@@ -14,10 +14,8 @@ uint32_t RAM_test(void){
 
 	addr=SDRAM_BASE;
 	for (i=0;i<(SDRAM_SIZE/2);i++){
-		LED_REV1_ON;
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
-		LED_REV1_OFF;
 
 		rd1 = (uint16_t)((i) & 0x0000FFFF);
 		*((uint16_t *)addr) = rd1;
@@ -29,9 +27,7 @@ uint32_t RAM_test(void){
 
 	addr=SDRAM_BASE;
 	for (i=0;i<(SDRAM_SIZE/2);i++){
-		LED_REV2_ON;
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
-		LED_REV2_OFF;
 
 		rd1 = *((uint16_t *)addr);
 
@@ -53,47 +49,36 @@ void RAM_startup_test(void)
 {
 	volatile register uint32_t ram_errors=0;
 
-	LED_LOOP1_OFF;
-	LED_LOOP2_OFF;
-	LED_PINGBUT_OFF;
-	LED_REV1_OFF;
-	LED_REV2_OFF;
-	LED_INF1_OFF;
-	LED_INF2_OFF;
 
 	ram_errors = RAM_test();
 
-	LED_LOOP1_ON;
-	LED_LOOP2_ON;
-	LED_PINGBUT_ON;
-	LED_REV1_ON;
-	LED_REV2_ON;
-	LED_INF1_ON;
-	LED_INF2_ON;
+	PLAYLED1_ON;
+	PLAYLED2_ON;
+	CLIPLED1_ON;
+	CLIPLED2_ON;
 
 
-	//Display the number of bad memory addresses using the seven lights (up to 127 can be shown)
-	//If there's 128 or more bad memory addresses, then flash all the lights
+	//Display the number of bad memory addresses using the seven lights (up to 15 can be shown)
+	//If there's 15 or more bad memory addresses, then flash all the lights
+
 	if (ram_errors & 1)
-		LED_LOOP1_OFF;
+		PLAYLED1_OFF;
 	if (ram_errors & 2)
-		LED_LOOP2_OFF;
+		CLIPLED1_OFF;
 	if (ram_errors & 4)
-		LED_PINGBUT_OFF;
+		CLIPLED2_OFF;
 	if (ram_errors & 8)
-		LED_REV1_OFF;
-	if (ram_errors & 16)
-		LED_INF1_OFF;
-	if (ram_errors & 32)
-		LED_INF2_OFF;
-	if (ram_errors & 64)
-		LED_REV2_OFF;
+		PLAYLED2_OFF;
 
 	while (1)
 	{
-		if (ram_errors >= 128)
+		if (ram_errors >= 15)
 		{
 			blink_all_lights(50);
+		}
+		else if (ram_errors == 0)
+		{
+			chase_all_lights(50);
 		}
 	}
 

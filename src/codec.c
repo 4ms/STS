@@ -13,26 +13,9 @@
 #define MCLK_SRC_EXTERNAL 1
 //#define MCLK_SRC_CODEC 2
 
-//CODECA is left channel of the DLD (I2C1, I2S3)
-//CODECB is right channel of the DLD (I2C2, I2S2)
 
-#ifdef USE_VCXO
-
-#define CODECA_MODE CODEC_IS_MASTER
-#define CODECB_MODE CODEC_IS_MASTER
-
-#define CODECA_MCLK_SRC MCLK_SRC_EXTERNAL
-#define CODECB_MCLK_SRC MCLK_SRC_EXTERNAL
-
-#else
-
-#define CODECA_MODE CODEC_IS_SLAVE
-#define CODECB_MODE CODEC_IS_SLAVE
-
-#define CODECA_MCLK_SRC MCLK_SRC_STM
-#define CODECB_MCLK_SRC MCLK_SRC_STM
-
-#endif
+#define CODEC_MODE CODEC_IS_SLAVE
+#define CODEC_MCLK_SRC MCLK_SRC_STM
 
 
 /* Codec audio Standards */
@@ -220,23 +203,20 @@ uint32_t Codec_TIMEOUT_UserCallback(void)
 #endif
 
 
-void Codecs_Deinit(void)
+void Codec_Deinit(void)
 {
 	GPIO_InitTypeDef gpio;
 
-	RCC_AHB1PeriphClockCmd(CODECB_RESET_RCC, ENABLE);
-	RCC_AHB1PeriphClockCmd(CODECA_RESET_RCC, ENABLE);
+	RCC_AHB1PeriphClockCmd(CODEC_RESET_RCC, ENABLE);
 
 	gpio.GPIO_Mode = GPIO_Mode_OUT;
 	gpio.GPIO_Speed = GPIO_Speed_2MHz;
 	gpio.GPIO_OType = GPIO_OType_PP;
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
-	gpio.GPIO_Pin = CODECA_RESET_pin; GPIO_Init(CODECA_RESET_GPIO, &gpio);
-	gpio.GPIO_Pin = CODECB_RESET_pin; GPIO_Init(CODECB_RESET_GPIO, &gpio);
+	gpio.GPIO_Pin = CODEC_RESET_pin; GPIO_Init(CODEC_RESET_GPIO, &gpio);
 
-	CODECA_RESET_LOW;
-	CODECB_RESET_LOW;
+	CODEC_RESET_LOW;
 
 
 }
@@ -248,17 +228,10 @@ uint32_t Codec_Register_Setup(uint8_t enable_DCinput)
 
 	Codec_CtrlInterface_Init();
 
-
-	CODECA_RESET_HIGH;
+	CODEC_RESET_HIGH;
 	delay_ms(2);
 
-	err+=Codec_Reset(CODECA_I2C, CODECA_MODE, enable_DCinput);
-
-
-	CODECB_RESET_HIGH;
-	delay_ms(2);
-
-	err+=Codec_Reset(CODECB_I2C, CODECB_MODE, enable_DCinput);
+	err+=Codec_Reset(CODEC_I2C, CODEC_MODE, enable_DCinput);
 
 	return err;
 }
@@ -371,21 +344,7 @@ void Codec_CtrlInterface_Init(void)
 {
 	I2C_InitTypeDef I2C_InitStructure;
 
-	RCC_APB1PeriphClockCmd(CODECB_I2C_CLK, ENABLE);
-
-	I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
-	I2C_InitStructure.I2C_DutyCycle = I2C_DutyCycle_2;
-	I2C_InitStructure.I2C_OwnAddress1 = 0x33;
-	I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
-	I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-	I2C_InitStructure.I2C_ClockSpeed = I2C_SPEED;
-	
-	I2C_DeInit(CODECB_I2C);
-	I2C_Init(CODECB_I2C, &I2C_InitStructure);
-	I2C_Cmd(CODECB_I2C, ENABLE);
-
-
-	RCC_APB1PeriphClockCmd(CODECA_I2C_CLK, ENABLE);
+	RCC_APB1PeriphClockCmd(CODEC_I2C_CLK, ENABLE);
 
 	I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
 	I2C_InitStructure.I2C_DutyCycle = I2C_DutyCycle_2;
@@ -394,9 +353,9 @@ void Codec_CtrlInterface_Init(void)
 	I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
 	I2C_InitStructure.I2C_ClockSpeed = I2C_SPEED;
 
-	I2C_DeInit(CODECA_I2C);
-	I2C_Init(CODECA_I2C, &I2C_InitStructure);
-	I2C_Cmd(CODECA_I2C, ENABLE);
+	I2C_DeInit(CODEC_I2C);
+	I2C_Init(CODEC_I2C, &I2C_InitStructure);
+	I2C_Cmd(CODEC_I2C, ENABLE);
 }
 
 /*
@@ -406,78 +365,38 @@ void Codec_AudioInterface_Init(uint32_t AudioFreq)
 {
 	I2S_InitTypeDef I2S_InitStructure;
 
-
-
-	//CODEC B: Right channel of DLD (I2S2, I2C2)
-
-	/* Enable the CODEC_I2S peripheral clock */
-	RCC_APB1PeriphClockCmd(CODECB_I2S_CLK, ENABLE);
-
-	/* CODEC_I2S peripheral configuration for master TX */
-	SPI_I2S_DeInit(CODECB_I2S);
-	I2S_InitStructure.I2S_AudioFreq = AudioFreq;
-	I2S_InitStructure.I2S_Standard = I2S_STANDARD;
-	I2S_InitStructure.I2S_DataFormat = I2S_DataFormat_24b;
-	I2S_InitStructure.I2S_CPOL = I2S_CPOL_Low;
-
-
-	if (CODECB_MODE==CODEC_IS_MASTER)
-		I2S_InitStructure.I2S_Mode = I2S_Mode_SlaveTx;
-	else
-		I2S_InitStructure.I2S_Mode = I2S_Mode_MasterTx;
-
-	if (CODECB_MODE==CODEC_IS_MASTER)
-		I2S_InitStructure.I2S_MCLKOutput = I2S_MCLKOutput_Disable;
-	else {
-		if (CODECB_MCLK_SRC==MCLK_SRC_STM)
-			I2S_InitStructure.I2S_MCLKOutput = I2S_MCLKOutput_Enable;
-		else
-			I2S_InitStructure.I2S_MCLKOutput = I2S_MCLKOutput_Disable;
-	}
-	/* Initialize the I2S main channel for TX */
-	I2S_Init(CODECB_I2S, &I2S_InitStructure);
-
-	/* Initialize the I2S extended channel for RX */
-	I2S_FullDuplexConfig(CODECB_I2S_EXT, &I2S_InitStructure);
-
-	I2S_Cmd(CODECB_I2S, ENABLE);
-	I2S_Cmd(CODECB_I2S_EXT, ENABLE);
-
-
-	// CODEC A: DLD Left Channel
 	// Enable the CODEC_I2S peripheral clock
-	RCC_APB1PeriphClockCmd(CODECA_I2S_CLK, ENABLE);
+	RCC_APB1PeriphClockCmd(CODEC_I2S_CLK, ENABLE);
 
-	// CODECA_I2S peripheral configuration for master TX
-	SPI_I2S_DeInit(CODECA_I2S);
+	// CODEC_I2S peripheral configuration for master TX
+	SPI_I2S_DeInit(CODEC_I2S);
 	I2S_InitStructure.I2S_AudioFreq = AudioFreq;
 	I2S_InitStructure.I2S_Standard = I2S_STANDARD;
 	I2S_InitStructure.I2S_DataFormat = I2S_DataFormat_24b;
 	I2S_InitStructure.I2S_CPOL = I2S_CPOL_High;
 
-	if (CODECA_MODE==CODEC_IS_MASTER)
+	if (CODEC_MODE==CODEC_IS_MASTER)
 		I2S_InitStructure.I2S_Mode = I2S_Mode_SlaveTx;
 	else
 		I2S_InitStructure.I2S_Mode = I2S_Mode_MasterTx;
 
-	if (CODECA_MODE==CODEC_IS_MASTER)
+	if (CODEC_MODE==CODEC_IS_MASTER)
 		I2S_InitStructure.I2S_MCLKOutput = I2S_MCLKOutput_Disable;
 	else {
-		if (CODECA_MCLK_SRC==MCLK_SRC_STM)
+		if (CODEC_MCLK_SRC==MCLK_SRC_STM)
 			I2S_InitStructure.I2S_MCLKOutput = I2S_MCLKOutput_Enable;
 		else
 			I2S_InitStructure.I2S_MCLKOutput = I2S_MCLKOutput_Disable;
 	}
 
-
 	// Initialize the I2S main channel for TX
-	I2S_Init(CODECA_I2S, &I2S_InitStructure);
+	I2S_Init(CODEC_I2S, &I2S_InitStructure);
 
 	// Initialize the I2S extended channel for RX
-	I2S_FullDuplexConfig(CODECA_I2S_EXT, &I2S_InitStructure);
+	I2S_FullDuplexConfig(CODEC_I2S_EXT, &I2S_InitStructure);
 
-	I2S_Cmd(CODECA_I2S, ENABLE);
-	I2S_Cmd(CODECA_I2S_EXT, ENABLE);
+	I2S_Cmd(CODEC_I2S, ENABLE);
+	I2S_Cmd(CODEC_I2S_EXT, ENABLE);
 
 
 }
@@ -487,11 +406,8 @@ void Codec_GPIO_Init(void)
 {
 	GPIO_InitTypeDef gpio;
 
-
 	/* Enable I2S and I2C GPIO clocks */
-	RCC_AHB1PeriphClockCmd(CODECB_I2C_GPIO_CLOCK | CODECB_I2S_GPIO_CLOCK, ENABLE);
-	RCC_AHB1PeriphClockCmd(CODECA_I2C_GPIO_CLOCK | CODECA_I2S_GPIO_CLOCK, ENABLE);
-
+	RCC_AHB1PeriphClockCmd(CODEC_I2C_GPIO_CLOCK | CODEC_I2S_GPIO_CLOCK, ENABLE);
 
 	/* CODEC_I2C SCL and SDA pins configuration -------------------------------------*/
 	gpio.GPIO_Mode = GPIO_Mode_AF;
@@ -499,15 +415,11 @@ void Codec_GPIO_Init(void)
 	gpio.GPIO_OType = GPIO_OType_OD;
 	gpio.GPIO_PuPd  = GPIO_PuPd_NOPULL;
 
-	gpio.GPIO_Pin = CODECB_I2C_SCL_PIN | CODECB_I2C_SDA_PIN;	GPIO_Init(CODECB_I2C_GPIO, &gpio);
-	gpio.GPIO_Pin = CODECA_I2C_SCL_PIN | CODECA_I2C_SDA_PIN;	GPIO_Init(CODECA_I2C_GPIO, &gpio);
+	gpio.GPIO_Pin = CODEC_I2C_SCL_PIN | CODEC_I2C_SDA_PIN;	GPIO_Init(CODEC_I2C_GPIO, &gpio);
 
 	/* Connect pins to I2C peripheral */
-	GPIO_PinAFConfig(CODECA_I2C_GPIO, CODECA_I2C_SCL_PINSRC, CODECA_I2C_GPIO_AF);
-	GPIO_PinAFConfig(CODECA_I2C_GPIO, CODECA_I2C_SDA_PINSRC, CODECA_I2C_GPIO_AF);
-
-	GPIO_PinAFConfig(CODECB_I2C_GPIO, CODECB_I2C_SCL_PINSRC, CODECB_I2C_GPIO_AF);
-	GPIO_PinAFConfig(CODECB_I2C_GPIO, CODECB_I2C_SDA_PINSRC, CODECB_I2C_GPIO_AF);
+	GPIO_PinAFConfig(CODEC_I2C_GPIO, CODEC_I2C_SCL_PINSRC, CODEC_I2C_GPIO_AF);
+	GPIO_PinAFConfig(CODEC_I2C_GPIO, CODEC_I2C_SDA_PINSRC, CODEC_I2C_GPIO_AF);
 
 
 	/* CODEC_I2S output pins configuration: WS, SCK SD0 SDI MCK pins ------------------*/
@@ -516,63 +428,35 @@ void Codec_GPIO_Init(void)
 	gpio.GPIO_OType = GPIO_OType_PP;
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
-	gpio.GPIO_Pin = CODECB_I2S_WS_PIN;	GPIO_Init(CODECB_I2S_GPIO_WS, &gpio);
-	gpio.GPIO_Pin = CODECB_I2S_SDI_PIN;	GPIO_Init(CODECB_I2S_GPIO_SDI, &gpio);
-	gpio.GPIO_Pin = CODECB_I2S_SCK_PIN;	GPIO_Init(CODECB_I2S_GPIO_SCK, &gpio);
-	gpio.GPIO_Pin = CODECB_I2S_SDO_PIN;	GPIO_Init(CODECB_I2S_GPIO_SDO, &gpio);
 
-	gpio.GPIO_Pin = CODECA_I2S_WS_PIN;	GPIO_Init(CODECA_I2S_GPIO_WS, &gpio);
-	gpio.GPIO_Pin = CODECA_I2S_SDI_PIN;	GPIO_Init(CODECA_I2S_GPIO_SDI, &gpio);
-	gpio.GPIO_Pin = CODECA_I2S_SCK_PIN;	GPIO_Init(CODECA_I2S_GPIO_SCK, &gpio);
-	gpio.GPIO_Pin = CODECA_I2S_SDO_PIN;	GPIO_Init(CODECA_I2S_GPIO_SDO, &gpio);
+	gpio.GPIO_Pin = CODEC_I2S_WS_PIN;	GPIO_Init(CODEC_I2S_GPIO_WS, &gpio);
+	gpio.GPIO_Pin = CODEC_I2S_SDI_PIN;	GPIO_Init(CODEC_I2S_GPIO_SDI, &gpio);
+	gpio.GPIO_Pin = CODEC_I2S_SCK_PIN;	GPIO_Init(CODEC_I2S_GPIO_SCK, &gpio);
+	gpio.GPIO_Pin = CODEC_I2S_SDO_PIN;	GPIO_Init(CODEC_I2S_GPIO_SDO, &gpio);
 
-	GPIO_PinAFConfig(CODECB_I2S_GPIO_WS, CODECB_I2S_WS_PINSRC, CODECB_I2S_GPIO_AF);
-	GPIO_PinAFConfig(CODECB_I2S_GPIO_SCK, CODECB_I2S_SCK_PINSRC, CODECB_I2S_GPIO_AF);
-	GPIO_PinAFConfig(CODECB_I2S_GPIO_SDO, CODECB_I2S_SDO_PINSRC, CODECB_I2S_GPIO_AF);
-	GPIO_PinAFConfig(CODECB_I2S_GPIO_SDI, CODECB_I2S_SDI_PINSRC, CODECB_I2Sext_GPIO_AF);
+	GPIO_PinAFConfig(CODEC_I2S_GPIO_WS, CODEC_I2S_WS_PINSRC, CODEC_I2S_GPIO_AF);
+	GPIO_PinAFConfig(CODEC_I2S_GPIO_SCK, CODEC_I2S_SCK_PINSRC, CODEC_I2S_GPIO_AF);
+	GPIO_PinAFConfig(CODEC_I2S_GPIO_SDO, CODEC_I2S_SDO_PINSRC, CODEC_I2S_GPIO_AF);
+	GPIO_PinAFConfig(CODEC_I2S_GPIO_SDI, CODEC_I2S_SDI_PINSRC, CODEC_I2Sext_GPIO_AF);
 
-	GPIO_PinAFConfig(CODECA_I2S_GPIO_WS, CODECA_I2S_WS_PINSRC, CODECA_I2S_GPIO_AF);
-	GPIO_PinAFConfig(CODECA_I2S_GPIO_SCK, CODECA_I2S_SCK_PINSRC, CODECA_I2S_GPIO_AF);
-	GPIO_PinAFConfig(CODECA_I2S_GPIO_SDO, CODECA_I2S_SDO_PINSRC, CODECA_I2S_GPIO_AF);
-	GPIO_PinAFConfig(CODECA_I2S_GPIO_SDI, CODECA_I2S_SDI_PINSRC, CODECA_I2Sext_GPIO_AF);
-
-	if (CODECA_MCLK_SRC==MCLK_SRC_STM){
+	if (CODEC_MCLK_SRC==MCLK_SRC_STM){
 
 		gpio.GPIO_Mode = GPIO_Mode_AF;
 		gpio.GPIO_Speed = GPIO_Speed_100MHz;
 		gpio.GPIO_OType = GPIO_OType_PP;
 		gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
-		gpio.GPIO_Pin = CODECA_I2S_MCK_PIN; GPIO_Init(CODECA_I2S_MCK_GPIO, &gpio);
-		GPIO_PinAFConfig(CODECA_I2S_MCK_GPIO, CODECA_I2S_MCK_PINSRC, CODECA_I2S_GPIO_AF);
+		gpio.GPIO_Pin = CODEC_I2S_MCK_PIN; GPIO_Init(CODEC_I2S_MCK_GPIO, &gpio);
+		GPIO_PinAFConfig(CODEC_I2S_MCK_GPIO, CODEC_I2S_MCK_PINSRC, CODEC_I2S_GPIO_AF);
 
-	} else if (CODECA_MCLK_SRC==MCLK_SRC_EXTERNAL){
-
-		gpio.GPIO_Mode = GPIO_Mode_IN;
-		gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-
-		gpio.GPIO_Pin = CODECA_I2S_MCK_PIN; GPIO_Init(CODECA_I2S_MCK_GPIO, &gpio);
-
-	}
-
-	if (CODECB_MCLK_SRC==MCLK_SRC_STM){
-		gpio.GPIO_Mode = GPIO_Mode_AF;
-		gpio.GPIO_Speed = GPIO_Speed_100MHz;
-		gpio.GPIO_OType = GPIO_OType_PP;
-		gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-
-		gpio.GPIO_Pin = CODECB_I2S_MCK_PIN; GPIO_Init(CODECB_I2S_MCK_GPIO, &gpio);
-		GPIO_PinAFConfig(CODECB_I2S_MCK_GPIO, CODECB_I2S_MCK_PINSRC, CODECB_I2S_GPIO_AF);
-
-	} else if (CODECB_MCLK_SRC==MCLK_SRC_EXTERNAL){
+	} else if (CODEC_MCLK_SRC==MCLK_SRC_EXTERNAL){
 
 		gpio.GPIO_Mode = GPIO_Mode_IN;
 		gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
-		gpio.GPIO_Pin = CODECB_I2S_MCK_PIN; GPIO_Init(CODECB_I2S_MCK_GPIO, &gpio);
+		gpio.GPIO_Pin = CODEC_I2S_MCK_PIN; GPIO_Init(CODEC_I2S_MCK_GPIO, &gpio);
 
 	}
-
 
 }
 
@@ -598,6 +482,6 @@ void init_i2s_clkin(void){
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOC, &gpio);
 
-	GPIO_PinAFConfig(GPIOC, GPIO_PinSource9, CODECB_I2S_GPIO_AF);
+	GPIO_PinAFConfig(GPIOC, GPIO_PinSource9, CODEC_I2S_GPIO_AF);
 
 }

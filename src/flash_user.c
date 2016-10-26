@@ -21,9 +21,9 @@ extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
 
 
 extern float param[NUM_CHAN][NUM_PARAMS];
-extern uint8_t mode[NUM_CHAN][NUM_CHAN_MODES];
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
-extern float global_param[NUM_GLOBAL_PARAMS];
+//extern uint8_t mode[NUM_CHAN][NUM_CHAN_MODES];
+//extern uint8_t global_mode[NUM_GLOBAL_MODES];
+//extern float global_param[NUM_GLOBAL_PARAMS];
 
 extern int16_t i_smoothed_cvadc[NUM_POT_ADCS];
 
@@ -148,24 +148,12 @@ void factory_reset(uint8_t loop_afterwards)
 	set_firmware_version();
 	set_default_system_settings();
 
-	LED_PINGBUT_OFF;
-	LED_REV1_ON;
-	LED_REV2_ON;
-	LED_LOOP1_OFF;
-	LED_LOOP2_OFF;
-	LED_INF1_ON;
-	LED_INF2_ON;
+//	LED_PINGBUT_OFF;
 
 	store_params_into_sram();
 	write_all_params_to_FLASH();
 
-	LED_PINGBUT_OFF;
-	LED_REV1_OFF;
-	LED_REV2_OFF;
-	LED_LOOP1_OFF;
-	LED_LOOP2_OFF;
-	LED_INF1_OFF;
-	LED_INF2_OFF;
+//	LED_PINGBUT_OFF;
 
 	if (loop_afterwards)
 	{
@@ -215,8 +203,8 @@ uint32_t load_flash_params(void)
 
 		param[0][TRACKING_COMP] = flash_param_TRACKING_COMP_0;
 		param[1][TRACKING_COMP] = flash_param_TRACKING_COMP_1;
-
-		global_param[LOOP_LED_BRIGHTNESS] = flash_loop_led_brightness;
+/*
+		global_param[LED_BRIGHTNESS] = flash_loop_led_brightness;
 
 		mode[0][LOOP_CLOCK_GATETRIG] = flash_mode_LOOP_CLOCK_GATETRIG_0;
 		mode[1][LOOP_CLOCK_GATETRIG] = flash_mode_LOOP_CLOCK_GATETRIG_1;
@@ -241,7 +229,7 @@ uint32_t load_flash_params(void)
 		global_param[SLOW_FADE_SAMPLES] = (float)flash_global_param_SLOW_FADE_SAMPLES;
 		global_param[FAST_FADE_INCREMENT] = set_fade_increment(flash_global_param_FAST_FADE_SAMPLES);
 		global_param[SLOW_FADE_INCREMENT] = set_fade_increment(flash_global_param_SLOW_FADE_SAMPLES);
-
+*/
 		return (flash_firmware_version);
 
 	} else
@@ -257,12 +245,7 @@ void save_flash_params(void)
 {
 	uint32_t i;
 
-	LED_REV1_ON;
-	LED_REV2_ON;
-	LED_LOOP1_ON;
-	LED_LOOP2_ON;
-	LED_INF1_ON;
-	LED_INF2_ON;
+//	LED_REV1_ON;
 
 	//copy global variables to flash_* variables (SRAM staging area)
 	store_params_into_sram();
@@ -271,22 +254,10 @@ void save_flash_params(void)
 	write_all_params_to_FLASH();
 
 	for (i=0;i<10;i++){
-		LED_PINGBUT_OFF;
-		LED_REV1_OFF;
-		LED_REV2_OFF;
-		LED_LOOP1_OFF;
-		LED_LOOP2_OFF;
-		LED_INF1_OFF;
-		LED_INF2_OFF;
+//		LED_PINGBUT_OFF;
 		delay_ms(10);
 
-		LED_PINGBUT_ON;
-		LED_REV1_ON;
-		LED_REV2_ON;
-		LED_LOOP1_ON;
-		LED_LOOP2_ON;
-		LED_INF1_ON;
-		LED_INF2_ON;
+//		LED_PINGBUT_ON;
 		delay_ms(10);
 	}
 }
@@ -315,6 +286,7 @@ void store_params_into_sram(void)
 	flash_param_TRACKING_COMP_0 = param[0][TRACKING_COMP];
 	flash_param_TRACKING_COMP_1 = param[1][TRACKING_COMP];
 
+	/*
 	flash_global_param_FAST_FADE_SAMPLES = global_param[FAST_FADE_SAMPLES];
 	flash_global_param_SLOW_FADE_SAMPLES = global_param[SLOW_FADE_SAMPLES];
 
@@ -339,6 +311,7 @@ void store_params_into_sram(void)
 	flash_mode_LEVELCV_IS_MIX_0 = mode[0][LEVELCV_IS_MIX];
 	flash_mode_LEVELCV_IS_MIX_1 = mode[1][LEVELCV_IS_MIX];
 
+	*/
 }
 
 
@@ -445,8 +418,8 @@ void read_all_params_from_FLASH(void)
 	flash_mode_LEVELCV_IS_MIX_1 = (flash_read_byte(FLASH_ADDR_LEVELCV_IS_MIX_1)==1) ? 1 : 0; //default OFF
 
 	flash_global_mode_PING_METHOD = flash_read_byte(FLASH_ADDR_PING_METHOD);
-	if (flash_global_mode_PING_METHOD > NUM_PING_METHODS || flash_global_mode_PING_METHOD < 0)
-		flash_global_mode_PING_METHOD = IGNORE_FLAT_DEVIATION_10;
+//	if (flash_global_mode_PING_METHOD > NUM_PING_METHODS || flash_global_mode_PING_METHOD < 0)
+//		flash_global_mode_PING_METHOD = IGNORE_FLAT_DEVIATION_10;
 
 	flash_global_mode_LOG_DELAY_FEED = (flash_read_byte(FLASH_ADDR_LOG_DELAY_FEED)==1) ? 1 : 0; //default OFF
 

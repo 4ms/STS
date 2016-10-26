@@ -9,24 +9,33 @@
 
 #define MIN_ADC_CHANGE 20
 
-#define NUM_POT_ADCS 8
+enum PotADCs {
+	PITCH1_POT,
+	PITCH2_POT,
+	START1_POT,
+	START2_POT,
+	LENGTH1_POT,
+	LENGTH2_POT,
+	SAMPLE1_POT,
+	SAMPLE2_POT,
+	RECSAMPLE_POT,
+	NUM_POT_ADCS
+};
 
-#define TIME1_POT 0
-#define TIME2_POT 1
-#define LVL1_POT 2
-#define LVL2_POT 3
-#define REGEN1_POT 4
-#define REGEN2_POT 5
-#define MIX1_POT 6
-#define MIX2_POT 7
+enum CVADCs {
+	PITCH1_CV,
+	PITCH2_CV,
+	START1_CV,
+	START2_CV,
+	LENGTH1_CV,
+	LENGTH2_CV,
+	SAMPLE1_CV,
+	SAMPLE2_CV,
+	NUM_CV_ADCS
+};
 
-#define NUM_CV_ADCS 6
-#define TIME1_CV 0
-#define TIME2_CV 1
-#define LVL1_CV 2
-#define LVL2_CV 3
-#define REGEN1_CV 4
-#define REGEN2_CV 5
+
+
 
 
 void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs);

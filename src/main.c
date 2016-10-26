@@ -17,6 +17,7 @@
 #include "system_settings.h"
 #include "buttons.h"
 #include "dig_pins.h"
+#include "pca9685_driver.h"
 
 #include "ITM.h"
 
@@ -57,63 +58,51 @@ void JumpTo(uint32_t address) {
 }
 
 
+
+
 int main(void)
 {
+	uint8_t i;
 	uint32_t do_factory_reset=0;
 
-    if (check_bootloader_keys())
-    	JumpTo(0x08000000);
+//    if (check_bootloader_keys())
+//    	JumpTo(0x08000000);
 
-    NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
+ //   NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
+	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
 
-    Codecs_Deinit();
+    Codec_Deinit();
 
     init_dig_inouts();
+//    test_dig_inouts();
 
     DeInit_I2S_Clock();
-	DeInit_I2SDMA_Channel2();
-	DeInit_I2SDMA_Channel1();
-
-//	*((volatile int *)(0xE0042004)) = 0x00000000;
-
-
-//	ITM_Init(6000000);
-//	ITM_Print(0,"\rStaring ITM\r");
-//	ITM_Disable();
-
-#ifdef HAS_VCXO
-	init_VCXO();
-
-#ifdef USE_VCXO
-	setupPLLInt(SI5351_PLL_A, 15); //375Mhz
-	setupPLLInt(SI5351_PLL_B, 15);
-	setupMultisynth(0, SI5351_PLL_A, 36, 265, 512);
-	setupMultisynth(1, SI5351_PLL_A, 36, 265, 512);
-
-	delay();
-
-#else
-	Si5351a_enableOutputs(0);
-#endif
-#endif
+	DeInit_I2SDMA();
 
 	delay();
 
 	init_timekeeper();
 
+
+	LEDDriver_Init(2);
+	LEDDRIVER_OUTPUTENABLE_ON;
+	test_all_buttonLEDs();
+
 	Deinit_Pot_ADC();
 	Deinit_CV_ADC();
+
+	init_LowPassCoefs();
 
 	Init_Pot_ADC((uint16_t *)potadc_buffer, NUM_POT_ADCS);
 	Init_CV_ADC((uint16_t *)cvadc_buffer, NUM_CV_ADCS);
 
 	delay();
 
-	init_LowPassCoefs();
 
 	SDRAM_Init();
 
-	if (RAMTEST_BUTTONS) RAM_startup_test();
+	if (RAMTEST_BUTTONS)
+		RAM_startup_test();
 
 	init_LED_PWM_IRQ();
 
@@ -124,17 +113,10 @@ int main(void)
 	Codec_GPIO_Init();
 	Codec_AudioInterface_Init(I2S_AudioFreq_48k);
 
-#ifdef HAS_VCXO
-#ifdef USE_VCXO
-	Si5351a_enableOutputs(1);
-#endif
-#endif
-
 	init_audio_dma();
 
-	global_mode[DCINPUT] = DCINPUT_JUMPER;
+	Codec_Register_Setup(0);
 
-	Codec_Register_Setup(global_mode[DCINPUT]);
 
 	global_mode[CALIBRATE] = 0;
 
@@ -149,17 +131,6 @@ int main(void)
     {
     	global_mode[CALIBRATE] = 1;
     }
-    else if (flash_firmware_version <= 1 ) //If we detect a pre-production version of firmware, then check the RAM and do a factory reset
-    {
-    	if (RAM_test()==0)
-    	{
-    		global_mode[CALIBRATE] = 1;
-    		do_factory_reset = 960000; //run normally for about 6 seconds before calibrating the CV jacks
-    	}
-    	else
-    		while (1) blink_all_lights(50); //RAM Test failed: It's on the fritz!
-
-    }
     else if (flash_firmware_version < FW_VERSION ) //If we detect a recently upgraded firmware version
     {
     	set_firmware_version();
@@ -170,22 +141,10 @@ int main(void)
 
 	init_inputread_timer();
 
-	Start_I2SDMA_Channel1();
-	Start_I2SDMA_Channel2();
+
+	Start_I2SDMA();
 
 	while(1){
-
-
-		if (global_mode[QUANTIZE_MODE_CHANGES]==0)
-		{
-			process_mode_flags(0);
-			process_mode_flags(1);
-		}
-		else
-		{
-			process_ping_changed(0);
-			process_ping_changed(1);
-		}
 
 
 		check_errors();

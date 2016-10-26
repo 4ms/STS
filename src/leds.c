@@ -9,132 +9,14 @@
 #include "params.h"
 
 
-extern volatile uint32_t ping_ledbut_tmr;
-extern volatile uint32_t loopled_tmr[2];
-extern volatile uint32_t divmult_time[2];
-extern volatile uint32_t ping_time;
-extern uint8_t mode[NUM_CHAN][NUM_CHAN_MODES];
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
+//extern uint8_t mode[NUM_CHAN][NUM_CHAN_MODES];
+//extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern float global_param[NUM_GLOBAL_PARAMS];
 
-extern uint32_t flag_acknowlegde_qcm;
-
-//extern uint32_t flash_firmware_version;
-
-uint8_t loop_led_state[NUM_CHAN]={0,0};
+uint8_t play_led_state[NUM_CHAN]={0,0};
+uint8_t clip_led_state[NUM_CHAN]={0,0};
 
 
-void update_ping_ledbut(void)
-{
-	if (global_mode[CALIBRATE])
-		LED_PINGBUT_OFF;
-	else if (global_mode[SYSTEM_SETTINGS])
-	{
-		//LED_PINGBUT_OFF;
-	}
-	else if (flag_acknowlegde_qcm)
-	{
-		flag_acknowlegde_qcm--;
-		if (
-				(flag_acknowlegde_qcm & (1<<8))
-				|| (!global_mode[QUANTIZE_MODE_CHANGES] && (flag_acknowlegde_qcm & (1<<6)))
-				)
-		{
-			LED_PINGBUT_ON;
-			LED_REV1_ON;
-			LED_REV2_ON;
-		}else{
-			LED_PINGBUT_OFF;
-			LED_REV1_OFF;
-			LED_REV2_OFF;
-		}
-
-	}
-	else
-	{
-		if (ping_ledbut_tmr>=ping_time)
-		{
-			LED_PINGBUT_ON;
-			reset_ping_ledbut_tmr();
-		}
-		else if (ping_ledbut_tmr >= (ping_time>>1))
-		{
-			LED_PINGBUT_OFF;
-		}
-	}
-}
-
-/*
-  			|| (mode[channel][WINDOWMODE_POT]==WINDOW && (flicker_ctr & 0x3FFFF) <= 0x5000)
-			|| (mode[channel][TIMEMODE_POT]==MOD_READWRITE_TIME_NOQ && (flicker_ctr & 0xFFFF) > 0xC000)
-
- */
-
-void chase_all_lights(uint32_t delaytime)
-{
-
-		LED_LOOP1_ON;
-		delay_ms(delaytime);
-		LED_LOOP1_OFF;
-		delay_ms(delaytime);
-
-		LED_PINGBUT_ON;
-		delay_ms(delaytime);
-		LED_PINGBUT_OFF;
-		delay_ms(delaytime);
-
-		LED_LOOP2_ON;
-		delay_ms(delaytime);
-		LED_LOOP2_OFF;
-		delay_ms(delaytime);
-
-		LED_REV1_ON;
-		delay_ms(delaytime);
-		LED_REV1_OFF;
-		delay_ms(delaytime);
-
-		LED_INF1_ON;
-		delay_ms(delaytime);
-		LED_INF1_OFF;
-		delay_ms(delaytime);
-
-		LED_INF2_ON;
-		delay_ms(delaytime);
-		LED_INF2_OFF;
-		delay_ms(delaytime);
-
-		LED_REV2_ON;
-		delay_ms(delaytime);
-		LED_REV2_OFF;
-		delay_ms(delaytime);
-
-		//infinite loop to force user to reset
-
-}
-
-
-void blink_all_lights(uint32_t delaytime)
-{
-
-		LED_LOOP1_ON;
-		LED_PINGBUT_ON;
-		LED_LOOP2_ON;
-		LED_REV1_ON;
-		LED_INF1_ON;
-		LED_INF2_ON;
-		LED_REV2_ON;
-		delay_ms(delaytime);
-
-		LED_LOOP1_OFF;
-		LED_PINGBUT_OFF;
-		LED_LOOP2_OFF;
-		LED_REV1_OFF;
-		LED_INF1_OFF;
-		LED_INF2_OFF;
-		LED_REV2_OFF;
-		delay_ms(delaytime);
-
-}
 
 
 
@@ -145,88 +27,10 @@ void update_channel_leds(void)
 
 	for (channel=0;channel<NUM_CHAN;channel++)
 	{
-		//if (!mode[channel][CONTINUOUS_REVERSE])
-		//{
-			if (loopled_tmr[channel] >= divmult_time[channel] && (mode[channel][INF]==INF_OFF))
-			{
-				reset_loopled_tmr(channel);
-			}
 
-			else if (loopled_tmr[channel] >= (divmult_time[channel]>>1))
-			{
-
-				loop_led_state[channel]=0;
-
-				if (channel==0) {
-					CLKOUT1_OFF;
-				} else {
-					CLKOUT2_OFF;
-				}
-			}
-
-			else if (mode[channel][LOOP_CLOCK_GATETRIG] == TRIG_MODE && loopled_tmr[channel] >= TRIG_TIME)
-			{
-				if (channel==0)
-					CLKOUT1_OFF;
-				 else
-					CLKOUT2_OFF;
-
-			}
-		//}
 	}
 }
 
-void update_INF_REV_ledbut(uint8_t channel)
-{
-	static uint32_t flicker_ctr=0;
-	uint8_t t;
-
-	flicker_ctr-=(1<<25);
-
-	if (global_mode[CALIBRATE])
-	{
-		update_calibration_button_leds();
-	}
-	else if (global_mode[SYSTEM_SETTINGS])
-	{
-		update_system_settings_button_leds();
-	}
-	else
-	{
-
-		//let the ping button function handle the rev lights blinking in ack_qcm state
-		if (!flag_acknowlegde_qcm)
-		{
-
-			//create a flicker by inverting the led state
-			t = mode[channel][CONTINUOUS_REVERSE] && (flicker_ctr<(1<<23));
-
-			if (mode[channel][REV] == t)
-			{
-				if (channel==0)	LED_REV1_OFF;
-				else 			LED_REV2_OFF;
-			} else
-			{
-				if (channel==0)	LED_REV1_ON;
-				else			LED_REV2_ON;
-			}
-
-		}
-		//create a flicker by inverting the state
-		t = mode[channel][PING_LOCKED] && (flicker_ctr<(1<<28));
-		if ((mode[channel][INF]!=INF_ON && mode[channel][INF]!=INF_TRANSITIONING_ON) == t)
-		{
-			if (channel==0)	LED_INF1_ON;
-			else 			LED_INF2_ON;
-		}
-		else
-		{
-			if (channel==0) LED_INF1_OFF;
-			else			LED_INF2_OFF;
-		}
-	}
-
-}
 
 void init_LED_PWM_IRQ(void)
 {
@@ -259,18 +63,30 @@ void init_LED_PWM_IRQ(void)
 void LED_PWM_IRQHandler(void)
 {
 	static uint32_t loop_led_PWM_ctr=0;
+
 	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
 		 //begin1: 300ns - 450ns
 
-		if (loop_led_state[0] && (loop_led_PWM_ctr<global_param[LOOP_LED_BRIGHTNESS]))
-			LED_LOOP1_ON;
-		else
-			LED_LOOP1_OFF;
 
-		if (loop_led_state[1] && (loop_led_PWM_ctr<global_param[LOOP_LED_BRIGHTNESS]))
-			LED_LOOP2_ON;
+		if (play_led_state[0] && (loop_led_PWM_ctr<global_param[LED_BRIGHTNESS]))
+			PLAYLED1_ON;
 		else
-			LED_LOOP2_OFF;
+			PLAYLED1_OFF;
+
+		if (play_led_state[1] && (loop_led_PWM_ctr<global_param[LED_BRIGHTNESS]))
+			PLAYLED2_ON;
+		else
+			PLAYLED2_OFF;
+
+		if (clip_led_state[0] && (loop_led_PWM_ctr<global_param[LED_BRIGHTNESS]))
+			CLIPLED1_ON;
+		else
+			CLIPLED1_OFF;
+
+		if (clip_led_state[1] && (loop_led_PWM_ctr<global_param[LED_BRIGHTNESS]))
+			CLIPLED2_ON;
+		else
+			CLIPLED2_OFF;
 
 		if (loop_led_PWM_ctr++>32)
 			loop_led_PWM_ctr=0;
@@ -282,3 +98,73 @@ void LED_PWM_IRQHandler(void)
 	}
 
 }
+
+
+
+void chase_all_lights(uint32_t delaytime)
+{
+
+		PLAYLED1_ON;
+		delay_ms(delaytime);
+		PLAYLED1_OFF;
+		delay_ms(delaytime);
+
+		CLIPLED1_ON;
+		delay_ms(delaytime);
+		CLIPLED1_OFF;
+		delay_ms(delaytime);
+
+		CLIPLED2_ON;
+		delay_ms(delaytime);
+		CLIPLED2_OFF;
+		delay_ms(delaytime);
+
+		PLAYLED2_ON;
+		delay_ms(delaytime);
+		PLAYLED2_OFF;
+		delay_ms(delaytime);
+
+		PLAYLED2_ON;
+		delay_ms(delaytime);
+		PLAYLED2_OFF;
+		delay_ms(delaytime);
+
+		CLIPLED2_ON;
+		delay_ms(delaytime);
+		CLIPLED2_OFF;
+		delay_ms(delaytime);
+
+		CLIPLED1_ON;
+		delay_ms(delaytime);
+		CLIPLED1_OFF;
+		delay_ms(delaytime);
+
+		PLAYLED1_ON;
+		delay_ms(delaytime);
+		PLAYLED1_OFF;
+		delay_ms(delaytime);
+
+
+		//infinite loop to force user to reset
+
+}
+
+
+void blink_all_lights(uint32_t delaytime)
+{
+
+		PLAYLED1_ON;
+		PLAYLED2_ON;
+		CLIPLED1_ON;
+		CLIPLED2_ON;
+		delay_ms(delaytime);
+
+		PLAYLED1_OFF;
+		PLAYLED2_OFF;
+		CLIPLED1_OFF;
+		CLIPLED2_OFF;
+		delay_ms(delaytime);
+
+}
+
+

@@ -14,91 +14,19 @@
 #include "dig_pins.h"
 
 
-volatile uint32_t ping_tmr;
-volatile uint32_t ping_ledbut_tmr;
-volatile uint32_t clkout_trigger_tmr;
-volatile uint32_t loopled_tmr[2];
-extern volatile uint32_t ping_time;
-extern uint8_t mode[NUM_CHAN][NUM_CHAN_MODES];
-extern uint8_t loop_led_state[NUM_CHAN];
+volatile uint32_t sys_tmr;
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 inline void inc_tmrs(void)
 {
-	ping_tmr++;
-	ping_ledbut_tmr++;
-	clkout_trigger_tmr++;
-	loopled_tmr[0]++;
-	loopled_tmr[1]++;
-
-
-	if (clkout_trigger_tmr>=ping_time)
-	{
-		CLKOUT_ON;
-		reset_clkout_trigger_tmr();
-	}
-	else if (clkout_trigger_tmr >= (ping_time>>1))
-	{
-		CLKOUT_OFF;
-	}
-	else if (mode[0][MAIN_CLOCK_GATETRIG]==TRIG_MODE && clkout_trigger_tmr >= TRIG_TIME){
-		CLKOUT_OFF;
-	}
-}
-
-inline void reset_ping_ledbut_tmr(void)
-{
-	ping_ledbut_tmr=0;
-
-
-}
-
-inline void reset_ping_tmr(void)
-{
-	ping_tmr=0;
-}
-
-inline void reset_clkout_trigger_tmr(void)
-{
-	clkout_trigger_tmr=0;
-
-	if (global_mode[QUANTIZE_MODE_CHANGES]!=0)
-	{
-		process_mode_flags(0);
-		process_mode_flags(1);
-	}
-
-}
-
-inline void reset_loopled_tmr(uint8_t channel)
-{
-	loopled_tmr[channel]=0;
-
-//	if (!mode[channel][CONTINUOUS_REVERSE])
-//	{
-		if (!global_mode[CALIBRATE] && !global_mode[SYSTEM_SETTINGS])
-			loop_led_state[channel]=1;
-
-		if (channel==0) {
-			CLKOUT1_ON;
-		} else {
-			CLKOUT2_ON;
-		}
-//	}
+	sys_tmr++; //at 48kHz, it resets after 24 hours, 51 minutes, 18.4853333 seconds
 }
 
 
 void init_timekeeper(void){
 	NVIC_InitTypeDef nvic;
 	EXTI_InitTypeDef   EXTI_InitStructure;
-
-
-	ping_tmr=0;
-	ping_ledbut_tmr=0;
-	clkout_trigger_tmr=0;
-	loopled_tmr[0]=0;
-	loopled_tmr[1]=0;
 
 	//Set Priority Grouping mode to 2-bits for priority and 2-bits for sub-priority
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
@@ -129,9 +57,6 @@ void EXTI_Handler(void)
 	if(EXTI_GetITStatus(EXTI_CLOCK_line) != RESET)
 	{
 		inc_tmrs();
-
-		if (!global_mode[SYSTEM_SETTINGS] && !global_mode[CALIBRATE])
-			update_channel_leds();
 
 		EXTI_ClearITPendingBit(EXTI_CLOCK_line);
 	}
@@ -171,31 +96,27 @@ void init_adc_param_update_timer(void)
 void adc_param_update_IRQHandler(void)
 {
 
-	//Takes 7-8us
 	if (TIM_GetITStatus(TIM9, TIM_IT_Update) != RESET) {
 
 		process_adc();
 
 		if (global_mode[CALIBRATE])
 		{
-			update_calibration();
-			update_calibrate_leds();
+			//update_calibration();
+			//update_calibrate_leds();
 		}
 		else
 			update_params();
 
+
 		if (global_mode[SYSTEM_SETTINGS])
 		{
-			update_system_settings();
-			update_system_settings_leds();
+			//update_system_settings();
+			//update_system_settings_leds();
 		}
 
 
-		check_entering_system_mode();
-
-		update_ping_ledbut();
-		update_INF_REV_ledbut(0);
-		update_INF_REV_ledbut(1);
+		//check_entering_system_mode();
 
 
 		TIM_ClearITPendingBit(TIM9, TIM_IT_Update);

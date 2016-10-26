@@ -15,7 +15,7 @@
 //16 is 12kHz
 //8 is 24kHz but seems glitchy...
 
-#define FW_VERSION 5
+#define FW_VERSION 0
 
 //Error codes for g_error
 #define OUT_OF_MEM 1
