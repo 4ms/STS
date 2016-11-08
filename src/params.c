@@ -5,35 +5,42 @@
  *      Author: design
  */
 
-#define QUANTIZE_TIMECV_CH1 1
-#define QUANTIZE_TIMECV_CH2 0
 
 #include "globals.h"
 #include "adc.h"
 #include "dig_pins.h"
 #include "params.h"
+#include "buttons.h"
+#include "sampler.h"
+#include "rgb_leds.h"
+
 #include "equal_pow_pan_padded.h"
 #include "exp_1voct.h"
-#include "timekeeper.h"
-#include "looping_delay.h"
 #include "log_taper_padded.h"
 
 
 extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
-extern uint8_t flag_rev_change[NUM_CHAN];
-
 extern uint8_t disable_mode_changes;
-
 
 float param[NUM_CHAN][NUM_PARAMS];
 float global_param[NUM_GLOBAL_PARAMS];
-uint8_t mode[NUM_CHAN][NUM_CHAN_MODES];
+uint8_t mode[NUM_CHAN+1][NUM_CHAN_MODES];
 uint8_t global_mode[NUM_GLOBAL_MODES];
 
-uint8_t flag_time_param_changed[2];
+uint8_t flags[NUM_FLAGS];
 
+uint8_t recording_enabled;
+uint8_t is_recording;
+
+
+extern uint8_t ButLED_state[NUM_RGBBUTTONS];
+
+
+
+
+ /*** Move to adc.c interrupts ***/
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
 
@@ -60,10 +67,12 @@ int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
 int32_t pot_delta[NUM_POT_ADCS];
 int32_t cv_delta[NUM_POT_ADCS];
 
+/* end move to adc.c */
+
 
 void init_params(void)
 {
-	uint8_t channel=0;
+	uint8_t channel,i;
 
 	for (channel=0;channel<NUM_CHAN;channel++){
 		param[channel][PITCH] = 1.0;
@@ -74,6 +83,12 @@ void init_params(void)
 	}
 
 	global_param[SLOW_FADE_INCREMENT] = 0.001;
+	global_param[LED_BRIGHTNESS] = 4;
+
+	for (i=0;i<NUM_FLAGS;i++)
+	{
+		flags[i]=0;
+	}
 }
 
 //initializes modes that aren't read from flash ram
@@ -86,6 +101,9 @@ void init_modes(void)
 		mode[channel][SAMPLE] = 0;
 		mode[channel][REV] = 0;
 	}
+
+	mode[REC][BANK] = 0;
+	mode[REC][SAMPLE] = 0;
 
 	global_mode[CALIBRATE] = 0;
 	global_mode[SYSTEM_SETTINGS] = 0;
@@ -202,19 +220,14 @@ void process_adc(void)
 		i_smoothed_potadc[i] = (int16_t)smoothed_potadc[i];
 
 		t=i_smoothed_potadc[i] - old_i_smoothed_potadc[i];
-
-
 		if ((t>MIN_POT_ADC_CHANGE[i]) || (t<-MIN_POT_ADC_CHANGE[i]))
 			track_moving_pot[i]=250;
 
 		if (track_moving_pot[i])
 		{
 			track_moving_pot[i]--;
-
 			flag_pot_changed[i]=1;
-
 			pot_delta[i] = t;
-
 			old_i_smoothed_potadc[i] = i_smoothed_potadc[i];
 		}
 	}
@@ -252,30 +265,104 @@ void update_params(void)
 {
 	uint8_t channel;
 
+	recording_enabled=1;
 
 	for (channel=0;channel<2;channel++)
 	{
-
-
-
+		param[channel][LENGTH] = potadc_buffer[LENGTH_POT*2+channel];
 	}
 }
 
 
 //
-// Handle all flags to change modes: INF, REV, and ping or div/mult time
+// Handle all flags to change modes
 //
-void process_mode_flags(uint8_t channel)
+void process_mode_flags(void)
 {
 	if (!disable_mode_changes)
 	{
 
-		if (flag_rev_change[channel])
+		if (flags[Play1Trig])
 		{
-
+			flags[Play1Trig]=0;
+			toggle_playing(0);
 		}
+
+		if (flags[Play2Trig])
+		{
+			flags[Play2Trig]=0;
+			toggle_playing(1);
+		}
+
+		if (flags[RecTrig]==1)
+		{
+			flags[RecTrig]=0;
+			toggle_recording();
+		}
+
+		if (flags[Rev1Trig])
+		{
+			flags[Rev1Trig]=0;
+			if (mode[0][REV])
+			{
+				mode[0][REV]=0;
+				ButLED_state[Reverse1ButtonLED] = 0;
+			}
+			else {
+				mode[0][REV]=1;
+				ButLED_state[Reverse1ButtonLED] = 1;
+			}
+		}
+		if (flags[Rev2Trig])
+		{
+			flags[Rev2Trig]=0;
+			if (mode[1][REV])
+			{
+				mode[1][REV]=0;
+				ButLED_state[Reverse2ButtonLED] = 0;
+			}
+			else {
+				mode[1][REV]=1;
+				ButLED_state[Reverse2ButtonLED] = 1;
+			}
+		}
+
 	}
+}
 
 
+void adc_param_update_IRQHandler(void)
+{
+
+	if (TIM_GetITStatus(TIM9, TIM_IT_Update) != RESET) {
+
+		//DEBUG2_ON;
+
+		process_adc();
+
+		if (global_mode[CALIBRATE])
+		{
+			//update_calibration();
+			//update_calibrate_leds();
+		}
+		else
+			update_params();
+
+		process_mode_flags();
+
+		if (global_mode[SYSTEM_SETTINGS])
+		{
+			//update_system_settings();
+			//update_system_settings_leds();
+		}
+
+
+		//check_entering_system_mode();
+
+		//DEBUG2_OFF;
+
+		TIM_ClearITPendingBit(TIM9, TIM_IT_Update);
+
+	}
 }
 

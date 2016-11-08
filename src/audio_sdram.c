@@ -5,10 +5,11 @@
  *      Author: design
  */
 
+#include "audio_sdram.h"
+#include "sampler.h"
 #include "globals.h"
-#include "audio_memory.h"
-#include "looping_delay.h"
 #include "params.h"
+#include "dig_pins.h"
 
 extern const uint32_t AUDIO_MEM_BASE[NUM_CHAN];
 
@@ -130,6 +131,88 @@ uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, ui
 	}
 
 	return 0;
+
+}
+
+
+uint32_t RAM_test(void){
+
+	uint32_t addr;
+	uint32_t i;
+	uint16_t rd0;
+	uint16_t rd1;
+	volatile uint32_t fail=0;
+
+	addr=SDRAM_BASE;
+	for (i=0;i<(SDRAM_SIZE/2);i++){
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+
+		rd1 = (uint16_t)((i) & 0x0000FFFF);
+		*((uint16_t *)addr) = rd1;
+
+		addr+=2;
+
+
+	}
+
+	addr=SDRAM_BASE;
+	for (i=0;i<(SDRAM_SIZE/2);i++){
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		rd1 = *((uint16_t *)addr);
+
+		rd0=(uint16_t)((i) & 0x0000FFFF);
+		if (rd1 != rd0)
+		{
+			fail++;
+		}
+
+		addr+=2;
+
+	}
+
+	return(fail);
+}
+
+
+void RAM_startup_test(void)
+{
+	volatile register uint32_t ram_errors=0;
+
+
+	ram_errors = RAM_test();
+
+	PLAYLED1_ON;
+	PLAYLED2_ON;
+	CLIPLED1_ON;
+	CLIPLED2_ON;
+
+
+	//Display the number of bad memory addresses using the seven lights (up to 15 can be shown)
+	//If there's 15 or more bad memory addresses, then flash all the lights
+
+	if (ram_errors & 1)
+		PLAYLED1_OFF;
+	if (ram_errors & 2)
+		CLIPLED1_OFF;
+	if (ram_errors & 4)
+		CLIPLED2_OFF;
+	if (ram_errors & 8)
+		PLAYLED2_OFF;
+
+	while (1)
+	{
+		if (ram_errors >= 15)
+		{
+			blink_all_lights(50);
+		}
+		else if (ram_errors == 0)
+		{
+			chase_all_lights(50);
+		}
+	}
+
 
 }
 

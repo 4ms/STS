@@ -10,13 +10,32 @@
 //codec_BUFF_LEN = Size (in samples) of the DMA rx/tx buffers:
 //Each channel = codec_BUFF_LEN/2 samples
 //We process the rx buffer when it's half-full and 100% full, so codec_BUFF_LEN/4 samples are processed at one time
-#define codec_BUFF_LEN 32
-//32 is 6kHz (48kHz / 32/4)
-//16 is 12kHz
-//8 is 24kHz but seems glitchy...
+
+//2048 codec_BUFF_LEN
+//1024 x 16-bits each Half Transfer
+//256 x samples per channel (32-bit samples even if only using 16-bits)
+//matches 256 samples per SDIO block (512 bytes/block = 256 x 16bit samples/block)
+#define codec_BUFF_LEN 2048
 
 #define FW_VERSION 0
 
+enum Flags {
+	PlaySample1Changed,
+	PlayBank1Changed,
+	PlaySample2Changed,
+	PlayBank2Changed,
+	RecSampleChanged,
+	RecBankChanged,
+	Play1Trig,
+	Play2Trig,
+	RecTrig,
+	Rev1Trig,
+	Rev2Trig,
+	NUM_FLAGS
+};
+
+
+//Error codes for g_error
 //Error codes for g_error
 #define OUT_OF_MEM 1
 #define OUT_OF_SAMPLES 2
@@ -28,41 +47,13 @@
 #define READ_BUFF1_OVERRUN 128
 #define READ_BUFF2_OVERRUN 256
 #define READ_MEM_ERROR 512
+#define WRITE_SDCARD_ERROR 1024
 
 //Number of channels
 #define NUM_CHAN 2
 
 #define TRIG_TIME 400
-//#define TRIG_TIME 1000
 
-//Attack/decay time in seconds: (1/AUTO_MUTE_ATTACK) / 48000
-//0.01 = 2.08ms
-//0.02 = 1.04ms
-//0.04 = 520ns
-
-#define AUTO_MUTE_ATTACK .02
-#define AUTO_MUTE_DECAY .02
-
-
-//.01 is a xfade time of 12ms or max hold period of 83Hz = divmult_time of 420
-//#define FADE_INCREMENT 0.0025 ==> global_param[SLOW_FADE_INCREMENT]
-
-//#define WRITE_FADEUP_INCREMENT 0.02 ==> global_param[FAST_FADE_INCREMENT]
-//#define WRITE_FADEDOWN_INCREMENT 0.0025 ==> global_param[SLOW_FADE_INCREMENT]
-
-//FADE_ADDRESSES should equal ((1/FADE_INCREMENT)-1) * codec_BUFF_LEN/2
-//#define FADE_ADDRESSES 792
-//#define FADE_ADDRESSES 7992
-//#define FADE_ADDRESSES 3192
-
-//FADE_SAMPLES should equal ((1/FADE_INCREMENT)-1) * codec_BUFF_LEN/4
-//#define FADE_SAMPLES 1596
-
-//#define EXITINF_FADE_SAMPLES 196
-//#define ENTERINF_FADE_SAMPLES 1596
-
-
-//#define USE_VCXO
 
 //About 45ms delay
 #define delay()						\

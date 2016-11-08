@@ -37,12 +37,26 @@
 		RECBUT &&\
 		BANKRECBUT)
 
-#define DIGINPUT_TIM TIM4
-#define DIGINPUT_TIM_RCC RCC_APB1Periph_TIM4
-#define DIGINPUT_TIM_IRQn TIM4_IRQn
-#define DIGINPUT_IRQHandler TIM4_IRQHandler
 
-void init_inputread_timer(void);
+enum Buttons {
+	Play1,
+	Play2,
+	Bank1,
+	Bank2,
+	Rec,
+	RecBank,
+	Rev1,
+	Rev2,
+	NUM_BUTTONS
+};
 
+enum ButtonStates {
+	UP,
+	DOWN
+};
+
+
+
+#define Button_Debounce_IRQHandler TIM4_IRQHandler
 
 #endif /* BUTTONS_H_ */

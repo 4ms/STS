@@ -2,12 +2,12 @@
  * dig_inouts.c
  */
 
+#include <audio_sdram.h>
+#include <sampler.h>
 #include "globals.h"
 #include "adc.h"
 #include "params.h"
-#include "looping_delay.h"
 #include "timekeeper.h"
-#include "audio_memory.h"
 #include "dig_pins.h"
 #include "buttons.h"
 
@@ -181,7 +181,7 @@ void test_dig_inouts(void)
 	if (t) PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	while (1){
+	while (0){
 		t=STEREOSW;
 		if (t==SW_MONO) {PLAYLED1_ON;PLAYLED2_OFF;CLIPLED1_OFF;}
 		else if (t==SW_LR) {PLAYLED1_OFF;PLAYLED2_ON;CLIPLED1_OFF;}

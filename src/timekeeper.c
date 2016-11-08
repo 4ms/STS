@@ -16,8 +16,6 @@
 
 volatile uint32_t sys_tmr;
 
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
-
 inline void inc_tmrs(void)
 {
 	sys_tmr++; //at 48kHz, it resets after 24 hours, 51 minutes, 18.4853333 seconds
@@ -64,7 +62,7 @@ void EXTI_Handler(void)
 
 
 
-void init_adc_param_update_timer(void)
+void init_adc_param_update_IRQ(void)
 {
 	TIM_TimeBaseInitTypeDef  tim;
 
@@ -72,13 +70,12 @@ void init_adc_param_update_timer(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM9, ENABLE);
 
 	nvic.NVIC_IRQChannel = TIM1_BRK_TIM9_IRQn;
-	nvic.NVIC_IRQChannelPreemptionPriority = 3;
+	nvic.NVIC_IRQChannelPreemptionPriority = 2;
 	nvic.NVIC_IRQChannelSubPriority = 2;
 	nvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&nvic);
 
-	//168MHz / prescale=3 ---> 42MHz / 30000 ---> 1.4kHz
-	//20000 and 0x1 ==> works well
+	//168MHz / prescale=3 --> 168/4 ---> 42MHz / 30000 ---> 1.4kHz
 
 	TIM_TimeBaseStructInit(&tim);
 	tim.TIM_Period = 30000;
@@ -87,40 +84,93 @@ void init_adc_param_update_timer(void)
 	tim.TIM_CounterMode = TIM_CounterMode_Up;
 
 	TIM_TimeBaseInit(TIM9, &tim);
-
 	TIM_ITConfig(TIM9, TIM_IT_Update, ENABLE);
-
 	TIM_Cmd(TIM9, ENABLE);
 }
 
-void adc_param_update_IRQHandler(void)
+
+void init_LED_PWM_IRQ(void)
 {
+	TIM_TimeBaseInitTypeDef tim;
+	NVIC_InitTypeDef nvic;
 
-	if (TIM_GetITStatus(TIM9, TIM_IT_Update) != RESET) {
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
-		process_adc();
+	nvic.NVIC_IRQChannel = TIM2_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority = 3;
+	nvic.NVIC_IRQChannelSubPriority = 0;
+	nvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&nvic);
 
-		if (global_mode[CALIBRATE])
-		{
-			//update_calibration();
-			//update_calibrate_leds();
-		}
-		else
-			update_params();
+	TIM_TimeBaseStructInit(&tim);
+	tim.TIM_Period = 17500; //168MHz / 2 / 17500 = 4.8kHz (208.3us) ... / 32 =
+//	tim.TIM_Period = 4375; //168MHz / 2 / 4375 = 19.2kHz
+	tim.TIM_Prescaler = 0;
+	tim.TIM_ClockDivision = 0;
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
 
-
-		if (global_mode[SYSTEM_SETTINGS])
-		{
-			//update_system_settings();
-			//update_system_settings_leds();
-		}
-
-
-		//check_entering_system_mode();
-
-
-		TIM_ClearITPendingBit(TIM9, TIM_IT_Update);
-
-	}
+	TIM_TimeBaseInit(TIM2, &tim);
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+	TIM_Cmd(TIM2, ENABLE);
 }
 
+void init_ButtonDebounce_IRQ(void)
+{
+	TIM_TimeBaseInitTypeDef  tim;
+
+	NVIC_InitTypeDef nvic;
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+
+	nvic.NVIC_IRQChannel = TIM4_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority = 3;
+	nvic.NVIC_IRQChannelSubPriority = 1;
+	nvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&nvic);
+
+	TIM_TimeBaseStructInit(&tim);
+	//30000 --> 2.8kHz
+	tim.TIM_Period = 30000;
+	tim.TIM_Prescaler = 0;
+	tim.TIM_ClockDivision = 0;
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
+
+	TIM_TimeBaseInit(TIM4, &tim);
+	TIM_ITConfig(TIM4, TIM_IT_Update, ENABLE);
+	TIM_Cmd(TIM4, ENABLE);
+
+}
+
+void init_ButtonLED_IRQ(void)
+{
+	TIM_TimeBaseInitTypeDef  tim;
+
+	NVIC_InitTypeDef nvic;
+
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM10, ENABLE);
+
+	nvic.NVIC_IRQChannel = TIM1_UP_TIM10_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority = 3;
+	nvic.NVIC_IRQChannelSubPriority = 2;
+	nvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&nvic);
+
+
+	//Run every 2ms (500Hz)
+	//Prescale = 11 --> 168MHz / 12 = 14MHz
+	//Period = 27999 --> 14MHz / 28000 = 500Hz
+
+	//Run every 5ms (200Hz)
+	//Prescale = 31 --> 168MHz / 32 = 5.25MHz
+	//Period = 26249 --> 5.25MHz / 26250 = 200Hz
+
+
+	TIM_TimeBaseStructInit(&tim);
+	tim.TIM_Period = 26249;
+	tim.TIM_Prescaler = 31;
+	tim.TIM_ClockDivision = 0;
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
+
+	TIM_TimeBaseInit(TIM10, &tim);
+	TIM_ITConfig(TIM10, TIM_IT_Update, ENABLE);
+	TIM_Cmd(TIM10, ENABLE);
+}

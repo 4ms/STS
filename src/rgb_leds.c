@@ -5,82 +5,215 @@
 #include <dig_pins.h>
 #include "rgb_leds.h"
 #include "globals.h"
+#include "LED_palette.h"
 
+uint16_t ButLED_color[NUM_RGBBUTTONS][3];
+uint16_t cached_ButLED_color[NUM_RGBBUTTONS][3];
+uint8_t ButLED_state[NUM_RGBBUTTONS];
 
-uint16_t Button_LED[NUM_RGBBUTTONS][3];
+extern uint32_t g_error;
 
-const uint32_t LED_PALETTE[84][3]={
-		{0, 0, 761}, {0, 770, 766}, {0, 766, 16}, {700, 700, 700}, {763, 154, 0}, {766, 0, 112},
-		{0, 0, 761}, {0, 780, 766}, {768, 767, 764}, {493, 768, 2}, {763, 154, 0}, {580, 65, 112},
-		{767, 0, 0}, {767, 28, 386}, {0, 0, 764}, {0, 320, 387}, {767, 768, 1}, {767, 774, 765},
-		{0, 0, 761}, {106, 0, 508}, {762, 769, 764}, {0, 767, 1}, {706, 697, 1}, {765, 179, 1},
-		{0,0,900}, {200,200,816}, {800,800,800},	{900,400,800},	{900,500,202}, {800,200,0},
-		{0,0,766}, {766,150,0}, {0,50,766}, {766,100,0}, {0,150,766}, {766,50,0},
-		{0,0,1000}, {0,100,766}, {0,200,666}, {0,300,500}, {0,350,500}, {0,350,400},
-
-		{895, 663, 1023}, {895, 663, 1023}, {895, 663, 1023}, {895, 663, 1023}, {895, 663, 1023}, {895, 663, 1023},
-		{1023, 1, 1023}, {1023, 0, 602}, {1021, 0, 217}, {1023, 0, 118}, {1023, 0, 105}, {1023, 4, 65},
-		{1023, 1, 0}, {1023, 33, 0}, {1023, 139, 0}, {1023, 275, 0}, {1023, 446, 0}, {1023, 698, 0},
-		{0, 1023, 0}, {0, 1022, 0}, {1, 1020, 4}, {0, 1023, 164}, {1, 1023, 86}, {0, 1023, 94},
-		{612, 37, 0}, {614, 0, 203}, {126, 0, 898}, {0, 1023, 461}, {894, 1023, 0}, {941, 996, 1000},
-		{1021, 1, 0}, {1021, 1, 0}, {1021, 1, 0}, {1021, 1, 0}, {1021, 1, 0}, {1021, 1, 0},
-		{1023, 1023, 0}, {1022, 1021, 1}, {1021, 1022, 32}, {1023, 1023, 110}, {1023, 1023, 164}, {1023, 1023, 222}
-};
 
 /*
- * Initializes the Button_LED array
+ * init_buttonLEDs()
+ *
+ * Initializes the ButLED_color array
  * The elements are organized into  RGBLED components, and then red, green, and blue elements:
- * LED_Element_Brightness <==> Button_LED [RGB_Button_Number] [0=red, 1=green, 2=blue]
+ * LED_Element_Brightness <==> ButLED_color [RGB_Button_Number] [0=red, 1=green, 2=blue]
  */
 void init_buttonLEDs(void)
 {
 	uint8_t i;
 	for (i=0;i<NUM_RGBBUTTONS;i++)
 	{
-		Button_LED[i][0]=0;
-		Button_LED[i][1]=0;
-		Button_LED[i][2]=0;
+		ButLED_color[i][0]=0;
+		ButLED_color[i][1]=0;
+		ButLED_color[i][2]=0;
 	}
 }
 
-/*
- * Updates the display of one RGB LED given by the number ButtonLED_number
- */
-void update_one_ButtonLED(uint8_t ButtonLED_number)
+void set_ButtonLED_byRGB(uint8_t ButtonLED_number, uint16_t red,  uint16_t green,  uint16_t blue)
 {
-	LEDDriver_setRGBLED(ButtonLED_number, ( Button_LED[ButtonLED_number][0] <<20) | ( Button_LED[ButtonLED_number][1] <<10) | Button_LED[ButtonLED_number][2] );
+	ButLED_color[ButtonLED_number][0]=red;
+	ButLED_color[ButtonLED_number][1]=green;
+	ButLED_color[ButtonLED_number][2]=blue;
+
+}
+
+void set_ButtonLED_byPalette(uint8_t ButtonLED_number, uint16_t paletteIndex)
+{
+	ButLED_color[ButtonLED_number][0] = LED_PALETTE[paletteIndex][0];
+	ButLED_color[ButtonLED_number][1] = LED_PALETTE[paletteIndex][1];
+	ButLED_color[ButtonLED_number][2] = LED_PALETTE[paletteIndex][2];
+}
+
+
+void set_ButtonLED_byPaletteFade(uint8_t ButtonLED_number, uint16_t paletteIndexA, uint16_t paletteIndexB, float fade)
+{
+	ButLED_color[ButtonLED_number][0] = ((float)LED_PALETTE[paletteIndexA][0] * (1.0f-fade)) + ((float)LED_PALETTE[paletteIndexB][0] * fade);
+	ButLED_color[ButtonLED_number][1] = ((float)LED_PALETTE[paletteIndexA][1] * (1.0f-fade)) + ((float)LED_PALETTE[paletteIndexB][1] * fade);
+	ButLED_color[ButtonLED_number][2] = ((float)LED_PALETTE[paletteIndexA][2] * (1.0f-fade)) + ((float)LED_PALETTE[paletteIndexB][2] * fade);
 }
 
 
 /*
- * Updates the display of all the RGB LEDs
+ * display_one_ButtonLED(buttonLED_number)
+ *
+ * Tells the LED Driver chip to set the RGB color of one LED given by the number ButtonLED_number
  */
-void update_all_ButtonLEDs(void)
+void display_one_ButtonLED(uint8_t ButtonLED_number)
+{
+	if ((cached_ButLED_color[ButtonLED_number][0] != ButLED_color[ButtonLED_number][0]) || (cached_ButLED_color[ButtonLED_number][1] != ButLED_color[ButtonLED_number][1]) || (cached_ButLED_color[ButtonLED_number][2] != ButLED_color[ButtonLED_number][2]))
+	{
+		LEDDriver_setRGBLED(ButtonLED_number, ( ButLED_color[ButtonLED_number][0] <<20) | ( ButLED_color[ButtonLED_number][1] <<10) | ButLED_color[ButtonLED_number][2] );
+
+		cached_ButLED_color[ButtonLED_number][0]=ButLED_color[ButtonLED_number][0];
+		cached_ButLED_color[ButtonLED_number][1]=ButLED_color[ButtonLED_number][1];
+		cached_ButLED_color[ButtonLED_number][2]=ButLED_color[ButtonLED_number][2];
+	}
+
+}
+
+
+/*
+ * display_all_ButtonLEDs()
+ *
+ * Tells the LED Driver chip to set the RGB color of all LEDs that have changed value
+ */
+void display_all_ButtonLEDs(void)
 {
 	uint8_t i;
 
 	for (i=0;i<NUM_RGBBUTTONS;i++)
 	{
-		LEDDriver_setRGBLED(i, ( Button_LED[i][0] <<20) | ( Button_LED[i][1] <<10) | Button_LED[i][2] );
+		//Update each LED that has a different color
+		if ((cached_ButLED_color[i][0] != ButLED_color[i][0]) || (cached_ButLED_color[i][1] != ButLED_color[i][1]) || (cached_ButLED_color[i][2] != ButLED_color[i][2]))
+		{
+			LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+			cached_ButLED_color[i][0]=ButLED_color[i][0];
+			cached_ButLED_color[i][1]=ButLED_color[i][1];
+			cached_ButLED_color[i][2]=ButLED_color[i][2];
+		}
 	}
 
 }
 
+
+/*
+ * test_all_buttonLEDs()
+ *
+ * Test all the buttons
+ *
+ */
 void test_all_buttonLEDs(void)
 {
 	uint8_t i, j;
+	float t=0.0f;
+	uint32_t r,g,b;
 
 	for (j=0;j<8;j++)
 	{
 		LEDDriver_setRGBLED(j,0 );
 	}
 
-
-	for (j=0;j<8;j++)
+	for(i=0;i<80;i++)
 	{
-		i=j+9;
-		LEDDriver_setRGBLED(j, ( LED_PALETTE[i][0] <<20) | ( LED_PALETTE[i][1] <<10) | LED_PALETTE[i][2] );
-	}
+		for (t=0.0;t<=1.0;t+=0.005)
+		{
+			for (j=0;j<8;j++)
+			{
+				set_ButtonLED_byPaletteFade(j, i, i+1, t);
+			}
 
+			display_all_ButtonLEDs();
+		}
+	}
 }
 
+uint16_t ButLED_statetable[NUM_RGBBUTTONS][2]={
+		{OFF, BLUE}, 	/*RecBankButtonLED*/
+		{OFF, RED}, 	/*RecButtonLED*/
+		{OFF, CYAN}, 	/*Reverse1ButtonLED*/
+		{OFF, WHITE}, 	/*Bank1ButtonLED*/
+		{OFF, GREEN}, 	/*Play1ButtonLED*/
+		{OFF, GREEN}, 	/*Play2ButtonLED*/
+		{OFF, WHITE}, 	/*Bank2ButtonLED*/
+		{OFF, CYAN} 	/*Reverse2ButtonLED*/
+
+};
+
+/*
+ * update_ButtonLEDs()
+ *
+ * Calculates the color of each button LED and tells the LED Driver chip to update the display
+ *
+ */
+void update_ButtonLEDs(void)
+{
+	uint8_t ButLEDnum;
+
+	if (!g_error){
+		for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
+		{
+			set_ButtonLED_byPalette(ButLEDnum, ButLED_statetable[ButLEDnum][ButLED_state[ButLEDnum]] );
+		}
+	}
+/*
+	if (ButLED_state[Reverse1ButtonLED]==1)
+		set_ButtonLED_byPalette(Reverse1ButtonLED,YELLOW);
+	else
+		set_ButtonLED_byPalette(Reverse1ButtonLED,OFF);
+
+	if (ButLED_state[Reverse2ButtonLED]==1)
+		set_ButtonLED_byPalette(Reverse2ButtonLED,YELLOW);
+	else
+		set_ButtonLED_byPalette(Reverse2ButtonLED,OFF);
+
+	if (ButLED_state[Play1ButtonLED]==1)
+		set_ButtonLED_byPalette(Play1ButtonLED,GREEN);
+	else
+		set_ButtonLED_byPalette(Play1ButtonLED,OFF);
+
+	if (ButLED_state[Play2ButtonLED]==1)
+		set_ButtonLED_byPalette(Play2ButtonLED,GREEN);
+	else
+		set_ButtonLED_byPalette(Play2ButtonLED,OFF);
+
+	if (ButLED_state[Bank1ButtonLED]==1)
+		set_ButtonLED_byPalette(Bank1ButtonLED,WHITE);
+	else
+		set_ButtonLED_byPalette(Bank1ButtonLED,OFF);
+
+	if (ButLED_state[Bank2ButtonLED]==1)
+		set_ButtonLED_byPalette(Bank2ButtonLED,WHITE);
+	else
+		set_ButtonLED_byPalette(Bank2ButtonLED,OFF);
+
+	if (ButLED_state[RecButtonLED]==1)
+		set_ButtonLED_byPalette(RecButtonLED,RED);
+	else
+		set_ButtonLED_byPalette(RecButtonLED,OFF);
+
+	if (ButLED_state[RecBankButtonLED]==1)
+		set_ButtonLED_byPalette(RecBankButtonLED,BLUE);
+	else
+		set_ButtonLED_byPalette(RecBankButtonLED,OFF);
+*/
+
+	display_all_ButtonLEDs();
+}
+
+
+
+
+void ButtonLED_IRQHandler(void)
+{
+	if (TIM_GetITStatus(TIM10, TIM_IT_Update) != RESET)
+	{
+		//DEBUG2_ON;
+		update_ButtonLEDs();
+		//DEBUG2_OFF;
+
+		TIM_ClearITPendingBit(TIM10, TIM_IT_Update);
+	}
+}

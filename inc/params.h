@@ -9,17 +9,22 @@
 #define PARAMS_H_
 #include <stm32f4xx.h>
 
-
+/* ????????????
+ * ChanParam_f: float parameters for a channel (play1, play2, rec): pitch, startpos, length, tracking
+ * ChanParam_i: integer parameters: bank, sample, gatetrig_start, gatetrig_rev, gatetrig_endout
+ * ChanState:	play state (silent, prebuffering, playing, fade down...);
+ * ChanMode:	reverse mode (on, off);
+ */
 //
 // ChannelParams
 // Params are float values related to pots and CV jacks
 //
 
 enum ChannelParams{
-	PITCH,			//TIME: fractional value for time multiplication, integer value for time division
-	START,			//LEVEL: 0..1 representing amount of main input mixed into delay loop
-	LENGTH,			//REGEN: 0..1 representing amount of regeneration
-	TRACKING_COMP,	//TRACKING_COMP: -2.0 .. 2.0 representing compensation for 1V/oct tracking
+	PITCH,
+	START,
+	LENGTH,
+	TRACKING_COMP,	//TRACKING_COMP: compensation for 1V/oct tracking
 	NUM_PARAMS
 };
 
@@ -47,6 +52,7 @@ enum ChannelModes{
 	NUM_CHAN_MODES
 };
 
+#define REC NUM_CHAN
 
 enum GateTrigModes{
 	GATE_MODE,
@@ -59,7 +65,8 @@ enum GateTrigModes{
 //Global Modes
 //Global Modes represent global states of functionality
 //
-enum GlobalModes{
+enum GlobalModes
+{
 	CALIBRATE,
 	SYSTEM_SETTINGS,
 
@@ -67,7 +74,8 @@ enum GlobalModes{
 	NUM_GLOBAL_MODES
 };
 
-enum GlobalParams{
+enum GlobalParams
+{
 	LED_BRIGHTNESS,
 	SLOW_FADE_INCREMENT,
 	NUM_GLOBAL_PARAMS
@@ -77,11 +85,13 @@ enum GlobalParams{
 void update_params(void);
 void process_adc(void);
 
-void process_mode_flags(uint8_t channel);
+void process_mode_flags(void);
 
 void init_LowPassCoefs(void);
 void init_params(void);
 void init_modes(void);
 
+#define adc_param_update_IRQHandler TIM1_BRK_TIM9_IRQHandler
+void adc_param_update_IRQHandler(void);
 
 #endif /* PARAMS_H_ */

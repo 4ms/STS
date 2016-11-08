@@ -21,7 +21,7 @@ extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
 
 
 extern float param[NUM_CHAN][NUM_PARAMS];
-//extern uint8_t mode[NUM_CHAN][NUM_CHAN_MODES];
+//extern uint8_t mode[NUM_CHAN+1][NUM_CHAN_MODES];
 //extern uint8_t global_mode[NUM_GLOBAL_MODES];
 //extern float global_param[NUM_GLOBAL_PARAMS];
 

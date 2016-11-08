@@ -3,12 +3,12 @@
  *
  * */
 
+#include <sampler.h>
 #include "globals.h"
 #include "i2s.h"
 #include "dig_pins.h"
 #include "timekeeper.h"
 #include "codec.h"
-#include "looping_delay.h"
 
 
 DMA_InitTypeDef dma_tx, dma_rx;

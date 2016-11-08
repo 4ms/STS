@@ -10,12 +10,7 @@
 #include <stm32f4xx.h>
 
 #define LED_PWM_IRQHandler TIM2_IRQHandler
-#define LED_TIM	TIM2
-#define LED_TIM_IRQn TIM2_IRQn
-#define LED_TIM_RCC RCC_APB1Periph_TIM2
 
-
-void init_LED_PWM_IRQ(void);
 
 void blink_all_lights(uint32_t delaytime);
 void chase_all_lights(uint32_t delaytime);
