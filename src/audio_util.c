@@ -3,15 +3,16 @@
 #include "audio_sdram.h"
 #include "sdram_driver.h"
 
-const uint32_t AUDIO_MEM_BASE[NUM_CHAN] = {SDRAM_BASE, SDRAM_BASE + MEM_SIZE};
-extern uint8_t SAMPLESIZE;
+extern const uint32_t AUDIO_MEM_BASE[4];
+
+extern uint8_t SAMPLINGBYTES;
 
 inline uint32_t offset_samples(uint8_t channel, uint32_t base_addr, uint32_t offset, uint8_t subtract)
 {
 	uint32_t t_addr;
 
 	//convert samples to addresses
-	offset*=SAMPLESIZE;
+	offset*=SAMPLINGBYTES;
 
 	if (subtract == 0){
 
@@ -29,7 +30,7 @@ inline uint32_t offset_samples(uint8_t channel, uint32_t base_addr, uint32_t off
 
 	}
 
-	if (SAMPLESIZE==2)
+	if (SAMPLINGBYTES==2)
 		t_addr = t_addr & 0xFFFFFFFE; //addresses must be even
 	else
 		t_addr = t_addr & 0xFFFFFFFC; //addresses must end in 00
@@ -44,15 +45,15 @@ inline uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction)
 
 	if (direction == 0)
 	{
-		addr+=SAMPLESIZE;
+		addr+=SAMPLINGBYTES;
 		if (addr >= (AUDIO_MEM_BASE[channel] + MEM_SIZE))
 			addr = AUDIO_MEM_BASE[channel];
 	}
 	else
 	{
-		addr-=SAMPLESIZE;
+		addr-=SAMPLINGBYTES;
 		if (addr <= AUDIO_MEM_BASE[channel])
-			addr = AUDIO_MEM_BASE[channel] + MEM_SIZE - SAMPLESIZE;
+			addr = AUDIO_MEM_BASE[channel] + MEM_SIZE - SAMPLINGBYTES;
 	}
 
 	return(addr & 0xFFFFFFFE);
@@ -60,16 +61,68 @@ inline uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction)
 	//return (offset_samples(channel, addr, 1, mode[channel][REV]));
 }
 
+inline uint32_t inc_addr_within_limits(uint32_t addr, uint32_t low_limit, uint32_t high_limit, uint8_t direction)
+{
+
+	if (direction == 0)
+	{
+		addr+=SAMPLINGBYTES;
+		if (addr >= high_limit)
+			addr = low_limit;
+	}
+	else
+	{
+		addr-=SAMPLINGBYTES;
+		if (addr <= low_limit)
+			addr = high_limit - SAMPLINGBYTES;
+	}
+
+	return(addr & 0xFFFFFFFE);
+}
+
 
 
 // Utility function to determine if address mid is in between addresses beg and end in a circular (ring) buffer.
 // ToDo: draw a truth table and condense this into as few as possible boolean logic functions
-// b<m
-// m<e
-// b<m
-// b==m
-// b==e
-// m==e
+/*
+ * There are four different ways three things can line up:
+ * a<b<c
+ * a=b<c
+ * a<b=c
+ * a=b=c
+ *
+ * And abc could be:
+ * bme
+ * bem
+ * mbe
+ * meb
+ * emb
+ * ebm
+ *
+ * So we start with 6*4 = 24 possibilities,
+ * but some of them are the same (b<m=e is the same as b<e=m)
+ * b<m<e --> 1
+ * b<e<m --> 0
+ * m<b<e --> 0
+ * m<e<b --> 1
+ * e<m<b --> 0
+ * e<b<m --> 1
+ *
+ * b=m<e --> 1
+ * b=e<m --> 0 ? beg=end error
+ * m=e<b --> 1
+ *
+ * b<m=e --> 1
+ * m<b=e --> 0 ? beg=end error
+ * e<m=b --> 1
+ *
+ * b=m=e  --> 0 ? beg=end error
+ *
+ * Therefore we have 6 + 3 + 3 + 1 = 13 possibilities
+ * if beg=end ---> error
+ * if beg<end ---> b<=m && m<=e -> 1
+ * if end<beg --->
+ */
 uint8_t in_between(uint32_t mid, uint32_t beg, uint32_t end, uint8_t reverse)
 {
 	uint32_t t;

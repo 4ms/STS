@@ -29,7 +29,13 @@ void init_buttonLEDs(void)
 		ButLED_color[i][0]=0;
 		ButLED_color[i][1]=0;
 		ButLED_color[i][2]=0;
+		ButLED_state[i] = 0;
+
+//		cached_ButLED_color[i][0]=0xFF;
+//		cached_ButLED_color[i][1]=0xFF;
+//		cached_ButLED_color[i][2]=0xFF;
 	}
+
 }
 
 void set_ButtonLED_byRGB(uint8_t ButtonLED_number, uint16_t red,  uint16_t green,  uint16_t blue)
@@ -210,9 +216,7 @@ void ButtonLED_IRQHandler(void)
 {
 	if (TIM_GetITStatus(TIM10, TIM_IT_Update) != RESET)
 	{
-		//DEBUG2_ON;
 		update_ButtonLEDs();
-		//DEBUG2_OFF;
 
 		TIM_ClearITPendingBit(TIM10, TIM_IT_Update);
 	}

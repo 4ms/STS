@@ -16,7 +16,7 @@ int16_t CODEC_DAC_CALIBRATION_DCOFFSET[4];
 int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
 
 
-//extern uint8_t led_state[NUM_CHAN];
+//extern uint8_t led_state[NUM_PLAY_CHAN];
 
 
 void set_default_calibration_values(void)

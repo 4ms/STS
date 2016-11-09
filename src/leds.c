@@ -9,12 +9,11 @@
 #include "params.h"
 
 
-//extern uint8_t mode[NUM_CHAN+1][NUM_CHAN_MODES];
 //extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern float global_param[NUM_GLOBAL_PARAMS];
 
-uint8_t play_led_state[NUM_CHAN]={0,0};
-uint8_t clip_led_state[NUM_CHAN]={0,0};
+uint8_t play_led_state[NUM_PLAY_CHAN]={0,0};
+uint8_t clip_led_state[NUM_PLAY_CHAN]={0,0};
 
 
 
@@ -25,7 +24,7 @@ void update_channel_leds(void)
 {
 	uint8_t channel;
 
-	for (channel=0;channel<NUM_CHAN;channel++)
+	for (channel=0;channel<NUM_PLAY_CHAN;channel++)
 	{
 
 	}
@@ -40,7 +39,6 @@ void LED_PWM_IRQHandler(void)
 
 	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
 		 //begin1: 300ns - 450ns
-//DEBUG2_ON;
 
 		if (play_led_state[0] && (loop_led_PWM_ctr<global_param[LED_BRIGHTNESS]))
 			PLAYLED1_ON;
@@ -67,7 +65,6 @@ void LED_PWM_IRQHandler(void)
 
 		//end1: 300ns - 450ns
 
-		//DEBUG2_OFF;
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 
 	}

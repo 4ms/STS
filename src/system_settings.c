@@ -20,8 +20,11 @@
 #include "buttons.h"
 #include "dig_pins.h"
 
-extern float param[NUM_CHAN][NUM_PARAMS];
-//extern uint8_t mode[NUM_CHAN+1][NUM_CHAN_MODES];
+
+extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
+//extern uint8_t 	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+//extern uint8_t 	settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
+
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern float global_param[NUM_GLOBAL_PARAMS];
 
@@ -33,8 +36,8 @@ uint8_t disable_mode_changes=0;
 
 void set_default_system_settings(void)
 {
-	param[0][TRACKING_COMP]=1.0;
-	param[1][TRACKING_COMP]=1.0;
+	f_param[0][TRACKING_COMP]=1.0;
+	f_param[1][TRACKING_COMP]=1.0;
 
 	global_param[SLOW_FADE_INCREMENT] = 0.001;
 	global_param[LED_BRIGHTNESS] = 4;

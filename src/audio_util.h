@@ -10,7 +10,6 @@
 #include <stm32f4xx.h>
 
 
-
 inline uint32_t offset_samples(uint8_t channel, uint32_t base_addr, uint32_t offset, uint8_t subtract);
 uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction);
 uint8_t in_between(uint32_t mid, uint32_t beg, uint32_t end, uint8_t reverse);

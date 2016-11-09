@@ -5,15 +5,17 @@
  *      Author: design
  */
 
-#include "audio_sdram.h"
-#include "sampler.h"
 #include "globals.h"
+#include "audio_sdram.h"
+#include "sdram_driver.h"
+#include "audio_util.h"
+#include "sampler.h"
 #include "params.h"
 #include "dig_pins.h"
 
-extern const uint32_t AUDIO_MEM_BASE[NUM_CHAN];
+const uint32_t AUDIO_MEM_BASE[4] = {SDRAM_BASE, SDRAM_BASE + MEM_SIZE, SDRAM_BASE + MEM_SIZE*2, SDRAM_BASE + MEM_SIZE*3};
 
-extern uint8_t SAMPLESIZE;
+extern uint8_t SAMPLINGBYTES;
 
 void memory_clear(uint8_t channel)
 {
@@ -25,45 +27,138 @@ void memory_clear(uint8_t channel)
 
 }
 
-// Reads from SDRAM memory starting at address addr[channel], for a length of num_samples words (16 or 32, depending on SAMPLESIZE)
-// loop_addr sets a threshold address value, and if memory_read reads from that address, the function returns 1.
-// otherwise the function returns 0
-// if decrement is set,
-uint32_t memory_read(uint32_t *addr, uint8_t channel, int32_t *rd_buff, uint8_t num_samples, uint32_t loop_addr, uint8_t decrement){
-	uint8_t i;
-	uint32_t heads_crossed=0;
+uint32_t memory_read_sample(uint32_t addr)
+{
+	// Enforce valid addr range
+	if ((addr<SDRAM_BASE) || (addr > (SDRAM_BASE + SDRAM_SIZE)))
+	addr=SDRAM_BASE;
+
+	// even addresses only
+	addr &= 0xFFFFFFFE;
+
+	while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+	if (SAMPLINGBYTES==2)
+		return (*((int16_t *)addr));
+	else
+		return (*((int32_t *)addr));
+
+}
+
+//
+// Reads from SDRAM memory starting at address addr[channel], for a length of num_samples words (16 or 32, depending on SAMPLINGBYTES)
+// Read a 0 at the stop_at_addr, and every address after that.
+// Returns the number of 0's filled (0 if we never hit stop_at_addr)
+//
+uint32_t memory_read(uint32_t *addr, uint8_t channel, int32_t *rd_buff, uint32_t num_samples, uint32_t stop_at_addr, uint8_t decrement)
+{
+	uint32_t i;
+	uint32_t num_filled=0;
 
 	//Loop of 8 takes 2.5us
 	//read from SDRAM. first one takes 200us, subsequent reads take 50ns
 	for (i=0;i<num_samples;i++){
 
-		//Enforce valid addr range
-		if ((addr[channel]<SDRAM_BASE) || (addr[channel] > (SDRAM_BASE + SDRAM_SIZE)))
-		addr[channel]=SDRAM_BASE;
+		// Enforce valid addr range
+		if ((*addr<SDRAM_BASE) || (*addr > (SDRAM_BASE + SDRAM_SIZE)))
+		*addr=SDRAM_BASE;
 
-		//even addresses only
-		addr[channel] = (addr[channel] & 0xFFFFFFFE);
+		// even addresses only
+		*addr = (*addr & 0xFFFFFFFE);
 
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
-		if (SAMPLESIZE==2)
-			rd_buff[i] = *((int16_t *)(addr[channel]));
+		if (*addr==stop_at_addr)	num_filled=1;
+		else if (num_filled)		num_filled++;
+
+		if (num_filled)				rd_buff[i] = 0;
 		else
-			rd_buff[i] = *((int32_t *)(addr[channel]));
+		{
+			if (SAMPLINGBYTES==2)
+				rd_buff[i] = *((int16_t *)(*addr));
+			else
+				rd_buff[i] = *((int32_t *)(*addr));
+		}
 
-		addr[channel] = inc_addr(addr[channel], channel, decrement);
+		*addr = inc_addr_within_limits(*addr, AUDIO_MEM_BASE[channel], AUDIO_MEM_BASE[channel] + MEM_SIZE, decrement);
 
-		if (addr[channel]==loop_addr) heads_crossed=1;
+	}
+
+	return(num_filled);
+}
+
+//
+// Reads from SDRAM memory starting at address addr[channel], for a length of num_samples words (16 or 32, depending on SAMPLINGBYTES)
+//
+uint32_t memory_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement)
+{
+	uint32_t i;
+	uint32_t heads_crossed=0;
+
+	for (i=0;i<num_samples;i++){
+
+		//Enforce valid addr range
+		if ((*addr<SDRAM_BASE) || (*addr > (SDRAM_BASE + SDRAM_SIZE)))
+			*addr=SDRAM_BASE;
+
+		//even addresses only
+		*addr &= 0xFFFFFFFE;
+
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		if (SAMPLINGBYTES==2)
+			*((int16_t *)*addr) = wr_buff[i];
+		else
+			*((int32_t *)*addr) = wr_buff[i];
+
+		*addr = inc_addr_within_limits(*addr, AUDIO_MEM_BASE[channel], AUDIO_MEM_BASE[channel] + MEM_SIZE, decrement);
+
+		if (*addr==detect_crossing_addr) heads_crossed=1;
 
 	}
 
 	return(heads_crossed);
+
 }
 
 
-uint32_t memory_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint8_t num_samples, uint8_t decrement)
+uint32_t memory_read_channel(uint32_t *addr, uint8_t channel, int32_t *rd_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement){
+	uint32_t i;
+	uint32_t num_detected=0;
+
+	//Loop of 8 takes 2.5us
+	//read from SDRAM. first one takes 200us, subsequent reads take 50ns
+	for (i=0;i<num_samples;i++){
+
+		// Enforce valid addr range
+		if ((addr[channel]<SDRAM_BASE) || (addr[channel] > (SDRAM_BASE + SDRAM_SIZE)))
+		addr[channel]=SDRAM_BASE;
+
+		// even addresses only
+		addr[channel] = (addr[channel] & 0xFFFFFFFE);
+
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		if (SAMPLINGBYTES==2)
+			rd_buff[i] = *((int16_t *)(addr[channel]));
+		else
+			rd_buff[i] = *((int32_t *)(addr[channel]));
+
+		// Count the number of addresses read from past, and including, the detect_crossing_addr
+		if (num_detected) num_detected++;
+		else if (addr[channel]==detect_crossing_addr) num_detected=1;
+
+		addr[channel] = inc_addr(addr[channel], channel, decrement);
+
+	}
+
+	return(num_detected);
+}
+
+
+uint32_t memory_write_channel(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint8_t decrement)
 {
-	uint8_t i;
+	uint32_t i;
 
 	for (i=0;i<num_samples;i++){
 
@@ -76,7 +171,7 @@ uint32_t memory_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint8_t
 
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
-		if (SAMPLESIZE==2)
+		if (SAMPLINGBYTES==2)
 			*((int16_t *)addr[channel]) = wr_buff[i];
 		else
 			*((int32_t *)addr[channel]) = wr_buff[i];
@@ -95,8 +190,8 @@ uint32_t memory_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint8_t
 // fade=0.5 means write 50% wr_buff and 50% read.
 // fade=0.0 means write 0% wr_buff and 100% read.
 //
-uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint8_t num_samples, uint8_t decrement, float fade){
-	uint8_t i;
+uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint8_t decrement, float fade){
+	uint32_t i;
 	int32_t rd;
 	int32_t mix;
 
@@ -112,7 +207,7 @@ uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, ui
 		addr[channel] = (addr[channel] & 0xFFFFFFFE);
 
 		//read from address
-		if (SAMPLESIZE==2)
+		if (SAMPLINGBYTES==2)
 			rd = *((int16_t *)(addr[channel]));
 		else
 			rd = *((int32_t *)(addr[channel]));
@@ -121,7 +216,7 @@ uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, ui
 
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
-		if (SAMPLESIZE==2)
+		if (SAMPLINGBYTES==2)
 			*((int16_t *)addr[channel]) = mix;
 		else
 			*((int32_t *)addr[channel]) = mix;

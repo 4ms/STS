@@ -24,12 +24,15 @@ extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
 extern uint8_t disable_mode_changes;
 
-float param[NUM_CHAN][NUM_PARAMS];
-float global_param[NUM_GLOBAL_PARAMS];
-uint8_t mode[NUM_CHAN+1][NUM_CHAN_MODES];
-uint8_t global_mode[NUM_GLOBAL_MODES];
+float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
+uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+uint8_t settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
+
+float	global_param[NUM_GLOBAL_PARAMS];
+uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 uint8_t flags[NUM_FLAGS];
+uint8_t flag_pot_changed[NUM_POT_ADCS];
 
 uint8_t recording_enabled;
 uint8_t is_recording;
@@ -74,13 +77,20 @@ void init_params(void)
 {
 	uint8_t channel,i;
 
-	for (channel=0;channel<NUM_CHAN;channel++){
-		param[channel][PITCH] = 1.0;
-		param[channel][START] = 0.0;
-		param[channel][LENGTH] = 1.0;
+	for (channel=0;channel<NUM_PLAY_CHAN;channel++){
+		f_param[channel][PITCH] 	= 1.0;
+		f_param[channel][START] 	= 0.0;
+		f_param[channel][LENGTH] 	= 1.0;
 
-		param[channel][TRACKING_COMP] = 1.00;
+		f_param[channel][TRACKING_COMP] = 1.00;
+
+		i_param[channel][BANK] 		= 0;
+		i_param[channel][SAMPLE] 	= 0;
+		i_param[channel][REV] 		= 0;
 	}
+
+	i_param[REC][BANK] = 0;
+	i_param[REC][SAMPLE] = 0;
 
 	global_param[SLOW_FADE_INCREMENT] = 0.001;
 	global_param[LED_BRIGHTNESS] = 4;
@@ -94,17 +104,6 @@ void init_params(void)
 //initializes modes that aren't read from flash ram
 void init_modes(void)
 {
-	uint8_t channel=0;
-
-	for (channel=0;channel<NUM_CHAN;channel++){
-		mode[channel][BANK] = 0;
-		mode[channel][SAMPLE] = 0;
-		mode[channel][REV] = 0;
-	}
-
-	mode[REC][BANK] = 0;
-	mode[REC][SAMPLE] = 0;
-
 	global_mode[CALIBRATE] = 0;
 	global_mode[SYSTEM_SETTINGS] = 0;
 
@@ -183,19 +182,19 @@ void init_LowPassCoefs(void)
 
 	for (i=0;i<NUM_POT_ADCS;i++)
 	{
-		smoothed_potadc[i]=0;
+		smoothed_potadc[i]		=0;
 		old_i_smoothed_potadc[i]=0;
-		i_smoothed_potadc[i]=0x7FFF;
-		pot_delta[i]=0;
+		i_smoothed_potadc[i]	=0x7FFF;
+		pot_delta[i]			=0;
 	}
 	for (i=0;i<NUM_CV_ADCS;i++)
 	{
-		smoothed_cvadc[i]=0;
-		smoothed_rawcvadc[i]=0;
-		old_i_smoothed_cvadc[i]=0;
-		i_smoothed_cvadc[i]=0x7FFF;
-		i_smoothed_rawcvadc[i]=0x7FFF;
-		cv_delta[i]=0;
+		smoothed_cvadc[i]		=0;
+		smoothed_rawcvadc[i]	=0;
+		old_i_smoothed_cvadc[i]	=0;
+		i_smoothed_cvadc[i]		=0x7FFF;
+		i_smoothed_rawcvadc[i]	=0x7FFF;
+		cv_delta[i]				=0;
 	}
 }
 
@@ -204,8 +203,6 @@ void process_adc(void)
 {
 	uint8_t i;
 	int32_t t;
-
-	uint8_t flag_pot_changed[NUM_POT_ADCS];
 
 	static uint32_t track_moving_pot[NUM_POT_ADCS]={0,0,0,0,0,0,0,0,0};
 
@@ -264,13 +261,33 @@ void process_adc(void)
 void update_params(void)
 {
 	uint8_t channel;
+	uint8_t old_val;
 
 	recording_enabled=1;
 
 	for (channel=0;channel<2;channel++)
 	{
-		param[channel][LENGTH] = potadc_buffer[LENGTH_POT*2+channel];
+		//Pots
+		f_param[channel][LENGTH] 	= smoothed_potadc[LENGTH_POT*2+channel] / 4096.0;
+		f_param[channel][START] 	= smoothed_potadc[START_POT*2+channel] / 4096.0;
+		f_param[channel][PITCH] 	= (smoothed_potadc[PITCH_POT*2+channel] / 2048.0) - 1.0;
+
+		old_val = i_param[channel][SAMPLE];
+
+		i_param[channel][SAMPLE] 	= detent_num(i_smoothed_potadc[SAMPLE_POT*2+channel]);
+
+		if (old_val != i_param[channel][SAMPLE])
+			flags[PlaySample1Changed+channel*2] = 1;
+
 	}
+
+	old_val = i_param[REC][SAMPLE];
+	i_param[REC][SAMPLE] 			= detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+
+	if (old_val != i_param[REC][SAMPLE])
+		flags[RecSampleChanged] = 1;
+
+
 }
 
 
@@ -303,26 +320,26 @@ void process_mode_flags(void)
 		if (flags[Rev1Trig])
 		{
 			flags[Rev1Trig]=0;
-			if (mode[0][REV])
+			if (i_param[0][REV])
 			{
-				mode[0][REV]=0;
+				i_param[0][REV]=0;
 				ButLED_state[Reverse1ButtonLED] = 0;
 			}
 			else {
-				mode[0][REV]=1;
+				i_param[0][REV]=1;
 				ButLED_state[Reverse1ButtonLED] = 1;
 			}
 		}
 		if (flags[Rev2Trig])
 		{
 			flags[Rev2Trig]=0;
-			if (mode[1][REV])
+			if (i_param[1][REV])
 			{
-				mode[1][REV]=0;
+				i_param[1][REV]=0;
 				ButLED_state[Reverse2ButtonLED] = 0;
 			}
 			else {
-				mode[1][REV]=1;
+				i_param[1][REV]=1;
 				ButLED_state[Reverse2ButtonLED] = 1;
 			}
 		}
@@ -331,12 +348,56 @@ void process_mode_flags(void)
 }
 
 
+uint8_t detent_num(uint16_t adc_val)
+{
+	if (adc_val<=91)
+		return(0);
+	else if (adc_val<=310)
+		return(1);
+	else if (adc_val<=565)
+		return(2);
+	else if (adc_val<=816)
+		return(3);
+	else if (adc_val<=1062)
+		return(4);
+	else if (adc_val<=1304)
+		return(5);
+	else if (adc_val<=1529)
+		return(6);
+	else if (adc_val<=1742)
+		return(7);
+	else if (adc_val<=1950)
+		return(8);
+	else if (adc_val<=2157) // Center
+		return(9);
+	else if (adc_val<=2365)
+		return(10);
+	else if (adc_val<=2580)
+		return(11);
+	else if (adc_val<=2806)
+		return(12);
+	else if (adc_val<=3044)
+		return(13);
+	else if (adc_val<=3289)
+		return(14);
+	else if (adc_val<=3537)
+		return(15);
+	else if (adc_val<=3790)
+		return(16);
+	else if (adc_val<=4003)
+		return(17);
+	else
+		return(18);
+
+}
+
+
+
 void adc_param_update_IRQHandler(void)
 {
 
 	if (TIM_GetITStatus(TIM9, TIM_IT_Update) != RESET) {
 
-		//DEBUG2_ON;
 
 		process_adc();
 
@@ -359,7 +420,6 @@ void adc_param_update_IRQHandler(void)
 
 		//check_entering_system_mode();
 
-		//DEBUG2_OFF;
 
 		TIM_ClearITPendingBit(TIM9, TIM_IT_Update);
 

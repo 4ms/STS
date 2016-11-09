@@ -9,25 +9,30 @@
 #define PARAMS_H_
 #include <stm32f4xx.h>
 
-/* ????????????
- * ChanParam_f: float parameters for a channel (play1, play2, rec): pitch, startpos, length, tracking
- * ChanParam_i: integer parameters: bank, sample, gatetrig_start, gatetrig_rev, gatetrig_endout
- * ChanState:	play state (silent, prebuffering, playing, fade down...);
- * ChanMode:	reverse mode (on, off);
- */
+
 //
-// ChannelParams
-// Params are float values related to pots and CV jacks
+// Params are values that the user controls, often in real-time
+//
+// i_ChannelParams are integer values
+// f_ChannelParams are float values
 //
 
-enum ChannelParams{
+enum i_ChannelParams{
+	BANK,
+	SAMPLE,
+	REV,
+	NUM_I_PARAMS
+};
+
+enum f_ChannelParams{
 	PITCH,
 	START,
 	LENGTH,
 	TRACKING_COMP,	//TRACKING_COMP: compensation for 1V/oct tracking
-	NUM_PARAMS
+	NUM_F_PARAMS
 };
 
+//ChannelPots is just a shortcut to help us with params, and must match the order in adc.h
 enum ChannelPots{
 	PITCH_POT,
 	START_POT,
@@ -37,24 +42,18 @@ enum ChannelPots{
 
 
 //
-// Channel Modes
-// Modes are integer values (often) related to switches or settings
+// Channel Settings are integer values related to states of operation
 //
 
-enum ChannelModes{
-	BANK,
-	SAMPLE,
-	REV,
-
+enum ChannelSettings{
 	GATETRIG_START,
 	GATETRIG_REV,
 	GATETRIG_ENDOUT,
-	NUM_CHAN_MODES
+	NUM_CHAN_SETTINGS
 };
 
-#define REC NUM_CHAN
 
-enum GateTrigModes{
+enum GateTrigTypes{
 	GATE_MODE,
 	TRIG_MODE
 };
@@ -62,16 +61,19 @@ enum GateTrigModes{
 
 
 //
-//Global Modes
+//Global
 //Global Modes represent global states of functionality
 //
 enum GlobalModes
 {
 	CALIBRATE,
 	SYSTEM_SETTINGS,
-
-	REC_GATETRIG,
 	NUM_GLOBAL_MODES
+};
+
+enum GlobalSettings
+{
+	NUM_GLOBAL_SETTINGS
 };
 
 enum GlobalParams
@@ -90,6 +92,8 @@ void process_mode_flags(void);
 void init_LowPassCoefs(void);
 void init_params(void);
 void init_modes(void);
+
+uint8_t detent_num(uint16_t adc_val);
 
 #define adc_param_update_IRQHandler TIM1_BRK_TIM9_IRQHandler
 void adc_param_update_IRQHandler(void);

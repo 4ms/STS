@@ -17,8 +17,6 @@ void Button_Debounce_IRQHandler(void)
 
 	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET) {
 
-		DEBUG2_ON;
-
 		for (i=0;i<NUM_BUTTONS;i++)
 		{
 			switch (i)
@@ -88,8 +86,6 @@ void Button_Debounce_IRQHandler(void)
 				button_state[i] = UP;
 			}
 		}
-
-		DEBUG2_OFF;
 
 		// Clear TIM update interrupt
 		TIM_ClearITPendingBit(TIM4, TIM_IT_Update);

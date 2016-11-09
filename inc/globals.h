@@ -36,7 +36,6 @@ enum Flags {
 
 
 //Error codes for g_error
-//Error codes for g_error
 #define OUT_OF_MEM 1
 #define OUT_OF_SAMPLES 2
 #define SPIERROR_1 4
@@ -48,9 +47,14 @@ enum Flags {
 #define READ_BUFF2_OVERRUN 256
 #define READ_MEM_ERROR 512
 #define WRITE_SDCARD_ERROR 1024
+#define WRITE_BUFF_UNDERRUN 2048
 
 //Number of channels
-#define NUM_CHAN 2
+#define NUM_PLAY_CHAN 2
+#define NUM_REC_CHAN 1
+#define NUM_ALL_CHAN 3
+
+#define REC (NUM_ALL_CHAN-1) /* =2 a shortcut to the REC channel */
 
 #define TRIG_TIME 400
 

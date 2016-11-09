@@ -31,8 +31,8 @@ __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 //extern uint8_t ButLED_state[NUM_RGBBUTTONS];
-//extern uint8_t play_led_state[NUM_CHAN];
-//extern uint8_t clip_led_state[NUM_CHAN];
+//extern uint8_t play_led_state[NUM_PLAY_CHAN];
+//extern uint8_t clip_led_state[NUM_PLAY_CHAN];
 
 extern uint32_t flash_firmware_version;
 

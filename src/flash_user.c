@@ -20,10 +20,9 @@ extern int16_t CODEC_DAC_CALIBRATION_DCOFFSET[4];
 extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
 
 
-extern float param[NUM_CHAN][NUM_PARAMS];
-//extern uint8_t mode[NUM_CHAN+1][NUM_CHAN_MODES];
-//extern uint8_t global_mode[NUM_GLOBAL_MODES];
-//extern float global_param[NUM_GLOBAL_PARAMS];
+extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
+//extern uint8_t 	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+//extern uint8_t 	settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
 
 extern int16_t i_smoothed_cvadc[NUM_POT_ADCS];
 
@@ -201,8 +200,8 @@ uint32_t load_flash_params(void)
 		CV_CALIBRATION_OFFSET[4] = flash_CV_CALIBRATION_OFFSET[4];
 		CV_CALIBRATION_OFFSET[5] = flash_CV_CALIBRATION_OFFSET[5];
 
-		param[0][TRACKING_COMP] = flash_param_TRACKING_COMP_0;
-		param[1][TRACKING_COMP] = flash_param_TRACKING_COMP_1;
+		f_param[0][TRACKING_COMP] = flash_param_TRACKING_COMP_0;
+		f_param[1][TRACKING_COMP] = flash_param_TRACKING_COMP_1;
 /*
 		global_param[LED_BRIGHTNESS] = flash_loop_led_brightness;
 
@@ -283,8 +282,8 @@ void store_params_into_sram(void)
 	flash_CODEC_ADC_CALIBRATION_DCOFFSET[2]=CODEC_ADC_CALIBRATION_DCOFFSET[2];
 	flash_CODEC_ADC_CALIBRATION_DCOFFSET[3]=CODEC_ADC_CALIBRATION_DCOFFSET[3];
 
-	flash_param_TRACKING_COMP_0 = param[0][TRACKING_COMP];
-	flash_param_TRACKING_COMP_1 = param[1][TRACKING_COMP];
+	flash_param_TRACKING_COMP_0 = f_param[0][TRACKING_COMP];
+	flash_param_TRACKING_COMP_1 = f_param[1][TRACKING_COMP];
 
 	/*
 	flash_global_param_FAST_FADE_SAMPLES = global_param[FAST_FADE_SAMPLES];

@@ -105,12 +105,10 @@ uint8_t test_sdcard(void){
 	SD_ReadSingleBlock((uint8_t *)test2, i+14);
 	SD_ReadSingleBlock((uint8_t *)test2, i+15);
 */
-	DEBUG1_OFF;
 
 	for (i=0;i<num_bytes;i++){
 		if (test[i]!=test2[i])
 		{
-			DEBUG1_ON;
 			return(99);
 		}
 	}
@@ -125,7 +123,6 @@ uint8_t test_sdcard(void){
 	for (i=0;i<num_bytes;i++){
 		if (test[i]!=test2[i])
 		{
-			DEBUG1_ON;
 			return(98);
 		}
 	}
