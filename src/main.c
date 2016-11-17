@@ -23,7 +23,7 @@
 #include "ITM.h"
 #include "rgb_leds.h"
 
-uint32_t g_error=0;
+enum g_Errors g_error=0;
 
 __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
@@ -151,12 +151,15 @@ int main(void)
 		}
 	}
 
+	ITM_Init(6000000);
+	ITM_Print_int(0,1243);
 
 	//Turn on the lights
 	LEDDriver_Init(2);
 	LEDDRIVER_OUTPUTENABLE_ON;
 	if (PLAY1BUT) test_all_buttonLEDs();
 
+	init_buttonLEDs();
 	init_ButtonLED_IRQ();
 	init_LED_PWM_IRQ();
 
@@ -266,8 +269,10 @@ void NMI_Handler(void)
 
 void HardFault_Handler(void)
 { 
-	uint8_t foobar;
+	volatile uint8_t foobar;
 	uint32_t hfsr,dfsr,afsr,bfar,mmfar,cfsr;
+
+	volatile uint8_t pause=1;
 
 	foobar=0;
 	mmfar=SCB->MMFAR;
@@ -282,7 +287,7 @@ void HardFault_Handler(void)
 	if (foobar){
 		return;
 	} else {
-		while(1){};
+		while(pause){};
 	}
 }
 

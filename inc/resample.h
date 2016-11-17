@@ -10,6 +10,7 @@
 
 #include <stm32f4xx.h>
 
-int32_t resample(float rs, uint32_t num_samples_out, int32_t last_samp, int32_t *in, int32_t *out);
+int32_t resample(float rs, uint32_t num_samples_out, int32_t *in, int32_t *out);
+int32_t nosample(float rs, uint32_t num_samples_out, int32_t *in, int32_t *out);
 
 #endif /* INC_RESAMPLE_H_ */

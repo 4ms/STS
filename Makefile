@@ -40,7 +40,13 @@ OBJDMP = $(ARCH)-objdump
 GDB = $(ARCH)-gdb
 
  	
-#CFLAGS  = -O0 -g -Wall
+C0FLAGS  = -O0 -g -Wall
+C0FLAGS += -mlittle-endian -mthumb 
+C0FLAGS +=  -I. -DARM_MATH_CM4 -D'__FPU_PRESENT=1'  $(INCLUDES)  -DUSE_STDPERIPH_DRIVER
+C0FLAGS += -mcpu=cortex-m4 -mfloat-abi=hard
+C0FLAGS +=  -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion 
+
+
 CFLAGS = -g2 -O1 \
           -fthread-jumps \
           -falign-functions  -falign-jumps \
@@ -81,6 +87,9 @@ LFLAGS  = -Map main.map -nostartfiles -T $(LDSCRIPT)
 vpath %.c src
 vpath %.h inc
 
+
+#build/src/resample.o: CFLAGS = $(C0FLAGS)
+
 all: Makefile $(BIN) $(HEX)
 
 $(BIN): $(ELF)
@@ -106,7 +115,7 @@ $(BUILDDIR)/%.o: %.s
 
 
 flash: $(BIN)
-	st-flash write $(BIN) 0x8008000
+	st-flash write $(BIN) 0x8000000
 
 clean:
 	rm -rf build

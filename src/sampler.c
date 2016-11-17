@@ -1,12 +1,12 @@
 /*
- * looping_delay.c
+ * sampler.c
 
  */
 #include "globals.h"
-#include <audio_sdram.h>
-#include <sampler.h>
+#include "audio_sdram.h"
+#include "sampler.h"
 #include "audio_util.h"
-#include <audio_sdcard.h>
+#include "audio_sdcard.h"
 
 #include "adc.h"
 #include "params.h"
@@ -14,21 +14,29 @@
 #include "compressor.h"
 #include "dig_pins.h"
 #include "rgb_leds.h"
+#include "resample.h"
+
+
+volatile uint32_t tdebug[256];
+uint8_t t_i;
+uint32_t debug_i=0x80000000;
+uint32_t debug_tri_dir=0;
+int32_t last_out;
 
 
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-extern uint8_t 	settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
+//extern uint8_t 	settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
 
 extern float global_param[NUM_GLOBAL_PARAMS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 extern uint8_t 	flags[NUM_FLAGS];
-extern uint32_t g_error;
+extern enum g_Errors g_error;
 
 extern uint8_t recording_enabled;
 extern uint8_t is_recording;
-volatile uint8_t play_state[NUM_PLAY_CHAN]={SILENT,SILENT};
+enum PlayStates play_state[NUM_PLAY_CHAN]={SILENT,SILENT};
 
 extern uint8_t play_led_state[NUM_PLAY_CHAN];
 //extern uint8_t clip_led_state[NUM_PLAY_CHAN];
@@ -93,8 +101,12 @@ void audio_buffer_init(void)
 	memory_clear(2);
 	memory_clear(3);
 
-	rec_buff_in_addr = AUDIO_MEM_BASE[RECCHAN];
-	rec_buff_out_addr = AUDIO_MEM_BASE[RECCHAN];
+	rec_buff_in_addr 		= AUDIO_MEM_BASE[RECCHAN];
+	rec_buff_out_addr 		= AUDIO_MEM_BASE[RECCHAN];
+	play_buff_out_addr[0] 	= AUDIO_MEM_BASE[0];
+	play_buff_in_addr[0] 	= AUDIO_MEM_BASE[0];
+	play_buff_out_addr[1] 	= AUDIO_MEM_BASE[1];
+	play_buff_in_addr[1] 	= AUDIO_MEM_BASE[1];
 
 	if (SAMPLINGBYTES==2){
 		//min_vol = 10;
@@ -106,6 +118,7 @@ void audio_buffer_init(void)
 	}
 
 
+	for (i=0;i<256;i++) tdebug[i]=0;
 }
 
 void toggle_recording(void)
@@ -138,6 +151,8 @@ void toggle_playing(uint8_t chan)
 			|| (play_state[chan]==PLAYING && f_param[chan][LENGTH]>0.01)
 		)
 	{
+		play_buff_in_addr[chan] = play_buff_out_addr[chan];
+
 		play_state[chan]=PREBUFFERING;
 
 		decay_amp_i[chan]=1.0;
@@ -237,8 +252,10 @@ void read_storage_to_buffer(void)
 	int32_t t_buff32[BUFF_LEN];
 	uint32_t start_of_sample_addr;
 
-//	DEBUG1_ON;
-
+	//
+	//Reset to beginning of sample if we changed sample or bank
+	//ToDo: Move this to a routine that checks for flags, and call it before read_storage_to_buffer() is called
+	//
 	//If user changed the play bank, start playing from the beginning of that slot
 	if (flags[PlayBank1Changed]){
 		flags[PlayBank1Changed]=0;
@@ -279,8 +296,25 @@ void read_storage_to_buffer(void)
 
 				if (err==0){
 
+
+					//DEBUG:
+					//write a 1kHz triangle wave into the play_buff
+					for (i=0;i<BUFF_LEN;i++)
+					{
+						t_buff32[i] = (uint16_t)(debug_i>>16) - (int16_t)0x8000;
+
+						if (debug_tri_dir)
+							debug_i -= (0xF0000000 - 0x10000)/(48000.0f/1000.0f);
+						else
+							debug_i += (0xF0000000 - 0x10000)/(48000.0f/1000.0f);
+
+						if (debug_i >= 0xF0000000) debug_tri_dir=1;
+						if (debug_i <= 0x10000) debug_tri_dir=0;
+
+					}
+
 					//convert i32 to u16 (we shouldn't have to waste time doing this manually!)
-					for (i=0;i<BUFF_LEN;i++) t_buff32[i] = t_buff16[i];
+					//DEBUG off: for (i=0;i<BUFF_LEN;i++) t_buff32[i] = t_buff16[i];
 
 					err = memory_write(&(play_buff_in_addr[chan]), chan, t_buff32, BUFF_LEN, play_buff_out_addr[chan], 0);
 
@@ -303,7 +337,6 @@ void read_storage_to_buffer(void)
 
 		}
 	}
-//	DEBUG1_OFF;
 
 }
 
@@ -343,6 +376,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	int32_t in[2];
 	int32_t out[2][BUFF_LEN];
 	int32_t dummy;
+	int32_t rs_out[MAX_RS_READ_BUFF_LEN];
 
 	uint16_t i;
 	int32_t v;
@@ -350,9 +384,14 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	uint8_t chan;
 	uint8_t overrun;
 
+	uint32_t read_padding;
+	float rs;
+	uint32_t r_BUFF_LEN;
+	static uint32_t last_sample[NUM_PLAY_CHAN]={0,0};
+
 	int32_t t_buff[BUFF_LEN];
 	static uint32_t write_buff_sample_i=0;
-	static float f_t[NUM_PLAY_CHAN]={0,0};
+	static float decay_inc[NUM_PLAY_CHAN]={0,0};
 
 
 	//
@@ -363,13 +402,13 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	//
 	if (is_recording)
 	{
-		DEBUG1_ON;
-		//every 5.3us for 0.248us
 		for (i=0;i<BUFF_LEN;i++)
 		{
+			//
 			// Split incoming stereo audio into the two channels
 			//
-			if (SAMPLINGBYTES==2){
+			if (SAMPLINGBYTES==2)
+			{
 				in[0] = (*src++) /*+ CODEC_ADC_CALIBRATION_DCOFFSET[channel+0]*/;
 				dummy=*src++;
 
@@ -402,7 +441,6 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			is_recording=0;
 			ButLED_state[RecButtonLED]=0;
 		}
-		DEBUG1_OFF;
 	}
 
 
@@ -412,87 +450,127 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	//
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
-		 switch (play_state[chan])
-		 {
 
-			 case (PLAY_FADEUP):
-				 //fill the next buffer with a linear fade-up
-				overrun = memory_read(&(play_buff_out_addr[chan]), chan, out[chan], BUFF_LEN, play_buff_in_addr[chan], 0);
-			  	for (i=0;i<BUFF_LEN;i++) out[chan][i] = ((float)out[chan][i] * (float)i / (float)BUFF_LEN);
-
-				 if (overrun)
-				 {
-					 g_error |= (READ_BUFF1_OVERRUN<<chan);
-				 }
-
-
-				play_state[chan]=PLAYING;
-				break;
-
-
-			 case (PLAY_FADEDOWN):
-				overrun = memory_read(&(play_buff_out_addr[chan]), chan, out[chan], BUFF_LEN, play_buff_in_addr[chan], 0);
-			  	for (i=0;i<BUFF_LEN;i++) out[chan][i] = ((float)out[chan][i] * (float)(BUFF_LEN-i) / (float)BUFF_LEN);
-				if (overrun)
-				{
-					g_error |= (READ_BUFF1_OVERRUN<<chan);
-				}
-
-				play_led_state[chan] = 0;
-				ButLED_state[Play1ButtonLED+chan] = 0;
-
-				//end_out_ctr[chan]=4000;
-				play_state[chan]=SILENT;
-
-				break;
-
-			 case (PLAYING):
-				 if (f_param[chan][LENGTH]>0.002)
-				 {
-					if (decay_amp_i[chan] == 1.0f)
-						f_t[chan] = 1.0f/((1.0f-f_param[chan][LENGTH])*10240.0f);
-					else
-						f_t[chan] += 1.0f/((1.0f-f_param[chan][LENGTH])*10240.0f);
-
-					decay_amp_i[chan] -= f_t[chan];
-
-					if (decay_amp_i[chan] <= 0.0f)
-					{
-						decay_amp_i[chan] = 0;
-						play_state[chan] = SILENT;
-						//end_out_ctr[chan] = 4000;
-
-						play_led_state[chan] = 0;
-						ButLED_state[Play1ButtonLED+chan] = 0;
-					}
-
-					overrun = memory_read(&(play_buff_out_addr[chan]), chan, out[chan], BUFF_LEN, play_buff_in_addr[chan], 0);
-
-					for (i=0;i<BUFF_LEN;i++) out[chan][i] = (float)out[chan][i] * decay_amp_i[chan];
-
-
-				 } else //play the whole sample, length = full
-				 {
-					 overrun = memory_read(&(play_buff_out_addr[chan]), chan, out[chan], BUFF_LEN, play_buff_in_addr[chan], 0);
-				 }
-
-				if (overrun)
-				{
-					g_error |= (READ_BUFF1_OVERRUN<<chan);
-				}
-
-				break;
-
-
-			 case (SILENT):
-			 case (PREBUFFERING):
-				 for (i=0;i<BUFF_LEN;i++)
-				 {
-					 out[chan][i]=0;
-				 }
-				 break;
-
+		// Fill buffer with silence
+		if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
+		{
+			 for (i=0;i<BUFF_LEN;i++)
+				 out[chan][i]=0;
 		}
+		else
+		{
+
+			//Read from SDRAM into out[chan][]
+
+			//rs = f_param[chan][PITCH];
+			rs = 1.0;
+			//rs = 0.2888;
+			read_padding = 3;
+			r_BUFF_LEN = (BUFF_LEN * rs) + read_padding;
+
+			//break this apart into a memory read loop, so we can save the last sample, and not have to offset play_buff_out_addr backwards
+
+					//if (chan==0) tdebug[t_i++] = play_buff_out_addr[chan];
+
+			overrun = memory_read(&(play_buff_out_addr[chan]), chan, rs_out, r_BUFF_LEN, play_buff_in_addr[chan], 0);
+			//overrun = memory_read(&(play_buff_out_addr[chan]), chan, out[chan], BUFF_LEN, play_buff_in_addr[chan], 0);
+
+					//if (chan==0) tdebug[t_i++] = play_buff_out_addr[chan];
+
+			play_buff_out_addr[chan] = offset_samples(chan, play_buff_out_addr[chan], read_padding-1, 1); //why the -1? That means we
+
+					//if (chan==0) tdebug[t_i++] = play_buff_out_addr[chan];
+
+
+			DEBUG1_ON;
+			resample(rs, BUFF_LEN, rs_out, out[chan]);
+			DEBUG1_OFF;
+
+			// Error: There is one error every audio block (256 samples = 5.33ms) of playback.
+			// Thus it's not in the recorded memory because the error occurs at 5.33mm regardless of resampling rate
+			//
+			// The error is (near-)zero if the first/last sample is 0.
+			// The error is larger as the sample value increases/decreases
+			// The error's direction is positive if the sample value is positive, and vice-versa
+			//
+			// Sometimes there is also a large glitch if the sample has been playing for a while
+			// This could be on the recording?
+			//
+
+			if (overrun)
+			{
+				g_error |= (READ_BUFF1_OVERRUN<<chan);
+			}
+
+
+
+			 switch (play_state[chan])
+			 {
+
+				 case (PLAY_FADEUP):
+
+					for (i=0;i<BUFF_LEN;i++)
+						out[chan][i] = ((float)out[chan][i] * (float)i / (float)BUFF_LEN);
+
+					play_state[chan]=PLAYING;
+					break;
+
+
+				 case (PLAY_FADEDOWN):
+
+					for (i=0;i<BUFF_LEN;i++)
+						out[chan][i] = ((float)out[chan][i] * (float)(BUFF_LEN-i) / (float)BUFF_LEN);
+
+					play_led_state[chan] = 0;
+					ButLED_state[Play1ButtonLED+chan] = 0;
+
+					//end_out_ctr[chan]=4000;
+					play_state[chan]=SILENT;
+
+					break;
+
+				 case (PLAYING):
+
+					//		if (f_param[chan][LENGTH]>0.99) //Play the whole sample, going to PLAY_FADEDOWN when one block from the end
+					//else 	if (f_param[chan][LENGTH]>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
+					//else 	if (f_param[chan][LENGTH]<=0.5) //Play a short portion of the sample, with an envelope on the whole thing
+
+
+					 if (f_param[chan][LENGTH]>0.002) //Play a portion of the sample, with an envelope
+					 {
+						//update the decay_inc(rement) based on LENGTH
+						if (decay_amp_i[chan] == 1.0f)
+							decay_inc[chan] = 1.0f/((1.0f-f_param[chan][LENGTH])*2621440.0f);
+						else
+							decay_inc[chan] += 1.0f/((1.0f-f_param[chan][LENGTH])*2621440.0f);
+
+						//Apply the decay envelope
+						for (i=0;i<BUFF_LEN;i++)
+						{
+							decay_amp_i[chan] -= decay_inc[chan];
+							if (decay_amp_i[chan] < 0.0f) decay_amp_i[chan] = 0.0f;
+
+							out[chan][i] = (float)out[chan][i] * decay_amp_i[chan];
+						}
+
+						//Stop playing once the decay envelope has finished
+						if (decay_amp_i[chan] <= 0.0f)
+						{
+							decay_amp_i[chan] = 0.0f;
+							play_state[chan] = SILENT;
+							//end_out_ctr[chan] = 4000;
+
+							play_led_state[chan] = 0;
+							ButLED_state[Play1ButtonLED+chan] = 0;
+						}
+
+
+					 }
+					break;
+
+			 }//switch play_state
+
+		} //if play_state
 
 	}
 
@@ -513,6 +591,14 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		{
 			if (SAMPLINGBYTES==2)
 			{
+
+				tdebug[t_i++] = out[0][i] - last_out;
+				last_out = out[0][i];
+
+				//if (i>0){
+					//if ((out[0][i] != out[0][i-1]) && abs(out[0][i] - out[0][i-1]) < 0x5FF)
+					//	ITM_Print(0,"less than 0x5FF");
+				//}
 				//L out
 				*dst++ = out[0][i] + CODEC_DAC_CALIBRATION_DCOFFSET[0];
 				*dst++ = 0;

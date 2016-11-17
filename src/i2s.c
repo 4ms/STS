@@ -158,8 +158,8 @@ void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_DME) != RESET)
 		err=AUDIO_I2S2_EXT_DMA_FLAG_DME;
 
-	if (err)
-		DEBUG3_ON; //debug breakpoint
+	//if (err)
+	//	DEBUG3_ON; //debug breakpoint
 
 	/* Transfer complete interrupt */
 	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_TC) != RESET)
@@ -210,8 +210,8 @@ void DMA1_Stream4_IRQHandler(void)
 		err=AUDIO_I2S2_DMA_FLAG_DME;
 		DMA_ClearFlag(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_DME);
 	}
-	if (err)
-		DEBUG3_ON; //debug breakpoint
+//	if (err)
+//		DEBUG3_ON; //debug breakpoint
 
 
 }

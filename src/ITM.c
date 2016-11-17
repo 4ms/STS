@@ -1,6 +1,43 @@
 #include <stm32f4xx.h>
 #include "ITM.h"
 
+char *itoa (int value, char *result, int base)
+{
+    // check that the base if valid
+    if (base < 2 || base > 36) { *result = '\0'; return result; }
+
+    char* ptr = result, *ptr1 = result, tmp_char;
+    int tmp_value;
+
+    do {
+        tmp_value = value;
+        value /= base;
+        *ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
+    } while ( value );
+
+    // Apply negative sign
+    if (tmp_value < 0) *ptr++ = '-';
+    *ptr-- = '\0';
+    while (ptr1 < ptr) {
+        tmp_char = *ptr;
+        *ptr--= *ptr1;
+        *ptr1++ = tmp_char;
+    }
+    return result;
+}
+
+void ITM_Print_int(int port, uint32_t v)
+{
+	char *p;
+	const char *q;
+
+	q = itoa(v,p,10);
+
+	ITM_Print(port, q);
+}
+
+
+
 // Print a given string to ITM.
 // This uses 8 bit writes, as that seems to be the most common way to write text
 // through ITM. Otherwise there is no good way for the PC software to know what

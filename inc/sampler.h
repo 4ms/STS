@@ -20,6 +20,9 @@ enum PlayStates {
 
 };
 
+#define MAX_RS 4
+#define MAX_RS_READ_BUFF_LEN (BUFF_LEN * MAX_RS)
+
 void audio_buffer_init(void);
 
 void write_buffer_to_storage(void);

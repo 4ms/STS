@@ -11,7 +11,7 @@ uint16_t ButLED_color[NUM_RGBBUTTONS][3];
 uint16_t cached_ButLED_color[NUM_RGBBUTTONS][3];
 uint8_t ButLED_state[NUM_RGBBUTTONS];
 
-extern uint32_t g_error;
+extern enum g_Errors g_error;
 
 
 /*
@@ -31,9 +31,9 @@ void init_buttonLEDs(void)
 		ButLED_color[i][2]=0;
 		ButLED_state[i] = 0;
 
-//		cached_ButLED_color[i][0]=0xFF;
-//		cached_ButLED_color[i][1]=0xFF;
-//		cached_ButLED_color[i][2]=0xFF;
+		cached_ButLED_color[i][0]=0xFF;
+		cached_ButLED_color[i][1]=0xFF;
+		cached_ButLED_color[i][2]=0xFF;
 	}
 
 }

@@ -17,6 +17,9 @@
 #include "equal_pow_pan_padded.h"
 #include "exp_1voct.h"
 #include "log_taper_padded.h"
+#include "pitch_pot_cv.h"
+
+extern float pitch_pot_cv[4096];
 
 
 extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
@@ -270,7 +273,12 @@ void update_params(void)
 		//Pots
 		f_param[channel][LENGTH] 	= smoothed_potadc[LENGTH_POT*2+channel] / 4096.0;
 		f_param[channel][START] 	= smoothed_potadc[START_POT*2+channel] / 4096.0;
-		f_param[channel][PITCH] 	= (smoothed_potadc[PITCH_POT*2+channel] / 2048.0) - 1.0;
+
+		f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]];
+
+		//f_param[channel][PITCH] = smoothed_potadc[PITCH_POT*2+channel] / 512.0;
+		//if 		(f_param[channel][PITCH] < 0.0625) 	f_param[channel][PITCH] = 0.0625;
+
 
 		old_val = i_param[channel][SAMPLE];
 

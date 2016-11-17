@@ -36,6 +36,22 @@ enum Flags {
 
 
 //Error codes for g_error
+enum g_Errors{
+	OUT_OF_MEM=1,
+	OUT_OF_SAMPLES=2,
+	SPIERROR_1=4,
+	SPIERROR_2=8,
+	DMA_OVR_ERROR=16,
+	sFLASH_BAD_ID=32,
+	WRITE_BUFF_OVERRUN=64,
+	READ_BUFF1_OVERRUN=128,
+	READ_BUFF2_OVERRUN=256,
+	READ_MEM_ERROR=512,
+	WRITE_SDCARD_ERROR=1024,
+	WRITE_BUFF_UNDERRUN=2048
+
+};
+/*
 #define OUT_OF_MEM 1
 #define OUT_OF_SAMPLES 2
 #define SPIERROR_1 4
@@ -48,6 +64,7 @@ enum Flags {
 #define READ_MEM_ERROR 512
 #define WRITE_SDCARD_ERROR 1024
 #define WRITE_BUFF_UNDERRUN 2048
+*/
 
 //Number of channels
 #define NUM_PLAY_CHAN 2
