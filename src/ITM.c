@@ -82,6 +82,10 @@ void ITM_Init(uint32_t SWOSpeed)
 	   *((volatile unsigned *)0xE0001000) = 0x400003FE;   // DWT_CTRL
 	   *((volatile unsigned *)0xE0040304) = 0x00000100;   // Formatter and Flush Control Register
 
+		DBGMCU->CR = DBGMCU_CR_TRACE_IOEN;
+		// *((volatile unsigned *)0xE0042004) = 0x00000020;
+
+
 }
 
 #define ITM_ENA (*(volatile unsigned int*)0xE0000E00) // ITM Enable

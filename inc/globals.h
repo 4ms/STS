@@ -31,6 +31,8 @@ enum Flags {
 	RecTrig,
 	Rev1Trig,
 	Rev2Trig,
+	PlayBuff1_Discontinuity,
+	PlayBuff2_Discontinuity,
 	NUM_FLAGS
 };
 

@@ -27,7 +27,7 @@ void memory_clear(uint8_t channel)
 
 }
 
-uint32_t memory_read_sample(uint32_t addr)
+int32_t memory_read_sample(uint32_t addr)
 {
 	// Enforce valid addr range
 	if ((addr<SDRAM_BASE) || (addr > (SDRAM_BASE + SDRAM_SIZE)))

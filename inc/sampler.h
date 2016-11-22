@@ -13,10 +13,12 @@
 /* Playback states */
 enum PlayStates {
 	SILENT,
+	PREBUFFERING,
 	PLAY_FADEUP,
 	PLAYING,
-	PLAY_FADEDOWN,
-	PREBUFFERING
+	PLAYING_PERC,
+	PLAY_FADEDOWN
+
 
 };
 

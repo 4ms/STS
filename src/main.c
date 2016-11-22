@@ -127,6 +127,9 @@ int main(void)
 	//
 	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
 
+//	ITM_Init(6000000);
+//	ITM_Print_int(0,1243);
+
 	//Codec and I2S/DMA should be disabled before they can properly start up
     Codec_Deinit();
     DeInit_I2S_Clock();
@@ -151,8 +154,7 @@ int main(void)
 		}
 	}
 
-	ITM_Init(6000000);
-	ITM_Print_int(0,1243);
+
 
 	//Turn on the lights
 	LEDDriver_Init(2);
