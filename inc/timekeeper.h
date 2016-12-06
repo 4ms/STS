@@ -11,7 +11,8 @@
 
 
 void init_timekeeper(void);
-inline void inc_tmrs(void);
+static inline void inc_tmrs(void);
+static inline uint32_t get_sys_tmr(void);
 
 void init_adc_param_update_IRQ(void);
 void init_LED_PWM_IRQ(void);

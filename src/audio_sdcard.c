@@ -8,22 +8,25 @@
 #include "audio_sdcard.h"
 #include "dig_pins.h"
 #include "globals.h"
-#include "stm32f4_discovery_sdio_sd.h"
+//#include "stm32f4_discovery_sdio_sd.h"
+#include "fatfs_sd_sdio.h"
+
 
 //__IO uint16_t MEMORY[SPIRAM_END_ADDR];
 
 
 uint8_t write_sdcard(uint16_t *data, uint32_t addr){
 	SD_Error err=0;
-	//SD_WaitTransmissionEnd();
 
+	//SD_WaitTransmissionEnd();
 	//err=SD_WriteSingleBlock((uint8_t *)data, addr);
 
-	err = SD_WriteBlock((uint8_t *)data, addr*512,512);
-	if (err==SD_OK){
-		err = SD_WaitWriteOperation();
-		while(SD_GetStatus() != SD_TRANSFER_OK);
-	}
+
+//	err = SD_WriteBlock((uint8_t *)data, addr*512,512);
+//	if (err==SD_OK){
+//		err = SD_WaitWriteOperation();
+//		while(SD_GetStatus() != SD_TRANSFER_OK);
+//	}
 	return(err);
 
 }
@@ -33,11 +36,12 @@ uint8_t read_sdcard(uint16_t *data, uint32_t addr){
 
 
 	//err=SD_ReadSingleBlock((uint8_t *)data, addr);
-	err=SD_ReadBlock((uint8_t *)data, addr*512, 512);
-	if (err==SD_OK){
-		err = SD_WaitReadOperation();
-		while(SD_GetStatus() != SD_TRANSFER_OK);
-	}
+
+//	err=SD_ReadBlock((uint8_t *)data, addr*512, 512);
+//	if (err==SD_OK){
+//		err = SD_WaitReadOperation();
+//		while(SD_GetStatus() != SD_TRANSFER_OK);
+//	}
 
 	return(err);
 }

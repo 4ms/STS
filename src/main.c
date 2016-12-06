@@ -22,6 +22,7 @@
 #include "pca9685_driver.h"
 #include "ITM.h"
 #include "rgb_leds.h"
+#include "ff.h"
 
 enum g_Errors g_error=0;
 
@@ -107,6 +108,9 @@ void JumpTo(uint32_t address) {
 }
 
 
+//extern unsigned int* __heap_limit;
+//extern unsigned int __HeapLimit;
+
 
 
 int main(void)
@@ -114,6 +118,15 @@ int main(void)
 	uint8_t i;
 	uint8_t err=0;
 	uint32_t do_factory_reset=0;
+
+	FATFS FatFs;
+	FIL fil;
+	FRESULT res;
+	uint32_t total, free;
+	uint32_t bw;
+    BYTE work[_MAX_SS]; /* Work area (larger is better for processing time) */
+
+
 
 	//
 	// Bootloader:
@@ -153,6 +166,35 @@ int main(void)
 			CLIPLED1_OFF;
 		}
 	}
+
+	CLIPLED1_OFF;
+	CLIPLED2_OFF;
+
+	if (f_mount(&FatFs, "", 1) != FR_OK)
+	{
+		res = f_mkfs("", 0, 32768); //create filesystem
+		if (res==FR_OK)
+		{
+			if (f_mount(&FatFs, "", 1) != FR_OK)
+				CLIPLED1_ON; //can't mount disk after creating filesystem
+		}
+		else
+			CLIPLED2_ON; //can't create filesystem on disk
+	}
+
+	res = f_open(&fil, "hello.txt", FA_CREATE_NEW | FA_WRITE);
+	if (res==FR_OK)
+	{
+		res = f_write(&fil, "Hello, World!\r\n", 15, &bw);
+		if (bw==15)
+		{
+			f_close(&fil);
+			f_mount(0,"",0);
+		}
+		else CLIPLED1_ON; //write failed
+	}
+	else CLIPLED2_ON; //file open failed
+
 
 
 

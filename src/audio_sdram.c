@@ -87,6 +87,38 @@ uint32_t memory_read(uint32_t *addr, uint8_t channel, int32_t *rd_buff, uint32_t
 	return(num_filled);
 }
 
+uint32_t memory_read16(uint32_t *addr, uint8_t channel, int16_t *rd_buff, uint32_t num_samples, uint32_t stop_at_addr, uint8_t decrement)
+{
+	uint32_t i;
+	uint32_t num_filled=0;
+
+	//Loop of 8 takes 2.5us
+	//read from SDRAM. first one takes 200us, subsequent reads take 50ns
+	for (i=0;i<num_samples;i++){
+
+		// Enforce valid addr range
+		if ((*addr<SDRAM_BASE) || (*addr > (SDRAM_BASE + SDRAM_SIZE)))
+		*addr=SDRAM_BASE;
+
+		// even addresses only
+		*addr = (*addr & 0xFFFFFFFE);
+
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		if (*addr==stop_at_addr)	num_filled=1;
+		else if (num_filled)		num_filled++;
+
+		if (num_filled)				rd_buff[i] = 0;
+		else						rd_buff[i] = *((int16_t *)(*addr));
+
+		*addr = inc_addr_within_limits(*addr, AUDIO_MEM_BASE[channel], AUDIO_MEM_BASE[channel] + MEM_SIZE, decrement);
+
+	}
+
+	return(num_filled);
+}
+
+
 //
 // Reads from SDRAM memory starting at address addr[channel], for a length of num_samples words (16 or 32, depending on SAMPLINGBYTES)
 //
@@ -110,6 +142,33 @@ uint32_t memory_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_
 			*((int16_t *)*addr) = wr_buff[i];
 		else
 			*((int32_t *)*addr) = wr_buff[i];
+
+		*addr = inc_addr_within_limits(*addr, AUDIO_MEM_BASE[channel], AUDIO_MEM_BASE[channel] + MEM_SIZE, decrement);
+
+		if (*addr==detect_crossing_addr) heads_crossed=1;
+
+	}
+
+	return(heads_crossed);
+
+}
+uint32_t memory_write16(uint32_t *addr, uint8_t channel, int16_t *wr_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement)
+{
+	uint32_t i;
+	uint32_t heads_crossed=0;
+
+	for (i=0;i<num_samples;i++){
+
+		//Enforce valid addr range
+		if ((*addr<SDRAM_BASE) || (*addr > (SDRAM_BASE + SDRAM_SIZE)))
+			*addr=SDRAM_BASE;
+
+		//even addresses only
+		*addr &= 0xFFFFFFFE;
+
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		*((int16_t *)*addr) = wr_buff[i];
 
 		*addr = inc_addr_within_limits(*addr, AUDIO_MEM_BASE[channel], AUDIO_MEM_BASE[channel] + MEM_SIZE, decrement);
 

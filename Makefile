@@ -17,6 +17,9 @@ SOURCES += $(wildcard $(PERIPH)/src/*.c)
 SOURCES += $(DEVICE)/src/$(STARTUP)
 SOURCES += $(DEVICE)/src/$(SYSTEM)
 SOURCES += $(wildcard src/*.c)
+SOURCES += $(wildcard src/fatfs/*.c)
+SOURCES += $(wildcard src/fatfs/drivers/*.c)
+SOURCES += $(wildcard src/fatfs/option/*.c)
 
 OBJECTS = $(addprefix $(BUILDDIR)/, $(addsuffix .o, $(basename $(SOURCES))))
 
@@ -24,7 +27,9 @@ INCLUDES += -I$(DEVICE)/include \
 			-I$(CORE)/include \
 			-I$(PERIPH)/include \
 			-I inc \
-			-I inc/res 
+			-I inc/res \
+			-I inc/fatfs \
+			-I inc/fatfs/drivers
 
 
 ELF = $(BUILDDIR)/$(BINARYNAME).elf
@@ -33,7 +38,9 @@ BIN = $(BUILDDIR)/$(BINARYNAME).bin
 
 ARCH = arm-none-eabi
 CC = $(ARCH)-gcc
-LD = $(ARCH)-ld -v
+##Use -gcc instead of -ld
+LD = $(ARCH)-gcc
+#LD = $(ARCH)-ld -v -Map main.map
 AS = $(ARCH)-as
 OBJCPY = $(ARCH)-objcopy
 OBJDMP = $(ARCH)-objdump
@@ -77,18 +84,25 @@ CFLAGS += -mlittle-endian -mthumb
 CFLAGS +=  -I. -DARM_MATH_CM4 -D'__FPU_PRESENT=1'  $(INCLUDES)  -DUSE_STDPERIPH_DRIVER
 CFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard
 CFLAGS +=  -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion 
+#CFLAGS += --specs=rdimon.specs -lgcc -lc -lm -lrdimon
 
 AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4 
 
 LDSCRIPT = $(DEVICE)/$(LOADFILE)
-LFLAGS  = -Map main.map -nostartfiles -T $(LDSCRIPT)
+
+#Use FPU libraries (standard C)
+LDLIBS = -L"/usr/local/Cellar/arm-none-eabi-gcc/20150609/arm-none-eabi/lib/fpu" -L"/usr/local/Cellar/arm-none-eabi-gcc/20150609/lib/gcc/arm-none-eabi/4.9.3/fpu"
+
+#Use nosys.specs for standard C functions such as malloc(), memcpy()
+LFLAGS  =  $(LDLIBS)  --specs=nosys.specs -nostartfiles -T $(LDSCRIPT) 
 
 
-vpath %.c src
-vpath %.h inc
-
+#vpath %.c src
 
 #build/src/resample.o: CFLAGS = $(C0FLAGS)
+build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
+build/src/fatfs/drivers/fatfs_sd_sdio.o: CFLAGS = $(C0FLAGS)
+build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 
 all: Makefile $(BIN) $(HEX)
 

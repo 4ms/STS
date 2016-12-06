@@ -93,12 +93,13 @@ SECTIONS
     *(.ccmdata)
     . = ALIGN(16);
   } >CCMRAM
+ 
  /*
   DISCARD :
   {
-    libc.a ( * )
-    libm.a ( * )
-    libgcc.a ( * )
+    fpu/libc.a ( * )
+    fpu/libm.a ( * )
+    fpu/libgcc.a ( * )
   }
   */
 }

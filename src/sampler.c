@@ -16,12 +16,13 @@
 #include "rgb_leds.h"
 #include "resample.h"
 
+#include "ff.h"
 
-volatile uint32_t tdebug[256];
-uint8_t t_i;
-uint32_t debug_i=0x80000000;
-uint32_t debug_tri_dir=0;
-int32_t last_out;
+
+//volatile uint32_t tdebug[256];
+//uint8_t t_i;
+//uint32_t debug_i=0x80000000;
+//uint32_t debug_tri_dir=0;
 
 
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
@@ -52,13 +53,12 @@ extern const uint32_t AUDIO_MEM_BASE[4];
 
 //
 //SDRAM buffer addresses for playing from sdcard
-//SD Card --> SDARM @play_buff_in_addr[] ... SDRAM @play_buff_out_addr[] --> Codec
+//SD Card @play_storage_addr[] --> SDARM @play_buff_in_addr[] ... SDRAM @play_buff_out_addr[] --> Codec
 //
 uint32_t play_buff_in_addr[NUM_PLAY_CHAN];
 uint32_t play_buff_out_addr[NUM_PLAY_CHAN];
 
 uint32_t play_storage_addr[NUM_PLAY_CHAN]={0,0};
-
 
 //
 // SDRAM buffer address for recording to sdcard
@@ -122,7 +122,7 @@ void audio_buffer_init(void)
 	}
 
 
-	for (i=0;i<256;i++) tdebug[i]=0;
+//	for (i=0;i<256;i++) tdebug[i]=0;
 }
 
 void toggle_recording(void)
@@ -211,13 +211,10 @@ void write_buffer_to_storage(void)
 	if (rec_buff_out_addr != rec_buff_in_addr)
 	{
 
-		addr_exceeded = memory_read(&rec_buff_out_addr, RECCHAN, t_buff32, BUFF_LEN, rec_buff_in_addr, 0);
+		addr_exceeded = memory_read16(&rec_buff_out_addr, RECCHAN, t_buff16, BUFF_LEN, rec_buff_in_addr, 0);
 
 		// Stop the circular buffer if we wrote it all out to storage
 		if (addr_exceeded) rec_buff_out_addr = rec_buff_in_addr;
-
-		//convert i32 to u16 (we shouldn't have to waste time doing this manually!)
-		for (i=0;i<BUFF_LEN;i++) t_buff16[i] = t_buff32[i];
 
 		start_of_sample_addr = (i_param[REC][SAMPLE] * SAMPLE_SIZE) + (i_param[REC][BANK] * BANK_SIZE);
 
@@ -248,6 +245,7 @@ void write_buffer_to_storage(void)
 }
 
 
+FIL fil[NUM_PLAY_CHAN];
 
 void read_storage_to_buffer(void)
 {
@@ -257,6 +255,10 @@ void read_storage_to_buffer(void)
 	uint16_t t_buff16[BUFF_LEN];
 	int32_t t_buff32[BUFF_LEN];
 	uint32_t start_of_sample_addr;
+
+	FRESULT res;
+	uint32_t br;
+
 
 	//
 	//Reset to beginning of sample if we changed sample or bank
@@ -292,42 +294,77 @@ void read_storage_to_buffer(void)
 
 		if (play_state[chan] != SILENT)
 		{
+			if (play_state[chan]==PREBUFFERING)
+			{
+				res = f_open(&fil[chan], "hello.txt", FA_READ);
+				if (res != FR_OK) g_error |= FILE_OPEN_FAIL;
+				else
+				{
+					res = f_read(&fil[chan], t_buff32, 4, &br);
+					if (br < 4)
+						g_error |= FILE_READ_FAIL;
+					else
+					{
+						if (t_buff32[0] == 0x6C6C6548)
+							DEBUG3_ON;
+
+						res = f_read(&fil[chan], t_buff32, 4, &br);
+						if (br < 4)
+							g_error |= FILE_READ_FAIL;
+						else
+						{
+							if (t_buff32[0] == 0x57202C6F)
+								DEBUG3_ON;
+
+
+						}
+					}
+				}
+
+
+			}
 
 			// If our "in" pointer is not far enough ahead of the "out" pointer, then we need to buffer some more:
 			if (diff_circular(play_buff_in_addr[chan], play_buff_out_addr[chan], MEM_SIZE) < (PRE_BUFF_SIZE*256))
 			{
+
 				start_of_sample_addr = (i_param[chan][SAMPLE] * SAMPLE_SIZE) + (i_param[chan][BANK]*BANK_SIZE);
 
 				err = read_sdcard( t_buff16, start_of_sample_addr + play_storage_addr[chan]);
 
 				if (err==0){
 
-					//  ******************** FAKE THE TRI **********
-					//DEBUG:
-					//write a 1kHz triangle wave into the play_buff
-					for (i=0;i<BUFF_LEN;i++)
-					{
-						t_buff32[i] = (uint16_t)(debug_i>>16) - (int16_t)0x7FFF;
+//					//DEBUG:
+//					//write a 1kHz triangle wave into the play_buff
+//					for (i=0;i<BUFF_LEN;i++)
+//					{
+//						t_buff32[i] = (uint16_t)(debug_i>>16) - (int16_t)0x7FFF;
+//
+//						if (debug_tri_dir)
+//							debug_i -= (0xF0000000 - 0x10000)/(48000.0f/1000.0f);
+//						else
+//							debug_i += (0xF0000000 - 0x10000)/(48000.0f/1000.0f);
+//
+//						if (debug_i >= 0xF0000000) debug_tri_dir=1;
+//						if (debug_i <= 0x10000) debug_tri_dir=0;
+//
+//					}
 
-						if (debug_tri_dir)
-							debug_i -= (0xF0000000 - 0x10000)/(48000.0f/1000.0f);
-						else
-							debug_i += (0xF0000000 - 0x10000)/(48000.0f/1000.0f);
+					if (chan==0)
+						DEBUG2_ON;
+					if (chan==1)
+						DEBUG3_ON;
 
-						if (debug_i >= 0xF0000000) debug_tri_dir=1;
-						if (debug_i <= 0x10000) debug_tri_dir=0;
+					err = memory_write16(&(play_buff_in_addr[chan]), chan, t_buff16, BUFF_LEN, play_buff_out_addr[chan], 0);
 
-					}
-
-					//convert i32 to u16 (we shouldn't have to waste time doing this manually!)
-					//DEBUG off: for (i=0;i<BUFF_LEN;i++) t_buff32[i] = t_buff16[i];
-
-					err = memory_write(&(play_buff_in_addr[chan]), chan, t_buff32, BUFF_LEN, play_buff_out_addr[chan], 0);
+					DEBUG2_OFF;
+					DEBUG3_OFF;
 
 					play_storage_addr[chan]++;
 
 					if (play_storage_addr[chan] > (SAMPLE_SIZE-4))
 						play_state[chan] = PLAY_FADEDOWN;
+
 
 				} else {
 					g_error |= READ_MEM_ERROR;
@@ -342,6 +379,7 @@ void read_storage_to_buffer(void)
 
 		}
 	}
+
 
 }
 
@@ -377,35 +415,23 @@ void increment_read_fade(uint8_t channel)
 }
 
 
-volatile int32_t aa,bb;
-
 void process_audio_block_codec(int16_t *src, int16_t *dst)
 {
 	int32_t in[2];
 	int32_t out[2][BUFF_LEN];
 	int32_t dummy;
-	int32_t rs_out[MAX_RS_READ_BUFF_LEN];
 
 	uint16_t i;
-	int32_t v;
 	uint16_t topbyte, bottombyte;
 	uint8_t chan;
 	uint8_t overrun;
-
-	uint32_t read_padding;
-	float rs;
-	uint32_t r_BUFF_LEN;
-	static uint32_t last_sample[NUM_PLAY_CHAN]={0,0};
 
 	int32_t t_buff[BUFF_LEN];
 	static uint32_t write_buff_sample_i=0;
 
 	//Resampling:
-	static float fractional_pos[NUM_PLAY_CHAN]={0.0f, 0.0f};
-	static int16_t xm1,x0,x1,x2;
-	float a,b,c;
-	float floatpos;
-	uint32_t outpos;
+	static float resampling_fpos[NUM_PLAY_CHAN]={0.0f, 0.0f};
+	float rs;
 
 
 	//
@@ -479,7 +505,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			rs = f_param[chan][PITCH];
 
 			DEBUG1_ON;
-			resample_read(rs, play_buff_out_addr, play_buff_in_addr[chan], BUFF_LEN, chan, fractional_pos, out[chan]);
+			resample_read(rs, play_buff_out_addr, play_buff_in_addr[chan], BUFF_LEN, chan, resampling_fpos, out[chan]);
 			DEBUG1_OFF;
 
 			 switch (play_state[chan])
@@ -572,30 +598,6 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		{
 			if (SAMPLINGBYTES==2)
 			{
-
-				//tdebug[t_i++] = out[0][i] - last_out;
-				//last_out = out[0][i];
-
-
-//				aa = out[0][i];
-//
-//				if (i==0)
-//				{
-//					bb = last_out;
-//				}
-//				else
-//				{
-//					bb = out[0][i-1];
-//					last_out = out[0][255];
-//				}
-//
-//				if (abs(aa - bb) > 400)
-//					ITM_Print(0,"gt 0x5FF");
-//
-//				if (aa==-123456) ITM_Print(0,"Dont optimize aa");
-//				if (bb==-1234567) ITM_Print(0,"Dont optimize bb");
-
-
 
 				//L out
 				*dst++ = out[0][i] + CODEC_DAC_CALIBRATION_DCOFFSET[0];
