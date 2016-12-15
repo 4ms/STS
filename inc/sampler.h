@@ -19,8 +19,17 @@ enum PlayStates {
 	PLAYING_PERC,
 	PLAY_FADEDOWN
 
-
 };
+
+typedef struct Sample {
+	uint32_t sampleSize;
+	uint32_t startOfData;
+	uint8_t sampleBitSize;
+	uint32_t sampleRate;
+	uint8_t numChannels;
+	uint8_t blockAlign;
+} Sample;
+
 
 #define MAX_RS 4
 #define MAX_RS_READ_BUFF_LEN (BUFF_LEN * MAX_RS)

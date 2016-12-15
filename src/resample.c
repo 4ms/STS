@@ -47,6 +47,7 @@ void resample_read(float rs, uint32_t *play_buff_out_addr, uint32_t limit_addr, 
 	outpos=0;
 	while (outpos < buff_len)
 	{
+		//Optimize for resample rates >= 4
 		if (fractional_pos[chan] >= 4.0)
 		{
 			fractional_pos[chan] = fractional_pos[chan] - 4.0;
@@ -66,6 +67,7 @@ void resample_read(float rs, uint32_t *play_buff_out_addr, uint32_t limit_addr, 
 			safe_inc_play_addr(chan, limit_addr);
 
 		}
+		//Optimize for resample rates >= 3
 		if (fractional_pos[chan] >= 3.0)
 		{
 			fractional_pos[chan] = fractional_pos[chan] - 3.0;
@@ -84,6 +86,7 @@ void resample_read(float rs, uint32_t *play_buff_out_addr, uint32_t limit_addr, 
 			safe_inc_play_addr(chan, limit_addr);
 
 		}
+		//Optimize for resample rates >= 2
 		if (fractional_pos[chan] >= 2.0)
 		{
 			fractional_pos[chan] = fractional_pos[chan] - 2.0;
@@ -91,7 +94,6 @@ void resample_read(float rs, uint32_t *play_buff_out_addr, uint32_t limit_addr, 
 			//shift samples back one
 			//and read a new sample
 			xm1[chan] 	= x1[chan];
-
 			x0[chan] 	= x2[chan];
 
 			x1[chan] 	= memory_read_sample(play_buff_out_addr[chan]);
@@ -101,6 +103,7 @@ void resample_read(float rs, uint32_t *play_buff_out_addr, uint32_t limit_addr, 
 			safe_inc_play_addr(chan, limit_addr);
 
 		}
+		//Optimize for resample rates >= 1
 		if (fractional_pos[chan] >= 1.0)
 		{
 			fractional_pos[chan] = fractional_pos[chan] - 1.0;

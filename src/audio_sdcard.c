@@ -22,11 +22,11 @@ uint8_t write_sdcard(uint16_t *data, uint32_t addr){
 	//err=SD_WriteSingleBlock((uint8_t *)data, addr);
 
 
-//	err = SD_WriteBlock((uint8_t *)data, addr*512,512);
-//	if (err==SD_OK){
-//		err = SD_WaitWriteOperation();
-//		while(SD_GetStatus() != SD_TRANSFER_OK);
-//	}
+	err = SD_WriteBlock((uint8_t *)data, addr*512,512);
+	if (err==SD_OK){
+		err = SD_WaitWriteOperation();
+		while(SD_GetStatus() != SD_TRANSFER_OK);
+	}
 	return(err);
 
 }
@@ -37,11 +37,11 @@ uint8_t read_sdcard(uint16_t *data, uint32_t addr){
 
 	//err=SD_ReadSingleBlock((uint8_t *)data, addr);
 
-//	err=SD_ReadBlock((uint8_t *)data, addr*512, 512);
-//	if (err==SD_OK){
-//		err = SD_WaitReadOperation();
-//		while(SD_GetStatus() != SD_TRANSFER_OK);
-//	}
+	err=SD_ReadBlock((uint8_t *)data, addr*512, 512);
+	if (err==SD_OK){
+		err = SD_WaitReadOperation();
+		while(SD_GetStatus() != SD_TRANSFER_OK);
+	}
 
 	return(err);
 }

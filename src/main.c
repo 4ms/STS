@@ -108,9 +108,6 @@ void JumpTo(uint32_t address) {
 }
 
 
-//extern unsigned int* __heap_limit;
-//extern unsigned int __HeapLimit;
-
 
 
 int main(void)
@@ -124,7 +121,6 @@ int main(void)
 	FRESULT res;
 	uint32_t total, free;
 	uint32_t bw;
-    BYTE work[_MAX_SS]; /* Work area (larger is better for processing time) */
 
 
 
@@ -154,11 +150,14 @@ int main(void)
     test_dig_inouts();
 	init_timekeeper();
 
-	//Initialize SD Card
-	err=init_sdcard();
+	PLAYLED1_OFF;
+	while(!PLAY2BUT){PLAYLED1_ON;}
+	PLAYLED1_OFF;
 
+	//Initialize SD Card
+	//err=init_sdcard();
 	//if (!err)
-	//	err=test_sdcard();
+	//err=test_sdcard();
 
 	if (err){
 		while(1){
@@ -170,16 +169,37 @@ int main(void)
 	CLIPLED1_OFF;
 	CLIPLED2_OFF;
 
+	if (PLAY2BUT && PLAY1BUT)
+	{
+		//f_mount(&FatFs, "", 1);
+		res = f_mkfs("", 0, 32768);
+
+		if (res!=FR_OK)
+		{
+			CLIPLED1_ON;
+			while(1){;}
+		}
+	}
+
 	if (f_mount(&FatFs, "", 1) != FR_OK)
 	{
-		res = f_mkfs("", 0, 32768); //create filesystem
+		//can't mount, so try to create fs
+
+		res = f_mkfs("", 0, 32768);
+
 		if (res==FR_OK)
 		{
 			if (f_mount(&FatFs, "", 1) != FR_OK)
+			{
 				CLIPLED1_ON; //can't mount disk after creating filesystem
+				while (1){;}
+			}
 		}
 		else
-			CLIPLED2_ON; //can't create filesystem on disk
+		{
+			CLIPLED2_ON; //can't mount and can't create filesystem on disk
+			while(1){;}
+		}
 	}
 
 	res = f_open(&fil, "hello.txt", FA_CREATE_NEW | FA_WRITE);

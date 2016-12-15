@@ -233,8 +233,8 @@
 #define logf(x)	TM_USART_Puts(USART1, x); TM_USART_Puts(USART1, "\n");
 */
 #include "ITM.h"
-#define logf(x) ITM_Print(0,x);
-//#define logf(x)
+//#define logf(x) ITM_Print(0,x);
+#define logf(x)
 
 
 static uint32_t CardType = SDIO_STD_CAPACITY_SD_CARD_V1_1;

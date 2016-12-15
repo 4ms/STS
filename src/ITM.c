@@ -65,39 +65,62 @@ void ITM_SendValue (int port, uint32_t value)
     }
 }
 
-void ITM_Init(uint32_t SWOSpeed)
-{
-
-	  uint32_t SWOPrescaler;
-
-	   *((volatile unsigned *)0xE000EDFC) = 0x01000000;   // "Debug Exception and Monitor Control Register (DEMCR)"
-	   *((volatile unsigned *)0xE0042004) = 0x00000027;
-	   *((volatile unsigned *)0xE00400F0) = 0x00000002;   // "Selected PIN Protocol Register": Select which protocol to use for trace output (2: SWO)
-	  SWOPrescaler = (168000000 / SWOSpeed) - 1;  // SWOSpeed in Hz
-	   *((volatile unsigned *)0xE0040010) = SWOPrescaler; // "Async Clock Prescaler Register". Scale the baud rate of the asynchronous output
-	   *((volatile unsigned *)0xE0000FB0) = 0xC5ACCE55;   // ITM Lock Access Register, C5ACCE55 enables more write access to Control Register 0xE00 :: 0xFFC
-	   *((volatile unsigned *)0xE0000E80) = 0x0001000D;   // ITM Trace Control Register
-	   *((volatile unsigned *)0xE0000E40) = 0x0000000F;   // ITM Trace Privilege Register
-	   *((volatile unsigned *)0xE0000E00) = 0x00000001;   // ITM Trace Enable Register. Enabled tracing on stimulus ports. One bit per stimulus port.
-	   *((volatile unsigned *)0xE0001000) = 0x400003FE;   // DWT_CTRL
-	   *((volatile unsigned *)0xE0040304) = 0x00000100;   // Formatter and Flush Control Register
-
-		DBGMCU->CR = DBGMCU_CR_TRACE_IOEN;
-		// *((volatile unsigned *)0xE0042004) = 0x00000020;
-
-
-}
-
 #define ITM_ENA (*(volatile unsigned int*)0xE0000E00) // ITM Enable
 #define ITM_TPR (*(volatile unsigned int*)0xE0000E40) // Trace Privilege Register
 #define ITM_TCR (*(volatile unsigned int*)0xE0000E80) // ITM Trace Control Reg.
 #define ITM_LSR (*(volatile unsigned int*)0xE0000FB0) // ITM Lock Status Register
 #define DHCSR (*(volatile unsigned int*)0xE000EDF0) // Debug register
-#define DEMCR (*(volatile unsigned int*)0xE000EDFC) // Debug register
+//#define DEMCR (*(volatile unsigned int*)0xE000EDFC) // Debug register
 #define TPIU_ACPR (*(volatile unsigned int*)0xE0040010) // Async Clock presacler register
 #define TPIU_SPPR (*(volatile unsigned int*)0xE00400F0) // Selected Pin Protocol Register
 #define DWT_CTRL (*(volatile unsigned int*)0xE0001000) // DWT Control Register
-#define FFCR (*(volatile unsigned int*)0xE0040304) // Formatter and flus
+//#define FFCR (*(volatile unsigned int*)0xE0040304) // Formatter and flus
+
+void ITM_Init(uint32_t SWOSpeed)
+{
+
+	  uint32_t SWOPrescaler;
+
+	 //  *((volatile unsigned *)0xE000EDFC) = 0x01000000;   // "Debug Exception and Monitor Control Register (DEMCR)"
+	   CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk;
+
+	//   *((volatile unsigned *)0xE0042004) = 0x00000027; // DBGMCU->CR = standby stop sleep trace_enable
+	//   *((volatile unsigned *)0xE00400F0) = 0x00000002;   // "Selected PIN Protocol Register": Select which protocol to use for trace output (2: SWO)
+
+	  SWOPrescaler = (168000000 / SWOSpeed) - 1;  // SWOSpeed in Hz
+	   *((volatile unsigned *)0xE0040010) = SWOPrescaler; // "Async Clock Prescaler Register". Scale the baud rate of the asynchronous output
+
+
+	   TPI->SPPR = 0; //Selected Pin Protocol = 0: sync Trace Port Mode, 1: SWO - manchester, 2: SWO - NRZ
+	   TPI->CSPSR = 1; //Current Parallel Port Size Register: port size =1
+	   TPI->FFCR = 0x00000102;   // Formatter and Flush Control Register default value = 102
+
+	   DBGMCU->CR = DBGMCU_CR_TRACE_IOEN;
+
+	//   *((volatile unsigned *)0xE0000FB0) = 0xC5ACCE55;   // ITM Lock Access Register, C5ACCE55 enables more write access to Control Register 0xE00 :: 0xFFC
+	   ITM->LAR = 0xC5ACCE55;
+
+	 //  *((volatile unsigned *)0xE0000E80) = 0x0001000D;   // ITM Trace Control Register
+	   ITM->TCR = ITM_TCR_ITMENA_Msk | ITM_TCR_TSENA_Msk | ITM_TCR_SYNCENA_Msk | ITM_TCR_DWTENA_Msk | ITM_TCR_SWOENA_Msk | (1<<ITM_TCR_TraceBusID_Pos);
+
+	 //  *((volatile unsigned *)0xE0000E40) = 0x0000000F;   // ITM Trace Privilege Register
+	   ITM->TPR = 0x00000001; //enable ports 0-7
+
+	//   *((volatile unsigned *)0xE0000E00) = 0x00000001;   // ITM Trace Enable Register. Enabled tracing on stimulus ports. One bit per stimulus port.
+	   ITM -> TER = 0x00000001;
+
+
+	//   *((volatile unsigned *)0xE0001000) = 0x400003FE;   // DWT_CTRL
+	//   *((volatile unsigned *)0xE0040304) = 0x00000100;   // Formatter and Flush Control Register
+
+
+
+		// *((volatile unsigned *)0xE0042004) = 0x00000020;
+
+
+
+}
+
 
 
 void ITM_Disable(void)
