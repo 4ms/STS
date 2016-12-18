@@ -121,6 +121,8 @@ int main(void)
 	FRESULT res;
 	uint32_t total, free;
 	uint32_t bw;
+	BYTE work[_MAX_SS];
+    DWORD plist[] = {100, 0, 0, 0};
 
 
 
@@ -171,49 +173,46 @@ int main(void)
 
 	if (PLAY2BUT && PLAY1BUT)
 	{
-		//f_mount(&FatFs, "", 1);
-		res = f_mkfs("", 0, 32768);
+
+		while (!PLAY1BUT) {;}
+		while (!PLAY2BUT) {;}
+
+		//res = f_mkfs("", FM_ANY, 0, work, sizeof work);
 
 		if (res!=FR_OK)
 		{
 			CLIPLED1_ON;
 			while(1){;}
 		}
-	}
-
-	if (f_mount(&FatFs, "", 1) != FR_OK)
-	{
-		//can't mount, so try to create fs
-
-		res = f_mkfs("", 0, 32768);
-
-		if (res==FR_OK)
-		{
-			if (f_mount(&FatFs, "", 1) != FR_OK)
-			{
-				CLIPLED1_ON; //can't mount disk after creating filesystem
-				while (1){;}
-			}
-		}
 		else
 		{
-			CLIPLED2_ON; //can't mount and can't create filesystem on disk
+			CLIPLED2_ON;
 			while(1){;}
 		}
 	}
 
-	res = f_open(&fil, "hello.txt", FA_CREATE_NEW | FA_WRITE);
-	if (res==FR_OK)
+	res = f_mount(&FatFs, "", 1);
+	if (res != FR_OK)
 	{
-		res = f_write(&fil, "Hello, World!\r\n", 15, &bw);
-		if (bw==15)
-		{
-			f_close(&fil);
-			f_mount(0,"",0);
-		}
-		else CLIPLED1_ON; //write failed
+		//can't mount
+		CLIPLED1_ON;
+		CLIPLED2_ON;
+		while(1){;}
 	}
-	else CLIPLED2_ON; //file open failed
+
+
+//	res = f_open(&fil, "hello.txt", FA_CREATE_NEW | FA_WRITE);
+//	if (res==FR_OK)
+//	{
+//		res = f_write(&fil, "Hello, World!\r\n", 15, &bw);
+//		if (bw==15)
+//		{
+//			f_close(&fil);
+//			f_mount(0,"",0);
+//		}
+//		else CLIPLED1_ON; //write failed
+//	}
+//	else CLIPLED2_ON; //file open failed
 
 
 

@@ -16,7 +16,7 @@
 
 volatile uint32_t sys_tmr;
 
-static inline void inc_tmrs(void)
+inline void inc_tmrs(void)
 {
 	sys_tmr++; //at 48kHz, it resets after 24 hours, 51 minutes, 18.4853333 seconds
 }

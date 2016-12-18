@@ -209,9 +209,9 @@ static FRESULT scan_files(char* path, uint16_t tmp_buffer_size, TM_FATFS_Search_
 	uint8_t gonext;
 	char* fn;
 #if _USE_LFN
-	static char lfn[_MAX_LFN + 1];   /* Buffer to store the LFN */
-	fno.lfname = lfn;
-	fno.lfsize = sizeof lfn;
+//	static char lfn[_MAX_LFN + 1];   /* Buffer to store the LFN */
+//	fno.lfname = lfn; //broken in fatfs v0.12
+//	fno.lfsize = sizeof lfn; //broken in fatfs v0.12
 #endif
 
 	/* Try to open file */
@@ -229,7 +229,8 @@ static FRESULT scan_files(char* path, uint16_t tmp_buffer_size, TM_FATFS_Search_
 
 			/* Format name */
 	#if _USE_LFN
-			fn = *fno.lfname ? fno.lfname : fno.fname;
+//			fn = *fno.lfname ? fno.lfname : fno.fname; //broken in fatfs v0.12
+			fn = fno.fname;
 	#else
 			fn = fno.fname;
 	#endif

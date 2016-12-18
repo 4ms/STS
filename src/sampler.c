@@ -100,7 +100,6 @@ Sample samples[19];
 
 void audio_buffer_init(void)
 {
-	uint32_t i;
 
 //	if (MODE_24BIT_JUMPER)
 //		SAMPLINGBYTES=4;
@@ -166,7 +165,24 @@ void load_sample_header(uint32_t sample, uint8_t chan)
 
 	samples[sample].sampleSize = 0;
 
-	res = f_open(&fil[chan], "synth.wav", FA_READ);
+	switch (sample)
+	{
+		case(0):
+			res = f_open(&fil[chan], "SYNTH1.WAV", FA_READ);
+			break;
+
+		case(1):
+			res = f_open(&fil[chan], "elec-drum.wav", FA_READ);
+			break;
+
+		case(2):
+			res = f_open(&fil[chan], "funk-kit.wav", FA_READ);
+			break;
+
+		default:
+			res = f_open(&fil[chan], "SYNTH1.WAV", FA_READ);
+
+	}
 
 	if (res != FR_OK) g_error |= FILE_OPEN_FAIL;
 	else
@@ -212,8 +228,17 @@ void load_sample_header(uint32_t sample, uint8_t chan)
 			while (chunk.chunkId != ccDATA)
 			{
 				res = f_read(&fil[chan], &chunk, rd, &br);
-				if (res != FR_OK) {g_error |= FILE_READ_FAIL; f_close(&fil[chan]); break;}
-				if (br < rd) {g_error |= FILE_WAVEFORMATERR; f_close(&fil[chan]); break;}
+
+				if (res != FR_OK) {
+					g_error |= FILE_READ_FAIL;
+					f_close(&fil[chan]);
+					break;
+				}
+				if (br < rd) {
+					g_error |= FILE_WAVEFORMATERR;
+					f_close(&fil[chan]);
+					break;
+				}
 
 				//fast-forward to the next chunk
 				if (chunk.chunkId != ccDATA)
@@ -256,7 +281,8 @@ void toggle_playing(uint8_t chan)
 
 		play_state[chan]=PREBUFFERING;
 
-		load_sample_header( i_param[SAMPLE][chan], chan );
+		load_sample_header( i_param[chan][SAMPLE], chan );
+
 		//loads the sample data, and opens the file into fil[chan]
 		//improvement idea #1: load all 19 samples in the current bank, opening their files. Then we when play, set the channel's file to the sample file (does this work for two channels playing the same sample?)
 		//#2: load all 19 sample headers and store info into samples[], then close the files. When we play, open the file and jump right to startOfData.
@@ -287,8 +313,8 @@ void write_buffer_to_storage(void)
 	uint32_t err;
 	uint32_t start_of_sample_addr;
 	uint8_t addr_exceeded;
-	uint32_t i;
-	int32_t t_buff32[BUFF_LEN];
+	//uint32_t i;
+	//int32_t t_buff32[BUFF_LEN];
 	uint16_t t_buff16[BUFF_LEN];
 
 
@@ -314,7 +340,7 @@ void write_buffer_to_storage(void)
 	if (rec_buff_out_addr != rec_buff_in_addr)
 	{
 
-		addr_exceeded = memory_read16(&rec_buff_out_addr, RECCHAN, t_buff16, BUFF_LEN, rec_buff_in_addr, 0);
+		addr_exceeded = memory_read16(&rec_buff_out_addr, RECCHAN, (int16_t *)t_buff16, BUFF_LEN, rec_buff_in_addr, 0);
 
 		// Stop the circular buffer if we wrote it all out to storage
 		if (addr_exceeded) rec_buff_out_addr = rec_buff_in_addr;
@@ -351,10 +377,10 @@ void read_storage_to_buffer(void)
 {
 	uint8_t chan=0;
 	uint32_t err;
-	uint32_t i;
+	//uint32_t i;
 	uint16_t t_buff16[BUFF_LEN];
-	int32_t t_buff32[BUFF_LEN];
-	uint32_t start_of_sample_addr;
+	//int32_t t_buff32[BUFF_LEN];
+	//uint32_t start_of_sample_addr;
 
 	FRESULT res;
 	uint32_t br;
@@ -425,7 +451,7 @@ void read_storage_to_buffer(void)
 						if (rd<br)
 							g_error |= FILE_UNEXPECTEDEOF; //unexpected end of file, but we can continue writing out the data we read
 
-						err = memory_write16(&(play_buff_in_addr[chan]), chan, t_buff16, rd>>1, play_buff_out_addr[chan], 0);
+						err = memory_write16(&(play_buff_in_addr[chan]), chan, (int16_t *)t_buff16, rd>>1, play_buff_out_addr[chan], 0);
 
 						sample_data_played[chan] += br;
 
@@ -529,8 +555,8 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	uint8_t chan;
 	uint8_t overrun;
 
-	int32_t t_buff[BUFF_LEN];
-	static uint32_t write_buff_sample_i=0;
+	//int32_t t_buff[BUFF_LEN];
+	//static uint32_t write_buff_sample_i=0;
 
 	//Resampling:
 	static float resampling_fpos[NUM_PLAY_CHAN]={0.0f, 0.0f};
@@ -570,7 +596,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			}
 
 
-			t_buff[i] = in[0];
+			//t_buff[i] = in[0];
 
 			overrun = memory_write(&rec_buff_in_addr, RECCHAN, &(in[0]), 1, rec_buff_out_addr, 0);
 			if (overrun) break;

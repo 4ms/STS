@@ -36,11 +36,8 @@
 #include "diskio.h"
 #include "integer.h"
 
-//#include "defines.h"
-
-//#include "tm_stm32f4_delay.h"
 #include "tm_stm32f4_fatfs.h"
-//#include "tm_stm32f4_gpio.h"
+
 
 #ifndef FATFS_USE_DETECT_PIN
 #define FATFS_USE_DETECT_PIN				0
