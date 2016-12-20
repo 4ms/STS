@@ -27,7 +27,8 @@
 #define READ_BUFF_SIZE 96
 
 //#define PRE_BUFF_SIZE 32
-#define PRE_BUFF_SIZE 1024
+//#define PRE_BUFF_SIZE 1024
+#define PRE_BUFF_SIZE 256
 
 #define MAXSAMPLES 19
 

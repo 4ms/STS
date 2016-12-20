@@ -270,16 +270,28 @@ void update_params(void)
 
 	for (channel=0;channel<2;channel++)
 	{
-		//Pots
+		//
+		// LENGTH POT
+		//
 		f_param[channel][LENGTH] 	= smoothed_potadc[LENGTH_POT*2+channel] / 4096.0;
+
+		//
+		// START POT
+		//
 		f_param[channel][START] 	= smoothed_potadc[START_POT*2+channel] / 4096.0;
 
+		//
+		// PITCH POT
+		//
 		f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]];
 
 		//f_param[channel][PITCH] = smoothed_potadc[PITCH_POT*2+channel] / 512.0;
 		//if 		(f_param[channel][PITCH] < 0.0625) 	f_param[channel][PITCH] = 0.0625;
 
 
+		//
+		// SAMPLE POT
+		//
 		old_val = i_param[channel][SAMPLE];
 
 		i_param[channel][SAMPLE] 	= detent_num(i_smoothed_potadc[SAMPLE_POT*2+channel]);
@@ -289,6 +301,9 @@ void update_params(void)
 
 	}
 
+	//
+	// REC SAMPLE POT
+	//
 	old_val = i_param[REC][SAMPLE];
 	i_param[REC][SAMPLE] 			= detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
 

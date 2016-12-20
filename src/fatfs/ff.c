@@ -4015,7 +4015,7 @@ FRESULT f_lseek (
 				a=0;
 			else
 				a = (ofs - 1) / bcs;
-			if ((ifptr - 1) < bcs || bcs==0)
+			if ((ifptr - 1) < bcs || bcs==0 || ifptr==0)
 				b=0;
 			else
 				b = (ifptr - 1) / bcs;
@@ -4023,6 +4023,10 @@ FRESULT f_lseek (
 			if (ifptr > 0 &&
 				(a >= b)) {	/* When seek to same or following cluster, */
 //end DG changes
+//was:
+//			if (ifptr > 0 &&
+//				(ofs - 1) / bcs >= (ifptr - 1) / bcs) {	/* When seek to same or following cluster, */
+
 				fp->fptr = (ifptr - 1) & ~(FSIZE_t)(bcs - 1);	/* start from the current cluster */
 				ofs -= fp->fptr;
 				clst = fp->clust;

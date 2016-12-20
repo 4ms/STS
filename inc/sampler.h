@@ -10,6 +10,8 @@
 #include <stm32f4xx.h>
 
 
+#define NUM_SAMPLES_PER_BANK 19
+
 /* Playback states */
 enum PlayStates {
 	SILENT,
@@ -22,6 +24,7 @@ enum PlayStates {
 };
 
 typedef struct Sample {
+	char *filename;
 	uint32_t sampleSize;
 	uint32_t startOfData;
 	uint8_t sampleBitSize;
@@ -45,6 +48,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst);
 
 void toggle_playing(uint8_t chan);
 void toggle_recording(void);
+uint8_t load_sample_header(uint32_t sample, uint8_t chan);
 
 #endif
 

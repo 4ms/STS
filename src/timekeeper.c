@@ -128,7 +128,7 @@ void init_ButtonDebounce_IRQ(void)
 
 	nvic.NVIC_IRQChannel = TIM4_IRQn;
 	nvic.NVIC_IRQChannelPreemptionPriority = 3;
-	nvic.NVIC_IRQChannelSubPriority = 1;
+	nvic.NVIC_IRQChannelSubPriority = 3;
 	nvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&nvic);
 
@@ -178,4 +178,30 @@ void init_ButtonLED_IRQ(void)
 	TIM_TimeBaseInit(TIM10, &tim);
 	TIM_ITConfig(TIM10, TIM_IT_Update, ENABLE);
 	TIM_Cmd(TIM10, ENABLE);
+}
+
+void init_TrigJackDebounce_IRQ(void)
+{
+	TIM_TimeBaseInitTypeDef  tim;
+
+	NVIC_InitTypeDef nvic;
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
+
+	nvic.NVIC_IRQChannel = TIM5_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority = 3;
+	nvic.NVIC_IRQChannelSubPriority = 1;
+	nvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&nvic);
+
+	TIM_TimeBaseStructInit(&tim);
+	//30000 --> 2.8kHz
+	tim.TIM_Period = 30000;
+	tim.TIM_Prescaler = 0;
+	tim.TIM_ClockDivision = 0;
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
+
+	TIM_TimeBaseInit(TIM5, &tim);
+	TIM_ITConfig(TIM5, TIM_IT_Update, ENABLE);
+	TIM_Cmd(TIM5, ENABLE);
+
 }

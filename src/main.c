@@ -242,7 +242,7 @@ int main(void)
 
 	//Initialize Codec
 	Codec_GPIO_Init();
-	Codec_AudioInterface_Init(I2S_AudioFreq_48k);
+	Codec_AudioInterface_Init(I2S_AudioFreq_44k);
 	init_audio_dma();
 	Codec_Register_Setup(0);
 
@@ -268,6 +268,7 @@ int main(void)
 
     //Begin reading inputs
     init_ButtonDebounce_IRQ();
+    init_TrigJackDebounce_IRQ();
 
 	//Begin audio DMA
 	audio_buffer_init();
