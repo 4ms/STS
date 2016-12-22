@@ -168,7 +168,11 @@
    I2SCLK = PLLI2S_VCO / PLLI2S_R */
 
 //295/6 actually runs at about 48k (48.01k)
-#define PLLI2S_N   295
+//#define PLLI2S_N   295
+//#define PLLI2S_R   6
+
+//271/6 actually runs at about 44.1k (45.17k)
+#define PLLI2S_N   271
 #define PLLI2S_R   6
 
 

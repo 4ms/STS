@@ -6,6 +6,7 @@
 #include "rgb_leds.h"
 #include "globals.h"
 #include "LED_palette.h"
+#include "pca9685_driver.h"
 
 uint16_t ButLED_color[NUM_RGBBUTTONS][3];
 uint16_t cached_ButLED_color[NUM_RGBBUTTONS][3];

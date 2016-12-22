@@ -7,40 +7,25 @@ extern const uint32_t AUDIO_MEM_BASE[4];
 
 extern uint8_t SAMPLINGBYTES;
 
-inline uint32_t offset_samples(uint8_t channel, uint32_t base_addr, uint32_t offset, uint8_t subtract)
+inline uint32_t offset_addr(uint32_t addr, uint8_t channel, int32_t offset)
 {
 	uint32_t t_addr;
 
-	//convert samples to addresses
-	offset*=SAMPLINGBYTES;
+	t_addr = addr + offset;
 
-	if (subtract == 0){
+	//Range check
+	while (t_addr >= (AUDIO_MEM_BASE[channel] + MEM_SIZE))
+		t_addr = t_addr - MEM_SIZE;
 
-		t_addr = base_addr + offset;
+	while (t_addr < AUDIO_MEM_BASE[channel])
+		t_addr = t_addr + MEM_SIZE;
 
-		while (t_addr >= (AUDIO_MEM_BASE[channel] + MEM_SIZE))
-			t_addr = t_addr - MEM_SIZE;
-
-	} else {
-
-		t_addr = base_addr - offset;
-
-		while (t_addr < AUDIO_MEM_BASE[channel])
-			t_addr = t_addr + MEM_SIZE;
-
-	}
-
-	if (SAMPLINGBYTES==2)
-		t_addr = t_addr & 0xFFFFFFFE; //addresses must be even
-	else
-		t_addr = t_addr & 0xFFFFFFFC; //addresses must end in 00
-
-	return (t_addr);
+	return(t_addr);
 }
 
 
 
-inline uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction)
+uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction)
 {
 
 	if (direction == 0)
@@ -61,7 +46,8 @@ inline uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction)
 	//return (offset_samples(channel, addr, 1, mode[channel][REV]));
 }
 
-inline uint32_t inc_addr_within_limits(uint32_t addr, uint32_t low_limit, uint32_t high_limit, uint8_t direction)
+
+uint32_t inc_addr_within_limits(uint32_t addr, uint32_t low_limit, uint32_t high_limit, uint8_t direction)
 {
 
 	if (direction == 0)
@@ -79,6 +65,15 @@ inline uint32_t inc_addr_within_limits(uint32_t addr, uint32_t low_limit, uint32
 
 	return(addr & 0xFFFFFFFE);
 }
+
+uint32_t diff_circular(uint32_t leader, uint32_t follower, uint32_t wrap_size)
+{
+	if (leader==follower) return(0);
+	else if (leader > follower) return(leader-follower);
+	else return ((leader+wrap_size)-(follower+1));
+}
+
+
 
 
 
@@ -160,9 +155,4 @@ uint32_t abs_diff(uint32_t a1, uint32_t a2)
 	else return (a2-a1);
 }
 
-inline uint32_t diff_circular(uint32_t leader, uint32_t follower, uint32_t wrap_size){
-	if (leader==follower) return(0);
-	else if (leader > follower) return(leader-follower);
-	else return ((leader+wrap_size)-(follower+1));
-}
 

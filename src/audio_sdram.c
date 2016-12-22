@@ -12,6 +12,7 @@
 #include "sampler.h"
 #include "params.h"
 #include "dig_pins.h"
+#include "leds.h"
 
 const uint32_t AUDIO_MEM_BASE[4] = {SDRAM_BASE, SDRAM_BASE + MEM_SIZE, SDRAM_BASE + MEM_SIZE*2, SDRAM_BASE + MEM_SIZE*3};
 
@@ -27,22 +28,20 @@ void memory_clear(uint8_t channel)
 
 }
 
-int32_t memory_read_sample(uint32_t addr)
+//
+// Reads a 32-bit word
+//
+uint32_t memory_read_32bword(uint32_t addr)
 {
 	// Enforce valid addr range
 	if ((addr<SDRAM_BASE) || (addr > (SDRAM_BASE + SDRAM_SIZE)))
-	addr=SDRAM_BASE;
+		addr=SDRAM_BASE;
 
-	// even addresses only
-	addr &= 0xFFFFFFFE;
+	//addr &= 0xFFFFFFFE;	 // align to even addresses
 
 	while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
-	if (SAMPLINGBYTES==2)
-		return (*((int16_t *)addr));
-	else
-		return (*((int32_t *)addr));
-
+	return (*((uint32_t *)addr));
 }
 
 //
@@ -333,6 +332,36 @@ uint32_t RAM_test(void){
 void RAM_startup_test(void)
 {
 	volatile register uint32_t ram_errors=0;
+
+
+	// Testing SDRAM timing:
+	// Results:
+	// reading a 4-byte word takes on average 218ns = 54.5 ns/Byte
+	// reading a 2-byte word takes on average 204ns = 102 ns/Byte
+	//
+	//	volatile uint32_t i32;
+	//	volatile int32_t dummy;
+	//	volatile int32_t dummy16;
+	//
+	//
+	//	for (i32=0;i32<100000;i32++)
+	//	{
+	//		DEBUG0_ON;
+	//		dummy = *((int32_t *)(0xD0000000 + i32*4));
+	//		dummy += *((int32_t *)(0xD0000000 + i32*4 + 500));
+	//		dummy += *((int32_t *)(0xD0000000 + i32*4 + 1500));
+	//		dummy += *((int32_t *)(0xD0000000 + i32*4 + 2000));
+	//		DEBUG0_OFF;
+	//
+	//		DEBUG1_ON;
+	//		dummy16 = *((int16_t *)(0xD1000000 + i32*2));
+	//		dummy16 += *((int16_t *)(0xD1000000 + i32*2 + 500));
+	//		dummy16 += *((int16_t *)(0xD1000000 + i32*2 + 1500));
+	//		dummy16 += *((int16_t *)(0xD1000000 + i32*2 + 2000));
+	//		DEBUG1_OFF;
+	//		if (dummy == 156 || dummy16 == 298)
+	//			DEBUG3_ON;
+	//	}
 
 
 	ram_errors = RAM_test();

@@ -16,7 +16,6 @@
 =-864691128455135232
 */
 
-inline int32_t compress(int32_t val);
 
 void init_compressor(uint32_t max_sample_val, float threshold_percent);
 

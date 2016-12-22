@@ -20,6 +20,8 @@ void init_compressor(uint32_t max_sample_val, float threshold_percent)
 	THRESHOLD_VALUE = threshold_percent*max_sample_val;
 }
 
+extern inline int32_t compress(int32_t val);
+
 inline int32_t compress(int32_t val)
 {
 	float tv = THRESHOLD_COMPILED / ((float)val);

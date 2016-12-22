@@ -21,6 +21,7 @@ enum i_ChannelParams{
 	BANK,
 	SAMPLE,
 	REV,
+	STEREO_MODE,
 	NUM_I_PARAMS
 };
 
@@ -58,6 +59,12 @@ enum GateTrigTypes{
 	TRIG_MODE
 };
 
+enum Stereo_Modes{
+	MONO,
+	STEREO_LEFT,
+	STEREO_RIGHT,
+	STEREO_SUM
+};
 
 
 //

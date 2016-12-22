@@ -57,10 +57,6 @@ enum g_Errors{
 	FILE_WAVEFORMATERR=(1<<14),
 	FILE_UNEXPECTEDEOF=(1<<15)
 
-
-
-
-
 };
 /*
 #define OUT_OF_MEM 1

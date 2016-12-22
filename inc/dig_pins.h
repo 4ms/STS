@@ -175,6 +175,7 @@
 
 
 void init_dig_inouts(void);
+void test_dig_inouts(void);
 
 
 #endif /* INOUTS_H_ */

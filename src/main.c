@@ -24,6 +24,7 @@
 #include "rgb_leds.h"
 #include "ff.h"
 
+
 enum g_Errors g_error=0;
 
 __IO uint16_t potadc_buffer[NUM_POT_ADCS];
@@ -152,6 +153,14 @@ int main(void)
     test_dig_inouts();
 	init_timekeeper();
 
+
+	//Initialize SDRAM memory
+	SDRAM_Init();
+	if (RAMTEST_BUTTONS)
+		RAM_startup_test();
+	delay();
+
+
 	PLAYLED1_OFF;
 	while(!PLAY2BUT){PLAYLED1_ON;}
 	PLAYLED1_OFF;
@@ -234,11 +243,7 @@ int main(void)
 	Init_CV_ADC((uint16_t *)cvadc_buffer, NUM_CV_ADCS);
 
 
-	//Initialize SDRAM memory
-	SDRAM_Init();
-	if (RAMTEST_BUTTONS)
-		RAM_startup_test();
-	delay();
+
 
 	//Initialize Codec
 	Codec_GPIO_Init();
@@ -275,6 +280,7 @@ int main(void)
 	Start_I2SDMA();
 
 	delay();
+
 
 
 	//Main loop

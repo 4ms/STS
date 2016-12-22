@@ -16,16 +16,11 @@
 
 volatile uint32_t sys_tmr;
 
+inline void inc_tmrs(void);
 inline void inc_tmrs(void)
 {
 	sys_tmr++; //at 48kHz, it resets after 24 hours, 51 minutes, 18.4853333 seconds
 }
-
-uint32_t get_sys_tmr(void)
-{
-	return sys_tmr;
-}
-
 
 void init_timekeeper(void){
 	NVIC_InitTypeDef nvic;

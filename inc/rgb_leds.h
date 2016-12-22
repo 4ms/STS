@@ -28,6 +28,12 @@ enum Buttons_LEDs {
 //Bank1ButtonLED+chan*3
 //Reverse1ButtonLED+chan*5
 
+void init_buttonLEDs(void);
+void set_ButtonLED_byRGB(uint8_t ButtonLED_number, uint16_t red,  uint16_t green,  uint16_t blue);
+void set_ButtonLED_byPalette(uint8_t ButtonLED_number, uint16_t paletteIndex);
+void set_ButtonLED_byPaletteFade(uint8_t ButtonLED_number, uint16_t paletteIndexA, uint16_t paletteIndexB, float fade);
+void display_one_ButtonLED(uint8_t ButtonLED_number);
+void display_all_ButtonLEDs(void);
 
 void test_all_buttonLEDs(void);
 void update_one_ButtonLED(uint8_t ButtonLED_number);

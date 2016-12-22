@@ -3938,7 +3938,14 @@ FRESULT f_lseek (
 	FRESULT res;
 	FATFS *fs;
 	DWORD clst, bcs, nsect;
-	uint32_t a, b;
+
+//start added by DG
+	uint8_t comparison;
+	float bcs_f, ofs_f, ifptr_f;
+	uint32_t bcs32, ofs32, ifptr32;
+//	uint64_t a,b;
+//end added by DG
+
 	FSIZE_t ifptr;
 #if _USE_FASTSEEK
 	DWORD cl, pcl, ncl, tcl, dsc, tlen, ulen, *tbl;
@@ -4010,19 +4017,37 @@ FRESULT f_lseek (
 		fp->fptr = nsect = 0;
 		if (ofs) {
 			bcs = (DWORD)fs->csize * SS(fs);	/* Cluster size (byte) */
+
 //start DG changes:
-			if ((ofs-1) < bcs || bcs==0)
-				a=0;
+			if (bcs >= 0x100000000 || ofs >= 0x100000000 || ifptr >= 0x100000000)
+			{
+				//Use float division
+				bcs_f = bcs;
+				ofs_f = ofs;
+				ifptr_f = ifptr;
+
+				comparison = ((ofs_f - 1.0f) / bcs_f >= (ifptr_f - 1.0f) / bcs_f)?1:0;
+			}
 			else
-				a = (ofs - 1) / bcs;
-			if ((ifptr - 1) < bcs || bcs==0 || ifptr==0)
-				b=0;
-			else
-				b = (ifptr - 1) / bcs;
+			{
+				//Use 32-bit division
+				bcs32 = bcs;
+				ofs32 = ofs;
+				ifptr32 = ifptr;
+
+				comparison = ((ofs32 - 1) / bcs32 >= (ifptr32 - 1) / bcs32)?1:0;
+			}
 
 			if (ifptr > 0 &&
-				(a >= b)) {	/* When seek to same or following cluster, */
+				comparison) {	/* When seek to same or following cluster, */
+
+// This crashes:
+//			a =  __aeabi_uldivmod(ofs-1,bcs); //crashes
+//			b =  __aeabi_uldivmod(ifptr - 1,bcs);
+
+
 //end DG changes
+
 //was:
 //			if (ifptr > 0 &&
 //				(ofs - 1) / bcs >= (ifptr - 1) / bcs) {	/* When seek to same or following cluster, */

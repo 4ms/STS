@@ -91,19 +91,19 @@ AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4
 LDSCRIPT = $(DEVICE)/$(LOADFILE)
 
 #Use FPU libraries (standard C)
-LDLIBS = -L"/usr/local/Cellar/arm-none-eabi-gcc/20150609/arm-none-eabi/lib/fpu" -L"/usr/local/Cellar/arm-none-eabi-gcc/20150609/lib/gcc/arm-none-eabi/4.9.3/fpu"
+LDLIBS = -L"/usr/local/Caskroom/gcc-arm-embedded/5_4-2016q3,20160926/gcc-arm-none-eabi-5_4-2016q3/arm-none-eabi/lib/fpu" -L"/usr/local/Caskroom/gcc-arm-embedded/5_4-2016q3,20160926/gcc-arm-none-eabi-5_4-2016q3/lib/gcc/arm-none-eabi/5.4.1/fpu"
 
 #Use nosys.specs for standard C functions such as malloc(), memcpy()
-LFLAGS  =  $(LDLIBS)  --specs=nosys.specs -nostartfiles -T $(LDSCRIPT) 
+LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT) 
 
 
 #vpath %.c src
 
-#build/src/resample.o: CFLAGS = $(C0FLAGS)
-build/src/sampler.o: CFLAGS = $(C0FLAGS)
-build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
-build/src/fatfs/drivers/fatfs_sd_sdio.o: CFLAGS = $(C0FLAGS)
-build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
+build/src/resample.o: CFLAGS = $(C0FLAGS)
+#build/src/sampler.o: CFLAGS = $(C0FLAGS)
+#build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
+#build/src/fatfs/drivers/fatfs_sd_sdio.o: CFLAGS = $(C0FLAGS)
+#build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 
 all: Makefile $(BIN) $(HEX)
 

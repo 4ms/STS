@@ -90,6 +90,7 @@ void init_params(void)
 		i_param[channel][BANK] 		= 0;
 		i_param[channel][SAMPLE] 	= 0;
 		i_param[channel][REV] 		= 0;
+		i_param[channel][STEREO_MODE]=0;
 	}
 
 	i_param[REC][BANK] = 0;
@@ -265,8 +266,23 @@ void update_params(void)
 {
 	uint8_t channel;
 	uint8_t old_val;
+	uint8_t stereo_switch;
 
 	recording_enabled=1;
+
+	stereo_switch=STEREOSW;
+
+	if (stereo_switch==SW_MONO)
+	{
+		i_param[0][STEREO_MODE] = STEREO_SUM;
+		i_param[1][STEREO_MODE] = STEREO_SUM;
+	}
+	else
+	{
+		i_param[0][STEREO_MODE] = STEREO_LEFT;
+		i_param[1][STEREO_MODE] = STEREO_RIGHT;
+	}
+
 
 	for (channel=0;channel<2;channel++)
 	{
@@ -299,7 +315,23 @@ void update_params(void)
 		if (old_val != i_param[channel][SAMPLE])
 			flags[PlaySample1Changed+channel*2] = 1;
 
+
+		if (stereo_switch==SW_LINK)
+		{
+			i_param[1][SAMPLE] 		= i_param[0][SAMPLE];
+			i_param[1][BANK] 		= i_param[0][BANK];
+			f_param[1][PITCH] 		= f_param[0][PITCH];
+			f_param[1][START] 		= f_param[0][START];
+			f_param[1][LENGTH] 		= f_param[0][LENGTH];
+
+			//flags[PlaySample2Changed] = flags[PlaySample1Changed];
+
+
+			break; //only calculate channel 0's parameters, because in LINK mode channel 1's params are copied from channel 0
+		}
+
 	}
+
 
 	//
 	// REC SAMPLE POT
@@ -326,12 +358,18 @@ void process_mode_flags(void)
 		{
 			flags[Play1Trig]=0;
 			toggle_playing(0);
+
+			if (STEREOSW==SW_LINK)
+				toggle_playing(1);
 		}
 
 		if (flags[Play2Trig])
 		{
 			flags[Play2Trig]=0;
 			toggle_playing(1);
+
+			if (STEREOSW==SW_LINK)
+				toggle_playing(0);
 		}
 
 		if (flags[RecTrig]==1)

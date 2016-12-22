@@ -41,6 +41,7 @@
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 //extern uint8_t 	settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
+uint8_t			sample_currently_playing[NUM_PLAY_CHAN];
 
 extern float global_param[NUM_GLOBAL_PARAMS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
@@ -147,6 +148,11 @@ void audio_buffer_init(void)
 	}
 
 
+	//Force loading of sample header on first play after boot
+	sample_currently_playing[0] = 0xFF;
+	sample_currently_playing[1] = 0xFF;
+
+
 	for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
 	{
 		samples[i].filename="";
@@ -157,8 +163,8 @@ void audio_buffer_init(void)
 	samples[1].filename = "A440-A400-16bstereo.wav";
 	samples[2].filename = "Risset-drum-16bmono.wav";
 	samples[3].filename = "SYNTH1.WAV";
-	samples[4].filename = "Risset-drum-16bmono.wav";
-	samples[5].filename = "Risset-drum-16bmono.wav";
+	samples[4].filename = "Gnossienne no 1.wav";
+
 }
 
 void toggle_recording(void)
@@ -190,94 +196,93 @@ uint8_t load_sample_header(uint32_t sample, uint8_t chan)
 	uint32_t rd;
 	WaveChunk chunk;
 
-	//need to load the sample header
-	if (samples[sample].sampleSize == 0)
+
+
+	rd = sizeof(WaveHeader);
+	res = f_read(&fil[chan], &sample_header, rd, &br);
+
+	if (res != FR_OK)
+	{ //file not opened
+		g_error |= FILE_READ_FAIL;
+		return(res);
+	}
+	else if (br < rd)
+	{ //file ended unexpectedly
+		g_error |= FILE_WAVEFORMATERR;
+		f_close(&fil[chan]);
+		return(FR_INT_ERR);
+	}
+	else if (	sample_header.RIFFId 			!= ccRIFF		//'RIFF'
+			|| sample_header.fileSize			 < 16			//File size - 8
+			|| sample_header.WAVEId 			!= ccWAVE		//'WAVE'
+			|| sample_header.fmtId 				!= ccFMT		//'fmt '
+			|| sample_header.fmtSize 			 < 16			//Format Chunk size
+			|| sample_header.audioFormat		!= 0x0001		//PCM format
+			|| sample_header.numChannels 		 > 2			//Stereo or mono allowed
+			|| sample_header.sampleRate 	 	> 48000		//Between 8k and 48k sampling rate allowed
+			|| sample_header.sampleRate		 	< 8000
+			|| (sample_header.bitsPerSample		!= 16 		//Only 8,16,24,and 32 bit samplerate allowed
+			//	&& sample_header.bitsPerSample	!= 8
+			//	&& sample_header.bitsPerSample	!= 24
+			//	&& sample_header.bitsPerSample	!= 32
+				)
+				//sample_header.blockAlign
+				//sample_header.byteRate
+		)
+	{ //first header error (not a valid wav file)
+		g_error |= FILE_WAVEFORMATERR;
+		f_close(&fil[chan]);
+		return(FR_INT_ERR);
+	}
+
+	else //no file or first header error
 	{
+		chunk.chunkId = 0;
+		rd = sizeof(WaveChunk);
 
-		rd = sizeof(WaveHeader);
-		res = f_read(&fil[chan], &sample_header, rd, &br);
-
-		if (res != FR_OK)
-		{ //file not opened
-			g_error |= FILE_READ_FAIL;
-			return(res);
-		}
-		else if (br < rd)
-		{ //file ended unexpectedly
-			g_error |= FILE_WAVEFORMATERR;
-			f_close(&fil[chan]);
-			return(FR_INT_ERR);
-		}
-		else if (	sample_header.RIFFId 			!= ccRIFF		//'RIFF'
-				|| sample_header.fileSize			 < 16			//File size - 8
-				|| sample_header.WAVEId 			!= ccWAVE		//'WAVE'
-				|| sample_header.fmtId 				!= ccFMT		//'fmt '
-				|| sample_header.fmtSize 			 < 16			//Format Chunk size
-				|| sample_header.audioFormat		!= 0x0001		//PCM format
-				|| sample_header.numChannels 		 > 0x0002		//Stereo or mono allowed
-				|| sample_header.sampleRate 	 	> 48000		//Between 8k and 48k sampling rate allowed
-				|| sample_header.sampleRate		 	< 8000
-				|| (sample_header.bitsPerSample		!= 8 		//Only 8,16,24,and 32 bit samplerate allowed
-					&& sample_header.bitsPerSample	!= 16
-					&& sample_header.bitsPerSample	!= 24
-					&& sample_header.bitsPerSample	!= 32)
-					//sample_header.blockAlign
-					//sample_header.byteRate
-			)
-		{ //first header error
-			g_error |= FILE_WAVEFORMATERR;
-			f_close(&fil[chan]);
-			return(FR_INT_ERR);
-		}
-
-		else //no file or first header error
+		while (chunk.chunkId != ccDATA)
 		{
-			chunk.chunkId = 0;
-			rd = sizeof(WaveChunk);
+			res = f_read(&fil[chan], &chunk, rd, &br);
 
-			while (chunk.chunkId != ccDATA)
+			if (res != FR_OK) {
+				g_error |= FILE_READ_FAIL;
+				f_close(&fil[chan]);
+				break;
+			}
+			if (br < rd) {
+				g_error |= FILE_WAVEFORMATERR;
+				f_close(&fil[chan]);
+				break;
+			}
+
+			//fast-forward to the next chunk
+			if (chunk.chunkId != ccDATA)
+				f_lseek(&fil[chan], f_tell(&fil[chan]) + chunk.chunkSize);
+
+			//Set the sampleSize as defined in the chunk
+			else
 			{
-				res = f_read(&fil[chan], &chunk, rd, &br);
+				samples[sample].sampleSize = chunk.chunkSize;
+				samples[sample].sampleBitSize = sample_header.bitsPerSample;
+				samples[sample].sampleRate = sample_header.sampleRate;
+				samples[sample].numChannels = sample_header.numChannels;
+				samples[sample].blockAlign = sample_header.numChannels * sample_header.bitsPerSample>>3;
+				samples[sample].startOfData = f_tell(&fil[chan]);
 
-				if (res != FR_OK) {
-					g_error |= FILE_READ_FAIL;
-					f_close(&fil[chan]);
-					return(FR_INT_ERR);
-				}
-				if (br < rd) {
-					g_error |= FILE_WAVEFORMATERR;
-					f_close(&fil[chan]);
-					return(FR_INT_ERR);
-				}
+				return(FR_OK);
 
-				//fast-forward to the next chunk
-				if (chunk.chunkId != ccDATA)
-					f_lseek(&fil[chan], f_tell(&fil[chan]) + chunk.chunkSize);
+			} //else chunk
+		} //while chunk
+	}//no file error
 
-				//Set the sampleSize as defined in the chunk
-				else
-				{
-					samples[sample].sampleSize = chunk.chunkSize;
-					samples[sample].sampleBitSize = sample_header.bitsPerSample;
-					samples[sample].sampleRate = sample_header.sampleRate;
-					samples[sample].numChannels = sample_header.numChannels;
-					samples[sample].blockAlign = sample_header.numChannels * sample_header.bitsPerSample/8;
-					samples[sample].startOfData = f_tell(&fil[chan]);
-
-
-				} //else chunk
-			} //while chunk
-		}//no file error
-	}//if samples[].samplesize==0
-
-	return(FR_OK);
+	return(FR_INT_ERR);
 }
 
 void toggle_playing(uint8_t chan)
 {
 	uint8_t sample;
 	FRESULT res;
-
+	uint32_t startpos32;
 
 	sample_data_played[chan] = 0;
 
@@ -292,45 +297,104 @@ void toggle_playing(uint8_t chan)
 
 		sample = i_param[chan][SAMPLE];
 
-		f_close(&fil[chan]);
-
-		DEBUG1_ON; //750us at -O0
-		res = f_open(&fil[chan], samples[sample].filename, FA_READ);
-		DEBUG1_OFF;
-
-		if (res != FR_OK)
+		//c=Check if sample changed
+		//if so, close the current file and open the new sample file
+		if (sample_currently_playing[chan] != sample || fil[chan].obj.fs==0)
 		{
-			g_error |= FILE_OPEN_FAIL;
-			return;
+			f_close(&fil[chan]);
+
+			DEBUG1_ON; // 384us up to 1.86ms or more? at -Ofast
+			res = f_open(&fil[chan], samples[sample].filename, FA_READ);
+			DEBUG1_OFF;
+
+			if (res != FR_OK)
+			{
+				g_error |= FILE_OPEN_FAIL;
+				sample_currently_playing[chan] = 0xFF;
+				return;
+			}
+
+			sample_currently_playing[chan] = sample;
 		}
 
-		DEBUG2_ON;
-		res = load_sample_header( i_param[chan][SAMPLE], chan );
-		DEBUG2_OFF;
 
+		//Load the sample header
+		res = FR_OK;
+		if (samples[sample].sampleSize == 0)
+		{
+			DEBUG2_ON; //For stereo 16-bit this plus the f_open take 2.04ms. For mono 16-bit it's 1.54ms
+			res = load_sample_header(sample, chan);
+			DEBUG2_OFF;
+		}
+
+		//
 		if (res == FR_OK)
 		{
 			//seek the beginning of data
-			DEBUG3_ON;
-			f_lseek(&fil[chan], samples[sample].startOfData); // ToDo: add +LENGTH param (as a function of percentage of samples[sample].sampleSize)
-			DEBUG3_OFF;
+			DEBUG3_ON; //
 
+			//Determine the starting address
+			if (f_param[chan][START] < 0.001)
+				startpos32 = 0;
+			else if (f_param[chan][START] > 0.999)
+				startpos32 = samples[sample].sampleSize - 512*8; //just play the last 8 block
+			else
+				startpos32 = (uint32_t)(f_param[chan][START] * (float)samples[sample].sampleSize);
+
+			//Align the start address
+			if (samples[sample].blockAlign == 4)
+				startpos32 &= 0xFFFFFFFC;
+
+			else if (samples[sample].blockAlign == 2)
+				startpos32 &= 0xFFFFFFFE;
+
+			else if (samples[sample].blockAlign == 8)
+				startpos32 &= 0xFFFFFFF8;
+			else
+			{
+				//handle other blockAligns here
+			}
+
+//			if (samples[sample].numChannels==2 && i_param[chan][STEREO_MODE]==STEREO_RIGHT) //Playing right channel
+//				startpos32 += samples[sample].sampleBitSize>>3; //skip one sample size ahead (bits/8 =  bytes) ===> right channel
+
+			res = f_lseek(&fil[chan], samples[sample].startOfData + startpos32);
+			sample_data_played[chan] = startpos32;
+
+			DEBUG3_OFF;
 		}
 
 
-		//loads the sample data, and opens the file into fil[chan]
-		//improvement idea #1: load all 19 samples in the current bank, opening their files. Then we when play, set the channel's file to the sample file (does this work for two channels playing the same sample?)
-		//#2: load all 19 sample headers and store info into samples[], then close the files. When we play, open the file and jump right to startOfData.
-		//??? can we open the same file twice (RO)?
+		// Set up parameters to begin playing
+		if (res == FR_OK)
+		{
+			decay_amp_i[chan]=1.0;
+			decay_inc[chan]=0.0;
+
+			play_led_state[chan]=1;
+			ButLED_state[Play1ButtonLED+chan]=1;
+
+			play_state[chan]=PREBUFFERING;
+		}
+
+		//improvement idea #1: load all 19 samples in the current bank, opening their files. So we have:
+		//FIL sample_files[19];
+		//Then we when play, set the channel's file to the sample file (somehow jump around to play the same file in two channels)
+
+		//#2:
+		//On change bank, load all 19 sample headers and store info into samples[].
+		//On play, open the file and jump right to startOfData.
+
+		//#3:
+		//On change bank, load all 19 sample headers into samples[]
+		//Load the first 100ms or so of data into SDRAM.
+		//We'd want to divide SDRAM into halves for Play and Rec,
+		//and then divide Play into 19 slots = max 9.1s@48k/16b or 441k samples or 1724 blocks of 512-bytes. So we could pre-load up to 1724 blocks per sample
+		//Set it up to load blocks in the background as we have time (e.g. if no sample is playing), filling the SDRAM space for the sample
+		//Don't let a sample start playing until it has a minimum number of blocks pre-loaded
+		//
 
 
-		decay_amp_i[chan]=1.0;
-		decay_inc[chan]=0.0;
-
-		play_led_state[chan]=1;
-		ButLED_state[Play1ButtonLED+chan]=1;
-
-		play_state[chan]=PREBUFFERING;
 	}
 
 	//Stop it if we're playing a full sample
@@ -423,6 +487,7 @@ void read_storage_to_buffer(void)
 	FRESULT res;
 	uint32_t br;
 	uint32_t rd;
+	uint8_t sample;
 
 	//
 	//Reset to beginning of sample if we changed sample or bank
@@ -460,11 +525,13 @@ void read_storage_to_buffer(void)
 		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN)
 		{
 
+			sample = sample_currently_playing[chan];
+
 			// If our "in" pointer is not far enough ahead of the "out" pointer, then we need to buffer some more:
 			if (diff_circular(play_buff_in_addr[chan], play_buff_out_addr[chan], MEM_SIZE) < (PRE_BUFF_SIZE*256))
 			{
 
-				if (sample_data_played[0] == samples[ i_param[chan][SAMPLE] ].sampleSize) //then we've buffered the entire file
+				if (sample_data_played[0] == samples[ sample ].sampleSize) //then we've buffered the entire file
 				{
 					play_state[chan] = PLAY_FADEDOWN; //this is premature!
 					f_close(&fil[chan]);
@@ -473,12 +540,12 @@ void read_storage_to_buffer(void)
 					//then set play_state to FADEDOWN in the playback routine
 
 				}
-				else if (sample_data_played[0] > samples[ i_param[chan][SAMPLE] ].sampleSize) //we read too much data somehow
+				else if (sample_data_played[0] > samples[ sample ].sampleSize) //we read too much data somehow
 					g_error |= FILE_WAVEFORMATERR;
 
 				else
 				{
-					rd = samples[ i_param[chan][SAMPLE] ].sampleSize -  sample_data_played[chan];
+					rd = samples[ sample ].sampleSize -  sample_data_played[chan];
 					if (rd > 512) rd = 512;
 
 					res = f_read(&fil[chan], t_buff16, rd, &br);
@@ -488,12 +555,15 @@ void read_storage_to_buffer(void)
 						g_error |= FILE_READ_FAIL;
 					else
 					{
-						if (rd<br)
+						if (br < rd)
+						{
 							g_error |= FILE_UNEXPECTEDEOF; //unexpected end of file, but we can continue writing out the data we read
 
+						}
 						err = memory_write16(&(play_buff_in_addr[chan]), chan, t_buff16, rd>>1, play_buff_out_addr[chan], 0);
 
 						if (err) g_error |= READ_BUFF1_OVERRUN*(1+chan);
+
 						sample_data_played[chan] += br;
 
 					}
@@ -550,6 +620,8 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	int32_t in[2];
 	int32_t out[2][BUFF_LEN];
 	int32_t dummy;
+	uint8_t sample;
+	enum Stereo_Modes stereomode;
 
 	uint16_t i;
 	uint16_t topbyte, bottombyte;
@@ -620,6 +692,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	//
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
+		sample = sample_currently_playing[chan];
 
 		// Fill buffer with silence
 		if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
@@ -632,9 +705,28 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 			//Read from SDRAM into out[chan][]
 
+			//Re-sampling rate (0.0 < rs <= 4.0)
 			rs = f_param[chan][PITCH];
 
-			resample_read(rs, play_buff_out_addr, play_buff_in_addr[chan], BUFF_LEN, chan, resampling_fpos, out[chan]);
+			if (samples[sample].numChannels == 1)
+				stereomode = MONO;
+
+			else if	(samples[sample].numChannels == 2)
+			{
+				if (   i_param[chan][STEREO_MODE] == STEREO_LEFT
+					|| i_param[chan][STEREO_MODE] == STEREO_RIGHT )
+					stereomode = STEREO_LEFT+chan; //L or R
+
+				else
+					stereomode = STEREO_SUM; //mono or sum
+			}
+			else
+			{
+				g_error |= FILE_WAVEFORMATERR; //invalid number of channels
+				break;
+			}
+
+			resample_read16(rs, play_buff_out_addr, play_buff_in_addr[chan], BUFF_LEN, stereomode, samples[sample].blockAlign, chan, resampling_fpos, out[chan]);
 
 			 switch (play_state[chan])
 			 {
@@ -666,7 +758,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 						{
 //							if ( play_storage_addr[chan] >= (uint32_t)((float)SAMPLE_SIZE * f_param[chan][LENGTH]) )
 
-							//We really should also check here if the sample is indeed fully buffered
+							//We really should check here if the sample is indeed fully buffered
 							if (diff_circular(play_buff_in_addr[chan], play_buff_out_addr[chan], MEM_SIZE) < (2*256))
 								play_state[chan] = PLAY_FADEDOWN;
 
