@@ -23,7 +23,7 @@ void init_dig_inouts(void){
 
 	//Configure inputs
 	gpio.GPIO_Mode = GPIO_Mode_IN;
-	gpio.GPIO_Speed = GPIO_Speed_2MHz;
+	gpio.GPIO_Speed = GPIO_Low_Speed;
 	gpio.GPIO_PuPd = GPIO_PuPd_UP;
 
 
@@ -36,6 +36,8 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = BANK1BUT_pin;	GPIO_Init(BANK1BUT_GPIO, &gpio);
 	gpio.GPIO_Pin = BANK2BUT_pin;	GPIO_Init(BANK2BUT_GPIO, &gpio);
 	gpio.GPIO_Pin = BANKRECBUT_pin;	GPIO_Init(BANKRECBUT_GPIO, &gpio);
+
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
 	//Trigger input jacks
 	gpio.GPIO_Pin = PLAY1JACK_pin;	GPIO_Init(PLAY1JACK_GPIO, &gpio);
@@ -52,7 +54,6 @@ void init_dig_inouts(void){
 
 	//Configure outputs
 	gpio.GPIO_Mode = GPIO_Mode_OUT;
-	gpio.GPIO_Speed = GPIO_Speed_2MHz;
 	gpio.GPIO_OType = GPIO_OType_PP;
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 

@@ -85,11 +85,15 @@ enum GlobalSettings
 
 enum GlobalParams
 {
-	LED_BRIGHTNESS,
 	SLOW_FADE_INCREMENT,
 	NUM_GLOBAL_PARAMS
 };
 
+enum GlobaliParams
+{
+	LED_BRIGHTNESS,
+	NUM_GLOBAL_I_PARAMS
+};
 
 void update_params(void);
 void process_adc(void);

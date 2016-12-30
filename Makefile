@@ -99,9 +99,10 @@ LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT)
 
 #vpath %.c src
 
-build/src/resample.o: CFLAGS = $(C0FLAGS)
+#build/src/resample.o: CFLAGS = $(C0FLAGS)
 #build/src/sampler.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
+#build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/drivers/fatfs_sd_sdio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 

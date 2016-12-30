@@ -40,5 +40,7 @@ typedef struct WaveChunk {
 
 } WaveChunk;
 
+uint8_t is_valid_wav_format(WaveHeader sample_header);
+
 
 #endif /* INC_WAVEFMT_H_ */

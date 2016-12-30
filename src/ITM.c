@@ -82,7 +82,9 @@ void ITM_Init(uint32_t SWOSpeed)
 	  uint32_t SWOPrescaler;
 
 	 //  *((volatile unsigned *)0xE000EDFC) = 0x01000000;   // "Debug Exception and Monitor Control Register (DEMCR)"
-	   CoreDebug->DEMCR = CoreDebug_DEMCR_TRCENA_Msk;
+	   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+	   DWT->CYCCNT = 0;
+	   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
 	//   *((volatile unsigned *)0xE0042004) = 0x00000027; // DBGMCU->CR = standby stop sleep trace_enable
 	//   *((volatile unsigned *)0xE00400F0) = 0x00000002;   // "Selected PIN Protocol Register": Select which protocol to use for trace output (2: SWO)

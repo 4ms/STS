@@ -55,7 +55,9 @@ enum g_Errors{
 	FILE_OPEN_FAIL=(1<<12),
 	FILE_READ_FAIL=(1<<13),
 	FILE_WAVEFORMATERR=(1<<14),
-	FILE_UNEXPECTEDEOF=(1<<15)
+	FILE_UNEXPECTEDEOF=(1<<15),
+	FILE_SEEK_FAIL=(1<<16),
+	READ_BUFF_OVERRUN_RESAMPLE=(1<<17)
 
 };
 /*
@@ -77,6 +79,9 @@ enum g_Errors{
 #define NUM_PLAY_CHAN 2
 #define NUM_REC_CHAN 1
 #define NUM_ALL_CHAN 3
+
+#define NUM_SAMPLES_PER_BANK 19
+#define NUM_BANKS 8
 
 #define REC (NUM_ALL_CHAN-1) /* =2 a shortcut to the REC channel */
 

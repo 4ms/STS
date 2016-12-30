@@ -1,10 +1,10 @@
 /*
  * rgb_leds.c
  */
-
-#include <dig_pins.h>
-#include "rgb_leds.h"
 #include "globals.h"
+#include "dig_pins.h"
+#include "params.h"
+#include "rgb_leds.h"
 #include "LED_palette.h"
 #include "pca9685_driver.h"
 
@@ -12,7 +12,11 @@ uint16_t ButLED_color[NUM_RGBBUTTONS][3];
 uint16_t cached_ButLED_color[NUM_RGBBUTTONS][3];
 uint8_t ButLED_state[NUM_RGBBUTTONS];
 
+extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+
 extern enum g_Errors g_error;
+
+extern volatile uint32_t sys_tmr;
 
 
 /*
@@ -158,11 +162,40 @@ uint16_t ButLED_statetable[NUM_RGBBUTTONS][2]={
 void update_ButtonLEDs(void)
 {
 	uint8_t ButLEDnum;
+	uint8_t chan;
+	uint32_t tm=sys_tmr & 0x3FFF;
+
 
 	if (!g_error){
 		for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 		{
-			set_ButtonLED_byPalette(ButLEDnum, ButLED_statetable[ButLEDnum][ButLED_state[ButLEDnum]] );
+			if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED)
+			{
+				chan=(ButLEDnum == Bank1ButtonLED)?0:1;
+
+				if (i_param[chan][BANK] < (NUM_LED_PALETTE-1))
+					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
+
+				else if (i_param[chan][BANK] < ((NUM_LED_PALETTE-1)*2))
+				{
+					if (tm < 0x1000)
+						set_ButtonLED_byPalette(ButLEDnum, OFF );
+					else
+						set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 2 - NUM_LED_PALETTE );
+				}
+				else
+				{
+					if ((tm < 0x0400) || (tm < 0x0C00 && tm > 0x0800))
+						set_ButtonLED_byPalette(ButLEDnum, OFF );
+					else
+						set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 3 - NUM_LED_PALETTE*2 );
+
+				}
+
+			}
+
+			else
+				set_ButtonLED_byPalette(ButLEDnum, ButLED_statetable[ButLEDnum][ButLED_state[ButLEDnum]] );
 		}
 	}
 /*

@@ -6,7 +6,7 @@
 /* This is an example of glue functions to attach various exsisting      */
 /* storage control module to the FatFs module with a defined API.        */
 /*-----------------------------------------------------------------------*/
-
+#include <string.h>
 #include "diskio.h"		/* FatFs lower layer API */
 #include "ff.h"
 
@@ -28,9 +28,10 @@ PARTITION VolToPart[] = {
 	#define FATFS_USE_SDIO			1
 #endif
 
+#include "stm32f4_discovery_sdio_sd.h"
+//#include "fatfs_sd_sdio.h"
 
-#include "fatfs_sd_sdio.h"
-
+volatile uint32_t accessing=0;
 
 /* Definitions of physical drive number for each media */
 //#define ATA		   0
@@ -46,7 +47,14 @@ DSTATUS disk_initialize (
 	BYTE pdrv				/* Physical drive nmuber (0..) */
 )
 {
-	return TM_FATFS_SD_SDIO_disk_initialize();
+	uint8_t res;
+
+	if (accessing) return 99;
+	accessing |= (1<<0);
+	res = TM_FATFS_SD_SDIO_disk_initialize();
+	accessing &= ~(1<<0);
+
+	return res;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -56,7 +64,16 @@ DSTATUS disk_status (
 	BYTE pdrv		/* Physical drive nmuber (0..) */
 )
 {
-	return TM_FATFS_SD_SDIO_disk_status();
+	return(0);
+
+//	uint8_t res;
+//
+//	if (accessing) return 99;
+//	accessing |= (1<<1);
+//	res = TM_FATFS_SD_SDIO_disk_status();
+//	accessing &= ~(1<<1);
+//
+//	return res;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -69,14 +86,22 @@ DRESULT disk_read (
 	UINT count		/* Number of sectors to read (1..128) */
 )
 {
+	uint8_t res;
+
 	/* Check count */
 	if (!count) {
 		return RES_PARERR;
 	}
 	
-	return DG_disk_read(buff,sector,count);
+	if (accessing)
+		return 99;
+	accessing |= (1<<2);
+	res = DG_disk_read(buff,sector,count);
+	//	res = TM_FATFS_SD_SDIO_disk_read(buff, sector, count);
+	accessing &= ~(1<<2);
 
-//	return TM_FATFS_SD_SDIO_disk_read(buff, sector, count);
+	return res;
+
 }
 
 
@@ -91,12 +116,19 @@ DRESULT disk_write (
 	UINT count			/* Number of sectors to write (1..128) */
 )
 {
+	uint8_t res;
+
 	/* Check count */
 	if (!count) {
 		return RES_PARERR;
 	}
 	
-	return TM_FATFS_SD_SDIO_disk_write(buff, sector, count);
+	if (accessing) return 99;
+	accessing |= (1<<3);
+	res = TM_FATFS_SD_SDIO_disk_write(buff,sector,count);
+	accessing &= ~(1<<3);
+
+	return res;
 
 }
 
@@ -110,8 +142,14 @@ DRESULT disk_ioctl (
 	void *buff		/* Buffer to send/receive control data */
 )
 {
+	uint8_t res;
 
-	return TM_FATFS_SD_SDIO_disk_ioctl(cmd, buff);
+	if (accessing) return 99;
+	accessing |= (1<<4);
+	res = TM_FATFS_SD_SDIO_disk_ioctl(cmd, buff);
+	accessing &= ~(1<<4);
+
+	return res;
 
 }
 
@@ -169,7 +207,6 @@ DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void) {
 #endif
 
 	// Configure the NVIC Preemption Priority Bits
-	//NVIC_PriorityGroupConfig (NVIC_PriorityGroup_1);
 	NVIC_InitStructure.NVIC_IRQChannel = SDIO_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
@@ -200,12 +237,12 @@ DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void) {
 }
 
 DSTATUS TM_FATFS_SD_SDIO_disk_status(void) {
-	if (SD_Detect() != SD_PRESENT) {
-		return STA_NOINIT;
+	if (SD_Detect() != SD_PRESENT) { //always returns SD_PRESENT
+		return STA_NOINIT;			//never
 	}
 
-	if (!TM_FATFS_SDIO_WriteEnabled()) {
-		TM_FATFS_SD_SDIO_Stat |= STA_PROTECT;
+	if (!TM_FATFS_SDIO_WriteEnabled()) { //always returns 1
+		TM_FATFS_SD_SDIO_Stat |= STA_PROTECT; //never
 	} else {
 		TM_FATFS_SD_SDIO_Stat &= ~STA_PROTECT;
 	}
@@ -217,24 +254,34 @@ DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
 {
 	SD_Error err=0;
 
-	err=SD_ReadBlock(data, addr*512, 512);
-	if (err==SD_OK){
+	err = SD_ReadMultiBlocksFIXED(data, addr, 512, count);
+
+	//err=SD_ReadBlock(data, addr*512, 512);
+	if (err==SD_OK)
+	{
 		err = SD_WaitReadOperation();
+		if (err)
+			return(err);
+
 		while(SD_GetStatus() != SD_TRANSFER_OK);
 	}
-
-	while (--count)
+	else
 	{
-		data += 512;
-		addr++;
-
-		err=SD_ReadBlock(data, addr*512, 512);
-		if (err==SD_OK){
-			err = SD_WaitReadOperation();
-			while(SD_GetStatus() != SD_TRANSFER_OK);
-		}
-
+		return(err);
 	}
+
+//	while (--count)
+//	{
+//		data += 512;
+//		addr++;
+//
+//		err=SD_ReadBlock(data, addr*512, 512);
+//		if (err==SD_OK){
+//			err = SD_WaitReadOperation();
+//			while(SD_GetStatus() != SD_TRANSFER_OK);
+//		}
+//
+//	}
 
 	return(err);
 }

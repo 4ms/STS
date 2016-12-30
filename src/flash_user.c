@@ -203,7 +203,7 @@ uint32_t load_flash_params(void)
 		f_param[0][TRACKING_COMP] = flash_param_TRACKING_COMP_0;
 		f_param[1][TRACKING_COMP] = flash_param_TRACKING_COMP_1;
 /*
-		global_param[LED_BRIGHTNESS] = flash_loop_led_brightness;
+		global_i_param[LED_BRIGHTNESS] = flash_loop_led_brightness;
 
 		mode[0][LOOP_CLOCK_GATETRIG] = flash_mode_LOOP_CLOCK_GATETRIG_0;
 		mode[1][LOOP_CLOCK_GATETRIG] = flash_mode_LOOP_CLOCK_GATETRIG_1;
@@ -289,7 +289,7 @@ void store_params_into_sram(void)
 	flash_global_param_FAST_FADE_SAMPLES = global_param[FAST_FADE_SAMPLES];
 	flash_global_param_SLOW_FADE_SAMPLES = global_param[SLOW_FADE_SAMPLES];
 
-	flash_loop_led_brightness = global_param[LOOP_LED_BRIGHTNESS];
+	flash_loop_led_brightness = global_i_param[LOOP_LED_BRIGHTNESS];
 
 	flash_mode_LOOP_CLOCK_GATETRIG_0 = mode[0][LOOP_CLOCK_GATETRIG];
 	flash_mode_LOOP_CLOCK_GATETRIG_1 = mode[1][LOOP_CLOCK_GATETRIG];

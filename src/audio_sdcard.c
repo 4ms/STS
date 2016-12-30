@@ -8,8 +8,8 @@
 #include "audio_sdcard.h"
 #include "dig_pins.h"
 #include "globals.h"
-//#include "stm32f4_discovery_sdio_sd.h"
-#include "fatfs_sd_sdio.h"
+#include "stm32f4_discovery_sdio_sd.h"
+//#include "fatfs_sd_sdio.h"
 
 
 //__IO uint16_t MEMORY[SPIRAM_END_ADDR];

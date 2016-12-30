@@ -13,6 +13,46 @@
 #include "params.h"
 #include "dig_pins.h"
 #include "leds.h"
+#include "circular_buffer.h"
+
+/*
+ * Proposed SDRAM memory layout:
+ *
+ *
+ * 0xD0000000 - 0xD037AA00		Pre-loaded sample data (0x0002EE00 each = 192000 bytes = 375 blocks = 1 second @ 48kHz/16-bit/stereo
+ * 	0xD0000000 - 			Sample #1
+ * 	0xD002EE00 - 			Sample #2
+ * 	0xD005DC00 - 			Sample #3
+ * 	...
+ *
+ * 0xD0F00000 - 0xD0FFFFFF		Channel sample playback buffer (used when pre-loaded data runs out)
+ *
+ * 0xD1000000 - 0xD1FFFFFF		Recording buffer
+ *
+ */
+//
+//
+//const uint32_t AUDIO_MEM_SAMPLE_SLOT[NUM_SAMPLES_PER_BANK] = {
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*0,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*1,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*2,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*3,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*4,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*5,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*6,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*7,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*8,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*9,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*10,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*11,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*12,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*13,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*14,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*15,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*16,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*17,
+//		MEM_SAMPLE_PRELOAD_BASE + MEM_SAMPLE_PRELOAD_SIZE*18
+//};
 
 const uint32_t AUDIO_MEM_BASE[4] = {SDRAM_BASE, SDRAM_BASE + MEM_SIZE, SDRAM_BASE + MEM_SIZE*2, SDRAM_BASE + MEM_SIZE*3};
 
@@ -35,7 +75,7 @@ uint32_t memory_read_32bword(uint32_t addr)
 {
 	// Enforce valid addr range
 	if ((addr<SDRAM_BASE) || (addr > (SDRAM_BASE + SDRAM_SIZE)))
-		addr=SDRAM_BASE;
+		return 0;
 
 	//addr &= 0xFFFFFFFE;	 // align to even addresses
 
@@ -117,6 +157,56 @@ uint32_t memory_read16(uint32_t *addr, uint8_t channel, int16_t *rd_buff, uint32
 	return(num_filled);
 }
 
+uint32_t memory_read16_cbin(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samples, uint8_t decrement)
+{
+	uint32_t i;
+	uint32_t num_filled=0;
+
+	for (i=0;i<num_samples;i++)
+	{
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		if (b->out==b->in)			num_filled=1;
+		else if (num_filled)		num_filled++;
+
+		if (num_filled)				rd_buff[i] = 0;
+		else						rd_buff[i] = *((int16_t *)(b->in));
+
+		CB_offset_in_address(b, 2, decrement);
+		b->in = (b->in & 0xFFFFFFFE);
+
+	}
+	return (num_filled);
+
+}
+
+uint32_t memory_read16_cbout(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samples, uint8_t decrement)
+{
+	uint32_t i;
+	uint32_t num_filled=0;
+
+	for (i=0;i<num_samples;i++)
+	{
+
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		if (b->out==b->in)			num_filled=1;
+		else if (num_filled)		num_filled++;
+
+		if (num_filled)				rd_buff[i] = 0;
+		else						rd_buff[i] = *((int16_t *)(b->out));
+
+		CB_offset_out_address(b, 2, decrement);
+		b->out = (b->out & 0xFFFFFFFE);
+
+	}
+	return (num_filled);
+}
+
+
+
+
+
 
 //
 // Reads from SDRAM memory starting at address addr[channel], for a length of num_samples words (16 or 32, depending on SAMPLINGBYTES)
@@ -171,7 +261,8 @@ uint32_t memory_write16(uint32_t *addr, uint8_t channel, int16_t *wr_buff, uint3
 
 		*addr = inc_addr_within_limits(*addr, AUDIO_MEM_BASE[channel], AUDIO_MEM_BASE[channel] + MEM_SIZE, decrement);
 
-		if (*addr==detect_crossing_addr) heads_crossed=1;
+		if (*addr==detect_crossing_addr)
+			heads_crossed=detect_crossing_addr;
 
 	}
 
@@ -179,68 +270,53 @@ uint32_t memory_write16(uint32_t *addr, uint8_t channel, int16_t *wr_buff, uint3
 
 }
 
-
-uint32_t memory_read_channel(uint32_t *addr, uint8_t channel, int32_t *rd_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement){
-	uint32_t i;
-	uint32_t num_detected=0;
-
-	//Loop of 8 takes 2.5us
-	//read from SDRAM. first one takes 200us, subsequent reads take 50ns
-	for (i=0;i<num_samples;i++){
-
-		// Enforce valid addr range
-		if ((addr[channel]<SDRAM_BASE) || (addr[channel] > (SDRAM_BASE + SDRAM_SIZE)))
-		addr[channel]=SDRAM_BASE;
-
-		// even addresses only
-		addr[channel] = (addr[channel] & 0xFFFFFFFE);
-
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
-
-		if (SAMPLINGBYTES==2)
-			rd_buff[i] = *((int16_t *)(addr[channel]));
-		else
-			rd_buff[i] = *((int32_t *)(addr[channel]));
-
-		// Count the number of addresses read from past, and including, the detect_crossing_addr
-		if (num_detected) num_detected++;
-		else if (addr[channel]==detect_crossing_addr) num_detected=1;
-
-		addr[channel] = inc_addr(addr[channel], channel, decrement);
-
-	}
-
-	return(num_detected);
-}
-
-
-uint32_t memory_write_channel(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint8_t decrement)
+uint32_t memory_write16_cbout(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement)
 {
 	uint32_t i;
+	uint32_t heads_crossed=0;
 
-	for (i=0;i<num_samples;i++){
-
-		//Enforce valid addr range
-		if ((addr[channel]<SDRAM_BASE) || (addr[channel] > (SDRAM_BASE + SDRAM_SIZE)))
-			addr[channel]=SDRAM_BASE;
-
-		//even addresses only
-		addr[channel] = (addr[channel] & 0xFFFFFFFE);
-
+	for (i=0;i<num_samples;i++)
+	{
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
-		if (SAMPLINGBYTES==2)
-			*((int16_t *)addr[channel]) = wr_buff[i];
-		else
-			*((int32_t *)addr[channel]) = wr_buff[i];
+		b->out = (b->out & 0xFFFFFFFE);
 
-		addr[channel] = inc_addr(addr[channel], channel, decrement);
+		*((int16_t *)b->out) = wr_buff[i];
 
+		CB_offset_out_address(b, 2, decrement);
+
+		if (b->in == b->out)
+			heads_crossed = b->out;
 	}
 
-	return(0);
-
+	return (heads_crossed);
 }
+
+
+uint32_t memory_write16_cbin(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement)
+{
+	uint32_t i;
+	uint32_t heads_crossed=0;
+
+	for (i=0;i<num_samples;i++)
+	{
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		b->in = (b->in & 0xFFFFFFFE);
+
+		*((int16_t *)b->in) = wr_buff[i];
+
+		CB_offset_in_address(b, 2, decrement);
+
+		if (b->in == b->out)
+			heads_crossed = b->out;
+	}
+
+	return (heads_crossed);
+}
+
+
+
 
 //
 // reads from the addr, and mixes that value with the value in wr_buff

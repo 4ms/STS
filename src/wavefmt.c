@@ -11,13 +11,15 @@ uint8_t is_valid_wav_format(WaveHeader sample_header)
 			|| sample_header.numChannels 	 > 0x0002		//Stereo or mono allowed
 			|| sample_header.sampleRate 	 > 48000		//Between 8k and 48k sampling rate allowed
 			|| sample_header.sampleRate		 < 8000
-			|| (sample_header.bitsPerSample		!= 8 		//Only 8,16,24,and 32 bit samplerate allowed
-				&& sample_header.bitsPerSample	!= 16
-				&& sample_header.bitsPerSample	!= 24
-				&& sample_header.bitsPerSample	!= 32)
+			|| (sample_header.bitsPerSample		!= 16 		//Only 16 bit samplerate allowed
+				//&& sample_header.bitsPerSample	!= 8
+				//&& sample_header.bitsPerSample	!= 24
+				//&& sample_header.bitsPerSample	!= 32
+				)
 		)
 		return 1;
 	else
 		return 0;
 
 }
+

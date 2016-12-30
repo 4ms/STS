@@ -27,6 +27,7 @@ extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern float global_param[NUM_GLOBAL_PARAMS];
+extern uint32_t global_i_param[NUM_GLOBAL_PARAMS];
 
 
 //extern uint32_t flash_firmware_version;
@@ -40,7 +41,7 @@ void set_default_system_settings(void)
 	f_param[1][TRACKING_COMP]=1.0;
 
 	global_param[SLOW_FADE_INCREMENT] = 0.001;
-	global_param[LED_BRIGHTNESS] = 4;
+	global_i_param[LED_BRIGHTNESS] = 4;
 
 }
 

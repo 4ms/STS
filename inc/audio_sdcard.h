@@ -26,12 +26,6 @@
 /* READ_BUFF_SIZE: number of elements in circular buffer array (each element has BUFF_LEN elements) */
 #define READ_BUFF_SIZE 96
 
-//#define PRE_BUFF_SIZE 32
-//#define PRE_BUFF_SIZE 1024
-#define PRE_BUFF_SIZE 256
-
-#define MAXSAMPLES 19
-
 //#define MEMORY_SIZE 0x00400000 /* 2GB / 512 Bytes per block = 4M blocks */
 //#define BANK_SIZE 0x30000 /* BANKs a  re over 1100 seconds, almost 20 minutes: 0x35CF0 x 512B/block = 106MBytes or 1175 seconds @48k/16bit*/
 

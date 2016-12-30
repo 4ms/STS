@@ -1,9 +1,11 @@
 #include "globals.h"
+#include "params.h"
 #include "dig_pins.h"
 #include "buttons.h"
 
 enum ButtonStates button_state[NUM_BUTTONS];
 extern uint8_t flags[NUM_FLAGS];
+extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
 
 
@@ -60,13 +62,23 @@ void Button_Debounce_IRQHandler(void)
 					case Play1:
 						flags[Play1Trig]=1;
 						break;
+
 					case Play2:
 						flags[Play2Trig]=1;
 						break;
+
 					case Bank1:
+						flags[PlayBank1Changed] = 1;
+						if (i_param[0][BANK] >= (NUM_BANKS-1))	i_param[0][BANK]=0;
+						else									i_param[0][BANK]++;
 						break;
+
 					case Bank2:
+						flags[PlayBank2Changed] = 1;
+						if (i_param[1][BANK] >= (NUM_BANKS-1))	i_param[1][BANK]=0;
+						else									i_param[1][BANK]++;
 						break;
+
 					case Rec:
 						flags[RecTrig]=1;
 						break;

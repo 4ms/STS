@@ -97,13 +97,13 @@ void init_LED_PWM_IRQ(void)
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
 	nvic.NVIC_IRQChannel = TIM2_IRQn;
-	nvic.NVIC_IRQChannelPreemptionPriority = 3;
+	nvic.NVIC_IRQChannelPreemptionPriority = 0;
 	nvic.NVIC_IRQChannelSubPriority = 0;
 	nvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&nvic);
 
 	TIM_TimeBaseStructInit(&tim);
-	tim.TIM_Period = 17500; //168MHz / 2 / 17500 = 4.8kHz (208.3us) ... / 32 =
+	tim.TIM_Period = 35000; //168MHz / 2 / 17500 = 4.8kHz (208.3us) ... / 32 =
 //	tim.TIM_Period = 4375; //168MHz / 2 / 4375 = 19.2kHz
 	tim.TIM_Prescaler = 0;
 	tim.TIM_ClockDivision = 0;

@@ -15,10 +15,14 @@ inline uint32_t offset_addr(uint32_t addr, uint8_t channel, int32_t offset)
 
 	//Range check
 	while (t_addr >= (AUDIO_MEM_BASE[channel] + MEM_SIZE))
+	{
 		t_addr = t_addr - MEM_SIZE;
+	}
 
 	while (t_addr < AUDIO_MEM_BASE[channel])
+	{
 		t_addr = t_addr + MEM_SIZE;
+	}
 
 	return(t_addr);
 }
@@ -74,7 +78,25 @@ uint32_t diff_circular(uint32_t leader, uint32_t follower, uint32_t wrap_size)
 }
 
 
+uint32_t diff_wrap(uint32_t leader, uint32_t follower, uint8_t wrapping, uint32_t wrap_size)
+{
 
+	if (!wrapping)
+	{
+		if (leader > follower)
+			return (leader - follower);
+		else
+			return 0;
+	}
+	else	//wrapping
+	{
+		if (follower > leader)
+			return ((leader + MEM_SIZE) - follower);
+		else
+			return 0;
+
+	}
+}
 
 
 // Utility function to determine if address mid is in between addresses beg and end in a circular (ring) buffer.

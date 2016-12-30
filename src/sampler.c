@@ -1,9 +1,38 @@
 /*
  * sampler.c
 
+		//improvement idea #1: load all 19 samples in the current bank, opening their files. So we have:
+		//FIL sample_files[19];
+		//Then we when play, set the channel's file to the sample file (somehow jump around to play the same file in two channels)
+
+		//#2:
+		//On change bank, load all 19 sample headers and store info into samples[].
+		//On play, open the file and jump right to startOfData.
+
+		//#3:
+		//On change bank, load all 19 sample headers into samples[]
+		//Load the first 100ms or so of data into SDRAM.
+		//We'd want to divide SDRAM into halves for Play and Rec,
+		//and then divide Play into 19 slots = max 9.1s@48k/16b or 441k samples or 1724 blocks of 512-bytes. So we could pre-load up to 1724 blocks per sample
+		//Set it up to load blocks in the background as we have time (e.g. if no sample is playing), filling the SDRAM space for the sample
+		//Don't let a sample start playing until it has a minimum number of blocks pre-loaded
+		//???? This doesn't allow us to play from a different start position!!!
+		//
+
+ */
+
+/* Improvements:
+ *
+ * Use structs:
+ * -params (combine i_param + f_param)
+ * -circular_buffer: uint32_t in, out; uint8_t is_wrapping; uint32_t min, size; (can then do diff_wrap(circ_buff);)... combines AUDIO_MEM_BASE and MEM_SIZE
+ * -adc_value: uint16_t raw_val, uint16_t i_smoothed_val, float smoothed_val;
+ *
+ *
  */
 #include "globals.h"
 #include "audio_sdram.h"
+#include "ff.h"
 #include "sampler.h"
 #include "audio_util.h"
 #include "audio_sdcard.h"
@@ -16,10 +45,8 @@
 #include "rgb_leds.h"
 #include "resample.h"
 
-#include "ff.h"
-
 #include "wavefmt.h"
-
+#include "circular_buffer.h"
 
 //
 // DEBUG
@@ -34,6 +61,7 @@
 //extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
 //extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 
+volatile uint32_t*  SDIOSTA;
 
 //
 // Parameters
@@ -55,7 +83,7 @@ enum PlayStates play_state[NUM_PLAY_CHAN]={SILENT,SILENT};
 
 extern uint8_t play_led_state[NUM_PLAY_CHAN];
 //extern uint8_t clip_led_state[NUM_PLAY_CHAN];
-uint8_t ButLED_state[NUM_RGBBUTTONS];
+extern uint8_t ButLED_state[NUM_RGBBUTTONS];
 
 
 uint8_t SAMPLINGBYTES=2;
@@ -63,7 +91,7 @@ uint8_t SAMPLINGBYTES=2;
 extern int16_t CODEC_DAC_CALIBRATION_DCOFFSET[4];
 //extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
 
-
+uint32_t end_out_ctr[NUM_PLAY_CHAN]={0,0};
 
 //
 // Memory
@@ -72,12 +100,16 @@ extern const uint32_t AUDIO_MEM_BASE[4];
 
 //
 // SDRAM buffer addresses for playing from sdcard
-// SD Card --> SDARM @play_buff_in_addr[] ... SDRAM @play_buff_out_addr[] --> Codec
+// SD Card --> SDARM @play_buff[]->in ... SDRAM @play_buff[]->out --> Codec
 //
-uint32_t play_buff_in_addr[NUM_PLAY_CHAN];
-uint32_t play_buff_out_addr[NUM_PLAY_CHAN];
+CircularBuffer splay_buff[NUM_PLAY_CHAN];
+CircularBuffer* play_buff[NUM_PLAY_CHAN];
 
-uint32_t sample_data_played[NUM_PLAY_CHAN]={0,0};
+
+
+uint32_t sample_data_position[NUM_PLAY_CHAN] = {0,0};
+uint32_t sample_data_played[NUM_PLAY_CHAN] =   {0,0};
+
 //uint32_t sample_data_position[NUM_PLAY_CHAN]={0,0};
 
 //
@@ -117,6 +149,9 @@ Sample samples[NUM_SAMPLES_PER_BANK];
 void audio_buffer_init(void)
 {
 	uint32_t i;
+	FIL temp_file;
+	FRESULT res;
+
 
 //	if (MODE_24BIT_JUMPER)
 //		SAMPLINGBYTES=4;
@@ -128,12 +163,27 @@ void audio_buffer_init(void)
 	memory_clear(2);
 	memory_clear(3);
 
+
 	rec_buff_in_addr 		= AUDIO_MEM_BASE[RECCHAN];
 	rec_buff_out_addr 		= AUDIO_MEM_BASE[RECCHAN];
-	play_buff_out_addr[0] 	= AUDIO_MEM_BASE[0];
-	play_buff_in_addr[0] 	= AUDIO_MEM_BASE[0];
-	play_buff_out_addr[1] 	= AUDIO_MEM_BASE[1];
-	play_buff_in_addr[1] 	= AUDIO_MEM_BASE[1];
+
+	play_buff[0] = &(splay_buff[0]);
+	play_buff[1] = &(splay_buff[1]);
+
+	play_buff[0]->in 		= AUDIO_MEM_BASE[0];
+	play_buff[0]->out		= AUDIO_MEM_BASE[0];
+	play_buff[0]->min		= AUDIO_MEM_BASE[0];
+	play_buff[0]->max		= AUDIO_MEM_BASE[0] + MEM_SIZE -1;
+	play_buff[0]->size		= MEM_SIZE;
+	play_buff[0]->wrapping	= 0;
+
+	play_buff[1]->in 		= AUDIO_MEM_BASE[1];
+	play_buff[1]->out		= AUDIO_MEM_BASE[1];
+	play_buff[1]->min		= AUDIO_MEM_BASE[1];
+	play_buff[1]->max		= AUDIO_MEM_BASE[1] + MEM_SIZE -1;
+	play_buff[1]->size		= MEM_SIZE;
+	play_buff[1]->wrapping	= 0;
+
 
 	flags[PlayBuff1_Discontinuity] = 1;
 	flags[PlayBuff2_Discontinuity] = 1;
@@ -159,12 +209,157 @@ void audio_buffer_init(void)
 		samples[i].sampleSize=0;
 	}
 
+	//Set the samples file names
 	samples[0].filename = "A440-16bmono.wav";
 	samples[1].filename = "A440-A400-16bstereo.wav";
 	samples[2].filename = "Risset-drum-16bmono.wav";
 	samples[3].filename = "SYNTH1.WAV";
 	samples[4].filename = "Gnossienne no 1.wav";
 
+	samples[5].filename = "Gnossienne no 1.wav";
+	samples[6].filename = "Gnossienne no 1.wav";
+	samples[7].filename = "Gnossienne no 1.wav";
+	samples[8].filename = "Gnossienne no 1.wav";
+	samples[9].filename = "Gnossienne no 1.wav";
+	samples[10].filename = "Gnossienne no 1.wav";
+	samples[11].filename = "Gnossienne no 1.wav";
+	samples[12].filename = "Gnossienne no 1.wav";
+	samples[13].filename = "Gnossienne no 1.wav";
+	samples[14].filename = "Gnossienne no 1.wav";
+	samples[15].filename = "Gnossienne no 1.wav";
+	samples[16].filename = "Gnossienne no 1.wav";
+	samples[17].filename = "Gnossienne no 1.wav";
+	samples[18].filename = "Gnossienne no 1.wav";
+
+	//Load all the sample headers
+	for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
+	{
+		res = f_open(&temp_file, samples[i].filename, FA_READ);
+
+		if (res==FR_OK)
+			res = load_sample_header(i, &temp_file);
+
+//		if (res==FR_OK)
+//			preload_sample(i, &temp_file);
+
+		f_close(&temp_file);
+	}
+
+}
+
+uint8_t preload_sample(uint32_t samplenum, FIL* sample_file)
+{
+	FRESULT res;
+	uint32_t sz,rd,br;
+	int16_t t_buff16[BUFF_LEN];
+
+	//file is open already
+
+	// Seek the start of the sample data
+	res = f_lseek(sample_file, samples[samplenum].startOfData);
+
+	// Read it
+	sz = samples[ samplenum ].sampleSize;
+
+	//if (sz > SAMPLE_SLOT_SIZE) sz = SAMPLE_SLOT_SIZE;
+
+	while (sz)
+	{
+		//Read in 512byte blocks, unless <512 is remaining
+		if (sz<512)	rd = sz;
+		else		rd = 512;
+
+		res = f_read(sample_file, t_buff16, rd, &br);
+
+		if (res==FR_OK && br==rd)
+		{
+			//memory_write16()
+
+			sz -= rd;
+		}
+		else
+			return(FR_INT_ERR);
+	}
+
+	return(FR_OK);
+
+}
+
+
+//
+// Load the sample header from the provided file
+//
+uint8_t load_sample_header(uint32_t samplenum, FIL* sample_file)
+{
+	WaveHeader sample_header;
+	FRESULT res;
+	uint32_t br;
+	uint32_t rd;
+	WaveChunk chunk;
+
+
+	rd = sizeof(WaveHeader);
+	res = f_read(sample_file, &sample_header, rd, &br);
+
+	if (res != FR_OK)
+	{
+		g_error |= FILE_READ_FAIL; //file not opened
+		return(res);
+	}
+	else if (br < rd)
+	{
+		g_error |= FILE_WAVEFORMATERR; //file ended unexpectedly when reading first header
+		f_close(sample_file);
+		return(FR_INT_ERR);
+	}
+	else if ( is_valid_wav_format(sample_header) )
+	{
+		g_error |= FILE_WAVEFORMATERR;	//first header error (not a valid wav file)
+		f_close(sample_file);
+		return(FR_INT_ERR);
+	}
+
+	else
+	{
+		chunk.chunkId = 0;
+		rd = sizeof(WaveChunk);
+
+		while (chunk.chunkId != ccDATA)
+		{
+			res = f_read(sample_file, &chunk, rd, &br);
+
+			if (res != FR_OK) {
+				g_error |= FILE_READ_FAIL;
+				f_close(sample_file);
+				break;
+			}
+			if (br < rd) {
+				g_error |= FILE_WAVEFORMATERR;
+				f_close(sample_file);
+				break;
+			}
+
+			//fast-forward to the next chunk
+			if (chunk.chunkId != ccDATA)
+				f_lseek(sample_file, f_tell(sample_file) + chunk.chunkSize);
+
+			//Set the sampleSize as defined in the chunk
+			else
+			{
+				samples[samplenum].sampleSize = chunk.chunkSize;
+				samples[samplenum].sampleBitSize = sample_header.bitsPerSample;
+				samples[samplenum].sampleRate = sample_header.sampleRate;
+				samples[samplenum].numChannels = sample_header.numChannels;
+				samples[samplenum].blockAlign = sample_header.numChannels * sample_header.bitsPerSample>>3;
+				samples[samplenum].startOfData = f_tell(sample_file);
+
+				return(FR_OK);
+
+			} //else chunk
+		} //while chunk
+	}//no file error
+
+	return(FR_INT_ERR);
 }
 
 void toggle_recording(void)
@@ -185,127 +380,33 @@ void toggle_recording(void)
 	}
 }
 
-//
-// Load the sample header and open it into the channel's file
-//
-uint8_t load_sample_header(uint32_t sample, uint8_t chan)
-{
-	WaveHeader sample_header;
-	FRESULT res;
-	uint32_t br;
-	uint32_t rd;
-	WaveChunk chunk;
-
-
-
-	rd = sizeof(WaveHeader);
-	res = f_read(&fil[chan], &sample_header, rd, &br);
-
-	if (res != FR_OK)
-	{ //file not opened
-		g_error |= FILE_READ_FAIL;
-		return(res);
-	}
-	else if (br < rd)
-	{ //file ended unexpectedly
-		g_error |= FILE_WAVEFORMATERR;
-		f_close(&fil[chan]);
-		return(FR_INT_ERR);
-	}
-	else if (	sample_header.RIFFId 			!= ccRIFF		//'RIFF'
-			|| sample_header.fileSize			 < 16			//File size - 8
-			|| sample_header.WAVEId 			!= ccWAVE		//'WAVE'
-			|| sample_header.fmtId 				!= ccFMT		//'fmt '
-			|| sample_header.fmtSize 			 < 16			//Format Chunk size
-			|| sample_header.audioFormat		!= 0x0001		//PCM format
-			|| sample_header.numChannels 		 > 2			//Stereo or mono allowed
-			|| sample_header.sampleRate 	 	> 48000		//Between 8k and 48k sampling rate allowed
-			|| sample_header.sampleRate		 	< 8000
-			|| (sample_header.bitsPerSample		!= 16 		//Only 8,16,24,and 32 bit samplerate allowed
-			//	&& sample_header.bitsPerSample	!= 8
-			//	&& sample_header.bitsPerSample	!= 24
-			//	&& sample_header.bitsPerSample	!= 32
-				)
-				//sample_header.blockAlign
-				//sample_header.byteRate
-		)
-	{ //first header error (not a valid wav file)
-		g_error |= FILE_WAVEFORMATERR;
-		f_close(&fil[chan]);
-		return(FR_INT_ERR);
-	}
-
-	else //no file or first header error
-	{
-		chunk.chunkId = 0;
-		rd = sizeof(WaveChunk);
-
-		while (chunk.chunkId != ccDATA)
-		{
-			res = f_read(&fil[chan], &chunk, rd, &br);
-
-			if (res != FR_OK) {
-				g_error |= FILE_READ_FAIL;
-				f_close(&fil[chan]);
-				break;
-			}
-			if (br < rd) {
-				g_error |= FILE_WAVEFORMATERR;
-				f_close(&fil[chan]);
-				break;
-			}
-
-			//fast-forward to the next chunk
-			if (chunk.chunkId != ccDATA)
-				f_lseek(&fil[chan], f_tell(&fil[chan]) + chunk.chunkSize);
-
-			//Set the sampleSize as defined in the chunk
-			else
-			{
-				samples[sample].sampleSize = chunk.chunkSize;
-				samples[sample].sampleBitSize = sample_header.bitsPerSample;
-				samples[sample].sampleRate = sample_header.sampleRate;
-				samples[sample].numChannels = sample_header.numChannels;
-				samples[sample].blockAlign = sample_header.numChannels * sample_header.bitsPerSample>>3;
-				samples[sample].startOfData = f_tell(&fil[chan]);
-
-				return(FR_OK);
-
-			} //else chunk
-		} //while chunk
-	}//no file error
-
-	return(FR_INT_ERR);
-}
 
 void toggle_playing(uint8_t chan)
 {
-	uint8_t sample;
+	uint8_t samplenum;
 	FRESULT res;
 	uint32_t startpos32;
 
-	sample_data_played[chan] = 0;
 
 	//Start playing, or re-start if we have a short length
-	if (	play_state[chan]==SILENT
-			|| play_state[chan]==PLAY_FADEDOWN
-			|| play_state[chan]==PLAYING_PERC)
+	if (play_state[chan]==SILENT || play_state[chan]==PLAY_FADEDOWN || play_state[chan]==RETRIG_FADEDOWN)
 	{
-		play_buff_in_addr[chan] = play_buff_out_addr[chan];
+
+		play_buff[chan]->in = play_buff[chan]->min;
+		play_buff[chan]->out = play_buff[chan]->min;
+
 		flags[PlayBuff1_Discontinuity+chan] = 1;
 
+		samplenum = i_param[chan][SAMPLE];
 
-		sample = i_param[chan][SAMPLE];
-
-		//c=Check if sample changed
+		//Check if sample changed
 		//if so, close the current file and open the new sample file
-		if (sample_currently_playing[chan] != sample || fil[chan].obj.fs==0)
+		if (sample_currently_playing[chan] != samplenum || fil[chan].obj.fs==0)
 		{
 			f_close(&fil[chan]);
 
-			DEBUG1_ON; // 384us up to 1.86ms or more? at -Ofast
-			res = f_open(&fil[chan], samples[sample].filename, FA_READ);
-			DEBUG1_OFF;
+			 // 384us up to 1.86ms or more? at -Ofast
+			res = f_open(&fil[chan], samples[samplenum].filename, FA_READ);
 
 			if (res != FR_OK)
 			{
@@ -314,55 +415,37 @@ void toggle_playing(uint8_t chan)
 				return;
 			}
 
-			sample_currently_playing[chan] = sample;
+			sample_currently_playing[chan] = samplenum;
 		}
 
+		//Determine the starting address
+		if (f_param[chan][START] < 0.001)
+			startpos32 = 0;
+		else if (f_param[chan][START] > 0.999)
+			startpos32 = samples[samplenum].sampleSize - 512*32; //just play the last 32 blocks
+		else
+			startpos32 = (uint32_t)(f_param[chan][START] * (float)samples[samplenum].sampleSize);
 
-		//Load the sample header
-		res = FR_OK;
-		if (samples[sample].sampleSize == 0)
+		//Align the start address
+		if (samples[samplenum].blockAlign == 4)
+			startpos32 &= 0xFFFFFFFC;
+
+		else if (samples[samplenum].blockAlign == 2)
+			startpos32 &= 0xFFFFFFFE;
+
+		else if (samples[samplenum].blockAlign == 8)
+			startpos32 &= 0xFFFFFFF8;
+		else
 		{
-			DEBUG2_ON; //For stereo 16-bit this plus the f_open take 2.04ms. For mono 16-bit it's 1.54ms
-			res = load_sample_header(sample, chan);
-			DEBUG2_OFF;
+			//handle other blockAligns here
 		}
 
-		//
-		if (res == FR_OK)
-		{
-			//seek the beginning of data
-			DEBUG3_ON; //
+		res = f_lseek(&fil[chan], samples[samplenum].startOfData + startpos32);
 
-			//Determine the starting address
-			if (f_param[chan][START] < 0.001)
-				startpos32 = 0;
-			else if (f_param[chan][START] > 0.999)
-				startpos32 = samples[sample].sampleSize - 512*8; //just play the last 8 block
-			else
-				startpos32 = (uint32_t)(f_param[chan][START] * (float)samples[sample].sampleSize);
-
-			//Align the start address
-			if (samples[sample].blockAlign == 4)
-				startpos32 &= 0xFFFFFFFC;
-
-			else if (samples[sample].blockAlign == 2)
-				startpos32 &= 0xFFFFFFFE;
-
-			else if (samples[sample].blockAlign == 8)
-				startpos32 &= 0xFFFFFFF8;
-			else
-			{
-				//handle other blockAligns here
-			}
-
-//			if (samples[sample].numChannels==2 && i_param[chan][STEREO_MODE]==STEREO_RIGHT) //Playing right channel
-//				startpos32 += samples[sample].sampleBitSize>>3; //skip one sample size ahead (bits/8 =  bytes) ===> right channel
-
-			res = f_lseek(&fil[chan], samples[sample].startOfData + startpos32);
-			sample_data_played[chan] = startpos32;
-
-			DEBUG3_OFF;
-		}
+		if (res != FR_OK)
+			g_error |= FILE_SEEK_FAIL;
+		else
+			sample_data_position[chan] = startpos32;
 
 
 		// Set up parameters to begin playing
@@ -377,32 +460,20 @@ void toggle_playing(uint8_t chan)
 			play_state[chan]=PREBUFFERING;
 		}
 
-		//improvement idea #1: load all 19 samples in the current bank, opening their files. So we have:
-		//FIL sample_files[19];
-		//Then we when play, set the channel's file to the sample file (somehow jump around to play the same file in two channels)
+	}
 
-		//#2:
-		//On change bank, load all 19 sample headers and store info into samples[].
-		//On play, open the file and jump right to startOfData.
-
-		//#3:
-		//On change bank, load all 19 sample headers into samples[]
-		//Load the first 100ms or so of data into SDRAM.
-		//We'd want to divide SDRAM into halves for Play and Rec,
-		//and then divide Play into 19 slots = max 9.1s@48k/16b or 441k samples or 1724 blocks of 512-bytes. So we could pre-load up to 1724 blocks per sample
-		//Set it up to load blocks in the background as we have time (e.g. if no sample is playing), filling the SDRAM space for the sample
-		//Don't let a sample start playing until it has a minimum number of blocks pre-loaded
-		//
-
+	else if (play_state[chan]==PLAYING_PERC)
+	{
+		play_state[chan]=RETRIG_FADEDOWN;
+		play_led_state[chan]=0;
+		ButLED_state[Play1ButtonLED+chan]=0;
 
 	}
 
 	//Stop it if we're playing a full sample
-	else if (play_state[chan]==PLAYING)
+	else if (play_state[chan]==PLAYING )
 	{
 		play_state[chan]=PLAY_FADEDOWN;
-		f_close(&fil[chan]);
-//		decay_amp_i[chan]=0.0;
 
 		play_led_state[chan]=0;
 		ButLED_state[Play1ButtonLED+chan]=0;
@@ -479,15 +550,15 @@ void read_storage_to_buffer(void)
 {
 	uint8_t chan=0;
 	uint32_t err;
-	//uint32_t i;
-	int16_t t_buff16[BUFF_LEN];
-	//int32_t t_buff32[BUFF_LEN];
-	//uint32_t start_of_sample_addr;
+	int16_t t_buff16[256*4];
+
+	int32_t buffer_lead;
 
 	FRESULT res;
 	uint32_t br;
 	uint32_t rd;
-	uint8_t sample;
+	uint8_t samplenum;
+
 
 	//
 	//Reset to beginning of sample if we changed sample or bank
@@ -496,75 +567,85 @@ void read_storage_to_buffer(void)
 	//If user changed the play bank, start playing from the beginning of that slot
 	if (flags[PlayBank1Changed]){
 		flags[PlayBank1Changed]=0;
-		sample_data_played[0] = 0;
 	}
 
 	//If user changed the play bank, start playing from the beginning of that slot
 	if (flags[PlayBank2Changed]){
 		flags[PlayBank2Changed]=0;
-		sample_data_played[1] = 0;
 	}
 
 	//If user changed the play sample, start playing from the beginning of that slot
 	if (flags[PlaySample1Changed]){
 		flags[PlaySample1Changed]=0;
-		sample_data_played[0] = 0;
+
+		if (play_state[0] == SILENT || play_state[0]==PREBUFFERING)
+			sample_data_position[0] = 0;
+		else
+			play_state[0] = PLAY_FADEDOWN;
 
 	}
 
 	//If user changed the play sample, start playing from the beginning of that slot
 	if (flags[PlaySample2Changed]){
 		flags[PlaySample2Changed]=0;
-		sample_data_played[1] = 0;
+
+		if (play_state[1] == SILENT || play_state[1]==PREBUFFERING)
+			sample_data_position[1] = 0;
+		else
+			play_state[1] = PLAY_FADEDOWN;
 	}
 
 
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
 
-		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN)
+		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN && play_state[chan] != RETRIG_FADEDOWN)
 		{
 
-			sample = sample_currently_playing[chan];
+			samplenum = sample_currently_playing[chan];
+
+
 
 			// If our "in" pointer is not far enough ahead of the "out" pointer, then we need to buffer some more:
-			if (diff_circular(play_buff_in_addr[chan], play_buff_out_addr[chan], MEM_SIZE) < (PRE_BUFF_SIZE*256))
-			{
+			buffer_lead = diff_wrap(play_buff[chan]->in, play_buff[chan]->out, play_buff[chan]->wrapping, MEM_SIZE);
 
-				if (sample_data_played[0] == samples[ sample ].sampleSize) //then we've buffered the entire file
+			if (buffer_lead < (PRE_BUFF_SIZE*256))
+			{
+				if (sample_data_position[chan] == samples[ samplenum ].sampleSize) //then we've buffered the entire file
 				{
-					play_state[chan] = PLAY_FADEDOWN; //this is premature!
+					play_state[chan] = PLAY_FADEDOWN; //this is premature, it will cause the sample to fade down at play_buff_out_addr but we still have data until play_buff_in_addr
 					f_close(&fil[chan]);
 
 					//actually we shoudl set a flag here that the sample is fully buffered
-					//then set play_state to FADEDOWN in the playback routine
+					//then set play_state to FADEDOWN in the playback routine once we get close to play_buff_in_addr
 
 				}
-				else if (sample_data_played[0] > samples[ sample ].sampleSize) //we read too much data somehow
+				else if (sample_data_position[chan] > samples[ samplenum ].sampleSize) //we read too much data somehow
 					g_error |= FILE_WAVEFORMATERR;
 
 				else
 				{
-					rd = samples[ sample ].sampleSize -  sample_data_played[chan];
+					rd = samples[ samplenum ].sampleSize -  sample_data_position[chan];
 					if (rd > 512) rd = 512;
 
 					res = f_read(&fil[chan], t_buff16, rd, &br);
-
 
 					if (res != FR_OK)
 						g_error |= FILE_READ_FAIL;
 					else
 					{
 						if (br < rd)
-						{
 							g_error |= FILE_UNEXPECTEDEOF; //unexpected end of file, but we can continue writing out the data we read
 
+						err = memory_write16_cbin(play_buff[chan], t_buff16, rd>>1, 0);
+
+						if (err)
+						{
+							DEBUG3_ON;
+							//g_error |= READ_BUFF1_OVERRUN*(1+chan);
 						}
-						err = memory_write16(&(play_buff_in_addr[chan]), chan, t_buff16, rd>>1, play_buff_out_addr[chan], 0);
 
-						if (err) g_error |= READ_BUFF1_OVERRUN*(1+chan);
-
-						sample_data_played[chan] += br;
+						sample_data_position[chan] += br;
 
 					}
 
@@ -584,43 +665,12 @@ void read_storage_to_buffer(void)
 }
 
 
-//If we're fading, increment the fade position
-//If we've cross-faded 100%:
-//	-Stop the cross-fade
-//	-Set read_addr to the destination
-//	-Load the next queued fade (if it exists)
-void increment_read_fade(uint8_t channel)
-{
-
-	if (read_fade_pos[channel]>0.0)
-	{
-		read_fade_pos[channel] += global_param[SLOW_FADE_INCREMENT];
-
-		//If we faded 100%, stop fading by setting read_fade_pos to 0
-		if (read_fade_pos[channel] > 1.0)
-		{
-			read_fade_pos[channel] = 0.0;
-			play_buff_out_addr[channel] = fade_dest_read_addr[channel];
-			flags[PlayBuff1_Discontinuity+channel] = 1;
-
-			//Load the next queued fade (if it exists)
-			if (fade_queued_dest_read_addr[channel])
-			{
-				fade_dest_read_addr[channel] = fade_queued_dest_read_addr[channel];
-				fade_queued_dest_read_addr[channel]=0;
-				read_fade_pos[channel] = global_param[SLOW_FADE_INCREMENT];
-			}
-		}
-	}
-}
-
-
 void process_audio_block_codec(int16_t *src, int16_t *dst)
 {
 	int32_t in[2];
 	int32_t out[2][BUFF_LEN];
 	int32_t dummy;
-	uint8_t sample;
+	uint8_t samplenum;
 	enum Stereo_Modes stereomode;
 
 	uint16_t i;
@@ -628,13 +678,15 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	uint8_t chan;
 	uint8_t overrun;
 
-	//int32_t t_buff[BUFF_LEN];
-	//static uint32_t write_buff_sample_i=0;
-
 	//Resampling:
 	static float resampling_fpos[NUM_PLAY_CHAN]={0.0f, 0.0f};
 	float rs;
 
+	float length;
+	uint32_t end_playing_addr;
+
+
+	SDIOSTA =  ((uint32_t *)(0x40012C34));
 
 	//
 	// Incoming audio
@@ -692,7 +744,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	//
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
-		sample = sample_currently_playing[chan];
+		samplenum = sample_currently_playing[chan];
 
 		// Fill buffer with silence
 		if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
@@ -702,16 +754,16 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		}
 		else
 		{
-
 			//Read from SDRAM into out[chan][]
 
 			//Re-sampling rate (0.0 < rs <= 4.0)
 			rs = f_param[chan][PITCH];
 
-			if (samples[sample].numChannels == 1)
+			//Stereo Mode
+			if (samples[samplenum].numChannels == 1)
 				stereomode = MONO;
 
-			else if	(samples[sample].numChannels == 2)
+			else if	(samples[samplenum].numChannels == 2)
 			{
 				if (   i_param[chan][STEREO_MODE] == STEREO_LEFT
 					|| i_param[chan][STEREO_MODE] == STEREO_RIGHT )
@@ -726,7 +778,12 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				break;
 			}
 
-			resample_read16(rs, play_buff_out_addr, play_buff_in_addr[chan], BUFF_LEN, stereomode, samples[sample].blockAlign, chan, resampling_fpos, out[chan]);
+
+			//Resample data read from the play_buff and store into out[]
+
+			resample_read16(rs, play_buff[chan], BUFF_LEN, stereomode, samples[samplenum].blockAlign, chan, resampling_fpos, out[chan]);
+
+			length = f_param[chan][LENGTH];
 
 			 switch (play_state[chan])
 			 {
@@ -741,6 +798,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 
 				 case (PLAY_FADEDOWN):
+				 case (RETRIG_FADEDOWN):
 
 					for (i=0;i<BUFF_LEN;i++)
 						out[chan][i] = ((float)out[chan][i] * (float)(BUFF_LEN-i) / (float)BUFF_LEN);
@@ -748,20 +806,27 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 					play_led_state[chan] = 0;
 					ButLED_state[Play1ButtonLED+chan] = 0;
 
-					//end_out_ctr[chan]=4000;
-					play_state[chan]=SILENT;
+					end_out_ctr[chan]=400;
+
+					if (play_state[chan]==RETRIG_FADEDOWN)
+						flags[Play1Trig+chan] = 1;
+					else
+						play_state[chan]=SILENT;
 
 					break;
 
 				 case (PLAYING):
-						if (f_param[chan][LENGTH]>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
+						if (length>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
 						{
-//							if ( play_storage_addr[chan] >= (uint32_t)((float)SAMPLE_SIZE * f_param[chan][LENGTH]) )
 
-							//We really should check here if the sample is indeed fully buffered
-							if (diff_circular(play_buff_in_addr[chan], play_buff_out_addr[chan], MEM_SIZE) < (2*256))
+							end_playing_addr = (samples[samplenum].sampleSize * (length-0.5)) + samples[samplenum].sampleRate*4;
+							if ( sample_data_position[chan] >= end_playing_addr )
+							{
 								play_state[chan] = PLAY_FADEDOWN;
-
+							}
+							//We really should check here if the sample is indeed fully buffered
+							if (diff_circular(play_buff[chan]->in, play_buff[chan]->out, MEM_SIZE) < (2*256))
+								play_state[chan] = PLAY_FADEDOWN;
 						}
 						else
 							play_state[chan] = PLAYING_PERC;
@@ -769,12 +834,11 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 				 case (PLAYING_PERC):
 
-					//if ((play_state[chan] == PLAYING_PERC) || f_param[chan][LENGTH]<=0.5) //Play a short portion of the sample, with an envelope on the whole thing
+					//if ((play_state[chan] == PLAYING_PERC) || length<=0.5) //Play a short portion of the sample, with an envelope on the whole thing
 					//{
 						play_state[chan] = PLAYING_PERC;
 
-						decay_inc[chan] += 1.0f/((f_param[chan][LENGTH])*2621440.0f);
-
+						decay_inc[chan] += 1.0f/((length)*2621440.0f);
 
 						for (i=0;i<BUFF_LEN;i++)
 						{
@@ -788,7 +852,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 						{
 							decay_amp_i[chan] = 0.0f;
 							play_state[chan] = SILENT;
-							//end_out_ctr[chan] = 4000;
+							end_out_ctr[chan] = 400;
 
 							play_led_state[chan] = 0;
 							ButLED_state[Play1ButtonLED+chan] = 0;
@@ -860,4 +924,35 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 }
 
+
+
+//If we're fading, increment the fade position
+//If we've cross-faded 100%:
+//	-Stop the cross-fade
+//	-Set read_addr to the destination
+//	-Load the next queued fade (if it exists)
+void increment_read_fade(uint8_t channel)
+{
+
+	if (read_fade_pos[channel]>0.0)
+	{
+		read_fade_pos[channel] += global_param[SLOW_FADE_INCREMENT];
+
+		//If we faded 100%, stop fading by setting read_fade_pos to 0
+		if (read_fade_pos[channel] > 1.0)
+		{
+			read_fade_pos[channel] = 0.0;
+			play_buff[channel]->out = fade_dest_read_addr[channel];
+			flags[PlayBuff1_Discontinuity+channel] = 1;
+
+			//Load the next queued fade (if it exists)
+			if (fade_queued_dest_read_addr[channel])
+			{
+				fade_dest_read_addr[channel] = fade_queued_dest_read_addr[channel];
+				fade_queued_dest_read_addr[channel]=0;
+				read_fade_pos[channel] = global_param[SLOW_FADE_INCREMENT];
+			}
+		}
+	}
+}
 
