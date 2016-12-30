@@ -16,12 +16,13 @@
 extern uint8_t flags[NUM_FLAGS];
 //extern enum g_Errors g_error;
 
+extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
-void safe_inc_play_addr(CircularBuffer* buf, uint8_t blockAlign);
+void safe_inc_play_addr(CircularBuffer* buf, uint8_t blockAlign,  uint8_t chan);
 
-inline void safe_inc_play_addr(CircularBuffer* buf, uint8_t blockAlign)
+inline void safe_inc_play_addr(CircularBuffer* buf, uint8_t blockAlign, uint8_t chan)
 {
-	CB_offset_out_address(buf, blockAlign, 0);
+	CB_offset_out_address(buf, blockAlign, i_param[chan][REV]);
 
 	//check for crossing of buf->in
 	if (buf->in==buf->out)
@@ -74,13 +75,13 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 		flags[PlayBuff1_Discontinuity+chan] = 0;
 
 		x0[chan] = get_16b_sample(buf->out, stereomode);
-		safe_inc_play_addr(buf, block_align);
+		safe_inc_play_addr(buf, block_align, chan);
 
 		x1[chan] = get_16b_sample(buf->out, stereomode);
-		safe_inc_play_addr(buf, block_align);
+		safe_inc_play_addr(buf, block_align, chan);
 
 		x2[chan] = get_16b_sample(buf->out, stereomode);
-		safe_inc_play_addr(buf, block_align);
+		safe_inc_play_addr(buf, block_align, chan);
 
 
 		fractional_pos[chan] = 0.0;
@@ -97,16 +98,16 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 			//shift samples back one
 			//and read a new sample
 			xm1[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 			x0[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 			x1[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 			x2[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 		}
 		//Optimize for resample rates >= 3
@@ -119,13 +120,13 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 			xm1[chan] 	= x2[chan];
 
 			x0[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 			x1[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 			x2[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 		}
 		//Optimize for resample rates >= 2
@@ -139,10 +140,10 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 			x0[chan] 	= x2[chan];
 
 			x1[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 			x2[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 		}
 		//Optimize for resample rates >= 1
@@ -157,7 +158,7 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 			x1[chan] 	= x2[chan];
 
 			x2[chan] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align);
+			safe_inc_play_addr(buf, block_align, chan);
 
 		}
 

@@ -48,6 +48,9 @@
 #include "wavefmt.h"
 #include "circular_buffer.h"
 
+#define READ_BLOCK_SIZE 512
+
+
 //
 // DEBUG
 //
@@ -440,6 +443,9 @@ void toggle_playing(uint8_t chan)
 			//handle other blockAligns here
 		}
 
+		if (i_param[chan][REV])
+			startpos32 = samples[samplenum].sampleSize - startpos32;
+
 		res = f_lseek(&fil[chan], samples[samplenum].startOfData + startpos32);
 
 		if (res != FR_OK)
@@ -520,7 +526,7 @@ void write_buffer_to_storage(void)
 
 		start_of_sample_addr = (i_param[REC][SAMPLE] * SAMPLE_SIZE) + (i_param[REC][BANK] * BANK_SIZE);
 
-		err = write_sdcard((uint16_t *)t_buff16, start_of_sample_addr + rec_storage_addr);
+		//err = write_sdcard((uint16_t *)t_buff16, start_of_sample_addr + rec_storage_addr);
 
 		if (err==0)
 		{
@@ -607,7 +613,8 @@ void read_storage_to_buffer(void)
 
 
 			// If our "in" pointer is not far enough ahead of the "out" pointer, then we need to buffer some more:
-			buffer_lead = diff_wrap(play_buff[chan]->in, play_buff[chan]->out, play_buff[chan]->wrapping, MEM_SIZE);
+//i_param[chan][REV] ? !(play_buff[chan]->wrapping) : (play_buff[chan]->wrapping)
+			buffer_lead = diff_wrap(play_buff[chan]->in, play_buff[chan]->out,  play_buff[chan]->wrapping, MEM_SIZE);
 
 			if (buffer_lead < (PRE_BUFF_SIZE*256))
 			{
@@ -625,10 +632,24 @@ void read_storage_to_buffer(void)
 
 				else
 				{
-					rd = samples[ samplenum ].sampleSize -  sample_data_position[chan];
-					if (rd > 512) rd = 512;
+					if (i_param[chan][REV]==0)
+					{
+						rd = samples[ samplenum ].sampleSize -  sample_data_position[chan];
 
-					res = f_read(&fil[chan], t_buff16, rd, &br);
+						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
+
+						res = f_read(&fil[chan], t_buff16, rd, &br);
+					}
+					else
+					{
+						rd = sample_data_position[chan];
+						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
+
+						f_lseek(&fil[chan], f_tell(&fil[chan]) - READ_BLOCK_SIZE);
+						res = f_read(&fil[chan], t_buff16, rd, &br);
+
+					}
+
 
 					if (res != FR_OK)
 						g_error |= FILE_READ_FAIL;
@@ -637,7 +658,7 @@ void read_storage_to_buffer(void)
 						if (br < rd)
 							g_error |= FILE_UNEXPECTEDEOF; //unexpected end of file, but we can continue writing out the data we read
 
-						err = memory_write16_cbin(play_buff[chan], t_buff16, rd>>1, 0);
+						err = memory_write16_cbin(play_buff[chan], t_buff16, rd>>1, i_param[chan][REV]);
 
 						if (err)
 						{
@@ -645,8 +666,10 @@ void read_storage_to_buffer(void)
 							//g_error |= READ_BUFF1_OVERRUN*(1+chan);
 						}
 
-						sample_data_position[chan] += br;
-
+						if (i_param[chan][REV]==0)
+							sample_data_position[chan] += br;
+						else
+							sample_data_position[chan] -= br;
 					}
 
 				}
@@ -694,7 +717,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	// Dump BUFF_LEN samples of the rx buffer from codec (src) into t_buff
 	// Then write t_buff to sdram at rec_buff_in_addr
 	//
-	if (is_recording)
+	if (is_recording && 0)
 	{
 		for (i=0;i<BUFF_LEN;i++)
 		{
