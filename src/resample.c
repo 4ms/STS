@@ -167,8 +167,8 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 		b = 2*x1[chan] + xm1[chan] - (5*x0[chan] + x2[chan]) / 2;
 		c = (x1[chan] - xm1[chan]) / 2;
 
-		//calculate as many fractionally placed output points as we can
-		while ( fractional_pos[chan] < 1.0 && outpos<buff_len)
+		//calculate as many fractionally placed output points as we need
+		while ( fractional_pos[chan]<1.0 && outpos<buff_len)
 		{
 			out[outpos++] = (((a * fractional_pos[chan]) + b) * fractional_pos[chan] + c) * fractional_pos[chan] + x0[chan];
 			fractional_pos[chan] += rs;

@@ -23,6 +23,7 @@ typedef struct CircularBuffer {
 
 uint8_t CB_offset_in_address(CircularBuffer *b, uint32_t amt, uint8_t subtract);
 uint8_t CB_offset_out_address(CircularBuffer *b, uint32_t amt, uint8_t subtract);
+uint32_t CB_distance(CircularBuffer *b, uint8_t reverse);
 
 
 #endif /* INC_CIRCULAR_BUFFER_H_ */

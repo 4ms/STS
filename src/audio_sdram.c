@@ -306,10 +306,11 @@ uint32_t memory_write16_cbin(CircularBuffer* b, int16_t *wr_buff, uint32_t num_s
 
 		*((int16_t *)b->in) = wr_buff[i];
 
-		CB_offset_in_address(b, 2, decrement);
-
 		if (b->in == b->out)
 			heads_crossed = b->out;
+
+		CB_offset_in_address(b, 2, decrement);
+
 	}
 
 	return (heads_crossed);

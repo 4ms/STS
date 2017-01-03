@@ -318,6 +318,8 @@ void update_params(void)
 		{
 			f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]] / exp_1voct[old_i_smoothed_cvadc[PITCH_POT*2+channel] - 2078];
 		}
+		else
+			f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]];
 
 		//
 		// SAMPLE POT

@@ -90,3 +90,24 @@ uint8_t CB_offset_out_address(CircularBuffer *b, uint32_t amt, uint8_t subtract)
 
 	return(0);
 }
+
+uint32_t CB_distance(CircularBuffer *b, uint8_t reverse)
+{
+
+	if (reverse)
+	{
+		if (b->out >= b->in)
+			return (b->out - b->in);
+		else	//wrapping
+			return ((b->out + b->size) - b->in);
+	}
+	else
+	{
+		if (b->in >= b->out)
+			return (b->in - b->out);
+		else	//wrapping
+			return ((b->in + b->size) - b->out);
+	}
+
+}
+

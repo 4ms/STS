@@ -1402,10 +1402,23 @@ DWORD clmt_clust (	/* <2:Error, >=2:Cluster number */
 {
 	DWORD cl, ncl, *tbl;
 	FATFS *fs = fp->obj.fs;
-
+	DWORD t;
 
 	tbl = fp->cltbl + 1;	/* Top of CLMT */
-	cl = (DWORD)(ofs / SS(fs) / fs->csize);	/* Cluster order from top of the file */
+
+	//DG changes to avoid 64-bit division
+	cl = ofs >> 9;
+	t=fs->csize;
+	while ( t>=2 )
+	{
+		cl>>=1;
+		t>>=1;
+	}
+	//end DG changes
+
+//was:
+//	cl = (DWORD)(ofs / SS(fs) / fs->csize);	/* Cluster order from top of the file */
+
 	for (;;) {
 		ncl = *tbl++;			/* Number of cluters in the fragment */
 		if (ncl == 0) return 0;	/* End of table? (error) */
