@@ -17,7 +17,7 @@ typedef struct CircularBuffer {
 	uint32_t max;
 	uint32_t size; //should always be max-min
 	uint8_t wrapping;
-
+	uint32_t seam;
 
 } CircularBuffer;
 

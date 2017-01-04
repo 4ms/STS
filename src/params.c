@@ -394,31 +394,24 @@ void process_mode_flags(void)
 			toggle_recording();
 		}
 
+
 		if (flags[Rev1Trig])
 		{
 			flags[Rev1Trig]=0;
-			if (i_param[0][REV])
-			{
-				i_param[0][REV]=0;
-				ButLED_state[Reverse1ButtonLED] = 0;
-			}
-			else {
-				i_param[0][REV]=1;
-				ButLED_state[Reverse1ButtonLED] = 1;
-			}
+			toggle_reverse(0);
+
+			if (STEREOSW==SW_LINK)
+				toggle_reverse(1);
+
 		}
 		if (flags[Rev2Trig])
 		{
 			flags[Rev2Trig]=0;
-			if (i_param[1][REV])
-			{
-				i_param[1][REV]=0;
-				ButLED_state[Reverse2ButtonLED] = 0;
-			}
-			else {
-				i_param[1][REV]=1;
-				ButLED_state[Reverse2ButtonLED] = 1;
-			}
+			toggle_reverse(1);
+
+			if (STEREOSW==SW_LINK)
+				toggle_reverse(0);
+
 		}
 
 	}

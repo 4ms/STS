@@ -25,8 +25,8 @@ inline void safe_inc_play_addr(CircularBuffer* buf, uint8_t blockAlign, uint8_t 
 	CB_offset_out_address(buf, blockAlign, i_param[chan][REV]);
 
 	//check for crossing of buf->in
-	if (buf->in==buf->out)
-		DEBUG2_ON;
+//	if (buf->in==buf->out)
+//		DEBUG2_ON;
 
 }
 
