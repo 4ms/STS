@@ -25,9 +25,26 @@
  *
  * Use structs:
  * -params (combine i_param + f_param)
- * -circular_buffer: uint32_t in, out; uint8_t is_wrapping; uint32_t min, size; (can then do diff_wrap(circ_buff);)... combines AUDIO_MEM_BASE and MEM_SIZE
  * -adc_value: uint16_t raw_val, uint16_t i_smoothed_val, float smoothed_val;
  *
+ *
+ToDo: Allow (in system mode?) a selection of length param modes:
+ 1) Playback time is fixed, as if an EG->VCA is applied to output and LENGTH controls the decay time
+			PITCH and REV do not change playback time
+
+ 2) Fixed sound clip:
+	  (define points in sample file to not read past and set fully_buffered[]=1 when reaching those points)
+    2a) Stop point(s) are set by LENGTH: so it stops at a certain point (# of samples in file) ahead of the startpos and/or behind startpos (limited by the beginning/end of the sample file of course)
+    2b) Stop point #1 is set by LENGTH and Stop point #2 is the start point (identical to 2a if startpos is 0). So if you hit reverse while playing, it stops where you started, never goes before that.
+			PITCH and REV change the playback time
+
+ 3) LENGTH sets total number of samples to play (total fwd and rev)
+	  (keep track of # addr of play_buff[]->out are read when resampling, whether fwd or rev)
+ 			PITCH changes playback time, REV does not
+		So at a constant PITCH, we can get a constant playback time even if we're toggling REV to get different effects
+
+ 4) ???
+			PITCH does not change playback time, REV does??
  *
  */
 #include "globals.h"
@@ -49,7 +66,7 @@
 #include "circular_buffer.h"
 #include "file_util.h"
 
-#define READ_BLOCK_SIZE 512
+#define READ_BLOCK_SIZE 8192
 
 
 //
@@ -68,7 +85,7 @@
 volatile uint32_t*  SDIOSTA;
 
 //
-// Parameters
+// System-wide parameters, flags, modes, states
 //
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
@@ -80,20 +97,18 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern uint8_t 	flags[NUM_FLAGS];
 extern enum g_Errors g_error;
 
-extern uint8_t recording_enabled;
-extern uint8_t is_recording;
-
-
-
 extern uint8_t play_led_state[NUM_PLAY_CHAN];
 //extern uint8_t clip_led_state[NUM_PLAY_CHAN];
 extern uint8_t ButLED_state[NUM_RGBBUTTONS];
 
-
-uint8_t SAMPLINGBYTES=2;
-
 extern int16_t CODEC_DAC_CALIBRATION_DCOFFSET[4];
 //extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
+
+
+extern uint8_t recording_enabled;
+extern uint8_t is_recording;
+
+uint8_t SAMPLINGBYTES=2;
 
 uint32_t end_out_ctr[NUM_PLAY_CHAN]={0,0};
 
@@ -106,16 +121,16 @@ extern const uint32_t AUDIO_MEM_BASE[4];
 // SDRAM buffer addresses for playing from sdcard
 // SD Card --> SDARM @play_buff[]->in ... SDRAM @play_buff[]->out --> Codec
 //
-CircularBuffer splay_buff[NUM_PLAY_CHAN];
-CircularBuffer* play_buff[NUM_PLAY_CHAN];
+CircularBuffer splay_buff				[NUM_PLAY_CHAN];
+CircularBuffer* play_buff				[NUM_PLAY_CHAN];
 
-uint8_t 		play_fully_buffered[NUM_PLAY_CHAN];
-enum PlayStates play_state[NUM_PLAY_CHAN]={SILENT,SILENT};
-uint8_t			samplenum_now_playing[NUM_PLAY_CHAN];
+uint8_t 		play_fully_buffered		[NUM_PLAY_CHAN];
+enum PlayStates play_state				[NUM_PLAY_CHAN];
+uint8_t			samplenum_now_playing	[NUM_PLAY_CHAN];
 
-uint32_t sample_file_startpos[NUM_PLAY_CHAN];
-uint32_t sample_file_curpos[NUM_PLAY_CHAN] = {0,0};
-
+uint32_t 		sample_file_startpos	[NUM_PLAY_CHAN];
+uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN];
+uint32_t		sample_file_seam		[NUM_PLAY_CHAN];
 
 //
 // SDRAM buffer address for recording to sdcard
@@ -158,7 +173,6 @@ void audio_buffer_init(void)
 	FIL temp_file;
 	FRESULT res;
 	DIR dir;
-//	FILINFO fno;
 	char* path;
 	char tname[_MAX_LFN+1];
 
@@ -252,7 +266,7 @@ void audio_buffer_init(void)
 			res = load_sample_header(i, &temp_file);
 
 //			if (res==FR_OK)
-//				clmt[i] = load_file_clmt(&temp_file);
+//				preloaded_clmt[i] = load_file_clmt(&temp_file);
 
 		}
 
@@ -368,7 +382,7 @@ uint8_t load_sample_header(uint32_t samplenum, FIL* sample_file)
 			else
 			{
 				samples[samplenum].sampleSize = chunk.chunkSize;
-				samples[samplenum].sampleBitSize = sample_header.bitsPerSample;
+				samples[samplenum].sampleByteSize = sample_header.bitsPerSample>>3;
 				samples[samplenum].sampleRate = sample_header.sampleRate;
 				samples[samplenum].numChannels = sample_header.numChannels;
 				samples[samplenum].blockAlign = sample_header.numChannels * sample_header.bitsPerSample>>3;
@@ -386,7 +400,6 @@ uint8_t load_sample_header(uint32_t samplenum, FIL* sample_file)
 void toggle_reverse(uint8_t chan)
 {
 	uint8_t samplenum;
-	FRESULT res;
 	uint32_t t;
 
 	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC)
@@ -397,10 +410,10 @@ void toggle_reverse(uint8_t chan)
 		//this is because we already have read the file from the starting position to the current position
 		//so to read more data in the opposite direction, beginning at the original starting position
 		//we cache the current position as startpos in case we reverse again
-		f_lseek(&fil[chan], samples[samplenum].startOfData + sample_file_startpos[chan]);
+		f_lseek(&fil[chan], samples[samplenum].startOfData + sample_file_seam[chan]);
 		t 							= sample_file_curpos[chan];
-		sample_file_curpos[chan] 	= sample_file_startpos[chan];
-		sample_file_startpos[chan]	= t;
+		sample_file_curpos[chan] 	= sample_file_seam[chan];
+		sample_file_seam[chan]	= t;
 
 		//also set the play_buff in ptr to the last starting place
 		if (play_buff[chan]->seam != 0xFFFFFFFF)
@@ -410,7 +423,7 @@ void toggle_reverse(uint8_t chan)
 			play_buff[chan]->seam 	= t;
 		}
 
-		play_fully_buffered[chan] = 0;
+		//play_fully_buffered[chan] = 0;
 
 
 	}
@@ -431,7 +444,8 @@ void toggle_reverse(uint8_t chan)
 
 
 #define SZ_TBL 256
-DWORD clmt[SZ_TBL];
+//DWORD clmt[SZ_TBL];
+DWORD chan_clmt[NUM_PLAY_CHAN][SZ_TBL];
 
 //
 // toggle_playing(chan)
@@ -490,12 +504,13 @@ void toggle_playing(uint8_t chan)
 			}
 
 			//takes over 3.3ms for a big file
-			fil[chan].cltbl = clmt;
-			clmt[0] = SZ_TBL;
-			res = f_lseek(&fil[chan], CREATE_LINKMAP);
 			//Could save time by pre-loading all the clmt when we load the bank
-			//Then just do this instead of clmt[0]=SZ_TBL and CREATE_LINKMAP:
-			//fil[chan].cltbl = clmt[samplenum];
+			//Then just do fil[chan].cltbl = preloaded_clmt[samplenum];
+			//instead of clmt[0]=SZ_TBL and f_lseek(...CREATE_LINKMAP)
+			fil[chan].cltbl = chan_clmt[chan];
+			chan_clmt[chan][0] = SZ_TBL;
+			res = f_lseek(&fil[chan], CREATE_LINKMAP);
+
 
 			if (res != FR_OK)
 			{
@@ -518,36 +533,25 @@ void toggle_playing(uint8_t chan)
 		if (i_param[chan][REV])
 		{
 			startpos32 = samples[samplenum].sampleSize - startpos32;
-		//	startpos32 -= READ_BLOCK_SIZE;		//Also jump back one extra block because reading happens from the start of a block
-
 		}
 
 		//Align the start address
-		if (samples[samplenum].blockAlign == 4)
-			startpos32 &= 0xFFFFFFFC;
-
-		else if (samples[samplenum].blockAlign == 2)
-			startpos32 &= 0xFFFFFFFE;
-
-		else if (samples[samplenum].blockAlign == 8)
-			startpos32 &= 0xFFFFFFF8;
-		else
-		{
-			//handle other blockAligns here
-		}
-
-		sample_file_startpos[chan] = startpos32;
+		if (samples[samplenum].blockAlign == 4)			startpos32 &= 0xFFFFFFFC;
+		else if (samples[samplenum].blockAlign == 2)	startpos32 &= 0xFFFFFFFE;
+		else if (samples[samplenum].blockAlign == 8)	startpos32 &= 0xFFFFFFF8;
+		//else handle other blockAligns here
 
 		res = f_lseek(&fil[chan], samples[samplenum].startOfData + startpos32);
 		f_sync(&fil[chan]);
 
-		if (res != FR_OK)
-			g_error |= FILE_SEEK_FAIL;
+		if (res != FR_OK) g_error |= FILE_SEEK_FAIL;
 
 		else
 		{
 			// Set up parameters to begin playing
-			sample_file_curpos[chan] = startpos32;
+			sample_file_curpos[chan] 	= startpos32;
+			sample_file_startpos[chan] 	= startpos32;
+			sample_file_seam[chan] 		= startpos32;
 
 			decay_amp_i[chan]=1.0;
 			decay_inc[chan]=0.0;
@@ -584,14 +588,18 @@ void read_storage_to_buffer(void)
 {
 	uint8_t chan=0;
 	uint32_t err;
-	int16_t t_buff16[256*4];
-
-	int32_t buffer_lead;
+	int16_t t_buff16[READ_BLOCK_SIZE];
 
 	FRESULT res;
 	uint32_t br;
 	uint32_t rd;
+
+	//convenience variables
 	uint8_t samplenum;
+	float length;
+	uint32_t buffer_lead;
+	uint32_t stop_point1, stop_point2, dist;
+	FSIZE_t t_fptr;
 
 
 	//
@@ -635,40 +643,66 @@ void read_storage_to_buffer(void)
 
 		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN && play_state[chan] != RETRIG_FADEDOWN)
 		{
+			// Check if we need to buffer ahead more
 
-			samplenum = samplenum_now_playing[chan];
+			if (i_param[chan][REV])		buffer_lead = diff_wrap(play_buff[chan]->out, play_buff[chan]->in,  play_buff[chan]->wrapping, MEM_SIZE);
+			else						buffer_lead = diff_wrap(play_buff[chan]->in, play_buff[chan]->out,  play_buff[chan]->wrapping, MEM_SIZE);
+			//Can we just do this: i_param[chan][REV] ? !(play_buff[chan]->wrapping) : (play_buff[chan]->wrapping)
 
-			// If our "in" pointer is not far enough ahead of the "out" pointer, then we need to buffer some more:
-				//Can't we just do this? i_param[chan][REV] ? !(play_buff[chan]->wrapping) : (play_buff[chan]->wrapping)
-			if (i_param[chan][REV])
-				buffer_lead = diff_wrap(play_buff[chan]->out, play_buff[chan]->in,  play_buff[chan]->wrapping, MEM_SIZE);
-			else
-				buffer_lead = diff_wrap(play_buff[chan]->in, play_buff[chan]->out,  play_buff[chan]->wrapping, MEM_SIZE);
-
-
-			if (buffer_lead < (PRE_BUFF_SIZE*256))
+			if (buffer_lead < (PRE_BUFF_SIZE*256)) //FixMe: should be PRE_BUFF_SIZE * blockAlign and set PRE_BUFF_SIZE to *=256
 			{
-				//Check if we're at the end (or start, if reversing) of the file
-				if ((!i_param[chan][REV] && sample_file_curpos[chan] == samples[ samplenum ].sampleSize)
-				  || (i_param[chan][REV] && sample_file_curpos[chan] == 0))
+				samplenum = samplenum_now_playing[chan];
+
+				// Calculate stop points for sample_file_curpos[chan], based on the LENGTH param
+
+				length = f_param[chan][LENGTH];
+				if (length>0.5)
+				{
+					if (length > 0.98)
+						dist = samples[samplenum].sampleSize * (length-0.9) * 10;
+					else //>0.5 to <0.9
+						dist = length * 8.0 * samples[ samplenum ].sampleRate;
+
+					stop_point1 = sample_file_startpos[chan] + dist;
+					if (stop_point1 > samples[samplenum].sampleSize)
+						stop_point1 = samples[samplenum].sampleSize;
+
+					if (sample_file_startpos[chan] > dist)
+						stop_point2 = sample_file_startpos[chan] - dist;
+					else
+						stop_point2 = 0;
+
+				}
+				else
+				{
+					stop_point1 = samples[samplenum].sampleSize;
+					stop_point2 = 0;
+				}
+
+				if ((!i_param[chan][REV] && sample_file_curpos[chan] >= stop_point1)
+				  || (i_param[chan][REV] && sample_file_curpos[chan] <= stop_point2))
 				{
 					play_fully_buffered[chan] = 1;
 					//f_close(&fil[chan]);
 				}
+
 				else if (sample_file_curpos[chan] > samples[ samplenum ].sampleSize) //we read too much data somehow
 					g_error |= FILE_WAVEFORMATERR;
 
 				else
 				{
-					//Forward
+
+					//Read from file forward
 					if (i_param[chan][REV]==0)
 					{
 						rd = samples[ samplenum ].sampleSize -  sample_file_curpos[chan];
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 
+				DEBUG1_ON;
 						res = f_read(&fil[chan], t_buff16, rd, &br);
 						f_sync(&fil[chan]);
+				DEBUG1_OFF;
 
 						if (br < rd)
 							g_error |= FILE_UNEXPECTEDEOF; //unexpected end of file, but we can continue writing out the data we read
@@ -681,18 +715,18 @@ void read_storage_to_buffer(void)
 							play_fully_buffered[chan] = 1;
 						}
 
-
 					}
 
-					//Reverse
+					//Read from file Reverse
 					else
 					{
-					//	rd = f_tell(&fil[chan]);
 						rd = sample_file_curpos[chan];
 						if (rd > READ_BLOCK_SIZE)
 						{
 							//Jump back a block
+				DEBUG2_ON;
 							f_lseek(&fil[chan], rd - READ_BLOCK_SIZE);
+				DEBUG2_OFF;
 							rd = READ_BLOCK_SIZE;
 							sample_file_curpos[chan] -= READ_BLOCK_SIZE;
 
@@ -705,31 +739,32 @@ void read_storage_to_buffer(void)
 							play_fully_buffered[chan] = 1;
 						}
 
+			DEBUG1_ON;
 						//Read one block forward
+						t_fptr=f_tell(&fil[chan]);
 						res = f_read(&fil[chan], t_buff16, rd, &br);
 						f_sync(&fil[chan]);
+			DEBUG1_OFF;
 
-						if (res != FR_OK)
-							g_error |= FILE_READ_FAIL;
-						if (br < rd)
-							g_error |= FILE_UNEXPECTEDEOF;
-
+						if (res != FR_OK)	g_error |= FILE_READ_FAIL;
+						if (br < rd)		g_error |= FILE_UNEXPECTEDEOF;
+			DEBUG2_ON;
 						//Jump backwards to where we started reading
-						res = f_lseek(&fil[chan], f_tell(&fil[chan]) - br);
+						fil[chan].fptr = t_fptr;
+						//res = f_lseek(&fil[chan], f_tell(&fil[chan]) - br);
 						f_sync(&fil[chan]);
+			DEBUG2_OFF;
 
-						if (res != FR_OK)
-							g_error |= FILE_SEEK_FAIL;
-
-
+						if (res != FR_OK)	g_error |= FILE_SEEK_FAIL;
 
 					}
 
 
-					if (res != FR_OK)
-						g_error |= FILE_READ_FAIL;
+					//Write temporary buffer to play_buff[]->in
+					if (res != FR_OK) 		g_error |= FILE_READ_FAIL;
 					else
 					{
+						//Todo: avoid using a tbuff16 and copying it, rewrite f_read so that it writes directly to play_buff[] in SDRAM
 						err = memory_write16_cbin(play_buff[chan], t_buff16, rd>>1, 0);
 
 						//Jump back two blocks if we're reversing
@@ -756,9 +791,11 @@ void read_storage_to_buffer(void)
 		}
 	}
 
-
 }
 
+uint32_t left_to_play[2];
+uint32_t left_to_play1;
+uint32_t left_to_play2;
 
 void process_audio_block_codec(int16_t *src, int16_t *dst)
 {
@@ -777,10 +814,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	static float resampling_fpos[NUM_PLAY_CHAN]={0.0f, 0.0f};
 	float rs;
 
+	//convenience variables
 	float length;
-	uint32_t end_playing_addr;
-	uint32_t left_to_play;
-
+	float resampled_buffer_size;
 
 	SDIOSTA =  ((uint32_t *)(0x40012C34));
 
@@ -907,7 +943,13 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 					if (play_state[chan]==RETRIG_FADEDOWN)
 						flags[Play1Trig+chan] = 1;
 					else
-						play_state[chan]=SILENT;
+					{
+						play_state[chan] = SILENT;
+						end_out_ctr[chan] = 400;
+						play_led_state[chan] = 0;
+						ButLED_state[Play1ButtonLED+chan] = 0;
+						//f_close(&fil[chan]);
+					}
 
 					break;
 
@@ -915,41 +957,18 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 						if (length>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
 						{
 
-							//Stop based on the LENGTH param
-//
-							//ToDo: Stop based on position of play_buff[chan]->out, if we are fully_buffered and it's going to hit ->seam or ->in
-							//
-//							if (!i_param[chan][REV])
-//							{
-//								end_playing_addr = (samples[samplenum].sampleSize * (length-0.5) * 2) + sample_file_startpos[chan];
-//								if (end_playing_addr > (samples[samplenum].sampleSize - READ_BLOCK_SIZE))
-//									end_playing_addr = samples[samplenum].sampleSize - READ_BLOCK_SIZE;
-//
-//								if (sample_file_curpos[chan] >= end_playing_addr )
-//									play_state[chan] = PLAY_FADEDOWN;
-//							}
-//							else {
-//								if (sample_file_startpos[chan] > (samples[samplenum].sampleSize * (length-0.5) * 2))
-//									end_playing_addr = sample_file_startpos[chan] - (samples[samplenum].sampleSize * (length-0.5) * 2);
-//								else
-//									end_playing_addr = READ_BLOCK_SIZE;
-//
-//								if (sample_file_curpos[chan] <= end_playing_addr )
-//									play_state[chan] = PLAY_FADEDOWN;
-//
-//							}
+							left_to_play[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
+							left_to_play1=left_to_play[0];
+							left_to_play2=left_to_play[1];
+							resampled_buffer_size = (float)(BUFF_LEN * samples[samplenum].blockAlign) * rs;
 
-							//ToDo: incorporate LENGTH into this comparison
-							// and get rid of the above comparisons
-							// and probably force the file from not being read once we're fully buffered
-							// and detect better when we are!
-
-							//							if (diff_circular(play_buff[chan]->in, play_buff[chan]->out, MEM_SIZE) < (2*256))
-
-							left_to_play = CB_distance(play_buff[chan], i_param[chan][REV]);
-
-							if (play_fully_buffered[chan] &&  (left_to_play <= READ_BLOCK_SIZE))
+							if (left_to_play[chan] <= (uint32_t)(resampled_buffer_size * 2.0))
+							{
 								play_state[chan] = PLAY_FADEDOWN;
+
+								if (!play_fully_buffered[chan])
+									g_error |= READ_BUFF1_OVERRUN<<chan;
+							}
 						}
 						else
 							play_state[chan] = PLAYING_PERC;
@@ -974,15 +993,21 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 						if (decay_amp_i[chan] <= 0.0f)
 						{
 							decay_amp_i[chan] = 0.0f;
+
 							play_state[chan] = SILENT;
 							end_out_ctr[chan] = 400;
-
 							play_led_state[chan] = 0;
 							ButLED_state[Play1ButtonLED+chan] = 0;
+							//f_close(&fil[chan]);
 						}
 
 
 					//}
+					break;
+
+				 case (SILENT):
+						play_led_state[chan] = 0;
+						ButLED_state[Play1ButtonLED+chan] = 0;
 					break;
 
 				 default:
@@ -1108,7 +1133,7 @@ void write_buffer_to_storage(void)
 		start_of_sample_addr = (i_param[REC][SAMPLE] * SAMPLE_SIZE) + (i_param[REC][BANK] * BANK_SIZE);
 
 		//err = write_sdcard((uint16_t *)t_buff16, start_of_sample_addr + rec_storage_addr);
-
+		err=0;
 		if (err==0)
 		{
 			rec_storage_addr++;

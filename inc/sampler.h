@@ -29,7 +29,7 @@ typedef struct Sample {
 	char	filename[_MAX_LFN];
 	uint32_t sampleSize;
 	uint32_t startOfData;
-	uint8_t sampleBitSize;
+	uint8_t sampleByteSize;
 	uint32_t sampleRate;
 	uint8_t numChannels;
 	uint8_t blockAlign;

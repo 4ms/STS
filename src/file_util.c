@@ -38,7 +38,6 @@ FRESULT scan_files (
         }
         f_closedir(&dir);
     }
-
     return res;
 }
 
