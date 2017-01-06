@@ -299,7 +299,7 @@ void update_params(void)
 		//
 		// START POT
 		//
-		f_param[channel][START] 	= (smoothed_potadc[START_POT*2+channel] + smoothed_cvadc[START_POT*2+channel]) / 4096.0;
+		f_param[channel][START] 	= (old_i_smoothed_potadc[START_POT*2+channel] + old_i_smoothed_cvadc[START_POT*2+channel]) / 4096.0;
 
 		if (f_param[channel][START] > 1.0)
 			f_param[channel][START] = 1.0;

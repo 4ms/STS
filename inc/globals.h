@@ -59,7 +59,10 @@ enum g_Errors{
 	FILE_SEEK_FAIL=(1<<16),
 	READ_BUFF_OVERRUN_RESAMPLE=(1<<17),
 	FILE_CANNOT_CREATE_CLTBL=(1<<18),
-	CANNOT_OPEN_ROOT_DIR=(1<<19)
+	CANNOT_OPEN_ROOT_DIR=(1<<19),
+	FILE_REC_OPEN_FAIL=(1<<20),
+	FILE_WRITE_FAIL=(1<<21),
+	FILE_UNEXPECTEDEOF_WRITE=(1<<22)
 
 };
 /*
@@ -108,6 +111,8 @@ do {							\
     __asm__ __volatile__ ("nop\n\t":::"memory");	\
 } while (0)
 
+
+void check_errors(void);
 
 //extern volatile uint32_t sys_time;
 //#define delay_sys(x) do{register uint32_t donetime=x+systime;__asm__ __volatile__ ("nop\n\t":::"memory");}while(sys_time!=donetime;)

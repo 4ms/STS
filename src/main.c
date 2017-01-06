@@ -38,6 +38,7 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 extern uint32_t flash_firmware_version;
 
+void check_errors(void);
 
 void check_errors(void){
 	if (g_error>0)

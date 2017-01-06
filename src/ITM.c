@@ -26,6 +26,39 @@ char *itoa (int value, char *result, int base)
     return result;
 }
 
+uint32_t intToStr(uint32_t x, char *str, uint32_t d)
+{
+	uint32_t i = 0;
+	uint32_t j, len;
+	char temp;
+
+    while (x)
+    {
+        str[i++] = (x%10) + '0';
+        x = x/10;
+    }
+
+    // If number of digits required is more, then
+    // add 0s at the beginning
+    while (i < d)
+        str[i++] = '0';
+
+    len=i;
+
+    j = i-1;
+    i = 0;
+    while (i<j)
+    {
+        temp = str[i];
+        str[i] = str[j];
+        str[j] = temp;
+        i++; j--;
+    }
+
+    str[len] = '\0';
+    return len;
+}
+
 void ITM_Print_int(int port, uint32_t v)
 {
 	char *p;

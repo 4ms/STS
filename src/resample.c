@@ -172,10 +172,8 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 		while ( fractional_pos[chan]<1.0 && outpos<buff_len)
 		{
 			t_out = (((a * fractional_pos[chan]) + b) * fractional_pos[chan] + c) * fractional_pos[chan] + x0[chan];
-			if (t_out >= 32767.0)
-				out[outpos++]  = 32767;
-			else if (t_out <= -32767.0)
-				out[outpos++]  = -32767;
+			if (t_out >= 32767.0)		out[outpos++] = 32767;
+			else if (t_out <= -32767.0)	out[outpos++] = -32767;
 			else						out[outpos++] = t_out;
 
 			fractional_pos[chan] += rs;

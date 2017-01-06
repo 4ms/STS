@@ -26,7 +26,7 @@ enum PlayStates {
 };
 
 enum RecStates {
-	OFF,
+	REC_OFF,
 	CREATING_FILE,
 	RECORDING,
 	CLOSING_FILE,

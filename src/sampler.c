@@ -65,6 +65,7 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 #include "wavefmt.h"
 #include "circular_buffer.h"
 #include "file_util.h"
+#include "ITM.h"
 
 
 
@@ -103,9 +104,8 @@ extern uint8_t ButLED_state[NUM_RGBBUTTONS];
 extern int16_t CODEC_DAC_CALIBRATION_DCOFFSET[4];
 //extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
 
+extern volatile uint32_t sys_tmr;
 
-extern uint8_t recording_enabled;
-extern uint8_t is_recording;
 
 uint8_t SAMPLINGBYTES=2;
 
@@ -143,6 +143,8 @@ CircularBuffer* rec_buff;
 
 enum RecStates	rec_state;
 uint8_t			samplenum_now_recording;
+extern uint8_t recording_enabled;
+extern uint8_t is_recording;
 
 
 //
@@ -342,23 +344,9 @@ uint8_t load_sample_header(uint32_t samplenum, FIL* sample_file)
 	rd = sizeof(WaveHeader);
 	res = f_read(sample_file, &sample_header, rd, &br);
 
-	if (res != FR_OK)
-	{
-		g_error |= FILE_READ_FAIL; //file not opened
-		return(res);
-	}
-	else if (br < rd)
-	{
-		g_error |= FILE_WAVEFORMATERR; //file ended unexpectedly when reading first header
-		f_close(sample_file);
-		return(FR_INT_ERR);
-	}
-	else if ( is_valid_wav_format(sample_header) )
-	{
-		g_error |= FILE_WAVEFORMATERR;	//first header error (not a valid wav file)
-		f_close(sample_file);
-		return(FR_INT_ERR);
-	}
+	if (res != FR_OK)	{g_error |= FILE_READ_FAIL; return(res);}//file not opened
+	else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading first header
+	else if ( !is_valid_wav_format(sample_header) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//first header error (not a valid wav file)
 
 	else
 	{
@@ -369,18 +357,8 @@ uint8_t load_sample_header(uint32_t samplenum, FIL* sample_file)
 		{
 			res = f_read(sample_file, &chunk, rd, &br);
 
-			if (res != FR_OK)
-			{
-				g_error |= FILE_READ_FAIL;
-				f_close(sample_file);
-				break;
-			}
-			if (br < rd)
-			{
-				g_error |= FILE_WAVEFORMATERR;
-				f_close(sample_file);
-				break;
-			}
+			if (res != FR_OK)	{g_error |= FILE_READ_FAIL; f_close(sample_file); break;}
+			if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
 			//fast-forward to the next chunk
 			if (chunk.chunkId != ccDATA)
@@ -900,7 +878,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 				in[1] = (*src++) /*+ CODEC_ADC_CALIBRATION_DCOFFSET[channel+2]*/;
 				dummy=*src++;
-			}
+							}
 			else
 			{
 				topbyte = (uint16_t)(*src++);
@@ -910,6 +888,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				topbyte = (uint16_t)(*src++);
 				bottombyte = (uint16_t)(*src++);
 				in[1] = (topbyte << 16) + (uint16_t)bottombyte;
+
 			}
 
 			t_buff16[i*2] = in[0];
@@ -1029,7 +1008,18 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 								play_state[chan] = PLAY_FADEDOWN;
 
 								if (!play_fully_buffered[chan])
+								{
 									g_error |= READ_BUFF1_OVERRUN<<chan;
+									check_errors();
+//									error_log[0] = resampled_buffer_size;
+//									error_log[1] = left_to_play;
+//									error_log[2] = play_buff[chan]->in;
+//									error_log[3] = play_buff[chan]->out;
+//									error_log[4] = sample_file_curpos[chan];
+//									error_log[5] = sample_file_startpos[chan];
+//									error_log[6] = sample_file_endpos[chan];
+//									error_log[7] = sample_file_seam[chan];
+								}
 							}
 						}
 						else
@@ -1135,9 +1125,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 void toggle_recording(void)
 {
-	if (is_recording)
+	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
-		is_recording=0;
+		rec_state=CLOSING_FILE;
 		ButLED_state[RecButtonLED]=0;
 
 	} else
@@ -1146,7 +1136,7 @@ void toggle_recording(void)
 		{
 			CB_init(rec_buff, 0);
 
-			is_recording=2;
+			rec_state = CREATING_FILE;
 			ButLED_state[RecButtonLED]=1;
 		}
 	}
@@ -1155,10 +1145,15 @@ void toggle_recording(void)
 
 void write_buffer_to_storage(void)
 {
-	uint32_t err;
-	uint8_t addr_exceeded;
 	int16_t t_buff16[BUFF_LEN];
 
+	FRESULT res;
+	char fname[255];
+
+//	WaveHeader wavh;
+	WaveHeaderAndChunk whac;
+
+	uint32_t sz, written;
 
 	//If user changed the record sample slot, start recording from the beginning of that slot
 	if (flags[RecSampleChanged])
@@ -1175,18 +1170,73 @@ void write_buffer_to_storage(void)
 
 
 	// Handle write buffers (transfer SDRAM to SD card)
-	if (is_recording==2)	//first time, create a new file
+	switch (rec_state)
 	{
-		is_recording=1;
-		if (recfil.obj.fs==0) //no file created yet
-		{
+		case (CREATING_FILE):	//first time, create a new file
+			if (recfil.obj.fs!=0)
+			{
+				rec_state = CLOSING_FILE;
+				//f_close(&recfil);
+				//f_sync(&recfil);
+			}
 
-		}
+			sz = intToStr(sys_tmr, fname, 1);
+			fname[sz++] = '.';
+			fname[sz++] = 'w';
+			fname[sz++] = 'a';
+			fname[sz++] = 'v';
 
+			res = f_open(&recfil, fname, FA_WRITE | FA_CREATE_NEW);
+			if (res!=FR_OK)		{g_error |= FILE_REC_OPEN_FAIL; check_errors();}
 
-	}
-	if (is_recording)
-	{
+			create_waveheader(&whac.wh);
+			create_chunk(ccDATA, 0, &whac.wc);
+
+			sz = sizeof(WaveHeaderAndChunk);
+
+			res = f_write(&recfil, &whac.wh, sz, &written);
+			if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors();}
+			if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+
+			f_close(&recfil);
+			f_sync(&recfil);
+
+			rec_state=RECORDING;
+		break;
+
+		case (CLOSING_FILE):
+			//calculate the length of the file and write it in:
+			//wavbyteswritten
+			//f_seek(&recfil, 4); //file size - 8
+			//f_write(&recfil, wavbyteswritten+sizeof(WaveHeader)+sizeof(WaveChunk)-8, 4, written);
+			//f_seek(&recfil, 40); //data chunk size
+			//f_write(&recfil, wavbyteswritten, 4, written);
+
+			f_close(&recfil);
+			f_sync(&recfil);
+		break;
+
+		case (RECORDING):
+		//read a block from rec_buff->out
+				//write it to the file
+
+//				res = f_write(&recfil, &whac.wh, sz, &written);
+//				if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors();}
+//				if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+
+		break;
+
+		case (REC_OFF):
+			if (recfil.obj.fs!=0)
+			{
+				rec_state = CLOSING_FILE;
+				//f_close(&recfil);
+				//f_sync(&recfil);
+			}
+		break;
+
+		case (REC_PAUSED):
+		break;
 
 	}
 

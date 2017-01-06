@@ -40,7 +40,14 @@ typedef struct WaveChunk {
 
 } WaveChunk;
 
+typedef struct WaveHeaderAndChunk {
+	WaveHeader wh;
+	WaveChunk wc;
+} WaveHeaderAndChunk;
+
 uint8_t is_valid_wav_format(WaveHeader sample_header);
 
+void create_waveheader(WaveHeader *w);
+void create_chunk(uint32_t chunkId, uint32_t chunkSize, WaveChunk *wc);
 
 #endif /* INC_WAVEFMT_H_ */
