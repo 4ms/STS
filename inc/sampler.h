@@ -25,6 +25,15 @@ enum PlayStates {
 
 };
 
+enum RecStates {
+	OFF,
+	CREATING_FILE,
+	RECORDING,
+	CLOSING_FILE,
+	REC_PAUSED
+
+};
+
 typedef struct Sample {
 	char	filename[_MAX_LFN];
 	uint32_t sampleSize;

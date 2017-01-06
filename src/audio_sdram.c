@@ -180,7 +180,7 @@ uint32_t memory_read16_cbin(CircularBuffer* b, int16_t *rd_buff, uint32_t num_sa
 
 }
 
-uint32_t memory_read16_cbout(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samples, uint8_t decrement)
+uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samples, uint8_t decrement)
 {
 	uint32_t i;
 	uint32_t num_filled=0;
@@ -270,30 +270,8 @@ uint32_t memory_write16(uint32_t *addr, uint8_t channel, int16_t *wr_buff, uint3
 
 }
 
-uint32_t memory_write16_cbout(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement)
-{
-	uint32_t i;
-	uint32_t heads_crossed=0;
 
-	for (i=0;i<num_samples;i++)
-	{
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
-
-		b->out = (b->out & 0xFFFFFFFE);
-
-		*((int16_t *)b->out) = wr_buff[i];
-
-		CB_offset_out_address(b, 2, decrement);
-
-		if (b->in == b->out)
-			heads_crossed = b->out;
-	}
-
-	return (heads_crossed);
-}
-
-
-uint32_t memory_write16_cbin(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement)
+uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement)
 {
 	uint32_t i;
 	uint32_t heads_crossed=0;

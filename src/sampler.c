@@ -80,8 +80,8 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 //extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 //extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
 //extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
+//volatile uint32_t*  SDIOSTA;
 
-volatile uint32_t*  SDIOSTA;
 
 //
 // System-wide parameters, flags, modes, states
@@ -118,7 +118,7 @@ extern const uint32_t AUDIO_MEM_BASE[4];
 
 //
 // SDRAM buffer addresses for playing from sdcard
-// SD Card --> SDARM @play_buff[]->in ... SDRAM @play_buff[]->out --> Codec
+// SD Card:fil[]@sample_file_curpos --> SDARM @play_buff[]->in ... SDRAM @play_buff[]->out --> Codec
 //
 CircularBuffer splay_buff				[NUM_PLAY_CHAN];
 CircularBuffer* play_buff				[NUM_PLAY_CHAN];
@@ -131,13 +131,18 @@ uint32_t 		sample_file_startpos	[NUM_PLAY_CHAN];
 uint32_t		sample_file_endpos		[NUM_PLAY_CHAN];
 uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN];
 uint32_t		sample_file_seam		[NUM_PLAY_CHAN];
+
+
+
 //
 // SDRAM buffer address for recording to sdcard
-// Codec --> SDRAM (@rec_buff_in_addr) .... SDRAM (@rec_buff_out_addr) --> SD Card (@rec_storage_addr)
+// Codec --> SDRAM (@rec_buff->in) .... SDRAM (@rec_buff->out) --> SD Card:recfil@rec_storage_addr
 //
-uint32_t	rec_buff_in_addr;
-uint32_t	rec_buff_out_addr;
-uint32_t	rec_storage_addr=0;
+CircularBuffer srec_buff;
+CircularBuffer* rec_buff;
+
+enum RecStates	rec_state;
+uint8_t			samplenum_now_recording;
 
 
 //
@@ -155,6 +160,7 @@ float decay_inc[NUM_PLAY_CHAN]={0,0};
 // Filesystem
 //
 FIL fil[NUM_PLAY_CHAN];
+FIL recfil;
 
 //
 // Sample info
@@ -185,9 +191,13 @@ void audio_buffer_init(void)
 	memory_clear(2);
 	memory_clear(3);
 
-
-	rec_buff_in_addr 		= AUDIO_MEM_BASE[RECCHAN];
-	rec_buff_out_addr 		= AUDIO_MEM_BASE[RECCHAN];
+	rec_buff = &srec_buff;
+	rec_buff->in 		= AUDIO_MEM_BASE[RECCHAN];
+	rec_buff->out 		= AUDIO_MEM_BASE[RECCHAN];
+	rec_buff->min		= AUDIO_MEM_BASE[RECCHAN];
+	rec_buff->max		= AUDIO_MEM_BASE[RECCHAN] + MEM_SIZE;
+	rec_buff->size		= MEM_SIZE;
+	rec_buff->wrapping	= 0;
 
 	play_buff[0] = &(splay_buff[0]);
 	play_buff[1] = &(splay_buff[1]);
@@ -461,14 +471,14 @@ void toggle_reverse(uint8_t chan)
 
 
 
-#define SZ_TBL 32
-//DWORD clmt[SZ_TBL];
-DWORD chan_clmt[NUM_PLAY_CHAN][SZ_TBL];
 
 //
 // toggle_playing(chan)
 // Toggles playing or restarts
 //
+#define SZ_TBL 32
+DWORD chan_clmt[NUM_PLAY_CHAN][SZ_TBL];
+
 void toggle_playing(uint8_t chan)
 {
 	uint8_t samplenum;
@@ -533,24 +543,44 @@ void toggle_playing(uint8_t chan)
 		else										startpos32 = (uint32_t)(f_param[chan][START] * (float)samples[samplenum].sampleSize);
 
 
+		//Align the start address
+		if (samples[samplenum].blockAlign == 4)			startpos32 &= 0xFFFFFFFC;
+		else if (samples[samplenum].blockAlign == 2)	startpos32 &= 0xFFFFFFFE;
+		else if (samples[samplenum].blockAlign == 8)	startpos32 &= 0xFFFFFFF8;
+
 		//Determine ending address
-		calc_stop_points(f_param[chan][LENGTH], samplenum, startpos32, &fwd_stop_point, &tt);
 
 		if (i_param[chan][REV])
 		{
 			//start at the "end" (fwd_stop_point) and end at the "beginning" (STARTPOS)
+
 			sample_file_endpos[chan] = startpos32 + READ_BLOCK_SIZE;
-			startpos32 = fwd_stop_point + READ_BLOCK_SIZE;
+
+			calc_stop_points(f_param[chan][LENGTH], samplenum, sample_file_endpos[chan], &fwd_stop_point, &tt);
+
+			startpos32 = fwd_stop_point;
+
+//			sample_file_endpos[chan] = startpos32 + READ_BLOCK_SIZE;
+//			startpos32 = fwd_stop_point + READ_BLOCK_SIZE;
+
+//			if (startpos32 > samples[ samplenum ].sampleSize)
+//				startpos32 = samples[ samplenum ].sampleSize;
+
 		}
 		else
+		{
+			calc_stop_points(f_param[chan][LENGTH], samplenum, startpos32, &fwd_stop_point, &tt);
 			sample_file_endpos[chan] = fwd_stop_point;
-
+		}
 
 		//Align the start address
 		if (samples[samplenum].blockAlign == 4)			startpos32 &= 0xFFFFFFFC;
 		else if (samples[samplenum].blockAlign == 2)	startpos32 &= 0xFFFFFFFE;
 		else if (samples[samplenum].blockAlign == 8)	startpos32 &= 0xFFFFFFF8;
 
+		if (samples[samplenum].blockAlign == 4)			sample_file_endpos[chan] &= 0xFFFFFFFC;
+		else if (samples[samplenum].blockAlign == 2)	sample_file_endpos[chan] &= 0xFFFFFFFE;
+		else if (samples[samplenum].blockAlign == 8)	sample_file_endpos[chan] &= 0xFFFFFFF8;
 
 		res = f_lseek(&fil[chan], samples[samplenum].startOfData + startpos32);
 		f_sync(&fil[chan]);
@@ -792,7 +822,7 @@ void read_storage_to_buffer(void)
 					else
 					{
 						//Todo: avoid using a tbuff16 and copying it, rewrite f_read so that it writes directly to play_buff[] in SDRAM
-						err = memory_write16_cbin(play_buff[chan], t_buff16, rd>>1, 0);
+						err = memory_write16_cb(play_buff[chan], t_buff16, rd>>1, 0);
 
 						//Jump back two blocks if we're reversing
 						if (i_param[chan][REV])
@@ -837,6 +867,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	uint8_t chan;
 	uint8_t overrun;
 
+
+	int16_t t_buff16[BUFF_LEN*2]; //stereo
+
 	//Resampling:
 	static float resampling_fpos[NUM_PLAY_CHAN]={0.0f, 0.0f};
 	float rs;
@@ -845,15 +878,15 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	float length;
 	float resampled_buffer_size;
 
-	SDIOSTA =  ((uint32_t *)(0x40012C34));
+//	SDIOSTA =  ((uint32_t *)(0x40012C34));
 
 	//
 	// Incoming audio
 	//
 	// Dump BUFF_LEN samples of the rx buffer from codec (src) into t_buff
-	// Then write t_buff to sdram at rec_buff_in_addr
+	// Then write t_buff to sdram at rec_buff
 	//
-	if (is_recording && 0)
+	if (is_recording)
 	{
 		for (i=0;i<BUFF_LEN;i++)
 		{
@@ -879,14 +912,11 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				in[1] = (topbyte << 16) + (uint16_t)bottombyte;
 			}
 
-
-			//t_buff[i] = in[0];
-
-			overrun = memory_write(&rec_buff_in_addr, RECCHAN, &(in[0]), 1, rec_buff_out_addr, 0);
-			if (overrun) break;
+			t_buff16[i*2] = in[0];
+			t_buff16[i*2+1] = in[1];
 		}
 
-		//overrun = memory_write(&rec_buff_in_addr, RECCHAN, t_buff, BUFF_LEN, rec_buff_out_addr, 0);
+		overrun = memory_write16_cb(rec_buff, t_buff16, BUFF_LEN, 0);
 
 		if (overrun)
 		{
@@ -1008,33 +1038,30 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 				 case (PLAYING_PERC):
 
-					//if ((play_state[chan] == PLAYING_PERC) || length<=0.5) //Play a short portion of the sample, with an envelope on the whole thing
-					//{
-						play_state[chan] = PLAYING_PERC;
+					play_state[chan] = PLAYING_PERC;
 
-						decay_inc[chan] += 1.0f/((length)*2621440.0f);
+					decay_inc[chan] += 1.0f/((length)*2621440.0f);
 
-						for (i=0;i<BUFF_LEN;i++)
-						{
-							decay_amp_i[chan] -= decay_inc[chan];
-							if (decay_amp_i[chan] < 0.0f) decay_amp_i[chan] = 0.0f;
+					for (i=0;i<BUFF_LEN;i++)
+					{
+						decay_amp_i[chan] -= decay_inc[chan];
+						if (decay_amp_i[chan] < 0.0f) decay_amp_i[chan] = 0.0f;
 
-							out[chan][i] = ((float)out[chan][i]) * decay_amp_i[chan];
-						}
+						out[chan][i] = ((float)out[chan][i]) * decay_amp_i[chan];
+					}
 
-						if (decay_amp_i[chan] <= 0.0f)
-						{
-							decay_amp_i[chan] = 0.0f;
+					if (decay_amp_i[chan] <= 0.0f)
+					{
+						decay_amp_i[chan] = 0.0f;
 
-							play_state[chan] = SILENT;
-							end_out_ctr[chan] = 400;
-							play_led_state[chan] = 0;
-							ButLED_state[Play1ButtonLED+chan] = 0;
-							//f_close(&fil[chan]);
-						}
+						play_state[chan] = SILENT;
+						end_out_ctr[chan] = 400;
+						play_led_state[chan] = 0;
+						ButLED_state[Play1ButtonLED+chan] = 0;
+						//f_close(&fil[chan]);
+					}
 
 
-					//}
 					break;
 
 				 case (SILENT):
@@ -1117,8 +1144,9 @@ void toggle_recording(void)
 	{
 		if (recording_enabled)
 		{
-			rec_storage_addr=0;
-			is_recording=1;
+			CB_init(rec_buff, 0);
+
+			is_recording=2;
 			ButLED_state[RecButtonLED]=1;
 		}
 	}
@@ -1128,10 +1156,7 @@ void toggle_recording(void)
 void write_buffer_to_storage(void)
 {
 	uint32_t err;
-	uint32_t start_of_sample_addr;
 	uint8_t addr_exceeded;
-	//uint32_t i;
-	//int32_t t_buff32[BUFF_LEN];
 	int16_t t_buff16[BUFF_LEN];
 
 
@@ -1139,52 +1164,55 @@ void write_buffer_to_storage(void)
 	if (flags[RecSampleChanged])
 	{
 		flags[RecSampleChanged]=0;
-		rec_storage_addr = 0;
 	}
 
 	//If user changed the record bank, start recording from the beginning of that slot
 	if (flags[RecBankChanged])
 	{
 		flags[RecBankChanged]=0;
-		rec_storage_addr = 0;
 	}
 
 
 
 	// Handle write buffers (transfer SDRAM to SD card)
+	if (is_recording==2)	//first time, create a new file
+	{
+		is_recording=1;
+		if (recfil.obj.fs==0) //no file created yet
+		{
+
+		}
 
 
-	if (rec_buff_out_addr != rec_buff_in_addr)
+	}
+	if (is_recording)
 	{
 
-		addr_exceeded = memory_read16(&rec_buff_out_addr, RECCHAN, t_buff16, BUFF_LEN, rec_buff_in_addr, 0);
+	}
+
+	if (rec_buff->out != rec_buff->in)
+	{
+
+		//addr_exceeded = memory_read16(&rec_buff_out_addr, RECCHAN, t_buff16, BUFF_LEN, rec_buff_in_addr, 0);
 
 		// Stop the circular buffer if we wrote it all out to storage
-		if (addr_exceeded) rec_buff_out_addr = rec_buff_in_addr;
+		//if (addr_exceeded) rec_buff_out_addr = rec_buff_in_addr;
 
-		start_of_sample_addr = (i_param[REC][SAMPLE] * SAMPLE_SIZE) + (i_param[REC][BANK] * BANK_SIZE);
+		//start_of_sample_addr = (i_param[REC][SAMPLE] * SAMPLE_SIZE) + (i_param[REC][BANK] * BANK_SIZE);
 
 		//err = write_sdcard((uint16_t *)t_buff16, start_of_sample_addr + rec_storage_addr);
-		err=0;
-		if (err==0)
-		{
-			rec_storage_addr++;
-
-			//if (rec_storage_addr>=(BANK_SIZE){
-			if (rec_storage_addr>=SAMPLE_SIZE)
-			{
-				rec_storage_addr=0; //reset and stop at the end of the sample
-				is_recording=0;
-				ButLED_state[RecButtonLED]=0;
-			}
-		}
-		else
-		{
-			g_error |= WRITE_SDCARD_ERROR;
-			is_recording=0;
-			ButLED_state[RecButtonLED]=0;
-		}
-
+//		err=0;
+//		if (err==0)
+//		{
+//
+//		}
+//		else
+//		{
+//			g_error |= WRITE_SDCARD_ERROR;
+//			is_recording=0;
+//			ButLED_state[RecButtonLED]=0;
+//		}
+//
 
 	}
 
