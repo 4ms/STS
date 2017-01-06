@@ -529,7 +529,7 @@ void toggle_playing(uint8_t chan)
 
 		//Determine the starting address
 		if (f_param[chan][START] < 0.002)			startpos32 = 0;
-		else if (f_param[chan][START] > 0.999)		startpos32 = samples[samplenum].sampleSize - 512*32; //just play the last 32 blocks
+		else if (f_param[chan][START] > 0.999)		startpos32 = samples[samplenum].sampleSize - READ_BLOCK_SIZE*32; //just play the last 32 blocks
 		else										startpos32 = (uint32_t)(f_param[chan][START] * (float)samples[samplenum].sampleSize);
 
 
@@ -539,8 +539,8 @@ void toggle_playing(uint8_t chan)
 		if (i_param[chan][REV])
 		{
 			//start at the "end" (fwd_stop_point) and end at the "beginning" (STARTPOS)
-			sample_file_endpos[chan] = startpos32;
-			startpos32 = fwd_stop_point;
+			sample_file_endpos[chan] = startpos32 + READ_BLOCK_SIZE;
+			startpos32 = fwd_stop_point + READ_BLOCK_SIZE;
 		}
 		else
 			sample_file_endpos[chan] = fwd_stop_point;
