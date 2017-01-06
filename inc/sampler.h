@@ -55,6 +55,7 @@ void toggle_reverse(uint8_t chan);
 
 uint8_t load_sample_header(uint32_t samplenum, FIL* sample_file);
 uint8_t preload_sample(uint32_t samplenum, FIL* sample_file);
+void calc_stop_points(float length, uint32_t samplenum, uint32_t startpos, uint32_t *fwd_stop_point, uint32_t *rev_stop_point);
 
 
 #endif

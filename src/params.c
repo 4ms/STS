@@ -291,7 +291,7 @@ void update_params(void)
 		//
 		// LENGTH POT
 		//
-		f_param[channel][LENGTH] 	= (smoothed_potadc[LENGTH_POT*2+channel] + smoothed_cvadc[LENGTH_POT*2+channel]) / 4096.0;
+		f_param[channel][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+channel] + old_i_smoothed_cvadc[LENGTH_POT*2+channel]) / 4096.0;
 
 		if (f_param[channel][LENGTH] > 1.0)
 			f_param[channel][LENGTH] = 1.0;

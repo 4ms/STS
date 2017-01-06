@@ -89,6 +89,8 @@ enum g_Errors{
 
 #define TRIG_TIME 400
 
+#define READ_BLOCK_SIZE 8192
+
 
 //About 45ms delay
 #define delay()						\

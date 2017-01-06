@@ -111,3 +111,22 @@ uint32_t CB_distance(CircularBuffer *b, uint8_t reverse)
 
 }
 
+void CB_init(CircularBuffer *b, uint8_t rev)
+{
+	if (rev)
+	{
+		b->wrapping = 0;
+		b->in = b->max - READ_BLOCK_SIZE;
+		b->out = b->max;
+		b->seam = b->max;
+	}
+	else
+	{
+		b->wrapping = 0;
+		b->in = b->min;
+		b->out = b->min;
+		b->seam = b->min;
+	}
+
+}
+
