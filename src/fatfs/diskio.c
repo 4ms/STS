@@ -153,16 +153,18 @@ DRESULT disk_ioctl (
 
 }
 
+
+
 /*-----------------------------------------------------------------------*/
 /* Get time for fatfs for files                                          */
 /*-----------------------------------------------------------------------*/
 __weak DWORD get_fattime(void) {
 	/* Returns current time packed into a DWORD variable */
-	return	  ((DWORD)(2013 - 1980) << 25)	/* Year 2013 */
-			| ((DWORD)7 << 21)				/* Month 7 */
-			| ((DWORD)28 << 16)				/* Mday 28 */
-			| ((DWORD)0 << 11)				/* Hour 0 */
-			| ((DWORD)0 << 5)				/* Min 0 */
+	return	  ((DWORD)(2016 - 1980) << 25)	/* Year 2016 */
+			| ((DWORD)2 << 21)				/* Month 2 */
+			| ((DWORD)22 << 16)				/* Mday 22 */
+			| ((DWORD)21 << 11)				/* Hour 21 */
+			| ((DWORD)10 << 5)				/* Min 10 */
 			| ((DWORD)0 >> 1);				/* Sec 0 */
 }
 

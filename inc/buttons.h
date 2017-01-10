@@ -50,9 +50,14 @@ enum Buttons {
 	NUM_BUTTONS
 };
 
+
 enum ButtonStates {
+	UNKNOWN,
 	UP,
-	DOWN
+	DOWN,
+	SHORT_PRESSED = 3000,
+	MED_PRESSED = 6000,
+	LONG_PRESSED = 12000,
 };
 
 

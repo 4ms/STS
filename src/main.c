@@ -21,6 +21,7 @@
 #include "dig_pins.h"
 #include "pca9685_driver.h"
 #include "ITM.h"
+#include "wav_recording.h"
 #include "rgb_leds.h"
 #include "ff.h"
 
@@ -46,7 +47,7 @@ void check_errors(void){
 		CLIPLED1_ON;
 		CLIPLED2_ON;
 
-	while(1){
+	//while(1){
  		CLIPLED1_ON;
 		CLIPLED2_ON;
  /*
@@ -81,7 +82,7 @@ void check_errors(void){
 			delay_ms(100);
 			*/
 
-		}
+		//}
 
 	}
 }
@@ -163,43 +164,23 @@ int main(void)
 
 
 	PLAYLED1_OFF;
-	while(!PLAY2BUT){PLAYLED1_ON;}
+	while(!REV1BUT){;}
 	PLAYLED1_OFF;
 
 	//Initialize SD Card
 	//err=init_sdcard();
 	//if (!err)
 	//err=test_sdcard();
-
-	if (err){
-		while(1){
-			CLIPLED1_ON;
-			CLIPLED1_OFF;
-		}
-	}
+//	if (err){
+//		while(1){
+//			CLIPLED1_ON;
+//			CLIPLED1_OFF;
+//		}
+//	}
 
 	CLIPLED1_OFF;
 	CLIPLED2_OFF;
 
-	if (PLAY2BUT && PLAY1BUT)
-	{
-
-		while (!PLAY1BUT) {;}
-		while (!PLAY2BUT) {;}
-
-		//res = f_mkfs("", FM_ANY, 0, work, sizeof work);
-
-		if (res!=FR_OK)
-		{
-			CLIPLED1_ON;
-			while(1){;}
-		}
-		else
-		{
-			CLIPLED2_ON;
-			while(1){;}
-		}
-	}
 
 	res = f_mount(&FatFs, "", 1);
 	if (res != FR_OK)
@@ -287,12 +268,12 @@ int main(void)
 	//Main loop
 	while(1){
 
-		DEBUG0_ON;
+		//DEBUG0_ON;
 		check_errors();
 		
 		write_buffer_to_storage();
 
-		DEBUG0_OFF;
+		//DEBUG0_OFF;
 
 		read_storage_to_buffer();
 

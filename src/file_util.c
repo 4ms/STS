@@ -123,3 +123,37 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 
 	return (3); ///error
 }
+
+uint32_t intToStr(uint32_t x, char *str, uint32_t d)
+{
+	uint32_t i = 0;
+	uint32_t len;
+	char temp;
+
+    while (x)
+    {
+        str[i++] = (x%10) + '0';
+        x = x/10;
+    }
+
+    // If number of digits required is more, then
+    // add 0s at the beginning
+    while (i < d)
+        str[i++] = '0';
+
+    len=i;
+
+    x = i-1;
+    i = 0;
+    while (i<x)
+    {
+        temp = str[i];
+        str[i] = str[x];
+        str[x] = temp;
+        i++; x--;
+    }
+
+    str[len] = '\0';
+    return len;
+}
+

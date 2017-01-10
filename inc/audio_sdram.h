@@ -31,7 +31,7 @@
 //#define PRE_BUFF_SIZE 256
 #define PRE_BUFF_SIZE 64
 
-#define RECCHAN 2
+#define REC_CHAN 2
 
 uint32_t memory_read_32bword(uint32_t addr);
 

@@ -22,6 +22,7 @@ enum i_ChannelParams{
 	SAMPLE,
 	REV,
 	STEREO_MODE,
+	LOOPING,
 	NUM_I_PARAMS
 };
 
@@ -75,6 +76,7 @@ enum GlobalModes
 {
 	CALIBRATE,
 	SYSTEM_SETTINGS,
+	MONITOR_AUDIO,
 	NUM_GLOBAL_MODES
 };
 

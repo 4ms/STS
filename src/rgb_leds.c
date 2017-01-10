@@ -7,6 +7,8 @@
 #include "rgb_leds.h"
 #include "LED_palette.h"
 #include "pca9685_driver.h"
+#include "sampler.h"
+#include "wav_recording.h"
 
 uint16_t ButLED_color[NUM_RGBBUTTONS][3];
 uint16_t cached_ButLED_color[NUM_RGBBUTTONS][3];
@@ -14,7 +16,12 @@ uint8_t ButLED_state[NUM_RGBBUTTONS];
 
 extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
+extern enum PlayStates play_state[NUM_PLAY_CHAN];
+extern enum RecStates	rec_state;
+
 extern enum g_Errors g_error;
+
+extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 extern volatile uint32_t sys_tmr;
 
@@ -141,17 +148,50 @@ void test_all_buttonLEDs(void)
 	}
 }
 
-uint16_t ButLED_statetable[NUM_RGBBUTTONS][2]={
-		{OFF, BLUE}, 	/*RecBankButtonLED*/
-		{OFF, RED}, 	/*RecButtonLED*/
-		{OFF, CYAN}, 	/*Reverse1ButtonLED*/
-		{OFF, WHITE}, 	/*Bank1ButtonLED*/
-		{OFF, GREEN}, 	/*Play1ButtonLED*/
-		{OFF, GREEN}, 	/*Play2ButtonLED*/
-		{OFF, WHITE}, 	/*Bank2ButtonLED*/
-		{OFF, CYAN} 	/*Reverse2ButtonLED*/
+uint16_t ButLED_statetable[NUM_RGBBUTTONS][4]={
+		{OFF, BLUE, BLUE, BLUE}, 	/*RecBankButtonLED*/
+		{OFF, RED, BLUE, VIOLET}, 	/*RecButtonLED*/
+		{OFF, CYAN, CYAN, CYAN}, 	/*Reverse1ButtonLED*/
+		{OFF, WHITE, WHITE, WHITE}, 	/*Bank1ButtonLED*/
+		{OFF, GREEN, YELLOW, BLUE}, 	/*Play1ButtonLED*/
+		{OFF, GREEN, GREEN, GREEN}, 	/*Play2ButtonLED*/
+		{OFF, WHITE, WHITE, WHITE}, 	/*Bank2ButtonLED*/
+		{OFF, CYAN, CYAN, CYAN} 	/*Reverse2ButtonLED*/
 
 };
+
+void update_ButtonLED_states(void)
+{
+
+	if (global_mode[MONITOR_AUDIO])		ButLED_state[RecButtonLED] |= 0b10;
+	else								ButLED_state[RecButtonLED] &= ~0b10;
+
+	if (rec_state==REC_OFF
+	|| rec_state==CLOSING_FILE
+	|| rec_state==REC_PAUSED)			ButLED_state[RecButtonLED] &= ~0b01;
+	else								ButLED_state[RecButtonLED] |= 0b01;
+
+	if (play_state[0]==SILENT
+	|| play_state[0]==RETRIG_FADEDOWN
+	|| play_state[0]==PLAY_FADEDOWN)	ButLED_state[Play1ButtonLED] = 0;
+	else								ButLED_state[Play1ButtonLED] = 1;
+
+	if (play_state[1]==SILENT
+	|| play_state[1]==RETRIG_FADEDOWN
+	|| play_state[1]==PLAY_FADEDOWN)	ButLED_state[Play2ButtonLED] = 0;
+	else								ButLED_state[Play2ButtonLED] = 1;
+
+	if (i_param[0][LOOPING])			ButLED_state[Play1ButtonLED] += 2;
+	if (i_param[1][LOOPING])			ButLED_state[Play2ButtonLED] += 2;
+
+	ButLED_state[Reverse1ButtonLED] = i_param[0][REV];
+	ButLED_state[Reverse2ButtonLED] = i_param[1][REV];
+
+
+}
+
+
+
 
 /*
  * update_ButtonLEDs()
@@ -166,12 +206,16 @@ void update_ButtonLEDs(void)
 	uint32_t tm=sys_tmr & 0x3FFF;
 
 
+	update_ButtonLED_states();
+
 	if (!g_error){
 		for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 		{
-			if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED)
+			if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED)
 			{
-				chan=(ButLEDnum == Bank1ButtonLED)?0:1;
+				if (ButLEDnum == Bank1ButtonLED) chan = 0;
+				else if (ButLEDnum == Bank2ButtonLED) chan = 1;
+				else chan = 2;
 
 				if (i_param[chan][BANK] < (NUM_LED_PALETTE-1))
 					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
@@ -198,47 +242,7 @@ void update_ButtonLEDs(void)
 				set_ButtonLED_byPalette(ButLEDnum, ButLED_statetable[ButLEDnum][ButLED_state[ButLEDnum]] );
 		}
 	}
-/*
-	if (ButLED_state[Reverse1ButtonLED]==1)
-		set_ButtonLED_byPalette(Reverse1ButtonLED,YELLOW);
-	else
-		set_ButtonLED_byPalette(Reverse1ButtonLED,OFF);
 
-	if (ButLED_state[Reverse2ButtonLED]==1)
-		set_ButtonLED_byPalette(Reverse2ButtonLED,YELLOW);
-	else
-		set_ButtonLED_byPalette(Reverse2ButtonLED,OFF);
-
-	if (ButLED_state[Play1ButtonLED]==1)
-		set_ButtonLED_byPalette(Play1ButtonLED,GREEN);
-	else
-		set_ButtonLED_byPalette(Play1ButtonLED,OFF);
-
-	if (ButLED_state[Play2ButtonLED]==1)
-		set_ButtonLED_byPalette(Play2ButtonLED,GREEN);
-	else
-		set_ButtonLED_byPalette(Play2ButtonLED,OFF);
-
-	if (ButLED_state[Bank1ButtonLED]==1)
-		set_ButtonLED_byPalette(Bank1ButtonLED,WHITE);
-	else
-		set_ButtonLED_byPalette(Bank1ButtonLED,OFF);
-
-	if (ButLED_state[Bank2ButtonLED]==1)
-		set_ButtonLED_byPalette(Bank2ButtonLED,WHITE);
-	else
-		set_ButtonLED_byPalette(Bank2ButtonLED,OFF);
-
-	if (ButLED_state[RecButtonLED]==1)
-		set_ButtonLED_byPalette(RecButtonLED,RED);
-	else
-		set_ButtonLED_byPalette(RecButtonLED,OFF);
-
-	if (ButLED_state[RecBankButtonLED]==1)
-		set_ButtonLED_byPalette(RecBankButtonLED,BLUE);
-	else
-		set_ButtonLED_byPalette(RecBankButtonLED,OFF);
-*/
 
 	display_all_ButtonLEDs();
 }

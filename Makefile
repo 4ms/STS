@@ -101,6 +101,8 @@ LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT)
 
 #build/src/resample.o: CFLAGS = $(C0FLAGS)
 build/src/sampler.o: CFLAGS = $(C0FLAGS)
+build/src/wav_recoding.o: CFLAGS = $(C0FLAGS)
+build/src/buttons.o: CFLAGS = $(C0FLAGS)
 #build/src/file_util.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)

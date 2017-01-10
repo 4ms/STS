@@ -11,11 +11,12 @@
 //Each channel = codec_BUFF_LEN/2 samples
 //We process the rx buffer when it's half-full and 100% full, so codec_BUFF_LEN/4 samples are processed at one time
 
-//2048 codec_BUFF_LEN
-//1024 x 16-bits each Half Transfer
-//256 x samples per channel (32-bit samples even if only using 16-bits)
-//matches 256 samples per SDIO block (512 bytes/block = 256 x 16bit samples/block)
+//=2048B codec_BUFF_LEN
+//=1024B each Half Transfer
+//=256 samples (32-bit samples from codec, even if in 16bit mode)
 #define codec_BUFF_LEN 2048
+#define HT16_BUFF_LEN (codec_BUFF_LEN>>2)
+#define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1)
 
 #define FW_VERSION 0
 
@@ -33,6 +34,9 @@ enum Flags {
 	Rev2Trig,
 	PlayBuff1_Discontinuity,
 	PlayBuff2_Discontinuity,
+	ToggleMonitor,
+	ToggleLooping1,
+	ToggleLooping2,
 	NUM_FLAGS
 };
 

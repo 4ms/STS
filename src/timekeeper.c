@@ -17,9 +17,41 @@
 volatile uint32_t sys_tmr;
 
 inline void inc_tmrs(void);
-inline void inc_tmrs(void)
+void inc_tmrs(void)
 {
 	sys_tmr++; //at 48kHz, it resets after 24 hours, 51 minutes, 18.4853333 seconds
+}
+
+
+uint32_t get_fattime(void){
+	uint32_t secs, mins, hours, days, month;
+
+	secs = sys_tmr/44100;
+	mins = 10;
+	hours = 21;
+	days = 22;
+	month = 2;
+
+	mins += secs / 60;
+	secs = secs % 60;
+
+	hours += mins / 60;
+	mins = mins % 60;
+
+	days += hours / 24;
+	hours = hours % 24;
+
+	month += days / 28;
+	days = days % 28; //February
+
+	return	  ((uint32_t)(2016 - 1980) << 25)
+			| ((uint32_t)month << 21)
+			| ((uint32_t)days << 16)
+			| ((uint32_t)hours << 11)
+			| ((uint32_t)mins << 5)
+			| ((uint32_t)secs >> 1);
+
+
 }
 
 void init_timekeeper(void){

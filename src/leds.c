@@ -50,16 +50,16 @@ void LED_PWM_IRQHandler(void)
 			PLAYLED2_ON;
 		else
 			PLAYLED2_OFF;
-
-		if (clip_led_state[0] && (loop_led_PWM_ctr<global_i_param[LED_BRIGHTNESS]))
-			CLIPLED1_ON;
-		else
-			CLIPLED1_OFF;
-
-		if (clip_led_state[1] && (loop_led_PWM_ctr<global_i_param[LED_BRIGHTNESS]))
-			CLIPLED2_ON;
-		else
-			CLIPLED2_OFF;
+//
+//		if (clip_led_state[0] && (loop_led_PWM_ctr<global_i_param[LED_BRIGHTNESS]))
+//			CLIPLED1_ON;
+//		else
+//			CLIPLED1_OFF;
+//
+//		if (clip_led_state[1] && (loop_led_PWM_ctr<global_i_param[LED_BRIGHTNESS]))
+//			CLIPLED2_ON;
+//		else
+//			CLIPLED2_OFF;
 
 		loop_led_PWM_ctr &= 0xF;
 

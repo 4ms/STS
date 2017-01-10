@@ -12,16 +12,20 @@
 #include "params.h"
 #include "buttons.h"
 #include "sampler.h"
+#include "wav_recording.h"
 #include "rgb_leds.h"
 
 #include "equal_pow_pan_padded.h"
 #include "exp_1voct.h"
 #include "log_taper_padded.h"
 #include "pitch_pot_cv.h"
+#include "buttons.h"
 
 extern float pitch_pot_cv[4096];
 const float exp_1voct[4096];
 
+
+extern enum PlayStates play_state[NUM_PLAY_CHAN];
 
 extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
@@ -39,13 +43,7 @@ uint8_t	global_mode[NUM_GLOBAL_MODES];
 uint8_t flags[NUM_FLAGS];
 uint8_t flag_pot_changed[NUM_POT_ADCS];
 
-uint8_t recording_enabled;
-uint8_t is_recording;
-
-
-extern uint8_t ButLED_state[NUM_RGBBUTTONS];
-
-
+extern uint8_t recording_enabled;
 
 
  /*** Move to adc.c interrupts ***/
@@ -93,6 +91,7 @@ void init_params(void)
 		i_param[channel][SAMPLE] 	= 0;
 		i_param[channel][REV] 		= 0;
 		i_param[channel][STEREO_MODE]=0;
+		i_param[channel][LOOPING]	 =0;
 	}
 
 	i_param[REC][BANK] = 0;
@@ -112,6 +111,7 @@ void init_modes(void)
 {
 	global_mode[CALIBRATE] = 0;
 	global_mode[SYSTEM_SETTINGS] = 0;
+	global_mode[MONITOR_AUDIO] = 0;
 
 }
 
@@ -346,6 +346,7 @@ void update_params(void)
 			break; //only calculate channel 0's parameters, because in LINK mode channel 1's params are copied from channel 0
 		}
 
+
 	}
 
 
@@ -359,6 +360,14 @@ void update_params(void)
 		flags[RecSampleChanged] = 1;
 
 
+	if (flags[ToggleMonitor])
+	{
+		flags[ToggleMonitor] = 0;
+
+		if (global_mode[MONITOR_AUDIO])		global_mode[MONITOR_AUDIO] = 0;
+		else								global_mode[MONITOR_AUDIO] = 1;
+
+	}
 }
 
 
@@ -373,7 +382,12 @@ void process_mode_flags(void)
 		if (flags[Play1Trig])
 		{
 			flags[Play1Trig]=0;
+
+			if (STEREOSW==SW_LINK)
+				if (play_state[0]==SILENT && (play_state[1]== PLAYING || play_state[1] == PLAYING_PERC)) play_state[1]=SILENT;
+
 			toggle_playing(0);
+
 
 			if (STEREOSW==SW_LINK)
 				toggle_playing(1);
@@ -382,6 +396,10 @@ void process_mode_flags(void)
 		if (flags[Play2Trig])
 		{
 			flags[Play2Trig]=0;
+
+			if (STEREOSW==SW_LINK)
+				if (play_state[1]==SILENT && (play_state[0]== PLAYING || play_state[0] == PLAYING_PERC)) play_state[1]=SILENT;
+
 			toggle_playing(1);
 
 			if (STEREOSW==SW_LINK)
@@ -414,6 +432,26 @@ void process_mode_flags(void)
 
 		}
 
+		if (flags[ToggleLooping1])
+		{
+			flags[ToggleLooping1] = 0;
+
+			if (i_param[0][LOOPING])
+				i_param[0][LOOPING] = 0;
+			else
+				i_param[0][LOOPING] = 1;
+
+		}
+
+		if (flags[ToggleLooping2])
+		{
+			flags[ToggleLooping2] = 0;
+
+			if (i_param[1][LOOPING])
+				i_param[1][LOOPING] = 0;
+			else
+				i_param[1][LOOPING] = 1;
+		}
 	}
 }
 
