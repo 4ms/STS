@@ -19,7 +19,6 @@ extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern enum PlayStates play_state[NUM_PLAY_CHAN];
 extern enum RecStates	rec_state;
 
-extern enum g_Errors g_error;
 
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
@@ -154,7 +153,7 @@ uint16_t ButLED_statetable[NUM_RGBBUTTONS][4]={
 		{OFF, CYAN, CYAN, CYAN}, 	/*Reverse1ButtonLED*/
 		{OFF, WHITE, WHITE, WHITE}, 	/*Bank1ButtonLED*/
 		{OFF, GREEN, YELLOW, BLUE}, 	/*Play1ButtonLED*/
-		{OFF, GREEN, GREEN, GREEN}, 	/*Play2ButtonLED*/
+		{OFF, GREEN, YELLOW, BLUE}, 	/*Play2ButtonLED*/
 		{OFF, WHITE, WHITE, WHITE}, 	/*Bank2ButtonLED*/
 		{OFF, CYAN, CYAN, CYAN} 	/*Reverse2ButtonLED*/
 
@@ -182,6 +181,7 @@ void update_ButtonLED_states(void)
 	else								ButLED_state[Play2ButtonLED] = 1;
 
 	if (i_param[0][LOOPING])			ButLED_state[Play1ButtonLED] += 2;
+
 	if (i_param[1][LOOPING])			ButLED_state[Play2ButtonLED] += 2;
 
 	ButLED_state[Reverse1ButtonLED] = i_param[0][REV];
@@ -208,40 +208,39 @@ void update_ButtonLEDs(void)
 
 	update_ButtonLED_states();
 
-	if (!g_error){
-		for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
+	for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
+	{
+		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED)
 		{
-			if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED)
+			if (ButLEDnum == Bank1ButtonLED) chan = 0;
+			else if (ButLEDnum == Bank2ButtonLED) chan = 1;
+			else chan = 2;
+
+			if (i_param[chan][BANK] < (NUM_LED_PALETTE-1))
+				set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
+
+			else if (i_param[chan][BANK] < ((NUM_LED_PALETTE-1)*2))
 			{
-				if (ButLEDnum == Bank1ButtonLED) chan = 0;
-				else if (ButLEDnum == Bank2ButtonLED) chan = 1;
-				else chan = 2;
-
-				if (i_param[chan][BANK] < (NUM_LED_PALETTE-1))
-					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
-
-				else if (i_param[chan][BANK] < ((NUM_LED_PALETTE-1)*2))
-				{
-					if (tm < 0x1000)
-						set_ButtonLED_byPalette(ButLEDnum, OFF );
-					else
-						set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 2 - NUM_LED_PALETTE );
-				}
+				if (tm < 0x1000)
+					set_ButtonLED_byPalette(ButLEDnum, OFF );
 				else
-				{
-					if ((tm < 0x0400) || (tm < 0x0C00 && tm > 0x0800))
-						set_ButtonLED_byPalette(ButLEDnum, OFF );
-					else
-						set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 3 - NUM_LED_PALETTE*2 );
-
-				}
+					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 2 - NUM_LED_PALETTE );
+			}
+			else
+			{
+				if ((tm < 0x0400) || (tm < 0x0C00 && tm > 0x0800))
+					set_ButtonLED_byPalette(ButLEDnum, OFF );
+				else
+					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 3 - NUM_LED_PALETTE*2 );
 
 			}
 
-			else
-				set_ButtonLED_byPalette(ButLEDnum, ButLED_statetable[ButLEDnum][ButLED_state[ButLEDnum]] );
 		}
+
+		else
+			set_ButtonLED_byPalette(ButLEDnum, ButLED_statetable[ButLEDnum][ButLED_state[ButLEDnum]] );
 	}
+
 
 
 	display_all_ButtonLEDs();

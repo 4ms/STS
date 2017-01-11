@@ -16,13 +16,13 @@
 #include "rgb_leds.h"
 
 #include "equal_pow_pan_padded.h"
-#include "exp_1voct.h"
+#include "voltoct.h"
 #include "log_taper_padded.h"
 #include "pitch_pot_cv.h"
 #include "buttons.h"
 
 extern float pitch_pot_cv[4096];
-const float exp_1voct[4096];
+const float voltoct[4096];
 
 
 extern enum PlayStates play_state[NUM_PLAY_CHAN];
@@ -71,7 +71,7 @@ int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
 
 //Change in pot since last process_adc
 int32_t pot_delta[NUM_POT_ADCS];
-int32_t cv_delta[NUM_POT_ADCS];
+int32_t cv_delta[NUM_CV_ADCS];
 
 /* end move to adc.c */
 
@@ -128,29 +128,29 @@ void init_LowPassCoefs(void)
 
 	t=50.0;
 
-	CV_LPF_COEF[PITCH_POT*2] = 1.0-(1.0/t);
-	CV_LPF_COEF[PITCH_POT*2+1] = 1.0-(1.0/t);
+	CV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
+	CV_LPF_COEF[PITCH_CV*2+1] = 1.0-(1.0/t);
 
-	CV_LPF_COEF[START_POT*2] = 1.0-(1.0/t);
-	CV_LPF_COEF[START_POT*2+1] = 1.0-(1.0/t);
+	CV_LPF_COEF[START_CV*2] = 1.0-(1.0/t);
+	CV_LPF_COEF[START_CV*2+1] = 1.0-(1.0/t);
 
-	CV_LPF_COEF[LENGTH_POT*2] = 1.0-(1.0/t);
-	CV_LPF_COEF[LENGTH_POT*2+1] = 1.0-(1.0/t);
+	CV_LPF_COEF[LENGTH_CV*2] = 1.0-(1.0/t);
+	CV_LPF_COEF[LENGTH_CV*2+1] = 1.0-(1.0/t);
 
-	CV_LPF_COEF[SAMPLE_POT*2] = 1.0-(1.0/t);
-	CV_LPF_COEF[SAMPLE_POT*2+1] = 1.0-(1.0/t);
+	CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
+	CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
-	MIN_CV_ADC_CHANGE[PITCH_POT*2] = 30;
-	MIN_CV_ADC_CHANGE[PITCH_POT*2+1] = 30;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 10;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 10;
 
-	MIN_CV_ADC_CHANGE[START_POT*2] = 20;
-	MIN_CV_ADC_CHANGE[START_POT*2+1] = 20;
+	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
+	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
 
-	MIN_CV_ADC_CHANGE[LENGTH_POT*2] = 20;
-	MIN_CV_ADC_CHANGE[LENGTH_POT*2+1] = 20;
+	MIN_CV_ADC_CHANGE[LENGTH_CV*2] = 20;
+	MIN_CV_ADC_CHANGE[LENGTH_CV*2+1] = 20;
 
-	MIN_CV_ADC_CHANGE[SAMPLE_POT*2] = 20;
-	MIN_CV_ADC_CHANGE[SAMPLE_POT*2+1] = 20;
+	MIN_CV_ADC_CHANGE[SAMPLE_CV*2] = 20;
+	MIN_CV_ADC_CHANGE[SAMPLE_CV*2+1] = 20;
 
 
 	t=20.0; //50.0 = about 100ms to turn a knob fully
@@ -291,7 +291,7 @@ void update_params(void)
 		//
 		// LENGTH POT
 		//
-		f_param[channel][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+channel] + old_i_smoothed_cvadc[LENGTH_POT*2+channel]) / 4096.0;
+		f_param[channel][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+channel] + old_i_smoothed_cvadc[LENGTH_CV*2+channel]) / 4096.0;
 
 		if (f_param[channel][LENGTH] > 1.0)
 			f_param[channel][LENGTH] = 1.0;
@@ -299,7 +299,7 @@ void update_params(void)
 		//
 		// START POT
 		//
-		f_param[channel][START] 	= (old_i_smoothed_potadc[START_POT*2+channel] + old_i_smoothed_cvadc[START_POT*2+channel]) / 4096.0;
+		f_param[channel][START] 	= (old_i_smoothed_potadc[START_POT*2+channel] + old_i_smoothed_cvadc[START_CV*2+channel]) / 4096.0;
 
 		if (f_param[channel][START] > 1.0)
 			f_param[channel][START] = 1.0;
@@ -309,17 +309,15 @@ void update_params(void)
 		//
 		//f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]];
 
-		if (old_i_smoothed_cvadc[PITCH_POT*2+channel] < 2018) //positive voltage on 1V/oct jack
+		if ((old_i_smoothed_cvadc[PITCH_CV*2+channel] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+channel] > 2058)) //positive voltage on 1V/oct jack
 		{
-			f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]] / exp_1voct[2018 - old_i_smoothed_cvadc[PITCH_POT*2+channel]];
-		}
-		else
-		if (old_i_smoothed_cvadc[PITCH_POT*2+channel] > 2078) //positive voltage on 1V/oct jack
-		{
-			f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]] / exp_1voct[old_i_smoothed_cvadc[PITCH_POT*2+channel] - 2078];
+			f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+channel]];
 		}
 		else
 			f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]];
+
+		if (f_param[channel][PITCH] > MAX_RS)
+			f_param[channel][PITCH] = MAX_RS;
 
 		//
 		// SAMPLE POT

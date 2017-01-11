@@ -7,7 +7,15 @@ enum ButtonStates button_state[NUM_BUTTONS];
 extern uint8_t flags[NUM_FLAGS];
 extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
+extern enum g_Errors g_error;
 
+void clear_errors(void)
+{
+	g_error = 0;
+	CLIPLED1_OFF;
+	CLIPLED2_OFF;
+
+}
 
 void Button_Debounce_IRQHandler(void)
 {
@@ -65,10 +73,12 @@ void Button_Debounce_IRQHandler(void)
 				{
 					case Play1:
 						flags[Play1Trig]=1;
+						clear_errors();
 						break;
 
 					case Play2:
 						flags[Play2Trig]=1;
+						clear_errors();
 						break;
 
 					case Bank1:
@@ -92,9 +102,11 @@ void Button_Debounce_IRQHandler(void)
 						break;
 					case Rev1:
 						flags[Rev1Trig]=1;
+						clear_errors();
 						break;
 					case Rev2:
 						flags[Rev2Trig]=1;
+						clear_errors();
 						break;
 				}
 

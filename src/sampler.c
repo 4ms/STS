@@ -489,7 +489,7 @@ void toggle_playing(uint8_t chan)
 {
 	uint8_t samplenum;
 	FRESULT res;
-	uint32_t startpos32, fwd_stop_point, tt;
+	uint32_t fwd_stop_point, tt;
 
 
 	//Start playing, or re-start if we have a short length
@@ -543,28 +543,19 @@ void toggle_playing(uint8_t chan)
 			samplenum_now_playing[chan] = samplenum;
 		}
 
-		//Determine the starting address
-		if (f_param[chan][START] < 0.002)			startpos32 = 0;
-		else if (f_param[chan][START] > 0.999)		startpos32 = samples[samplenum].sampleSize - READ_BLOCK_SIZE*32; //just play the last 32 blocks
-		else										startpos32 = (uint32_t)(f_param[chan][START] * (float)samples[samplenum].sampleSize);
-
-
-		//Align the start address
-		if (samples[samplenum].blockAlign == 4)			startpos32 &= 0xFFFFFFFC;
-		else if (samples[samplenum].blockAlign == 2)	startpos32 &= 0xFFFFFFFE;
-		else if (samples[samplenum].blockAlign == 8)	startpos32 &= 0xFFFFFFF8;
+		//Determine starting address
+		sample_file_startpos[chan] = calc_start_point(f_param[chan][START], samplenum);
 
 		//Determine ending address
-
 		if (i_param[chan][REV])
 		{
 			//start at the "end" (fwd_stop_point) and end at the "beginning" (STARTPOS)
 
-			sample_file_endpos[chan] = startpos32 + READ_BLOCK_SIZE;
+			sample_file_endpos[chan] = sample_file_startpos[chan] + READ_BLOCK_SIZE;
 
 			calc_stop_points(f_param[chan][LENGTH], samplenum, sample_file_endpos[chan], &fwd_stop_point, &tt);
 
-			startpos32 = fwd_stop_point;
+			sample_file_startpos[chan] = fwd_stop_point;
 
 //			sample_file_endpos[chan] = startpos32 + READ_BLOCK_SIZE;
 //			startpos32 = fwd_stop_point + READ_BLOCK_SIZE;
@@ -575,20 +566,12 @@ void toggle_playing(uint8_t chan)
 		}
 		else
 		{
-			calc_stop_points(f_param[chan][LENGTH], samplenum, startpos32, &fwd_stop_point, &tt);
+			calc_stop_points(f_param[chan][LENGTH], samplenum, sample_file_startpos[chan], &fwd_stop_point, &tt);
 			sample_file_endpos[chan] = fwd_stop_point;
 		}
 
-		//Align the start address
-		if (samples[samplenum].blockAlign == 4)			startpos32 &= 0xFFFFFFFC;
-		else if (samples[samplenum].blockAlign == 2)	startpos32 &= 0xFFFFFFFE;
-		else if (samples[samplenum].blockAlign == 8)	startpos32 &= 0xFFFFFFF8;
 
-		if (samples[samplenum].blockAlign == 4)			sample_file_endpos[chan] &= 0xFFFFFFFC;
-		else if (samples[samplenum].blockAlign == 2)	sample_file_endpos[chan] &= 0xFFFFFFFE;
-		else if (samples[samplenum].blockAlign == 8)	sample_file_endpos[chan] &= 0xFFFFFFF8;
-
-		res = f_lseek(&fil[chan], samples[samplenum].startOfData + startpos32);
+		res = f_lseek(&fil[chan], samples[samplenum].startOfData + sample_file_startpos[chan]);
 		f_sync(&fil[chan]);
 
 		if (res != FR_OK) g_error |= FILE_SEEK_FAIL;
@@ -596,9 +579,8 @@ void toggle_playing(uint8_t chan)
 		else
 		{
 			// Set up parameters to begin playing
-			sample_file_curpos[chan] 	= startpos32;
-			sample_file_startpos[chan] 	= startpos32;
-			sample_file_seam[chan] 		= startpos32;
+			sample_file_curpos[chan] 	= sample_file_startpos[chan];
+			sample_file_seam[chan] 		= sample_file_startpos[chan];
 
 			decay_amp_i[chan]=1.0;
 			decay_inc[chan]=0.0;
@@ -631,6 +613,24 @@ void toggle_playing(uint8_t chan)
 }
 
 
+uint32_t calc_start_point(float start_param, uint32_t samplenum)
+{
+	uint32_t align;
+
+	if (samples[samplenum].blockAlign == 4)			align = 0xFFFFFFFC;
+	else if (samples[samplenum].blockAlign == 2)	align = 0xFFFFFFFC; //was E? but it clicks if we align to 2 not 4, even if our file claims blockAlign = 2
+	else if (samples[samplenum].blockAlign == 8)	align = 0xFFFFFFF8;
+
+	//Determine the starting address
+	if (start_param < 0.002)			return(0);
+	else if (start_param > 0.998)		return( samples[samplenum].sampleSize - READ_BLOCK_SIZE*32 ); //just play the last 32 blocks
+
+	else								return( align & ( (uint32_t)(start_param * (float)samples[samplenum].sampleSize) ) );
+
+
+}
+
+
 void calc_stop_points(float length, uint32_t samplenum, uint32_t startpos, uint32_t *fwd_stop_point, uint32_t *rev_stop_point)
 {
 	uint32_t dist;
@@ -657,6 +657,14 @@ void calc_stop_points(float length, uint32_t samplenum, uint32_t startpos, uint3
 		*fwd_stop_point = samples[samplenum].sampleSize;
 		*rev_stop_point = 0;
 	}
+
+	if (samples[samplenum].blockAlign == 4)			*fwd_stop_point &= 0xFFFFFFFC;
+	else if (samples[samplenum].blockAlign == 2)	*fwd_stop_point &= 0xFFFFFFFC;
+	else if (samples[samplenum].blockAlign == 8)	*fwd_stop_point &= 0xFFFFFFF8;
+
+	if (samples[samplenum].blockAlign == 4)			*rev_stop_point &= 0xFFFFFFFC;
+	else if (samples[samplenum].blockAlign == 2)	*rev_stop_point &= 0xFFFFFFFC;
+	else if (samples[samplenum].blockAlign == 8)	*rev_stop_point &= 0xFFFFFFF8;
 
 }
 
@@ -938,16 +946,13 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 				play_led_state[chan] = 0;
 
-				end_out_ctr[chan]=400;
+				end_out_ctr[chan]=35;
 
 				if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
 					flags[Play1Trig+chan] = 1;
+
 				else
-				{
 					play_state[chan] = SILENT;
-					play_led_state[chan] = 0;
-					//f_close(&fil[chan]);
-				}
 
 				break;
 
@@ -996,10 +1001,13 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 				{
 					decay_amp_i[chan] = 0.0f;
 
-					play_state[chan] = SILENT;
-					end_out_ctr[chan] = 400;
+					end_out_ctr[chan] = 35;
 					play_led_state[chan] = 0;
-					//f_close(&fil[chan]);
+
+					play_state[chan] = SILENT;
+
+					if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
+						flags[Play1Trig+chan] = 1;
 				}
 
 

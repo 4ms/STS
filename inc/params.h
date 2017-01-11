@@ -41,7 +41,12 @@ enum ChannelPots{
 	LENGTH_POT,
 	SAMPLE_POT
 };
-
+enum ChannelCVs{
+	PITCH_CV,
+	START_CV,
+	LENGTH_CV,
+	SAMPLE_CV
+};
 
 //
 // Channel Settings are integer values related to states of operation

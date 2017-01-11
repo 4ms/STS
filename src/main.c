@@ -188,7 +188,9 @@ int main(void)
 		//can't mount
 		CLIPLED1_ON;
 		CLIPLED2_ON;
-		while(1){;}
+		res = f_mount(&FatFs, "", 0);
+
+		//while(1){;}
 	}
 
 
