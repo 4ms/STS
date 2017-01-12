@@ -90,7 +90,8 @@ enum g_Errors{
 #define NUM_ALL_CHAN 3
 
 #define NUM_SAMPLES_PER_BANK 19
-#define NUM_BANKS 8
+#define MAX_NUM_BANKS 16
+#define MAX_NUM_REC_BANKS 8
 
 #define REC (NUM_ALL_CHAN-1) /* =2 a shortcut to the REC channel */
 

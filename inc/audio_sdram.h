@@ -26,10 +26,7 @@
 #define MEM_SIZE (SDRAM_SIZE>>2) /* 0x02000000 / 4 = 0x00800000 */
 
 
-//#define PRE_BUFF_SIZE 32
-//#define PRE_BUFF_SIZE 1024
-//#define PRE_BUFF_SIZE 256
-#define PRE_BUFF_SIZE 64
+//#define PRE_BUFF_SIZE (64*256)
 
 #define REC_CHAN 2
 

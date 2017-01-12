@@ -26,7 +26,7 @@ extern uint8_t 	flags[NUM_FLAGS];
 
 extern enum PlayLoadTriage play_load_triage;
 
-extern Sample samples[NUM_SAMPLES_PER_BANK];
+extern Sample samples[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 
 #define WRITE_BLOCK_SIZE 8192
 
@@ -144,6 +144,7 @@ void write_buffer_to_storage(void)
 	uint32_t written;
 	uint32_t data[1];
 	uint32_t samplenum;
+	uint32_t chan;
 
 	FRESULT res;
 
@@ -192,7 +193,7 @@ void write_buffer_to_storage(void)
 			sample_fname_now_recording[sz++] = 0;
 
 			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
-			if (res!=FR_OK)		{g_error |= FILE_REC_OPEN_FAIL; check_errors();}
+			if (res!=FR_OK)		{g_error |= FILE_REC_OPEN_FAIL; check_errors(); break;}
 
 			create_waveheader(&whac.wh);
 			create_chunk(ccDATA, 0, &whac.wc);
@@ -200,13 +201,15 @@ void write_buffer_to_storage(void)
 			sz = sizeof(WaveHeaderAndChunk);
 
 			res = f_write(&recfil, &whac.wh, sz, &written);
-			if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors();}
-			if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+			if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+			if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
 
 			samplebytes_recorded = 0;
 
 			//f_close(&recfil);
 			f_sync(&recfil);
+
+			enable_bank(sample_bank_now_recording);
 
 			rec_state=RECORDING;
 		break;
@@ -216,7 +219,9 @@ void write_buffer_to_storage(void)
 		//read a block from rec_buff->out
 			if (play_load_triage==0)
 			{
-				buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
+				//buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
+				buffer_lead = CB_distance(rec_buff, 0);
+
 				if (buffer_lead > WRITE_BLOCK_SIZE)
 				{
 
@@ -227,8 +232,8 @@ void write_buffer_to_storage(void)
 						sz = WRITE_BLOCK_SIZE;
 						res = f_write(&recfil, t_buff16, sz, &written);
 						f_sync(&recfil);
-						if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors();}
-						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+						if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
 						samplebytes_recorded += written;
 
 					}
@@ -244,7 +249,9 @@ void write_buffer_to_storage(void)
 
 		case (CLOSING_FILE):
 			//See if we have more in the buffer to write
-			buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
+			//buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
+			buffer_lead = CB_distance(rec_buff, 0);
+
 			if (buffer_lead)
 			{
 				//Write out remaining data in buffer, one WRITE_BLOCK_SIZE at a time
@@ -256,8 +263,8 @@ void write_buffer_to_storage(void)
 				{
 					res = f_write(&recfil, t_buff16, buffer_lead, &written);
 					f_sync(&recfil);
-					if (res!=FR_OK)				{g_error |= FILE_WRITE_FAIL; check_errors();}
-					if (written!=buffer_lead)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+					if (res!=FR_OK)				{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+					if (written!=buffer_lead)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
 
 					samplebytes_recorded += written;
 
@@ -285,13 +292,20 @@ void write_buffer_to_storage(void)
 
 				rec_state=REC_OFF;
 
-				str_cpy(samples[sample_num_now_recording].filename, sample_fname_now_recording);
-				samples[sample_num_now_recording].sampleSize = samplebytes_recorded;
-				samples[sample_num_now_recording].sampleByteSize = 2;
-				samples[sample_num_now_recording].sampleRate = 44100;
-				samples[sample_num_now_recording].numChannels = 2;
-				samples[sample_num_now_recording].blockAlign = 4;
-				samples[sample_num_now_recording].startOfData = 44;
+				for (chan=0;chan<NUM_PLAY_CHAN;chan++)
+				{
+					if (i_param[chan][BANK] == sample_bank_now_recording)
+					{
+						str_cpy(samples[chan][sample_num_now_recording].filename, sample_fname_now_recording);
+						samples[chan][sample_num_now_recording].sampleSize = samplebytes_recorded;
+						samples[chan][sample_num_now_recording].sampleByteSize = 2;
+						samples[chan][sample_num_now_recording].sampleRate = 44100;
+						samples[chan][sample_num_now_recording].numChannels = 2;
+						samples[chan][sample_num_now_recording].blockAlign = 4;
+						samples[chan][sample_num_now_recording].startOfData = 44;
+
+					}
+				}
 
 				sample_fname_now_recording[0] = 0;
 				sample_num_now_recording = 0;

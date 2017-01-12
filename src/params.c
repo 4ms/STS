@@ -171,14 +171,14 @@ void init_LowPassCoefs(void)
 
 
 
-	MIN_POT_ADC_CHANGE[PITCH_POT*2] = 60;
-	MIN_POT_ADC_CHANGE[PITCH_POT*2+1] = 60;
+	MIN_POT_ADC_CHANGE[PITCH_POT*2] = 40;
+	MIN_POT_ADC_CHANGE[PITCH_POT*2+1] = 40;
 
-	MIN_POT_ADC_CHANGE[START_POT*2] = 60;
-	MIN_POT_ADC_CHANGE[START_POT*2+1] = 60;
+	MIN_POT_ADC_CHANGE[START_POT*2] = 20;
+	MIN_POT_ADC_CHANGE[START_POT*2+1] = 20;
 
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 60;
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 60;
+	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 20;
+	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 20;
 
 	MIN_POT_ADC_CHANGE[SAMPLE_POT*2] = 60;
 	MIN_POT_ADC_CHANGE[SAMPLE_POT*2+1] = 60;
@@ -332,6 +332,12 @@ void update_params(void)
 
 		if (stereo_switch==SW_LINK)
 		{
+			if (i_param[1][SAMPLE] != i_param[0][SAMPLE])
+				flags[PlaySample2Changed] = 1;
+
+			if (i_param[1][BANK] != i_param[0][BANK])
+				flags[PlayBank2Changed] = 1;
+
 			i_param[1][SAMPLE] 		= i_param[0][SAMPLE];
 			i_param[1][BANK] 		= i_param[0][BANK];
 			f_param[1][PITCH] 		= f_param[0][PITCH];

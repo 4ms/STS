@@ -2,6 +2,7 @@
 #include "params.h"
 #include "dig_pins.h"
 #include "buttons.h"
+#include "sts_filesystem.h"
 
 enum ButtonStates button_state[NUM_BUTTONS];
 extern uint8_t flags[NUM_FLAGS];
@@ -83,21 +84,23 @@ void Button_Debounce_IRQHandler(void)
 
 					case Bank1:
 						flags[PlayBank1Changed] = 1;
-						if (i_param[0][BANK] >= (NUM_BANKS-1))	i_param[0][BANK]=0;
-						else									i_param[0][BANK]++;
+						i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
+//						if (i_param[0][BANK] >= (MAX_NUM_BANKS-1))	i_param[0][BANK]=0;
+//						else									i_param[0][BANK]++;
 						break;
 
 					case Bank2:
 						flags[PlayBank2Changed] = 1;
-						if (i_param[1][BANK] >= (NUM_BANKS-1))	i_param[1][BANK]=0;
-						else									i_param[1][BANK]++;
+						i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
+//						if (i_param[1][BANK] >= (MAX_NUM_BANKS-1))	i_param[1][BANK]=0;
+//						else									i_param[1][BANK]++;
 						break;
 
 					case Rec:
 						break;
 					case RecBank:
 						flags[RecBankChanged] = 1;
-						if (i_param[2][BANK] >= (NUM_BANKS-1))	i_param[2][BANK]=0;
+						if (i_param[2][BANK] >= (MAX_NUM_REC_BANKS-1))	i_param[2][BANK]=0;
 						else									i_param[2][BANK]++;
 						break;
 					case Rev1:

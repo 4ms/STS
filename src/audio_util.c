@@ -70,33 +70,33 @@ uint32_t inc_addr_within_limits(uint32_t addr, uint32_t low_limit, uint32_t high
 	return(addr & 0xFFFFFFFE);
 }
 
-uint32_t diff_circular(uint32_t leader, uint32_t follower, uint32_t wrap_size)
-{
-	if (leader==follower) return(0);
-	else if (leader > follower) return(leader-follower);
-	else return ((leader+wrap_size)-(follower+1));
-}
+//uint32_t diff_circular(uint32_t leader, uint32_t follower, uint32_t wrap_size)
+//{
+//	if (leader==follower) return(0);
+//	else if (leader > follower) return(leader-follower);
+//	else return ((leader+wrap_size)-(follower+1));
+//}
 
 
-uint32_t diff_wrap(uint32_t leader, uint32_t follower, uint8_t wrapping, uint32_t wrap_size)
-{
-
-	if (!wrapping)
-	{
-		if (leader > follower)
-			return (leader - follower);
-		else
-			return 0;
-	}
-	else	//wrapping
-	{
-		if (follower > leader)
-			return ((leader + MEM_SIZE) - follower);
-		else
-			return 0;
-
-	}
-}
+//uint32_t diff_wrap(uint32_t leader, uint32_t follower, uint8_t wrapping, uint32_t wrap_size)
+//{
+//
+//	if (!wrapping)
+//	{
+//		if (leader > follower)
+//			return (leader - follower);
+//		else
+//			return 0;
+//	}
+//	else	//wrapping
+//	{
+//		if (follower > leader)
+//			return ((leader + MEM_SIZE) - follower);
+//		else
+//			return 0;
+//
+//	}
+//}
 
 
 // Utility function to determine if address mid is in between addresses beg and end in a circular (ring) buffer.
