@@ -296,8 +296,9 @@ void update_params(void)
 		//
 		f_param[channel][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+channel] + old_i_smoothed_cvadc[LENGTH_CV*2+channel]) / 4096.0;
 
-		if (f_param[channel][LENGTH] > 1.0)
-			f_param[channel][LENGTH] = 1.0;
+		if (f_param[channel][LENGTH] > 1.0)			f_param[channel][LENGTH] = 1.0;
+		if (f_param[channel][LENGTH] <= 0.000244)	f_param[channel][LENGTH] = 0.000244;
+
 
 		//
 		// START POT

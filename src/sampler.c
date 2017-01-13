@@ -548,8 +548,11 @@ void calc_stop_points(float length, Sample *sample, uint32_t startpos, uint32_t 
 		dist = (length - 0.4375) * 16.0 * sample->sampleRate;
 	}
 
-	else
-		dist = sample->sampleRate * 4.0;
+	else //length < 0.5
+	{
+//		dist = sample->sampleRate * 4.0;
+		dist = 88200.0 * length; //close enough
+	}
 
 	*fwd_stop_point = startpos + dist;
 	if (*fwd_stop_point > sample->sampleSize)
@@ -922,7 +925,8 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 			 case (PLAYING_PERC):
 
-				decay_inc[chan] += 1.0f/((length)*2621440.0f);
+		//		decay_inc[chan] += 1.0f/((length)*2621440.0f);
+				decay_inc[chan] = 1.0f/((length)*20000.0f);
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
@@ -943,10 +947,22 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 					end_out_ctr[chan] = 35;
 					play_led_state[chan] = 0;
 
-					play_state[chan] = SILENT;
 
-					if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
-						flags[Play1Trig+chan] = 1;
+//					if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
+//						flags[Play1Trig+chan] = 1;
+
+					if (i_param[chan][REV])
+						play_state[chan] = PLAY_FADEDOWN;
+
+					else
+					{
+						if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
+							flags[Play1Trig+chan] = 1;
+
+						play_state[chan] = SILENT;
+					}
+
+
 				}
 
 

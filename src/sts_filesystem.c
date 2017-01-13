@@ -166,7 +166,7 @@ uint8_t load_bank_from_disk(uint8_t bank, uint8_t chan)
 	sample_num=0;
 	i = bank_to_color(bank_color, path);
 
-	if (bank != bank_color)
+	if (bank > MAX_NUM_REC_BANKS)
 	{
 		//Append "-SAVE" to directory name
 		path[i++] = '-';
@@ -184,7 +184,7 @@ uint8_t load_bank_from_disk(uint8_t bank, uint8_t chan)
 
 		//ToDo: check for variations of capital letters (or can we just check the short fname?)
 
-		if (bank != bank_color)
+		if (bank > MAX_NUM_REC_BANKS)
 		{
 			//color-SAVE/ dir not found, try just color/ dir
 			bank_to_color(bank, path);
