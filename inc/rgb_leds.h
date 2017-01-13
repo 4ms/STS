@@ -16,10 +16,10 @@ enum Buttons_LEDs {
 	RecBankButtonLED,
 	RecButtonLED,
 	Reverse1ButtonLED,
-	Bank1ButtonLED,
 	Play1ButtonLED,
-	Play2ButtonLED,
+	Bank1ButtonLED,
 	Bank2ButtonLED,
+	Play2ButtonLED,
 	Reverse2ButtonLED,
 	NUM_RGBBUTTONS
 };

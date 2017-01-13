@@ -30,6 +30,8 @@ extern enum PlayStates play_state[NUM_PLAY_CHAN];
 extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
+extern Sample samples[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+
 extern uint8_t disable_mode_changes;
 
 volatile float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
@@ -268,6 +270,7 @@ void update_params(void)
 {
 	uint8_t channel;
 	uint8_t old_val;
+	uint8_t new_val;
 	uint8_t stereo_switch;
 
 	recording_enabled=1;
@@ -323,12 +326,14 @@ void update_params(void)
 		// SAMPLE POT
 		//
 		old_val = i_param[channel][SAMPLE];
+		new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+channel] + old_i_smoothed_cvadc[SAMPLE_CV*2+channel] );
 
-		i_param[channel][SAMPLE] 	= detent_num(i_smoothed_potadc[SAMPLE_POT*2+channel]);
-
-		if (old_val != i_param[channel][SAMPLE])
-			flags[PlaySample1Changed+channel*2] = 1;
-
+		if ((old_val != new_val) && (samples[channel][ new_val ].filename[0] != 0) )
+		{
+			i_param[channel][SAMPLE] = new_val;
+			flags[PlaySample1Changed + channel*2] = 1;
+			flags[PlaySample1Changed_light + channel] = 10;
+		}
 
 		if (stereo_switch==SW_LINK)
 		{
@@ -358,11 +363,13 @@ void update_params(void)
 	// REC SAMPLE POT
 	//
 	old_val = i_param[REC][SAMPLE];
-	i_param[REC][SAMPLE] 			= detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+	new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
 
-	if (old_val != i_param[REC][SAMPLE])
+	if (old_val != new_val)
+	{
+		i_param[REC][SAMPLE] = new_val;
 		flags[RecSampleChanged] = 1;
-
+	}
 
 	if (flags[ToggleMonitor])
 	{
@@ -388,7 +395,12 @@ void process_mode_flags(void)
 			flags[Play1Trig]=0;
 
 			if (STEREOSW==SW_LINK)
-				if (play_state[0]==SILENT && (play_state[1]== PLAYING || play_state[1] == PLAYING_PERC)) play_state[1]=SILENT;
+			{
+				play_state[1] = play_state[0];
+				//if (play_state[0]==SILENT && (play_state[1]== PLAYING || play_state[1] == PLAYING_PERC)) play_state[1]=SILENT;
+				if (i_param[0][REV]!=i_param[1][REV])
+					toggle_reverse(0);
+			}
 
 			toggle_playing(0);
 
@@ -402,7 +414,13 @@ void process_mode_flags(void)
 			flags[Play2Trig]=0;
 
 			if (STEREOSW==SW_LINK)
-				if (play_state[1]==SILENT && (play_state[0]== PLAYING || play_state[0] == PLAYING_PERC)) play_state[1]=SILENT;
+			{
+				play_state[0] = play_state[1];
+				if (i_param[0][REV]!=i_param[1][REV])
+					toggle_reverse(1);
+
+			}
+				//if (play_state[1]==SILENT && (play_state[0]== PLAYING || play_state[0] == PLAYING_PERC)) play_state[1]=SILENT;
 
 			toggle_playing(1);
 
@@ -420,6 +438,10 @@ void process_mode_flags(void)
 		if (flags[Rev1Trig])
 		{
 			flags[Rev1Trig]=0;
+
+			if (STEREOSW==SW_LINK && i_param[0][REV]!=i_param[1][REV])
+				i_param[1][REV] = i_param[0][REV];
+
 			toggle_reverse(0);
 
 			if (STEREOSW==SW_LINK)
@@ -428,7 +450,12 @@ void process_mode_flags(void)
 		}
 		if (flags[Rev2Trig])
 		{
+
 			flags[Rev2Trig]=0;
+
+			if (STEREOSW==SW_LINK && i_param[0][REV]!=i_param[1][REV])
+				i_param[0][REV] = i_param[1][REV];
+
 			toggle_reverse(1);
 
 			if (STEREOSW==SW_LINK)
@@ -443,8 +470,11 @@ void process_mode_flags(void)
 			if (i_param[0][LOOPING])
 				i_param[0][LOOPING] = 0;
 			else
+			{
 				i_param[0][LOOPING] = 1;
+				flags[Play1Trig] = 1;
 
+			}
 		}
 
 		if (flags[ToggleLooping2])
@@ -454,54 +484,81 @@ void process_mode_flags(void)
 			if (i_param[1][LOOPING])
 				i_param[1][LOOPING] = 0;
 			else
+			{
 				i_param[1][LOOPING] = 1;
+				flags[Play2Trig] = 1;
+			}
 		}
 	}
 }
 
-
 uint8_t detent_num(uint16_t adc_val)
 {
-	if (adc_val<=91)
+	if (adc_val<=212)
 		return(0);
-	else if (adc_val<=310)
+	else if (adc_val<=625)
 		return(1);
-	else if (adc_val<=565)
+	else if (adc_val<=1131)
 		return(2);
-	else if (adc_val<=816)
+	else if (adc_val<=1562)
 		return(3);
-	else if (adc_val<=1062)
+	else if (adc_val<=1995)
 		return(4);
-	else if (adc_val<=1304)
+	else if (adc_val<=2475)
 		return(5);
-	else if (adc_val<=1529)
+	else if (adc_val<=2825)
 		return(6);
-	else if (adc_val<=1742)
+	else if (adc_val<=3355)
 		return(7);
-	else if (adc_val<=1950)
+	else if (adc_val<=3840)
 		return(8);
-	else if (adc_val<=2157) // Center
-		return(9);
-	else if (adc_val<=2365)
-		return(10);
-	else if (adc_val<=2580)
-		return(11);
-	else if (adc_val<=2806)
-		return(12);
-	else if (adc_val<=3044)
-		return(13);
-	else if (adc_val<=3289)
-		return(14);
-	else if (adc_val<=3537)
-		return(15);
-	else if (adc_val<=3790)
-		return(16);
-	else if (adc_val<=4003)
-		return(17);
 	else
-		return(18);
-
+		return(9);
 }
+
+
+//uint8_t detent_num(uint16_t adc_val)
+//{
+//	if (adc_val<=91)
+//		return(0);
+//	else if (adc_val<=310)
+//		return(1);
+//	else if (adc_val<=565)
+//		return(2);
+//	else if (adc_val<=816)
+//		return(3);
+//	else if (adc_val<=1062)
+//		return(4);
+//	else if (adc_val<=1304)
+//		return(5);
+//	else if (adc_val<=1529)
+//		return(6);
+//	else if (adc_val<=1742)
+//		return(7);
+//	else if (adc_val<=1950)
+//		return(8);
+//	else if (adc_val<=2157) // Center
+//		return(9);
+//	else if (adc_val<=2365)
+//		return(10);
+//	else if (adc_val<=2580)
+//		return(11);
+//	else if (adc_val<=2806)
+//		return(12);
+//	else if (adc_val<=3044)
+//		return(13);
+//	else if (adc_val<=3289)
+//		return(14);
+//	else if (adc_val<=3537)
+//		return(15);
+//	else if (adc_val<=3790)
+//		return(16);
+//	else if (adc_val<=4003)
+//		return(17);
+//	else
+//		return(18);
+//
+//}
 
 
 

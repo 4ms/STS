@@ -300,10 +300,12 @@ void toggle_reverse(uint8_t chan)
 {
 	uint8_t samplenum;
 	uint32_t t;
+	uint32_t numwraps;
 
 	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC || play_state[chan] == PREBUFFERING)
 	{
-		samplenum = i_param[chan][SAMPLE];
+		//samplenum = i_param[chan][SAMPLE];
+		samplenum =sample_num_now_playing[chan];
 
 		//swap the current position with the starting position
 		//this is because we already have read the file from the starting position to the current position
@@ -320,14 +322,22 @@ void toggle_reverse(uint8_t chan)
 			sample_file_seam[chan]		= t;
 
 			//also set the play_buff in ptr to the last starting place
-			if (play_buff[chan]->seam != 0xFFFFFFFF)
+			if (play_buff[chan]->seam < 0xFFFFFFF0)
 			{
 				t 						= play_buff[chan]->in;
 				play_buff[chan]->in	  	= play_buff[chan]->seam;
 				play_buff[chan]->seam 	= t;
 			}
+			else
+			{
+				numwraps =  0xFFFFFFFF - play_buff[chan]->seam;
+				numwraps++;
+				sample_file_curpos[chan]= sample_file_seam[chan] - play_buff[chan]->max * numwraps;
+			}
 
 		}
+
+		//If we are PREBUFFERING, then re-start the playback
 		else
 		{
 			sample_file_curpos[chan] 	= sample_file_endpos[chan];
@@ -379,11 +389,6 @@ void toggle_playing(uint8_t chan)
 	if (play_state[chan]==SILENT || play_state[chan]==PLAY_FADEDOWN || play_state[chan]==RETRIG_FADEDOWN )
 	{
 
-		///load new bank
-
-
-
-
 		CB_init(play_buff[chan], i_param[chan][REV]);
 
 		play_fully_buffered[chan] = 0;
@@ -395,9 +400,11 @@ void toggle_playing(uint8_t chan)
 
 		flags[PlayBuff1_Discontinuity+chan] = 1;
 
+		check_change_bank(chan);
+
 		//Check if sample changed
 		//if so, close the current file and open the new sample file
-		if (sample_num_now_playing[chan] != samplenum || sample_bank_now_playing[chan] != i_param[chan][BANK] || fil[chan].obj.fs==0)
+		if ((sample_num_now_playing[chan] != samplenum) || (sample_bank_now_playing[chan] != i_param[chan][BANK]) || fil[chan].obj.fs==0)
 		{
 			f_close(&fil[chan]);
 
@@ -476,7 +483,11 @@ void toggle_playing(uint8_t chan)
 			sample_file_curpos[chan] 	= sample_file_startpos[chan];
 			sample_file_seam[chan] 		= sample_file_startpos[chan];
 
-			decay_amp_i[chan]=1.0;
+			if (i_param[chan][REV])
+				decay_amp_i[chan]=0.0;
+			else
+				decay_amp_i[chan]=1.0;
+
 			decay_inc[chan]=0.0;
 
 			play_led_state[chan]=1;
@@ -511,7 +522,7 @@ uint32_t calc_start_point(float start_param, Sample *sample)
 {
 	uint32_t align;
 
-	if (sample->blockAlign == 4)			align = 0xFFFFFFFC;
+	if (sample->blockAlign == 4)		align = 0xFFFFFFFC;
 	else if (sample->blockAlign == 2)	align = 0xFFFFFFFC; //was E? but it clicks if we align to 2 not 4, even if our file claims blockAlign = 2
 	else if (sample->blockAlign == 8)	align = 0xFFFFFFF8;
 
@@ -529,28 +540,26 @@ void calc_stop_points(float length, Sample *sample, uint32_t startpos, uint32_t 
 {
 	uint32_t dist;
 
-	if (length>=0.5)
+	if (length > 0.98)
+		dist = sample->sampleSize * (length-0.9) * 10;
+
+	else if (length>=0.5) //>0.5 to <0.9
 	{
-		if (length > 0.98)
-			dist = sample->sampleSize * (length-0.9) * 10;
-		else //>0.5 to <0.9
-			dist = (length - 0.4375) * 16.0 * sample->sampleRate;
-
-		*fwd_stop_point = startpos + dist;
-		if (*fwd_stop_point > sample->sampleSize)
-			*fwd_stop_point = sample->sampleSize;
-
-		if (startpos > dist)
-			*rev_stop_point = startpos - dist;
-		else
-			*rev_stop_point = 0;
-
+		dist = (length - 0.4375) * 16.0 * sample->sampleRate;
 	}
+
 	else
-	{
+		dist = sample->sampleRate * 4.0;
+
+	*fwd_stop_point = startpos + dist;
+	if (*fwd_stop_point > sample->sampleSize)
 		*fwd_stop_point = sample->sampleSize;
+
+	if (startpos > dist)
+		*rev_stop_point = startpos - dist;
+	else
 		*rev_stop_point = 0;
-	}
+
 
 	if (sample->blockAlign == 4)			*fwd_stop_point &= 0xFFFFFFFC;
 	else if (sample->blockAlign == 2)	*fwd_stop_point &= 0xFFFFFFFC;
@@ -569,6 +578,11 @@ void check_change_bank(uint8_t chan)
 		flags[PlayBank1Changed + chan*2]=0;
 
 		load_bank_from_disk(i_param[chan][BANK], chan);
+
+		play_fully_buffered[chan] = 0;
+
+		flags[PlaySample1Changed + chan*2]=1;
+
 	}
 
 }
@@ -598,10 +612,15 @@ void read_storage_to_buffer(void)
 	if (flags[PlaySample1Changed]){
 		flags[PlaySample1Changed]=0;
 
-		if (play_state[0] == SILENT || play_state[0]==PREBUFFERING)
-			sample_file_curpos[0] = 0;
-		else
+//		if (play_state[0] == SILENT || play_state[0]==PREBUFFERING)
+//			sample_file_curpos[0] = 0;
+//		else
+//			play_state[0] = PLAY_FADEDOWN;
+
+		if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
 			play_state[0] = PLAY_FADEDOWN;
+
+
 
 	}
 
@@ -609,10 +628,13 @@ void read_storage_to_buffer(void)
 	if (flags[PlaySample2Changed]){
 		flags[PlaySample2Changed]=0;
 
-		if (play_state[1] == SILENT || play_state[1]==PREBUFFERING)
-			sample_file_curpos[1] = 0;
-		else
+//		if (play_state[1] == SILENT || play_state[1]==PREBUFFERING)
+//			sample_file_curpos[1] = 0;
+//		else
+//			play_state[1] = PLAY_FADEDOWN;
+		if (play_state[1] != SILENT && play_state[1]!=PREBUFFERING)
 			play_state[1] = PLAY_FADEDOWN;
+
 	}
 
 
@@ -636,10 +658,8 @@ void read_storage_to_buffer(void)
 
 				calc_stop_points(f_param[chan][LENGTH], &samples[chan][samplenum], sample_file_startpos[chan], &fwd_stop_point, &rev_stop_point);
 
-				if (i_param[chan][REV])
-					sample_file_endpos[chan] = rev_stop_point;
-				else
-					sample_file_endpos[chan] = fwd_stop_point;
+				if (i_param[chan][REV])	sample_file_endpos[chan] = rev_stop_point;
+				else					sample_file_endpos[chan] = fwd_stop_point;
 
 
 				if ((!i_param[chan][REV] && sample_file_curpos[chan] >= sample_file_endpos[chan])
@@ -734,11 +754,17 @@ void read_storage_to_buffer(void)
 						if (i_param[chan][REV])
 							CB_offset_in_address(play_buff[chan], READ_BLOCK_SIZE*2, 1);
 
+						//Check if our in ptr wrapped around to the start, in which case we can no longer
+						//jumper back to the seam if we hit reverse
+
+						if (play_buff[chan]->wrapping)		play_buff[chan]->seam = 0xFFFFFFFF;
+
 						if (err)
 						{
 							DEBUG3_ON;
 							//g_error |= READ_BUFF1_OVERRUN*(1+chan);
-						}
+						} else
+							DEBUG3_OFF;
 
 					}
 
@@ -748,7 +774,14 @@ void read_storage_to_buffer(void)
 			else //Otherwise, we've buffered enough
 			{
 				if (play_state[chan] == PREBUFFERING)
-					play_state[chan] = PLAY_FADEUP;
+				{
+
+					if (f_param[chan][LENGTH] < 0.5 && i_param[chan][REV])
+						play_state[chan] = PLAYING_PERC;
+					else
+						play_state[chan] = PLAY_FADEUP;
+
+				}
 			}
 
 		}
@@ -838,10 +871,13 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 				end_out_ctr[chan]=35;
 
 				if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
-					flags[Play1Trig+chan] = 1;
+				{
 
-				else
-					play_state[chan] = SILENT;
+					flags[Play1Trig+chan] = 1;
+				}
+
+				//else
+				play_state[chan] = SILENT;
 
 				break;
 
@@ -850,10 +886,6 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 					{
 
 						play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
-
-						//since we count play_buff[]->in from the start when REVersing, we need to offset it by a block
-//						if (i_param[chan][REV] && play_buff_bufferedamt[chan] > READ_BLOCK_SIZE)
-//							play_buff_bufferedamt[chan] -= READ_BLOCK_SIZE;
 
 						resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * samples[chan][samplenum].blockAlign) * rs);
 
@@ -890,19 +922,21 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 			 case (PLAYING_PERC):
 
-				play_state[chan] = PLAYING_PERC;
-
 				decay_inc[chan] += 1.0f/((length)*2621440.0f);
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
-					decay_amp_i[chan] -= decay_inc[chan];
-					if (decay_amp_i[chan] < 0.0f) decay_amp_i[chan] = 0.0f;
+					if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
+					else					decay_amp_i[chan] -= decay_inc[chan];
+
+
+					if (decay_amp_i[chan] < 0.0f) 		decay_amp_i[chan] = 0.0f;
+					else if (decay_amp_i[chan] > 1.0f) 	decay_amp_i[chan] = 1.0f;
 
 					out[i] = ((float)out[i]) * decay_amp_i[chan];
 				}
 
-				if (decay_amp_i[chan] <= 0.0f)
+				if (decay_amp_i[chan] <= 0.0f || decay_amp_i[chan] >= 1.0f)
 				{
 					decay_amp_i[chan] = 0.0f;
 

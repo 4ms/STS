@@ -13,11 +13,11 @@
 //INPUTS
 
 //Buttons
-#define PLAY1BUT_pin GPIO_Pin_13
+#define PLAY1BUT_pin GPIO_Pin_14
 #define PLAY1BUT_GPIO GPIOG
 #define PLAY1BUT (!(PLAY1BUT_GPIO->IDR & PLAY1BUT_pin))
 
-#define PLAY2BUT_pin GPIO_Pin_12
+#define PLAY2BUT_pin GPIO_Pin_11
 #define PLAY2BUT_GPIO GPIOG
 #define PLAY2BUT (!(PLAY2BUT_GPIO->IDR & PLAY2BUT_pin))
 
@@ -25,11 +25,11 @@
 #define RECBUT_GPIO GPIOG
 #define RECBUT (!(RECBUT_GPIO->IDR & RECBUT_pin))
 
-#define BANK1BUT_pin GPIO_Pin_14
+#define BANK1BUT_pin GPIO_Pin_13
 #define BANK1BUT_GPIO GPIOG
 #define BANK1BUT (!(BANK1BUT_GPIO->IDR & BANK1BUT_pin))
 
-#define BANK2BUT_pin GPIO_Pin_11
+#define BANK2BUT_pin GPIO_Pin_12
 #define BANK2BUT_GPIO GPIOG
 #define BANK2BUT (!(BANK2BUT_GPIO->IDR & BANK2BUT_pin))
 

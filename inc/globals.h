@@ -37,6 +37,9 @@ enum Flags {
 	ToggleMonitor,
 	ToggleLooping1,
 	ToggleLooping2,
+	PlaySample1Changed_light,
+	PlaySample2Changed_light,
+
 	NUM_FLAGS
 };
 
@@ -89,7 +92,7 @@ enum g_Errors{
 #define NUM_REC_CHAN 1
 #define NUM_ALL_CHAN 3
 
-#define NUM_SAMPLES_PER_BANK 19
+#define NUM_SAMPLES_PER_BANK 10
 #define MAX_NUM_BANKS 16
 #define MAX_NUM_REC_BANKS 8
 

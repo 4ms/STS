@@ -147,6 +147,9 @@ void write_buffer_to_storage(void)
 	uint32_t chan;
 
 	FRESULT res;
+	DIR dir;
+	char path[10];
+
 
 //	WaveHeader wavh;
 	WaveHeaderAndChunk whac;
@@ -181,6 +184,13 @@ void write_buffer_to_storage(void)
 			sample_num_now_recording = i_param[REC_CHAN][SAMPLE];
 			sample_bank_now_recording = i_param[REC_CHAN][BANK];
 
+			sz = bank_to_color(sample_bank_now_recording, path);
+			res = f_opendir(&dir, path);
+			//If that's not found, create it
+			if (res==FR_NO_PATH)
+				res = f_mkdir(path);
+
+
 			sz = bank_to_color(sample_bank_now_recording, sample_fname_now_recording);
 			sample_fname_now_recording[sz++] = '/';
 			sz += intToStr(sample_num_now_recording, &(sample_fname_now_recording[sz]), 2);
@@ -191,6 +201,11 @@ void write_buffer_to_storage(void)
 			sample_fname_now_recording[sz++] = 'a';
 			sample_fname_now_recording[sz++] = 'v';
 			sample_fname_now_recording[sz++] = 0;
+
+
+
+
+
 
 			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
 			if (res!=FR_OK)		{g_error |= FILE_REC_OPEN_FAIL; check_errors(); break;}

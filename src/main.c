@@ -164,7 +164,7 @@ int main(void)
 
 
 	PLAYLED1_OFF;
-	while(!REV1BUT){;}
+	while(!REV1BUT && !REV2BUT  && !PLAY1BUT  && !PLAY2BUT && !BANK1BUT && !BANK2BUT){;}
 	PLAYLED1_OFF;
 
 	//Initialize SD Card
@@ -213,7 +213,7 @@ int main(void)
 	//Turn on the lights
 	LEDDriver_Init(2);
 	LEDDRIVER_OUTPUTENABLE_ON;
-	if (PLAY1BUT) test_all_buttonLEDs();
+	if (PLAY1BUT && BANK1BUT) test_all_buttonLEDs();
 
 	init_buttonLEDs();
 	init_ButtonLED_IRQ();

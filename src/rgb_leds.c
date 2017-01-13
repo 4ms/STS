@@ -19,6 +19,7 @@ extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern enum PlayStates play_state[NUM_PLAY_CHAN];
 extern enum RecStates	rec_state;
 
+extern uint8_t flags[NUM_FLAGS];
 
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
@@ -147,15 +148,15 @@ void test_all_buttonLEDs(void)
 	}
 }
 
-uint16_t ButLED_statetable[NUM_RGBBUTTONS][4]={
-		{OFF, BLUE, BLUE, BLUE}, 	/*RecBankButtonLED*/
-		{OFF, RED, BLUE, VIOLET}, 	/*RecButtonLED*/
-		{OFF, CYAN, CYAN, CYAN}, 	/*Reverse1ButtonLED*/
-		{OFF, WHITE, WHITE, WHITE}, 	/*Bank1ButtonLED*/
-		{OFF, GREEN, YELLOW, BLUE}, 	/*Play1ButtonLED*/
-		{OFF, GREEN, YELLOW, BLUE}, 	/*Play2ButtonLED*/
-		{OFF, WHITE, WHITE, WHITE}, 	/*Bank2ButtonLED*/
-		{OFF, CYAN, CYAN, CYAN} 	/*Reverse2ButtonLED*/
+uint16_t ButLED_statetable[NUM_RGBBUTTONS][5]={
+		{OFF, BLUE, BLUE, BLUE, WHITE}, 	/*RecBankButtonLED*/
+		{OFF, RED, BLUE, VIOLET, WHITE}, 	/*RecButtonLED*/
+		{OFF, CYAN, CYAN, CYAN, WHITE}, 	/*Reverse1ButtonLED*/
+		{OFF, GREEN, YELLOW, BLUE, WHITE}, 	/*Play1ButtonLED*/
+		{OFF, WHITE, WHITE, WHITE, WHITE}, 	/*Bank1ButtonLED*/
+		{OFF, WHITE, WHITE, WHITE, WHITE}, 	/*Bank2ButtonLED*/
+		{OFF, GREEN, YELLOW, BLUE, WHITE}, 	/*Play2ButtonLED*/
+		{OFF, CYAN, CYAN, CYAN, WHITE} 	/*Reverse2ButtonLED*/
 
 };
 
@@ -170,19 +171,39 @@ void update_ButtonLED_states(void)
 	|| rec_state==REC_PAUSED)			ButLED_state[RecButtonLED] &= ~0b01;
 	else								ButLED_state[RecButtonLED] |= 0b01;
 
-	if (play_state[0]==SILENT
-	|| play_state[0]==RETRIG_FADEDOWN
-	|| play_state[0]==PLAY_FADEDOWN)	ButLED_state[Play1ButtonLED] = 0;
-	else								ButLED_state[Play1ButtonLED] = 1;
 
-	if (play_state[1]==SILENT
-	|| play_state[1]==RETRIG_FADEDOWN
-	|| play_state[1]==PLAY_FADEDOWN)	ButLED_state[Play2ButtonLED] = 0;
-	else								ButLED_state[Play2ButtonLED] = 1;
 
-	if (i_param[0][LOOPING])			ButLED_state[Play1ButtonLED] += 2;
+	if (flags[PlaySample1Changed_light])
+	{
+		ButLED_state[Play1ButtonLED] = 4;
+		flags[PlaySample1Changed_light]--;
+	}
+	else
+	{
+		if (play_state[0]==SILENT
+		|| play_state[0]==RETRIG_FADEDOWN
+		|| play_state[0]==PLAY_FADEDOWN)	ButLED_state[Play1ButtonLED] = 0;
+		else								ButLED_state[Play1ButtonLED] = 1;
 
-	if (i_param[1][LOOPING])			ButLED_state[Play2ButtonLED] += 2;
+		if (i_param[0][LOOPING])			ButLED_state[Play1ButtonLED] += 2;
+	}
+
+	if (flags[PlaySample2Changed_light])
+	{
+		ButLED_state[Play2ButtonLED] = 4;
+		flags[PlaySample2Changed_light]--;
+	}
+	else
+	{
+		if (play_state[1]==SILENT
+		|| play_state[1]==RETRIG_FADEDOWN
+		|| play_state[1]==PLAY_FADEDOWN)	ButLED_state[Play2ButtonLED] = 0;
+		else								ButLED_state[Play2ButtonLED] = 1;
+
+
+		if (i_param[1][LOOPING])			ButLED_state[Play2ButtonLED] += 2;
+	}
+
 
 	ButLED_state[Reverse1ButtonLED] = i_param[0][REV];
 	ButLED_state[Reverse2ButtonLED] = i_param[1][REV];
