@@ -22,10 +22,27 @@ typedef struct Sample {
 
 
 uint8_t bank_to_color(uint8_t bank, char *color);
-uint8_t load_bank_from_disk(uint8_t bank, uint8_t chan);
+
+uint8_t load_sample_header(Sample *s_sample, FIL *sample_file);
 void clear_sample_header(Sample *s_sample);
-void check_bank_dirs(void);
+
+FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
+uint8_t load_bank_from_disk(uint8_t bank);
+
+void check_enabled_banks(void);
 uint8_t next_enabled_bank(uint8_t bank);
+
 void enable_bank(uint8_t bank);
+void disable_bank(uint8_t bank);
+
+uint8_t load_sampleindex_file(void);
+uint8_t write_sampleindex_file(void);
+
+void enter_assignment_mode(uint8_t chan);
+void save_exit_assignment_mode(uint8_t chan);
+uint8_t load_samples_to_assign(uint8_t bank, uint8_t chan);
+
+void next_unassigned_sample(uint8_t chan);
+
 
 #endif /* INC_STS_FILESYSTEM_H_ */

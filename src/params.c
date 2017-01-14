@@ -30,7 +30,7 @@ extern enum PlayStates play_state[NUM_PLAY_CHAN];
 extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
-extern Sample samples[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 extern uint8_t disable_mode_changes;
 
@@ -329,7 +329,7 @@ void update_params(void)
 		old_val = i_param[channel][SAMPLE];
 		new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+channel] + old_i_smoothed_cvadc[SAMPLE_CV*2+channel] );
 
-		if ((old_val != new_val) && (samples[channel][ new_val ].filename[0] != 0) )
+		if ((old_val != new_val) && (samples[ i_param[channel][BANK] ][ new_val ].filename[0] != 0) )
 		{
 			i_param[channel][SAMPLE] = new_val;
 			flags[PlaySample1Changed + channel*2] = 1;
@@ -370,6 +370,12 @@ void update_params(void)
 	{
 		i_param[REC][SAMPLE] = new_val;
 		flags[RecSampleChanged] = 1;
+		if (global_mode[MONITOR_AUDIO])
+		{
+			flags[RecSampleChanged_light] = 10;
+			//play the sample selected by rec bank/sample
+			//have to override i_param[0][BANK] and [SAMPLE] and all params (pitch, length...)
+		}
 	}
 
 	if (flags[ToggleMonitor])

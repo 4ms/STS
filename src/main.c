@@ -256,6 +256,7 @@ int main(void)
 
 
     //Begin reading inputs
+    init_buttons();
     init_ButtonDebounce_IRQ();
     init_TrigJackDebounce_IRQ();
 

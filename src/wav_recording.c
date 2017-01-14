@@ -26,7 +26,7 @@ extern uint8_t 	flags[NUM_FLAGS];
 
 extern enum PlayLoadTriage play_load_triage;
 
-extern Sample samples[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 #define WRITE_BLOCK_SIZE 8192
 
@@ -203,10 +203,6 @@ void write_buffer_to_storage(void)
 			sample_fname_now_recording[sz++] = 0;
 
 
-
-
-
-
 			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
 			if (res!=FR_OK)		{g_error |= FILE_REC_OPEN_FAIL; check_errors(); break;}
 
@@ -307,24 +303,19 @@ void write_buffer_to_storage(void)
 
 				rec_state=REC_OFF;
 
-				for (chan=0;chan<NUM_PLAY_CHAN;chan++)
-				{
-					if (i_param[chan][BANK] == sample_bank_now_recording)
-					{
-						str_cpy(samples[chan][sample_num_now_recording].filename, sample_fname_now_recording);
-						samples[chan][sample_num_now_recording].sampleSize = samplebytes_recorded;
-						samples[chan][sample_num_now_recording].sampleByteSize = 2;
-						samples[chan][sample_num_now_recording].sampleRate = 44100;
-						samples[chan][sample_num_now_recording].numChannels = 2;
-						samples[chan][sample_num_now_recording].blockAlign = 4;
-						samples[chan][sample_num_now_recording].startOfData = 44;
-
-					}
-				}
+				str_cpy(samples[sample_bank_now_recording][sample_num_now_recording].filename, sample_fname_now_recording);
+				samples[sample_bank_now_recording][sample_num_now_recording].sampleSize = samplebytes_recorded;
+				samples[sample_bank_now_recording][sample_num_now_recording].sampleByteSize = 2;
+				samples[sample_bank_now_recording][sample_num_now_recording].sampleRate = 44100;
+				samples[sample_bank_now_recording][sample_num_now_recording].numChannels = 2;
+				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign = 4;
+				samples[sample_bank_now_recording][sample_num_now_recording].startOfData = 44;
+				res = write_sampleindex_file();
+				if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
 
 				sample_fname_now_recording[0] = 0;
 				sample_num_now_recording = 0;
-				sample_num_now_recording = 0;
+				sample_bank_now_recording = 0;
 			}
 
 		break;

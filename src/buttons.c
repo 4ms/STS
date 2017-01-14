@@ -9,6 +9,7 @@ extern uint8_t flags[NUM_FLAGS];
 extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
 extern enum g_Errors g_error;
+extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 void clear_errors(void)
 {
@@ -17,6 +18,15 @@ void clear_errors(void)
 	CLIPLED2_OFF;
 
 }
+void init_buttons(void)
+{
+	uint8_t i;
+
+	for (i=0;i<NUM_BUTTONS;i++)
+		button_state[i] = UP;
+
+}
+
 
 void Button_Debounce_IRQHandler(void)
 {
@@ -83,33 +93,18 @@ void Button_Debounce_IRQHandler(void)
 						break;
 
 					case Bank1:
-						flags[PlayBank1Changed] = 1;
-						i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
-//						if (i_param[0][BANK] >= (MAX_NUM_BANKS-1))	i_param[0][BANK]=0;
-//						else									i_param[0][BANK]++;
 						break;
-
 					case Bank2:
-						flags[PlayBank2Changed] = 1;
-						i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
-//						if (i_param[1][BANK] >= (MAX_NUM_BANKS-1))	i_param[1][BANK]=0;
-//						else									i_param[1][BANK]++;
 						break;
-
 					case Rec:
 						break;
 					case RecBank:
-						flags[RecBankChanged] = 1;
-						if (i_param[2][BANK] >= (MAX_NUM_REC_BANKS-1))	i_param[2][BANK]=0;
-						else									i_param[2][BANK]++;
 						break;
+
 					case Rev1:
-						flags[Rev1Trig]=1;
-						clear_errors();
 						break;
+
 					case Rev2:
-						flags[Rev2Trig]=1;
-						clear_errors();
 						break;
 				}
 
@@ -121,9 +116,53 @@ void Button_Debounce_IRQHandler(void)
 
 				switch (i)
 				{
+
+					case Bank1:
+						flags[PlayBank1Changed] = 1;
+						i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
+
+						//load assignment samples for new bank
+						if (global_mode[ASSIGN_CH1]) enter_assignment_mode(0);
+						break;
+
+					case Bank2:
+						flags[PlayBank2Changed] = 1;
+						i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
+
+						//load assignment samples for new bank
+						if (global_mode[ASSIGN_CH2]) enter_assignment_mode(1);
+						break;
+
 					case Rec:
 						if (button_state[Rec]<SHORT_PRESSED)
 							flags[RecTrig]=1;
+						break;
+
+					case RecBank:
+						flags[RecBankChanged] = 1;
+						if (i_param[2][BANK] >= (MAX_NUM_REC_BANKS-1))	i_param[2][BANK]=0;
+						else									i_param[2][BANK]++;
+						break;
+
+					case Rev1:
+						if (!global_mode[ASSIGN_CH1])
+							flags[Rev1Trig]=1;
+						else
+						{
+							next_unassigned_sample(0);
+						}
+
+						clear_errors();
+						break;
+
+					case Rev2:
+						if (!global_mode[ASSIGN_CH2])
+							flags[Rev2Trig]=1;
+						else
+						{
+							next_unassigned_sample(1);
+						}
+						clear_errors();
 						break;
 
 					default:
@@ -131,61 +170,69 @@ void Button_Debounce_IRQHandler(void)
 				}
 
 				button_state[i] = UP;
-
-
 			}
+
 
 			//Check for long presses
 
 			if (State[i]==0xe000) //pressed for 16 cycles
 			{
-				if (long_press[i] != 0xFFFFFFFF) //prevent roll-over if holding down for a REALLY long time
-					long_press[i]++;
+				if (long_press[i] != 0xFFFFFFFF) //already detected, ignore
+				{
+					if (long_press[i] != 0xFFFFFFFE) //prevent roll-over if holding down for a REALLY long time
+						long_press[i]++;
 
 
-				if (long_press[i] > LONG_PRESSED) {
+					if (long_press[i] > LONG_PRESSED) {
 
-					if (button_state[i]!=LONG_PRESSED)
-					{
-						button_state[i] = LONG_PRESSED;
-						switch (i)
+						if (button_state[i]!=LONG_PRESSED)
 						{
-							default:
-								break;
+							button_state[i] = LONG_PRESSED;
+							switch (i)
+							{
+								default:
+									break;
+							}
 						}
 					}
-				}
-				else if (long_press[i] > MED_PRESSED) {
-					if (button_state[i]!=MED_PRESSED)
-					{
-						button_state[i] = MED_PRESSED;
-						switch (i)
+					else if (long_press[i] > MED_PRESSED) {
+						if (button_state[i]!=MED_PRESSED)
 						{
-							default:
-								break;
+							button_state[i] = MED_PRESSED;
+							switch (i)
+							{
+								default:
+									break;
+							}
 						}
 					}
-				}
-				else if (long_press[i] > SHORT_PRESSED) {
-					if (button_state[i]!=SHORT_PRESSED)
-					{
-						button_state[i] = SHORT_PRESSED;
-						switch (i)
+					else if (long_press[i] > SHORT_PRESSED) {
+						if (button_state[i]!=SHORT_PRESSED)
 						{
-							case Rec:
-								flags[ToggleMonitor] = 1;
-								break;
+							button_state[i] = SHORT_PRESSED;
+							switch (i)
+							{
+								case Rec:
+									flags[ToggleMonitor] = 1;
+									//enable_recording=1;
+									break;
 
-							case Play1:
-								flags[ToggleLooping1] = 1;
-								break;
+								case Play1:
+									if (button_state[Rev1] == UP)
+										flags[ToggleLooping1] = 1;
+									break;
 
-							case Play2:
-								flags[ToggleLooping2] = 1;
-								break;
+								case Play2:
+									if (button_state[Rev1] == UP)
+										flags[ToggleLooping2] = 1;
+									break;
 
-							default:
-								break;
+								case Bank1:
+									break;
+
+								default:
+									break;
+							}
 						}
 					}
 				}
@@ -199,6 +246,34 @@ void Button_Debounce_IRQHandler(void)
 
 
 		}
+
+		//Sample Assignment mode
+		if (button_state[Play1] >= SHORT_PRESSED && button_state[Rev1] >= SHORT_PRESSED)
+		{
+			if (global_mode[ASSIGN_CH1])
+				save_exit_assignment_mode(0);
+			else
+				enter_assignment_mode(0);
+
+			long_press[Play1] = 0xFFFFFFFF;
+			long_press[Rev1] = 0xFFFFFFFF;
+			button_state[Play1] = DOWN;
+			button_state[Rev1] = DOWN;
+
+		}
+		if (button_state[Play2] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED)
+		{
+			if (global_mode[ASSIGN_CH2])
+				save_exit_assignment_mode(1);
+			else
+				enter_assignment_mode(1);
+
+			long_press[Play2] = 0xFFFFFFFF;
+			long_press[Rev2] = 0xFFFFFFFF;
+			button_state[Play2] = DOWN;
+			button_state[Rev2] = DOWN;
+		}
+
 
 		// Clear TIM update interrupt
 		TIM_ClearITPendingBit(TIM4, TIM_IT_Update);

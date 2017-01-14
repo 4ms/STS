@@ -55,12 +55,13 @@ enum ButtonStates {
 	UNKNOWN,
 	UP,
 	DOWN,
-	SHORT_PRESSED = 3000,
-	MED_PRESSED = 6000,
+	SHORT_PRESSED = 2000,
+	MED_PRESSED = 4000,
 	LONG_PRESSED = 12000,
 };
 
 
+void init_buttons(void);
 
 #define Button_Debounce_IRQHandler TIM4_IRQHandler
 

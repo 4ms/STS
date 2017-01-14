@@ -39,6 +39,13 @@ enum Flags {
 	ToggleLooping2,
 	PlaySample1Changed_light,
 	PlaySample2Changed_light,
+	RecSampleChanged_light,
+	ForceFileReload1,
+	ForceFileReload2,
+	AssignModeRefused1,
+	AssignModeRefused2,
+	AssigningEmptySample1,
+	AssigningEmptySample2,
 
 	NUM_FLAGS
 };
@@ -69,7 +76,9 @@ enum g_Errors{
 	CANNOT_OPEN_ROOT_DIR=(1<<19),
 	FILE_REC_OPEN_FAIL=(1<<20),
 	FILE_WRITE_FAIL=(1<<21),
-	FILE_UNEXPECTEDEOF_WRITE=(1<<22)
+	FILE_UNEXPECTEDEOF_WRITE=(1<<22),
+	CANNOT_WRITE_INDEX=(1<<23)
+
 
 };
 /*

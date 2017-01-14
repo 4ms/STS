@@ -47,7 +47,6 @@ void toggle_playing(uint8_t chan);
 void toggle_reverse(uint8_t chan);
 void check_change_bank(uint8_t chan);
 
-uint8_t load_sample_header(Sample *s_sample, FIL *sample_file);
 //uint8_t preload_sample(uint32_t samplenum, FIL* sample_file);
 
 uint32_t calc_start_point(float start_param, Sample *sample);
