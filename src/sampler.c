@@ -225,20 +225,23 @@ void audio_buffer_init(void)
 	sample_bank_now_playing[0] = 0xFF;
 	sample_bank_now_playing[1] = 0xFF;
 
-	//look for a sampleinfo.bin file
-	//if not found, load all banks from disk
+
+	//look for a sample.index file
+	//if not found, or holding down both REV buttons, load all banks from disk
 	//if found, read it into sample[]
 	//  do some basic checks to verify integrity
 
-	res = load_sampleindex_file();
+	if (REV1BUT && REV2BUT)
+		res = 1;
+	else
+		res = load_sampleindex_file();
 
-	if (res == 0)
+	if (res == 0) //file was found
 	{
 		check_enabled_banks();
 	}
 	else
 	{
-
 		//load all the banks
 		for (bank=0;bank<MAX_NUM_BANKS;bank++)
 		{
@@ -465,9 +468,9 @@ void toggle_playing(uint8_t chan)
 
 			play_state[chan]=PREBUFFERING;
 
-			if (global_mode[MONITOR_AUDIO])
+			if (global_mode[MONITOR_RECORDING])
 			{
-				global_mode[MONITOR_AUDIO] = 0;
+				global_mode[MONITOR_RECORDING] = 0;
 			}
 		}
 
@@ -577,37 +580,46 @@ void read_storage_to_buffer(void)
 	uint32_t fwd_stop_point, rev_stop_point;
 	FSIZE_t t_fptr;
 
-	//
-	//Reset to beginning of sample if we changed sample or bank
-	//ToDo: Move this to a routine that checks for flags, and call it before read_storage_to_buffer() is called
-	//
 
-	//If user changed the play sample, start playing from the beginning of that slot
-	if (flags[PlaySample1Changed]){
+	if (flags[PlaySample1Changed])
+	{
 		flags[PlaySample1Changed]=0;
 
-//		if (play_state[0] == SILENT || play_state[0]==PREBUFFERING)
-//			sample_file_curpos[0] = 0;
-//		else
-//			play_state[0] = PLAY_FADEDOWN;
+		if (samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ].filename[0] == 0) //no file: fadedown or remain silent
+		{
+			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
+				play_state[0] = PLAY_FADEDOWN;
+			else
+				play_state[0] = SILENT;
+		}
+		else
+		{
+			if (play_state[0] == SILENT && i_param[0][LOOPING])
+				flags[Play1Trig]=1;
 
-		if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
-			play_state[0] = PLAY_FADEDOWN;
+			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
+				play_state[0] = PLAY_FADEDOWN;
 
+			if (global_mode[ASSIGN_CH1])
+				find_current_sample_in_assign(&samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ], chan);
+		}
 
 
 	}
 
-	//If user changed the play sample, start playing from the beginning of that slot
 	if (flags[PlaySample2Changed]){
 		flags[PlaySample2Changed]=0;
 
-//		if (play_state[1] == SILENT || play_state[1]==PREBUFFERING)
-//			sample_file_curpos[1] = 0;
-//		else
-//			play_state[1] = PLAY_FADEDOWN;
-		if (play_state[1] != SILENT && play_state[1]!=PREBUFFERING)
-			play_state[1] = PLAY_FADEDOWN;
+		if (samples[ i_param[1][BANK] ][ i_param[1][SAMPLE] ].filename[0] == 0 )
+		{
+			if (play_state[1] != SILENT && play_state[1]!=PREBUFFERING)
+				play_state[1] = PLAY_FADEDOWN;
+			else
+				play_state[1] = SILENT;
+		}
+		else
+			if (play_state[1] != SILENT && play_state[1]!=PREBUFFERING)
+				play_state[1] = PLAY_FADEDOWN;
 
 	}
 
@@ -1000,7 +1012,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		{
 			if (SAMPLINGBYTES==2)
 			{
-				if (global_mode[MONITOR_AUDIO])
+				if (global_mode[MONITOR_RECORDING])
 				{
 					*dst++ = (*src++) + out[0][i] + CODEC_DAC_CALIBRATION_DCOFFSET[0];
 					*dst++ = *src++;
@@ -1020,7 +1032,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			}
 			else
 			{
-				if (global_mode[MONITOR_AUDIO])
+				if (global_mode[MONITOR_RECORDING])
 				{
 					*dst++ = (*src++) + (int16_t)(out[0][i]>>16) + CODEC_DAC_CALIBRATION_DCOFFSET[0];
 					*dst++ = (*src++) + (int16_t)(out[0][i] & 0x0000FF00);

@@ -19,7 +19,7 @@ enum RecStates {
 
 };
 
-
+void stop_recording(void);
 void toggle_recording(void);
 void record_audio_to_buffer(int16_t *src);
 void write_buffer_to_storage(void);

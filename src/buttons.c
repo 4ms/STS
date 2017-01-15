@@ -114,61 +114,61 @@ void Button_Debounce_IRQHandler(void)
 			else if (State[i]==0xe0ff)
 			{
 
-				switch (i)
+				if (button_state[i] != UP)
 				{
+					switch (i)
+					{
 
-					case Bank1:
-						flags[PlayBank1Changed] = 1;
-						i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
+						case Bank1:
+							flags[PlayBank1Changed] = 1;
+							i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
 
-						//load assignment samples for new bank
-						if (global_mode[ASSIGN_CH1]) enter_assignment_mode(0);
-						break;
+							//load assignment samples for new bank
+							if (global_mode[ASSIGN_CH1]) enter_assignment_mode(0);
+							break;
 
-					case Bank2:
-						flags[PlayBank2Changed] = 1;
-						i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
+						case Bank2:
+							flags[PlayBank2Changed] = 1;
+							i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
 
-						//load assignment samples for new bank
-						if (global_mode[ASSIGN_CH2]) enter_assignment_mode(1);
-						break;
+							//load assignment samples for new bank
+							if (global_mode[ASSIGN_CH2]) enter_assignment_mode(1);
+							break;
 
-					case Rec:
-						if (button_state[Rec]<SHORT_PRESSED)
-							flags[RecTrig]=1;
-						break;
+						case Rec:
+							if (button_state[Rec]<SHORT_PRESSED)
+								flags[RecTrig]=1;
+							break;
 
-					case RecBank:
-						flags[RecBankChanged] = 1;
-						if (i_param[2][BANK] >= (MAX_NUM_REC_BANKS-1))	i_param[2][BANK]=0;
-						else									i_param[2][BANK]++;
-						break;
+						case RecBank:
+							flags[RecBankChanged] = 1;
+							if (i_param[2][BANK] >= (MAX_NUM_REC_BANKS-1))	i_param[2][BANK]=0;
+							else											i_param[2][BANK]++;
+							break;
 
-					case Rev1:
-						if (!global_mode[ASSIGN_CH1])
-							flags[Rev1Trig]=1;
-						else
-						{
-							next_unassigned_sample(0);
-						}
+						case Rev1:
+							if (!global_mode[ASSIGN_CH1] && !flags[AssignModeRefused1])
+								flags[Rev1Trig]=1;
+							else
+								next_unassigned_sample(0);
 
-						clear_errors();
-						break;
 
-					case Rev2:
-						if (!global_mode[ASSIGN_CH2])
-							flags[Rev2Trig]=1;
-						else
-						{
-							next_unassigned_sample(1);
-						}
-						clear_errors();
-						break;
+							clear_errors();
+							break;
 
-					default:
-						break;
+						case Rev2:
+							if (!global_mode[ASSIGN_CH2] && !flags[AssignModeRefused2])
+								flags[Rev2Trig]=1;
+							else
+								next_unassigned_sample(1);
+
+							clear_errors();
+							break;
+
+						default:
+							break;
+					}
 				}
-
 				button_state[i] = UP;
 			}
 
@@ -257,21 +257,40 @@ void Button_Debounce_IRQHandler(void)
 
 			long_press[Play1] = 0xFFFFFFFF;
 			long_press[Rev1] = 0xFFFFFFFF;
-			button_state[Play1] = DOWN;
-			button_state[Rev1] = DOWN;
+			button_state[Play1] = UP;
+			button_state[Rev1] = UP;
 
 		}
+		//ToDo:
+		//only allow assign mode on ch2
+		//we will use ch1 to move samples from different banks
+		//on entering ASSIGN mode: change ch1 bank to ch2 bank
+		//during ASSIGN mode:
+		//turn off Play1 and Rev1
+		//Bank1 changes the source bank (loads t_assign_samples from directory selected by ch1)
+		//Bank2 changes the destination bank
+		//Rev2 changes the sample within the selected source directoy
+		//??
+		//Or we could scan the sdcard for samples, everytime you press Rev2 is looks for the next sample
+		//MEDIUM PRESS on Rev2 makes it blank (turns red/flashing)
+		//Pressing Rev1 leaves the directory and tries another dir in the tree (dim slow flashing orange)
+		//Play1 is off, no effect
+		//Bank1 is off, no effect
+		//
+
 		if (button_state[Play2] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED)
 		{
-			if (global_mode[ASSIGN_CH2])
-				save_exit_assignment_mode(1);
-			else
-				enter_assignment_mode(1);
+			cancel_exit_assignment_mode(0);
 
-			long_press[Play2] = 0xFFFFFFFF;
-			long_press[Rev2] = 0xFFFFFFFF;
-			button_state[Play2] = DOWN;
-			button_state[Rev2] = DOWN;
+//			if (global_mode[ASSIGN_CH2])
+//				save_exit_assignment_mode(1);
+//			else
+//				enter_assignment_mode(1);
+//
+//			long_press[Play2] = 0xFFFFFFFF;
+//			long_press[Rev2] = 0xFFFFFFFF;
+//			button_state[Play2] = DOWN;
+//			button_state[Rev2] = DOWN;
 		}
 
 

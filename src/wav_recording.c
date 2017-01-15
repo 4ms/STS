@@ -21,6 +21,7 @@ extern const uint32_t AUDIO_MEM_BASE[4];
 extern uint8_t SAMPLINGBYTES;
 
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 extern uint8_t 	flags[NUM_FLAGS];
 
@@ -62,6 +63,13 @@ void init_rec_buff(void)
 
 }
 
+void stop_recording(void)
+{
+	if (rec_state==RECORDING || rec_state==CREATING_FILE || rec_state==REC_PAUSED)
+	{
+		rec_state=CLOSING_FILE;
+	}
+}
 
 void toggle_recording(void)
 {
@@ -71,7 +79,7 @@ void toggle_recording(void)
 
 	} else
 	{
-		if (recording_enabled)
+		if (global_mode[ENABLE_RECORDING])
 		{
 			CB_init(rec_buff, 0);
 			rec_state = CREATING_FILE;

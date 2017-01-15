@@ -40,9 +40,11 @@ uint8_t write_sampleindex_file(void);
 
 void enter_assignment_mode(uint8_t chan);
 void save_exit_assignment_mode(uint8_t chan);
+void cancel_exit_assignment_mode(uint8_t chan);
 uint8_t load_samples_to_assign(uint8_t bank, uint8_t chan);
 
 void next_unassigned_sample(uint8_t chan);
+uint8_t find_current_sample_in_assign(Sample *s, uint8_t chan);
 
 
 #endif /* INC_STS_FILESYSTEM_H_ */

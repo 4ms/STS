@@ -80,20 +80,20 @@ int32_t cv_delta[NUM_CV_ADCS];
 
 void init_params(void)
 {
-	uint8_t channel,i;
+	uint8_t chan,i;
 
-	for (channel=0;channel<NUM_PLAY_CHAN;channel++){
-		f_param[channel][PITCH] 	= 1.0;
-		f_param[channel][START] 	= 0.0;
-		f_param[channel][LENGTH] 	= 1.0;
+	for (chan=0;chan<NUM_PLAY_CHAN;chan++){
+		f_param[chan][PITCH] 	= 1.0;
+		f_param[chan][START] 	= 0.0;
+		f_param[chan][LENGTH] 	= 1.0;
 
-		f_param[channel][TRACKING_COMP] = 1.00;
+		f_param[chan][TRACKING_COMP] = 1.00;
 
-		i_param[channel][BANK] 		= 0;
-		i_param[channel][SAMPLE] 	= 0;
-		i_param[channel][REV] 		= 0;
-		i_param[channel][STEREO_MODE]=0;
-		i_param[channel][LOOPING]	 =0;
+		i_param[chan][BANK] 		= 0;
+		i_param[chan][SAMPLE] 	= 0;
+		i_param[chan][REV] 		= 0;
+		i_param[chan][STEREO_MODE]=0;
+		i_param[chan][LOOPING]	 =0;
 	}
 
 	i_param[REC][BANK] = 0;
@@ -113,7 +113,8 @@ void init_modes(void)
 {
 	global_mode[CALIBRATE] = 0;
 	global_mode[SYSTEM_SETTINGS] = 0;
-	global_mode[MONITOR_AUDIO] = 0;
+	global_mode[MONITOR_RECORDING] = 0;
+	global_mode[ENABLE_RECORDING] = 0;
 
 }
 
@@ -268,10 +269,11 @@ void process_adc(void)
 
 void update_params(void)
 {
-	uint8_t channel;
+	uint8_t chan;
 	uint8_t old_val;
 	uint8_t new_val;
 	uint8_t stereo_switch;
+	uint8_t ok_sampleslot;
 
 	recording_enabled=1;
 
@@ -289,51 +291,56 @@ void update_params(void)
 	}
 
 
-	for (channel=0;channel<2;channel++)
+	for (chan=0;chan<2;chan++)
 	{
 		//
 		// LENGTH POT
 		//
-		f_param[channel][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+channel] + old_i_smoothed_cvadc[LENGTH_CV*2+channel]) / 4096.0;
+		f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
 
-		if (f_param[channel][LENGTH] > 1.0)			f_param[channel][LENGTH] = 1.0;
-		if (f_param[channel][LENGTH] <= 0.000244)	f_param[channel][LENGTH] = 0.000244;
+		if (f_param[chan][LENGTH] > 1.0)			f_param[chan][LENGTH] = 1.0;
+		if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
 
 
 		//
 		// START POT
 		//
-		f_param[channel][START] 	= (old_i_smoothed_potadc[START_POT*2+channel] + old_i_smoothed_cvadc[START_CV*2+channel]) / 4096.0;
+		f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
 
-		if (f_param[channel][START] > 1.0)
-			f_param[channel][START] = 1.0;
+		if (f_param[chan][START] > 1.0)
+			f_param[chan][START] = 1.0;
 
 		//
 		// PITCH POT
 		//
-		//f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]];
+		//f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]];
 
-		if ((old_i_smoothed_cvadc[PITCH_CV*2+channel] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+channel] > 2058)) //positive voltage on 1V/oct jack
+		if ((old_i_smoothed_cvadc[PITCH_CV*2+chan] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+chan] > 2058)) //positive voltage on 1V/oct jack
 		{
-			f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+channel]];
+			f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
 		}
 		else
-			f_param[channel][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+channel]];
+			f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]];
 
-		if (f_param[channel][PITCH] > MAX_RS)
-			f_param[channel][PITCH] = MAX_RS;
+		if (f_param[chan][PITCH] > MAX_RS)
+			f_param[chan][PITCH] = MAX_RS;
 
 		//
 		// SAMPLE POT
 		//
-		old_val = i_param[channel][SAMPLE];
-		new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+channel] + old_i_smoothed_cvadc[SAMPLE_CV*2+channel] );
+		old_val = i_param[chan][SAMPLE];
+		new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+chan] + old_i_smoothed_cvadc[SAMPLE_CV*2+chan] );
 
-		if ((old_val != new_val) && (samples[ i_param[channel][BANK] ][ new_val ].filename[0] != 0) )
+
+		if (old_val != new_val)
 		{
-			i_param[channel][SAMPLE] = new_val;
-			flags[PlaySample1Changed + channel*2] = 1;
-			flags[PlaySample1Changed_light + channel] = 10;
+			i_param[chan][SAMPLE] = new_val;
+			flags[PlaySample1Changed + chan*2] = 1;
+
+			if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
+				flags[PlaySample1Changed_empty + chan] = 10;
+			else
+				flags[PlaySample1Changed_valid + chan] = 10;
 		}
 
 		if (stereo_switch==SW_LINK)
@@ -370,22 +377,15 @@ void update_params(void)
 	{
 		i_param[REC][SAMPLE] = new_val;
 		flags[RecSampleChanged] = 1;
-		if (global_mode[MONITOR_AUDIO])
+		if (global_mode[MONITOR_RECORDING])
 		{
 			flags[RecSampleChanged_light] = 10;
+			//?? DO THIS???
 			//play the sample selected by rec bank/sample
 			//have to override i_param[0][BANK] and [SAMPLE] and all params (pitch, length...)
 		}
 	}
 
-	if (flags[ToggleMonitor])
-	{
-		flags[ToggleMonitor] = 0;
-
-		if (global_mode[MONITOR_AUDIO])		global_mode[MONITOR_AUDIO] = 0;
-		else								global_mode[MONITOR_AUDIO] = 1;
-
-	}
 }
 
 
@@ -439,6 +439,25 @@ void process_mode_flags(void)
 		{
 			flags[RecTrig]=0;
 			toggle_recording();
+		}
+
+		if (flags[ToggleMonitor])
+		{
+			flags[ToggleMonitor] = 0;
+
+			if (global_mode[ENABLE_RECORDING])
+			{
+				global_mode[ENABLE_RECORDING] = 0;
+				global_mode[MONITOR_RECORDING] = 0;
+				stop_recording();
+			}
+			else
+			{
+				global_mode[ENABLE_RECORDING] = 1;
+				global_mode[MONITOR_RECORDING] = 1;
+				i_param[0][LOOPING] = 0;
+				i_param[1][LOOPING] = 0;
+			}
 		}
 
 

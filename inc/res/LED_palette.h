@@ -9,6 +9,7 @@ enum Palette {
 	CYAN,
 	ORANGE,
 	VIOLET,
+	PINK,
 	NUM_LED_PALETTE
 
 };
@@ -23,7 +24,8 @@ const uint32_t LED_PALETTE[NUM_LED_PALETTE][3]=
 		{600,	500,	0},		//YELLOW
 		{0,		560,	1000},	//CYAN
 		{1000,	200,	0},		//ORANGE
-		{1000,	0,		1000}	//VIOLET
+		{1000,	0,		1000},	//VIOLET
+		{1000,	0,		500}	//PINK
 
 };
 

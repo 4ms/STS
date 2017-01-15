@@ -523,7 +523,7 @@ uint8_t load_samples_to_assign(uint8_t bank, uint8_t chan)
 	{
 		tname[0]=0;
 
-		while (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)
+		while (sample_num < MAX_ASSIGNED)
 		{
 			res = find_next_ext_in_dir(&dir, ".wav", tname);
 			if (res!=FR_OK) break;
@@ -544,13 +544,14 @@ uint8_t load_samples_to_assign(uint8_t bank, uint8_t chan)
 				{
 					str_cpy(t_assign_samples[chan][sample_num++].filename, path_tname);
 				}
+
 			}
 			f_close(&temp_file);
 		}
 		f_closedir(&dir);
 
 		//Special try again using root directory for first bank
-		if (bank==0 && sample_num < NUM_SAMPLES_PER_BANK)
+		if (bank==0 && sample_num < MAX_ASSIGNED)
 		{
 			res = f_opendir(&dir, "/");
 			if (res==FR_OK)
@@ -590,6 +591,29 @@ uint8_t load_samples_to_assign(uint8_t bank, uint8_t chan)
 	return(sample_num);
 }
 
+uint8_t find_current_sample_in_assign(Sample *s, uint8_t chan)
+{
+	uint8_t i;
+
+	original_assigned_sample_i[chan] = 0xFF;//error, not found
+
+	for (i=0; i<end_assigned_sample_i[chan]; i++)
+	{
+		if (str_cmp(t_assign_samples[chan][i].filename, s->filename))
+		{
+			original_assigned_sample_i[chan] = i;
+			break;
+		}
+	}
+
+	if (original_assigned_sample_i[chan] == 0xFF)
+		return(1); //fail
+
+	cur_assigned_sample_i[chan] = original_assigned_sample_i[chan];
+	return(0);
+
+}
+
 
 void enter_assignment_mode(uint8_t chan)
 {
@@ -609,14 +633,8 @@ void enter_assignment_mode(uint8_t chan)
 	if (end_assigned_sample_i[chan])
 	{
 		//find the current sample in the t_assigned_samples array
-		for (i=0; i<end_assigned_sample_i[chan]; i++)
-		{
-			if (str_cmp(t_assign_samples[chan][i].filename, samples[chan][ i_param[chan][SAMPLE] ].filename))
-			{
-				original_assigned_sample_i[chan] = i;
-				break;
-			}
-		}
+		i = find_current_sample_in_assign(&(samples[ i_param[chan][BANK] ][ i_param[chan][SAMPLE] ]), chan);
+		if (i)	{flags[AssignModeRefused1+chan] = 4; return; }
 
 		//Add a blank/erase sample at the end
 		t_assign_samples[chan][end_assigned_sample_i[chan]].filename[0] = 0;
@@ -628,7 +646,7 @@ void enter_assignment_mode(uint8_t chan)
 
 	} else
 	{
-		flags[AssignModeRefused1+chan] = 8;
+		flags[AssignModeRefused1+chan] = 4;
 	}
 }
 
