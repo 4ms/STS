@@ -591,6 +591,10 @@ void read_storage_to_buffer(void)
 				play_state[0] = PLAY_FADEDOWN;
 			else
 				play_state[0] = SILENT;
+
+			if (global_mode[ASSIGN_CH1])
+				flags[AssigningEmptySample1] = 1;
+
 		}
 		else
 		{
@@ -601,7 +605,10 @@ void read_storage_to_buffer(void)
 				play_state[0] = PLAY_FADEDOWN;
 
 			if (global_mode[ASSIGN_CH1])
+			{
 				find_current_sample_in_assign(&samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ], chan);
+				flags[AssigningEmptySample1] = 0;
+			}
 		}
 
 

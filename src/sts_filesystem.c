@@ -634,7 +634,7 @@ void enter_assignment_mode(uint8_t chan)
 	{
 		//find the current sample in the t_assigned_samples array
 		i = find_current_sample_in_assign(&(samples[ i_param[chan][BANK] ][ i_param[chan][SAMPLE] ]), chan);
-		if (i)	{flags[AssignModeRefused1+chan] = 4; return; }
+		if (i)	{flags[AssigningEmptySample1+chan] = 1;}
 
 		//Add a blank/erase sample at the end
 		t_assign_samples[chan][end_assigned_sample_i[chan]].filename[0] = 0;
