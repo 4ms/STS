@@ -65,7 +65,7 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 
 	case 4:
 		str_cpy(color, "Yellow");
-		return(5);
+		return(6);
 		break;
 
 	case 5:
@@ -105,7 +105,7 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 
 	case 12:
 		str_cpy(color, "Yellow-SAVE");
-		return(10);
+		return(11);
 		break;
 
 	case 13:

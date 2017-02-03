@@ -189,6 +189,7 @@ void write_buffer_to_storage(void)
 				//f_sync(&recfil);
 			}
 
+
 			sample_num_now_recording = i_param[REC_CHAN][SAMPLE];
 			sample_bank_now_recording = i_param[REC_CHAN][BANK];
 
@@ -212,7 +213,7 @@ void write_buffer_to_storage(void)
 
 
 			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
-			if (res!=FR_OK)		{g_error |= FILE_REC_OPEN_FAIL; check_errors(); break;}
+			if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_REC_OPEN_FAIL; check_errors(); break;}
 
 			create_waveheader(&whac.wh);
 			create_chunk(ccDATA, 0, &whac.wc);
@@ -220,8 +221,8 @@ void write_buffer_to_storage(void)
 			sz = sizeof(WaveHeaderAndChunk);
 
 			res = f_write(&recfil, &whac.wh, sz, &written);
-			if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
-			if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
+			if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+			if (sz!=written)	{rec_state=REC_OFF; g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
 
 			samplebytes_recorded = 0;
 
@@ -322,8 +323,10 @@ void write_buffer_to_storage(void)
 				if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
 
 				sample_fname_now_recording[0] = 0;
-				sample_num_now_recording = 0;
-				sample_bank_now_recording = 0;
+				sample_num_now_recording = 0xFF;
+				sample_bank_now_recording = 0xFF;
+				flags[ForceFileReload1] = 1;
+				flags[ForceFileReload2] = 1;
 			}
 
 		break;

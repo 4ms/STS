@@ -129,10 +129,12 @@ void init_LowPassCoefs(void)
 	float t;
 	uint8_t i;
 
-	t=50.0;
+	t=10.0;
 
 	CV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[PITCH_CV*2+1] = 1.0-(1.0/t);
+
+	t=50.0;
 
 	CV_LPF_COEF[START_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[START_CV*2+1] = 1.0-(1.0/t);
@@ -177,8 +179,8 @@ void init_LowPassCoefs(void)
 	MIN_POT_ADC_CHANGE[PITCH_POT*2] = 40;
 	MIN_POT_ADC_CHANGE[PITCH_POT*2+1] = 40;
 
-	MIN_POT_ADC_CHANGE[START_POT*2] = 20;
-	MIN_POT_ADC_CHANGE[START_POT*2+1] = 20;
+	MIN_POT_ADC_CHANGE[START_POT*2] = 10;
+	MIN_POT_ADC_CHANGE[START_POT*2+1] = 10;
 
 	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 20;
 	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 20;
@@ -318,6 +320,7 @@ void update_params(void)
 		if ((old_i_smoothed_cvadc[PITCH_CV*2+chan] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+chan] > 2058)) //positive voltage on 1V/oct jack
 		{
 			f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
+			//if (chan==1) f_param[chan][PITCH] *= 1.009227524f;
 		}
 		else
 			f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]];
@@ -338,9 +341,9 @@ void update_params(void)
 			flags[PlaySample1Changed + chan*2] = 1;
 
 			if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
-				flags[PlaySample1Changed_empty + chan] = 10;
+				flags[PlaySample1Changed_empty + chan] = 6;
 			else
-				flags[PlaySample1Changed_valid + chan] = 10;
+				flags[PlaySample1Changed_valid + chan] = 6;
 		}
 
 		if (stereo_switch==SW_LINK)
@@ -353,6 +356,7 @@ void update_params(void)
 
 			i_param[1][SAMPLE] 		= i_param[0][SAMPLE];
 			i_param[1][BANK] 		= i_param[0][BANK];
+			i_param[1][LOOPING] 	= i_param[0][LOOPING];
 			f_param[1][PITCH] 		= f_param[0][PITCH];
 			f_param[1][START] 		= f_param[0][START];
 			f_param[1][LENGTH] 		= f_param[0][LENGTH];
@@ -407,13 +411,17 @@ void process_mode_flags(void)
 				//if (play_state[0]==SILENT && (play_state[1]== PLAYING || play_state[1] == PLAYING_PERC)) play_state[1]=SILENT;
 				if (i_param[0][REV]!=i_param[1][REV])
 					toggle_reverse(0);
-			}
 
-			toggle_playing(0);
+				i_param[1][LOOPING] = i_param[0][LOOPING];
 
+				toggle_playing(0);
 
-			if (STEREOSW==SW_LINK)
 				toggle_playing(1);
+
+			}
+			else
+				toggle_playing(0);
+
 		}
 
 		if (flags[Play2Trig])
@@ -426,13 +434,20 @@ void process_mode_flags(void)
 				if (i_param[0][REV]!=i_param[1][REV])
 					toggle_reverse(1);
 
-			}
-				//if (play_state[1]==SILENT && (play_state[0]== PLAYING || play_state[0] == PLAYING_PERC)) play_state[1]=SILENT;
-
-			toggle_playing(1);
-
-			if (STEREOSW==SW_LINK)
 				toggle_playing(0);
+
+				toggle_playing(1);
+
+				i_param[0][LOOPING] = i_param[1][LOOPING];
+
+			}
+			else
+				toggle_playing(1);
+
+			//if (play_state[1]==SILENT && (play_state[0]== PLAYING || play_state[0] == PLAYING_PERC)) play_state[1]=SILENT;
+
+
+
 		}
 
 		if (flags[RecTrig]==1)
@@ -445,7 +460,7 @@ void process_mode_flags(void)
 		{
 			flags[ToggleMonitor] = 0;
 
-			if (global_mode[ENABLE_RECORDING])
+			if (global_mode[ENABLE_RECORDING] && global_mode[MONITOR_RECORDING])
 			{
 				global_mode[ENABLE_RECORDING] = 0;
 				global_mode[MONITOR_RECORDING] = 0;
@@ -494,25 +509,43 @@ void process_mode_flags(void)
 			flags[ToggleLooping1] = 0;
 
 			if (i_param[0][LOOPING])
+			{
 				i_param[0][LOOPING] = 0;
+
+				if (STEREOSW==SW_LINK)
+					i_param[1][LOOPING] = 0;
+			}
 			else
 			{
 				i_param[0][LOOPING] = 1;
 				flags[Play1Trig] = 1;
 
+				if (STEREOSW==SW_LINK)
+				{
+					i_param[1][LOOPING] = 1;
+					flags[Play2Trig] = 1;
+				}
+
 			}
+
+
 		}
 
 		if (flags[ToggleLooping2])
 		{
 			flags[ToggleLooping2] = 0;
 
-			if (i_param[1][LOOPING])
-				i_param[1][LOOPING] = 0;
-			else
+			if (STEREOSW!=SW_LINK)
 			{
-				i_param[1][LOOPING] = 1;
-				flags[Play2Trig] = 1;
+				if (i_param[1][LOOPING])
+				{
+					i_param[1][LOOPING] = 0;
+				}
+				else
+				{
+					i_param[1][LOOPING] = 1;
+					flags[Play2Trig] = 1;
+				}
 			}
 		}
 	}

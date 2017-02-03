@@ -30,7 +30,8 @@ enum PlayLoadTriage{
 };
 
 
-#define PRE_BUFF_SIZE (8192*3)
+
+#define PRE_BUFF_SIZE (8192*3) /*0x6000*/
 
 
 #define MAX_RS 4
@@ -38,6 +39,7 @@ enum PlayLoadTriage{
 
 void audio_buffer_init(void);
 void read_storage_to_buffer(void);
+//void play_audio_from_buffer(int32_t *out, uint8_t chan);
 void play_audio_from_buffer(int32_t *out, uint8_t chan);
 
 //void increment_read_fade(uint8_t channel);
