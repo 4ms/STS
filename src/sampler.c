@@ -677,7 +677,7 @@ void check_change_sample(void)
 
 			if (global_mode[ASSIGN_CH1])
 			{
-				find_current_sample_in_assign(&samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ], 0);
+				find_current_sample_in_assign(&samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]);
 				flags[AssigningEmptySample1] = 0;
 			}
 		}

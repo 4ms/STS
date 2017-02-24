@@ -124,15 +124,12 @@ void Button_Debounce_IRQHandler(void)
 							i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
 
 							//load assignment samples for new bank
-							if (global_mode[ASSIGN_CH1]) enter_assignment_mode(0);
+							if (global_mode[ASSIGN_CH1]) enter_assignment_mode();
 							break;
 
 						case Bank2:
 							flags[PlayBank2Changed] = 1;
 							i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
-
-							//load assignment samples for new bank
-							if (global_mode[ASSIGN_CH2]) enter_assignment_mode(1);
 							break;
 
 						case Rec:
@@ -150,17 +147,14 @@ void Button_Debounce_IRQHandler(void)
 							if (!global_mode[ASSIGN_CH1] && !flags[AssignModeRefused1])
 								flags[Rev1Trig]=1;
 							else
-								next_unassigned_sample(0);
+								next_unassigned_sample();
 
 
 							clear_errors();
 							break;
 
 						case Rev2:
-							if (!global_mode[ASSIGN_CH2] && !flags[AssignModeRefused2])
-								flags[Rev2Trig]=1;
-							else
-								next_unassigned_sample(1);
+							flags[Rev2Trig]=1;
 
 							clear_errors();
 							break;
@@ -251,9 +245,9 @@ void Button_Debounce_IRQHandler(void)
 		if (button_state[Play1] >= SHORT_PRESSED && button_state[Rev1] >= SHORT_PRESSED)
 		{
 			if (global_mode[ASSIGN_CH1])
-				save_exit_assignment_mode(0);
+				save_exit_assignment_mode();
 			else
-				enter_assignment_mode(0);
+				enter_assignment_mode();
 
 			long_press[Play1] = 0xFFFFFFFF;
 			long_press[Rev1] = 0xFFFFFFFF;
@@ -280,7 +274,7 @@ void Button_Debounce_IRQHandler(void)
 
 		if (button_state[Play2] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED)
 		{
-			cancel_exit_assignment_mode(0);
+			cancel_exit_assignment_mode();
 
 //			if (global_mode[ASSIGN_CH2])
 //				save_exit_assignment_mode(1);
