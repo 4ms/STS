@@ -1,0 +1,492 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "src/main.c",
+			"settings":
+			{
+				"buffer_size": 6718,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/buttons.c",
+			"settings":
+			{
+				"buffer_size": 6378,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/params.c",
+			"settings":
+			{
+				"buffer_size": 13611,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "inc/params.h",
+			"settings":
+			{
+				"buffer_size": 1728,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "inc/dig_pins.h",
+			"settings":
+			{
+				"buffer_size": 4958,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/dig_pins.c",
+			"settings":
+			{
+				"buffer_size": 3915,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "Packages/Makefile/Make.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					""
+				],
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					"Run"
+				]
+			],
+			[
+				"Packages/C++/C++ Single File.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					""
+				],
+				[
+					"Packages/C++/C++ Single File.sublime-build",
+					"Run"
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					""
+				],
+				[
+					"Packages/Makefile/Make.sublime-build",
+					"Clean"
+				]
+			],
+			[
+				"Packages/Makefile/Make.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 87.0,
+		"last_filter": ":q",
+		"selected_items":
+		[
+			[
+				":q",
+				"Set Syntax: SQL"
+			]
+		],
+		"width": 392.0
+	},
+	"console":
+	{
+		"height": 126.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": true,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": true,
+		"status_bar_visible": true
+	},
+	"expanded_folders":
+	[
+		"/Users/design/4ms/stm32/DTS",
+		"/Users/design/4ms/stm32/DTS/src"
+	],
+	"file_history":
+	[
+		"/Users/design/4ms/stm32/DTS/src/flash.c",
+		"/Users/design/4ms/stm32/DTS/stm32/periph/include/stm32f4xx_flash.h",
+		"/Users/design/4ms/stm32/DTS/src/buttons.c",
+		"/Users/design/4ms/stm32/DTS/DTS.sublime-project",
+		"/Users/design/4ms/stm32/DTS/src/sampler.c",
+		"/Users/design/4ms/stm32/DTS/inc/sampler.h",
+		"/Users/design/4ms/stm32/DTS/inc/dig_pins.h",
+		"/Users/design/4ms/stm32/DTS/DTS.jdebug",
+		"/Users/design/4ms/stm32/SMR/adc.c",
+		"/Users/design/4ms/stm32/SMR/adc.h",
+		"/Users/design/4ms/stm32/SMR/audio_util.c",
+		"/Users/design/4ms/stm32/SMR/audio_util.h",
+		"/Users/design/4ms/stm32/SMR/Makefile",
+		"/Users/design/4ms/stm32/SMR/main.c"
+	],
+	"find":
+	{
+		"height": 23.0
+	},
+	"find_in_files":
+	{
+		"height": 93.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"STEREOSW",
+			"uint16_t",
+			"potadc_buffer",
+			"address",
+			"uint8_t",
+			"\n}",
+			"DMA_InitStructure",
+			"DMA"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "src/main.c",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6718,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								458,
+								458
+							]
+						],
+						"settings":
+						{
+							"rulers":
+							[
+							],
+							"syntax": "Packages/C++/C.sublime-syntax",
+							"word_wrap": true,
+							"wrap_width": 120
+						},
+						"translation.x": 0.0,
+						"translation.y": 3232.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "src/buttons.c",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6378,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								321,
+								321
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 3,
+			"sheets":
+			[
+				{
+					"buffer": 2,
+					"file": "src/params.c",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 13611,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "inc/params.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1728,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "inc/dig_pins.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4958,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2084,
+								2076
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 456.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "src/dig_pins.c",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3915,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1119,
+								1119
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 34.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			],
+			[
+				1,
+				0,
+				2,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			0.5,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 100.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "DTS.sublime-project",
+	"replace":
+	{
+		"height": 42.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"butto",
+				"src/buttons.c"
+			],
+			[
+				"dig",
+				"src/dig_pins.c"
+			],
+			[
+				"par",
+				"inc/params.h"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 392.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 449.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 245.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
