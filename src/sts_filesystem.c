@@ -8,11 +8,6 @@
 
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-#define MAX_ASSIGNED 32
-uint8_t cur_assigned_sample_i;
-uint8_t end_assigned_sample_i;
-uint8_t original_assigned_sample_i;
-Sample t_assign_samples[MAX_ASSIGNED];
 
 
 uint8_t bank_status[MAX_NUM_BANKS];
@@ -223,6 +218,15 @@ void clear_sample_header(Sample *s_sample)
 	s_sample->blockAlign = 0;
 	s_sample->startOfData = 0;
 
+	s_sample->inst_start = 0;
+	s_sample->inst_end = s_sample->sampleSize;
+	s_sample->inst_gain = 1.0;
+
+	s_sample->knob_pos_start1 = 0;
+	s_sample->knob_pos_start2 = 2048;
+	s_sample->knob_pos_length1 = 4095;
+	s_sample->knob_pos_length2 = 2048;
+
 }
 
 
@@ -238,7 +242,7 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 	uint32_t br;
 	uint32_t rd;
 	WaveChunk chunk;
-
+	uint32_t t32;
 
 	rd = sizeof(WaveHeader);
 	res = f_read(sample_file, &sample_header, rd, &br);
@@ -276,6 +280,17 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 				s_sample->numChannels = sample_header.numChannels;
 				s_sample->blockAlign = sample_header.numChannels * sample_header.bitsPerSample>>3;
 				s_sample->startOfData = f_tell(sample_file);
+
+				s_sample->inst_end = s_sample->sampleSize;
+				s_sample->inst_start = 0;
+				s_sample->inst_gain = 1.0;
+				s_sample->knob_pos_start1 = 0;
+				s_sample->knob_pos_start2 = 2048;
+				s_sample->knob_pos_length1 = 4095;
+				s_sample->knob_pos_length2 = 2048;
+
+
+
 
 				return(FR_OK);
 
@@ -496,222 +511,3 @@ uint8_t load_sampleindex_file(void)
 	return(0);	//OK
 
 }
-
-/**************************************************/
-/**************************************************/
-/**************************************************/
-/**************************************************/
-/**************************************************/
-/* sts_fs_assignment.c */
-
-uint8_t load_samples_to_assign(uint8_t bank)
-{
-	uint32_t i;
-	uint32_t sample_num;
-	FIL temp_file;
-	FRESULT res;
-	DIR dir;
-	char path[10];
-	char tname[_MAX_LFN+1];
-	char path_tname[_MAX_LFN+1];
-
-	if (bank >= MAX_NUM_REC_BANKS)	bank -= MAX_NUM_REC_BANKS;
-
-	sample_num=0;
-	i = bank_to_color(bank, path);
-
-	res = f_opendir(&dir, path);
-	if (res==FR_NO_PATH)	return(0);
-	//ToDo: check for variations of capital letters (or can we just check the short fname?)
-
-	if (res==FR_OK)
-	{
-		tname[0]=0;
-
-		while (sample_num < MAX_ASSIGNED)
-		{
-			res = find_next_ext_in_dir(&dir, ".wav", tname);
-			if (res!=FR_OK) break;
-
-			i = str_len(path);
-			str_cpy(path_tname, path);
-			path_tname[i]='/';
-			str_cpy(&(path_tname[i+1]), tname);
-
-			res = f_open(&temp_file, path_tname, FA_READ);
-			f_sync(&temp_file);
-
-			if (res==FR_OK)
-			{
-				res = load_sample_header(&t_assign_samples[sample_num], &temp_file);
-
-				if (res==FR_OK)
-				{
-					str_cpy(t_assign_samples[sample_num++].filename, path_tname);
-				}
-
-			}
-			f_close(&temp_file);
-		}
-		f_closedir(&dir);
-
-		//Special try again using root directory for first bank
-		if (bank==0 && sample_num < MAX_ASSIGNED)
-		{
-			res = f_opendir(&dir, "/");
-			if (res==FR_OK)
-			{
-				tname[0]=0;
-				while (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)
-				{
-					res = find_next_ext_in_dir(&dir, ".wav", tname);
-					if (res!=FR_OK) break;
-
-					res = f_open(&temp_file, tname, FA_READ);
-					f_sync(&temp_file);
-
-					if (res==FR_OK)
-					{
-						res = load_sample_header(&t_assign_samples[sample_num], &temp_file);
-
-						if (res==FR_OK)
-						{
-							str_cpy(t_assign_samples[sample_num++].filename, tname);
-						}
-					}
-					f_close(&temp_file);
-				}
-				f_closedir(&dir);
-			}
-		}
-
-
-	}
-	else
-	{
-		g_error=CANNOT_OPEN_ROOT_DIR;
-		return(0);
-	}
-
-	return(sample_num);
-}
-
-uint8_t find_current_sample_in_assign(Sample *s)
-{
-	uint8_t i;
-
-	original_assigned_sample_i = 0xFF;//error, not found
-
-	for (i=0; i<end_assigned_sample_i; i++)
-	{
-		if (str_cmp(t_assign_samples[i].filename, s->filename))
-		{
-			original_assigned_sample_i = i;
-			break;
-		}
-	}
-
-	if (original_assigned_sample_i == 0xFF)
-		return(1); //fail
-
-	cur_assigned_sample_i = original_assigned_sample_i;
-	return(0);
-
-}
-
-
-void enter_assignment_mode(void)
-{
-	uint8_t i;
-
-	//force us to be on a non -SAVE bank
-	if (i_param[0][BANK] >= MAX_NUM_REC_BANKS)
-	{
-		do i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
-		while (i_param[0][BANK] >= MAX_NUM_REC_BANKS);
-
-		flags[PlayBank1Changed] = 1;
-	}
-
-	end_assigned_sample_i = load_samples_to_assign(i_param[0][BANK]);
-
-	if (end_assigned_sample_i)
-	{
-		//find the current sample in the t_assigned_samples array
-		i = find_current_sample_in_assign(&(samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]));
-		if (i)	{flags[AssigningEmptySample1] = 1;}
-
-		//Add a blank/erase sample at the end
-		t_assign_samples[end_assigned_sample_i].filename[0] = 0;
-		t_assign_samples[end_assigned_sample_i].sampleSize = 0;
-		end_assigned_sample_i ++;
-
-		cur_assigned_sample_i = original_assigned_sample_i;
-		global_mode[ASSIGN_CH1] = 1;
-
-	} else
-	{
-		flags[AssignModeRefused1] = 4;
-	}
-}
-
-void assign_sample(uint8_t assigned_sample_i)
-{
-	uint8_t sample, bank;
-
-	bank = i_param[0][BANK];
-	sample = i_param[0][SAMPLE];
-
-	str_cpy(samples[bank][sample].filename,   t_assign_samples[ assigned_sample_i ].filename);
-	samples[bank][sample].blockAlign 		= t_assign_samples[ assigned_sample_i ].blockAlign;
-	samples[bank][sample].numChannels 		= t_assign_samples[ assigned_sample_i ].numChannels;
-	samples[bank][sample].sampleByteSize 	= t_assign_samples[ assigned_sample_i ].sampleByteSize;
-	samples[bank][sample].sampleRate 		= t_assign_samples[ assigned_sample_i ].sampleRate;
-	samples[bank][sample].sampleSize 		= t_assign_samples[ assigned_sample_i ].sampleSize;
-	samples[bank][sample].startOfData 		= t_assign_samples[ assigned_sample_i ].startOfData;
-
-	flags[ForceFileReload1] = 1;
-
-	if (samples[bank][sample].filename[0] == 0)
-		flags[AssigningEmptySample1] = 1;
-	else
-		flags[AssigningEmptySample1] = 0;
-
-}
-
-
-void save_exit_assignment_mode(void)
-{
-	FRESULT res;
-
-	global_mode[ASSIGN_CH1] = 0;
-
-	check_enabled_banks(); //disables a bank if we cleared it out
-
-	res = write_sampleindex_file();
-	if (res!=FR_OK) {g_error|=CANNOT_WRITE_INDEX; check_errors();}
-
-}
-
-void cancel_exit_assignment_mode(void)
-{
-	assign_sample(original_assigned_sample_i);
-	global_mode[ASSIGN_CH1] = 0;
-}
-
-
-void next_unassigned_sample(void)
-{
-
-	play_state[0]=SILENT;
-
-	cur_assigned_sample_i ++;
-	if (cur_assigned_sample_i >= end_assigned_sample_i || cur_assigned_sample_i >= MAX_ASSIGNED)
-		cur_assigned_sample_i = 0;
-
-	assign_sample(cur_assigned_sample_i);
-
-	flags[Play1Trig]=1;
-}
-
-

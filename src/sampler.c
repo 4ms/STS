@@ -326,7 +326,7 @@ void toggle_reverse(uint8_t chan)
 				sample_file_curpos[chan] = map_low[chan];
 			}
 
-			f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + sample_file_curpos[chan]);
+			f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start + sample_file_curpos[chan]);
 
 		}
 
@@ -479,7 +479,7 @@ void toggle_playing(uint8_t chan)
 		}
 
 
-		res = f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + sample_file_startpos[chan]);
+		res = f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start + sample_file_startpos[chan]);
 		f_sync(&fil[chan]);
 
 		if (res != FR_OK) g_error |= FILE_SEEK_FAIL;
@@ -663,8 +663,8 @@ void check_change_sample(void)
 			else
 				play_state[0] = SILENT;
 
-			if (global_mode[ASSIGN_CH1])
-				flags[AssigningEmptySample1] = 1;
+			if (global_mode[ASSIGN_MODE])
+				flags[AssigningEmptySample] = 1;
 
 		}
 		else
@@ -675,10 +675,10 @@ void check_change_sample(void)
 			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
 				play_state[0] = PLAY_FADEDOWN;
 
-			if (global_mode[ASSIGN_CH1])
+			if (global_mode[ASSIGN_MODE])
 			{
 				find_current_sample_in_assign(&samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]);
-				flags[AssigningEmptySample1] = 0;
+				flags[AssigningEmptySample] = 0;
 			}
 		}
 
@@ -890,11 +890,9 @@ void read_storage_to_buffer(void)
 void play_audio_from_buffer(int32_t *out, uint8_t chan)
 {
 	uint16_t i;
-	uint8_t samplenum, banknum;
 	uint32_t play_length;
 	uint32_t t_out;
-
-//	int16_t t_buff16[HT16_BUFF_LEN>>1]; //stereo
+	int32_t	t_i32;
 
 	//Resampling:
 	static float resampling_fpos[NUM_PLAY_CHAN]={0.0f, 0.0f};
@@ -904,6 +902,9 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 	//convenience variables
 	float length;
 	uint32_t resampled_buffer_size;
+	float gain;
+	uint8_t samplenum, banknum;
+
 
 
 	samplenum = sample_num_now_playing[chan];
@@ -955,13 +956,15 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 		length = f_param[chan][LENGTH];
 		play_length = calc_play_length(length, &samples[banknum][samplenum]);
 
+		gain = samples[banknum][samplenum].inst_gain;
+
 		 switch (play_state[chan])
 		 {
 
 			 case (PLAY_FADEUP):
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-					out[i] = ((float)out[i] * (float)i / (float)HT16_CHAN_BUFF_LEN);
+					out[i] = ((float)out[i] * gain * (float)i / (float)HT16_CHAN_BUFF_LEN);
 
 				play_state[chan]=PLAYING;
 
@@ -972,17 +975,19 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 			 case (RETRIG_FADEDOWN):
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+				{
 					out[i] = ((float)out[i] * (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN);
+					t_i32 = (float)out[i] * gain;
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					out[i] = t_i32;
+				}
 
 				play_led_state[chan] = 0;
 
 				end_out_ctr[chan]=35;
 
 				if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
-				{
-
 					flags[Play1Trig+chan] = 1;
-				}
 
 				//else
 				play_state[chan] = SILENT;
@@ -990,6 +995,13 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 				break;
 
 			 case (PLAYING):
+
+					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+					{
+						t_i32 = (float)out[i] * gain;
+						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+						out[i] = t_i32;
+					}
 
 					if (length>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
 					{
@@ -1051,6 +1063,11 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 					if (length>0.02) //fixme: not efficient to have an if inside the for-loop! All we want to do is use decay_amp_i as a duration counter, but not apply an envelope if we have a very short length
 						out[i] = ((float)out[i]) * decay_amp_i[chan];
+
+					t_i32 = (float)out[i] * gain;
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					out[i] = t_i32;
+
 				}
 
 				if (decay_amp_i[chan] <= 0.0f || decay_amp_i[chan] >= 1.0f)
@@ -1180,9 +1197,8 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		*dst++ = potadc_buffer[channel+2]*4;
 		*dst++ = 0;
 
-		if (STEREOSW==SWITCH_CENTER) *dst++ = cvadc_buffer[channel+4]*4;
-		else if (STEREOSW==SWITCH_LEFT) *dst++ = cvadc_buffer[channel+0]*4;
-		else *dst++ = cvadc_buffer[channel+2]*4;
+		//*dst++ = cvadc_buffer[channel+4]*4;
+		*dst++ = cvadc_buffer[channel+0]*4;
 		*dst++ = 0;
 
 #endif

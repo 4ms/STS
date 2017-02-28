@@ -44,10 +44,8 @@ enum Flags {
 	RecSampleChanged_light,
 	ForceFileReload1,
 	ForceFileReload2,
-	AssignModeRefused1,
-	AssignModeRefused2,
-	AssigningEmptySample1,
-	AssigningEmptySample2,
+	AssignModeRefused,
+	AssigningEmptySample,
 
 	NUM_FLAGS
 };

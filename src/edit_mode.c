@@ -1,0 +1,291 @@
+/* assignment_mode.c */
+#include "globals.h"
+#include "params.h"
+
+#include "ff.h"
+#include "sts_filesystem.h"
+#include "file_util.h"
+#include "sampler.h"
+#include "wavefmt.h"
+
+#include "edit_mode.h"
+
+
+
+#define MAX_ASSIGNED 32
+uint8_t cur_assigned_sample_i;
+uint8_t end_assigned_sample_i;
+uint8_t original_assigned_sample_i;
+Sample t_assign_samples[MAX_ASSIGNED];
+
+extern enum g_Errors g_error;
+extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+extern uint8_t 	flags[NUM_FLAGS];
+extern uint8_t global_mode[NUM_GLOBAL_MODES];
+
+extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+extern enum PlayStates play_state				[NUM_PLAY_CHAN];
+
+
+uint8_t load_samples_to_assign(uint8_t bank)
+{
+	uint32_t i;
+	uint32_t sample_num;
+	FIL temp_file;
+	FRESULT res;
+	DIR dir;
+	char path[10];
+	char tname[_MAX_LFN+1];
+	char path_tname[_MAX_LFN+1];
+
+	if (bank >= MAX_NUM_REC_BANKS)	bank -= MAX_NUM_REC_BANKS;
+
+	sample_num=0;
+	i = bank_to_color(bank, path);
+
+	res = f_opendir(&dir, path);
+	if (res==FR_NO_PATH)	return(0);
+	//ToDo: check for variations of capital letters (or can we just check the short fname?)
+
+	if (res==FR_OK)
+	{
+		tname[0]=0;
+
+		while (sample_num < MAX_ASSIGNED)
+		{
+			res = find_next_ext_in_dir(&dir, ".wav", tname);
+			if (res!=FR_OK) break;
+
+			i = str_len(path);
+			str_cpy(path_tname, path);
+			path_tname[i]='/';
+			str_cpy(&(path_tname[i+1]), tname);
+
+			res = f_open(&temp_file, path_tname, FA_READ);
+			f_sync(&temp_file);
+
+			if (res==FR_OK)
+			{
+				res = load_sample_header(&t_assign_samples[sample_num], &temp_file);
+
+				if (res==FR_OK)
+				{
+					str_cpy(t_assign_samples[sample_num++].filename, path_tname);
+				}
+
+			}
+			f_close(&temp_file);
+		}
+		f_closedir(&dir);
+
+		//Special try again using root directory for first bank
+		if (bank==0 && sample_num < MAX_ASSIGNED)
+		{
+			res = f_opendir(&dir, "/");
+			if (res==FR_OK)
+			{
+				tname[0]=0;
+				while (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)
+				{
+					res = find_next_ext_in_dir(&dir, ".wav", tname);
+					if (res!=FR_OK) break;
+
+					res = f_open(&temp_file, tname, FA_READ);
+					f_sync(&temp_file);
+
+					if (res==FR_OK)
+					{
+						res = load_sample_header(&t_assign_samples[sample_num], &temp_file);
+
+						if (res==FR_OK)
+						{
+							str_cpy(t_assign_samples[sample_num++].filename, tname);
+						}
+					}
+					f_close(&temp_file);
+				}
+				f_closedir(&dir);
+			}
+		}
+
+
+	}
+	else
+	{
+		g_error=CANNOT_OPEN_ROOT_DIR;
+		return(0);
+	}
+
+	return(sample_num);
+}
+
+uint8_t find_current_sample_in_assign(Sample *s)
+{
+	uint8_t i;
+
+	original_assigned_sample_i = 0xFF;//error, not found
+
+	for (i=0; i<end_assigned_sample_i; i++)
+	{
+		if (str_cmp(t_assign_samples[i].filename, s->filename))
+		{
+			original_assigned_sample_i = i;
+			break;
+		}
+	}
+
+	if (original_assigned_sample_i == 0xFF)
+		return(1); //fail
+
+	cur_assigned_sample_i = original_assigned_sample_i;
+	return(0);
+
+}
+
+
+void enter_assignment_mode(void)
+{
+	uint8_t i;
+
+	//force us to be on a non -SAVE bank
+	if (i_param[0][BANK] >= MAX_NUM_REC_BANKS)
+	{
+		do i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
+		while (i_param[0][BANK] >= MAX_NUM_REC_BANKS);
+
+		flags[PlayBank1Changed] = 1;
+	}
+
+	end_assigned_sample_i = load_samples_to_assign(i_param[0][BANK]);
+
+	if (end_assigned_sample_i)
+	{
+		//find the current sample in the t_assigned_samples array
+		i = find_current_sample_in_assign(&(samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]));
+		if (i)	{flags[AssigningEmptySample] = 1;}
+
+		//Add a blank/erase sample at the end
+		t_assign_samples[end_assigned_sample_i].filename[0] = 0;
+		t_assign_samples[end_assigned_sample_i].sampleSize = 0;
+		end_assigned_sample_i ++;
+
+		cur_assigned_sample_i = original_assigned_sample_i;
+		//global_mode[ASSIGN_MODE] = 1;
+
+	} else
+	{
+		flags[AssignModeRefused] = 4;
+	}
+}
+
+
+void assign_sample(uint8_t assigned_sample_i)
+{
+	uint8_t sample, bank;
+	uint32_t t32;
+
+	bank = i_param[0][BANK];
+	sample = i_param[0][SAMPLE];
+
+	str_cpy(samples[bank][sample].filename,   t_assign_samples[ assigned_sample_i ].filename);
+	samples[bank][sample].blockAlign 		= t_assign_samples[ assigned_sample_i ].blockAlign;
+	samples[bank][sample].numChannels 		= t_assign_samples[ assigned_sample_i ].numChannels;
+	samples[bank][sample].sampleByteSize 	= t_assign_samples[ assigned_sample_i ].sampleByteSize;
+	samples[bank][sample].sampleRate 		= t_assign_samples[ assigned_sample_i ].sampleRate;
+	samples[bank][sample].sampleSize 		= t_assign_samples[ assigned_sample_i ].sampleSize;
+	samples[bank][sample].startOfData 		= t_assign_samples[ assigned_sample_i ].startOfData;
+
+	if (samples[bank][sample].inst_end > samples[bank][sample].sampleSize)
+		samples[bank][sample].inst_end = samples[bank][sample].sampleSize;
+
+	if (samples[bank][sample].inst_start > samples[bank][sample].inst_end)
+	{
+		t32 								= samples[bank][sample].inst_start;
+		samples[bank][sample].inst_start 	= samples[bank][sample].inst_end;
+		samples[bank][sample].inst_end 		= t32;
+	}
+
+
+	flags[ForceFileReload1] = 1;
+
+	if (samples[bank][sample].filename[0] == 0)
+		flags[AssigningEmptySample] = 1;
+	else
+		flags[AssigningEmptySample] = 0;
+
+}
+
+
+void save_exit_assignment_mode(void)
+{
+	FRESULT res;
+
+	//global_mode[ASSIGN_MODE] = 0;
+
+	check_enabled_banks(); //disables a bank if we cleared it out
+
+	res = write_sampleindex_file();
+	if (res!=FR_OK) {g_error|=CANNOT_WRITE_INDEX; check_errors();}
+
+}
+
+void cancel_exit_assignment_mode(void)
+{
+	assign_sample(original_assigned_sample_i);
+	//global_mode[ASSIGN_MODE] = 0;
+}
+
+
+void next_unassigned_sample(void)
+{
+
+	play_state[0]=SILENT;
+	play_state[1]=SILENT;
+
+	cur_assigned_sample_i ++;
+	if (cur_assigned_sample_i >= end_assigned_sample_i || cur_assigned_sample_i >= MAX_ASSIGNED)
+		cur_assigned_sample_i = 0;
+
+	assign_sample(cur_assigned_sample_i);
+
+	flags[Play1Trig]=1;
+}
+
+
+void set_sample_gain(Sample *s_sample, float gain)
+{
+	if (gain >= 2.1) 		gain = 2.1f;
+	else if (gain <= 0.1)	gain = 0.1f;
+
+	s_sample->inst_gain = gain;
+
+}
+
+void set_sample_trim_end(Sample *s_sample, float en)
+{
+	uint32_t trimend;
+
+	if (en >= 1.0f) 				trimend = s_sample->sampleSize;
+	else 							trimend = s_sample->sampleSize * en;
+	if (trimend <= 0) 				trimend = 4420;
+
+	trimend &= 0xFFFFFFF8;
+
+	s_sample->inst_end = trimend;
+
+}
+
+//sets the trim start point between 0 and 100ms before the end of the sample file
+void set_sample_trim_start(Sample *s_sample, float st)
+{
+	uint32_t trimstart;
+
+	if (st >= 1.0f) 				trimstart = s_sample->sampleSize - 4420;
+	else if (st <= (1.0/4096.0))	trimstart = 0;
+	else 							trimstart = (s_sample->sampleSize - 4420) * st;
+
+	trimstart &= 0xFFFFFFF8;
+
+	s_sample->inst_start = trimstart;
+
+}

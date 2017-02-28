@@ -36,6 +36,7 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = BANK1BUT_pin;	GPIO_Init(BANK1BUT_GPIO, &gpio);
 	gpio.GPIO_Pin = BANK2BUT_pin;	GPIO_Init(BANK2BUT_GPIO, &gpio);
 	gpio.GPIO_Pin = BANKRECBUT_pin;	GPIO_Init(BANKRECBUT_GPIO, &gpio);
+	gpio.GPIO_Pin = EDIT_BUTTON_pin;	GPIO_Init(EDIT_BUTTON_GPIO, &gpio);
 
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
@@ -47,8 +48,8 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = REV2JACK_pin;	GPIO_Init(REV2JACK_GPIO, &gpio);
 
 	//Switch
-	gpio.GPIO_Pin = STEREOSW_T1_pin;	GPIO_Init(STEREOSW_T1_GPIO, &gpio);
-	gpio.GPIO_Pin = STEREOSW_T2_pin;	GPIO_Init(STEREOSW_T2_GPIO, &gpio);
+	// gpio.GPIO_Pin = STEREOSW_T1_pin;	GPIO_Init(STEREOSW_T1_GPIO, &gpio);
+	// gpio.GPIO_Pin = STEREOSW_T2_pin;	GPIO_Init(STEREOSW_T2_GPIO, &gpio);
 
 
 
@@ -183,10 +184,10 @@ void test_dig_inouts(void)
 	PLAYLED1_OFF;
 
 	while (0){
-		t=STEREOSW;
-		if (t==SW_MONO) {PLAYLED1_ON;PLAYLED2_OFF;CLIPLED1_OFF;}
-		else if (t==SW_LR) {PLAYLED1_OFF;PLAYLED2_ON;CLIPLED1_OFF;}
-		else if (t==SW_LINK) {CLIPLED1_ON;PLAYLED1_OFF;PLAYLED2_OFF;}
+		// t=STEREOSW;
+		// if (t==SW_MONO) {PLAYLED1_ON;PLAYLED2_OFF;CLIPLED1_OFF;}
+		// else if (t==SW_LR) {PLAYLED1_OFF;PLAYLED2_ON;CLIPLED1_OFF;}
+		// else if (t==SW_LINK) {CLIPLED1_ON;PLAYLED1_OFF;PLAYLED2_OFF;}
 
 	}
 

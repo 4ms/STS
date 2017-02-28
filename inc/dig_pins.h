@@ -45,6 +45,10 @@
 #define REV2BUT_GPIO GPIOA
 #define REV2BUT (!(REV2BUT_GPIO->IDR & REV2BUT_pin))
 
+#define EDIT_BUTTON_pin GPIO_Pin_3
+#define EDIT_BUTTON_GPIO GPIOD
+#define EDIT_BUTTON (!(EDIT_BUTTON_GPIO->IDR & EDIT_BUTTON_pin))
+
 
 //Trigger input jacks
 
@@ -70,20 +74,20 @@
 
 
 //Switch
-#define SWITCH_CENTER 0b11
-#define SWITCH_LEFT 0b01
-#define SWITCH_RIGHT 0b10
-#define SWITCH_INVALID 0b00
+// #define SWITCH_CENTER 0b11
+// #define SWITCH_LEFT 0b01
+// #define SWITCH_RIGHT 0b10
+// #define SWITCH_INVALID 0b00
 
-#define SW_MONO SWITCH_LEFT
-#define SW_LINK SWITCH_CENTER
-#define SW_LR SWITCH_RIGHT
+// #define SW_MONO SWITCH_LEFT
+// #define SW_LINK SWITCH_CENTER
+// #define SW_LR SWITCH_RIGHT
 
-#define STEREOSW_T1_pin GPIO_Pin_3
-#define STEREOSW_T1_GPIO GPIOD
-#define STEREOSW_T2_pin GPIO_Pin_4
-#define STEREOSW_T2_GPIO GPIOD
-#define STEREOSW (((STEREOSW_T2_GPIO->IDR & STEREOSW_T2_pin) ? 0b10:0b00) | ((STEREOSW_T1_GPIO->IDR & STEREOSW_T1_pin) ? 0b01:0b00))
+// #define STEREOSW_T1_pin GPIO_Pin_3
+// #define STEREOSW_T1_GPIO GPIOD
+// #define STEREOSW_T2_pin GPIO_Pin_4
+// #define STEREOSW_T2_GPIO GPIOD
+// #define STEREOSW (((STEREOSW_T2_GPIO->IDR & STEREOSW_T2_pin) ? 0b10:0b00) | ((STEREOSW_T1_GPIO->IDR & STEREOSW_T1_pin) ? 0b01:0b00))
 //#define STEREOSW ((STEREOSW_T2_GPIO->IDR & (STEREOSW_T1_pin|STEREOSW_T2_pin)) >> 3)
 
 

@@ -3,6 +3,8 @@
 #include "dig_pins.h"
 #include "buttons.h"
 #include "sts_filesystem.h"
+#include "edit_mode.h"
+
 
 enum ButtonStates button_state[NUM_BUTTONS];
 extern uint8_t flags[NUM_FLAGS];
@@ -30,11 +32,13 @@ void init_buttons(void)
 
 void Button_Debounce_IRQHandler(void)
 {
-	static uint16_t State[NUM_BUTTONS] = {0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff}; // Current debounce status
+//	static uint16_t State[NUM_BUTTONS] = {0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff}; // Current debounce status
+//	static uint16_t State[NUM_BUTTONS] = {[0 ... NUM_BUTTONS-1] = 0xffff}; // Current debounce status
+	static uint16_t State[NUM_BUTTONS] = {0xffff}; // Current debounce status
 	uint16_t t;
 	uint8_t i;
 	uint32_t but_read;
-	static uint32_t long_press[NUM_BUTTONS] = {0,0,0,0,0,0,0,0};
+	static uint32_t long_press[NUM_BUTTONS] = {0};
 
 
 	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET) {
@@ -67,6 +71,9 @@ void Button_Debounce_IRQHandler(void)
 					break;
 				case Rev2:
 					but_read=REV2BUT;
+					break;
+				case Edit:
+					but_read=EDIT_BUTTON;
 					break;
 			}
 
@@ -106,6 +113,11 @@ void Button_Debounce_IRQHandler(void)
 
 					case Rev2:
 						break;
+
+					case Edit:
+						global_mode[ASSIGN_MODE] = 1;
+						break;
+
 				}
 
 			}
@@ -124,7 +136,7 @@ void Button_Debounce_IRQHandler(void)
 							i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
 
 							//load assignment samples for new bank
-							if (global_mode[ASSIGN_CH1]) enter_assignment_mode();
+							//if (global_mode[ASSIGN_MODE]) enter_assignment_mode();
 							break;
 
 						case Bank2:
@@ -144,10 +156,10 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 						case Rev1:
-							if (!global_mode[ASSIGN_CH1] && !flags[AssignModeRefused1])
+							//if (!global_mode[ASSIGN_MODE] && !flags[AssignModeRefused])
 								flags[Rev1Trig]=1;
-							else
-								next_unassigned_sample();
+							//else
+							//	next_unassigned_sample();
 
 
 							clear_errors();
@@ -157,6 +169,10 @@ void Button_Debounce_IRQHandler(void)
 							flags[Rev2Trig]=1;
 
 							clear_errors();
+							break;
+
+						case Edit:
+							global_mode[ASSIGN_MODE] = 0;
 							break;
 
 						default:
@@ -242,19 +258,19 @@ void Button_Debounce_IRQHandler(void)
 		}
 
 		//Sample Assignment mode
-		if (button_state[Play1] >= SHORT_PRESSED && button_state[Rev1] >= SHORT_PRESSED)
-		{
-			if (global_mode[ASSIGN_CH1])
-				save_exit_assignment_mode();
-			else
-				enter_assignment_mode();
+		// if (button_state[Play1] >= SHORT_PRESSED && button_state[Rev1] >= SHORT_PRESSED)
+		// {
+		// 	if (global_mode[ASSIGN_MODE])
+		// 		save_exit_assignment_mode();
+		// 	else
+		// 		enter_assignment_mode();
 
-			long_press[Play1] = 0xFFFFFFFF;
-			long_press[Rev1] = 0xFFFFFFFF;
-			button_state[Play1] = UP;
-			button_state[Rev1] = UP;
+		// 	long_press[Play1] = 0xFFFFFFFF;
+		// 	long_press[Rev1] = 0xFFFFFFFF;
+		// 	button_state[Play1] = UP;
+		// 	button_state[Rev1] = UP;
 
-		}
+		// }
 		//ToDo:
 		//only allow assign mode on ch2
 		//we will use ch1 to move samples from different banks
@@ -272,20 +288,10 @@ void Button_Debounce_IRQHandler(void)
 		//Bank1 is off, no effect
 		//
 
-		if (button_state[Play2] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED)
-		{
-			cancel_exit_assignment_mode();
-
-//			if (global_mode[ASSIGN_CH2])
-//				save_exit_assignment_mode(1);
-//			else
-//				enter_assignment_mode(1);
-//
-//			long_press[Play2] = 0xFFFFFFFF;
-//			long_press[Rev2] = 0xFFFFFFFF;
-//			button_state[Play2] = DOWN;
-//			button_state[Rev2] = DOWN;
-		}
+		// if (button_state[Play2] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED)
+		// {
+		// 	cancel_exit_assignment_mode();
+		// }
 
 
 		// Clear TIM update interrupt

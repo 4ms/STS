@@ -1,0 +1,12 @@
+*.ods
+firmwares/
+.DS_Store
+.cproject
+build/
+wav/
+Makefile-old
+*.jdebug
+.project
+.settings/
+sample\ wavs/
+notes/

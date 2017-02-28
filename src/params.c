@@ -20,6 +20,7 @@
 #include "log_taper_padded.h"
 #include "pitch_pot_cv.h"
 #include "buttons.h"
+#include "edit_mode.h"
 
 extern float pitch_pot_cv[4096];
 const float voltoct[4096];
@@ -115,6 +116,8 @@ void init_modes(void)
 	global_mode[SYSTEM_SETTINGS] = 0;
 	global_mode[MONITOR_RECORDING] = 0;
 	global_mode[ENABLE_RECORDING] = 0;
+	global_mode[STEREO_LINK] = 0;
+	global_mode[ASSIGN_MODE] = 0;
 
 }
 
@@ -274,14 +277,14 @@ void update_params(void)
 	uint8_t chan;
 	uint8_t old_val;
 	uint8_t new_val;
-	uint8_t stereo_switch;
 	uint8_t ok_sampleslot;
+	float t_f;
+	uint32_t t_32;
+	uint8_t samplenum, banknum;
 
 	recording_enabled=1;
 
-	stereo_switch=STEREOSW;
-
-	if (stereo_switch==SW_MONO)
+	if (!global_mode[STEREO_LINK])
 	{
 		i_param[0][STEREO_MODE] = STEREO_SUM;
 		i_param[1][STEREO_MODE] = STEREO_SUM;
@@ -292,104 +295,198 @@ void update_params(void)
 		i_param[1][STEREO_MODE] = STEREO_RIGHT;
 	}
 
-
-	for (chan=0;chan<2;chan++)
+	//
+	// Assignment mode
+	// Channel 2's knobs control the sample instance (assignment) parameters
+	//
+	if (global_mode[ASSIGN_MODE])
 	{
-		//
-		// LENGTH POT
-		//
-		f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
-
-		if (f_param[chan][LENGTH] > 1.0)			f_param[chan][LENGTH] = 1.0;
-		if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
-
+		samplenum = i_param[chan][SAMPLE];
+		banknum = i_param[chan][BANK];
 
 		//
-		// START POT
+		// Trim End 
+		// 0 to 1.0 with ch1 knob
+		// +/- 0.1 with ch2 knob
 		//
-		f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
+		if (flag_pot_changed[LENGTH_POT*2+0])
+			samples[banknum][samplenum].knob_pos_length1	= i_smoothed_potadc[LENGTH_POT*2+0];
 
-		if (f_param[chan][START] > 1.0)
-			f_param[chan][START] = 1.0;
+		if (flag_pot_changed[LENGTH_POT*2+1])
+			samples[banknum][samplenum].knob_pos_length2	= i_smoothed_potadc[LENGTH_POT*2+1];
+
+		if (flag_pot_changed[LENGTH_POT*2+1] || flag_pot_changed[LENGTH_POT*2+0])
+		{
+			t_f 	 = samples[banknum][samplenum].knob_pos_length1 / 4096.0;
+			t_f 	+= samples[banknum][samplenum].knob_pos_length2 / 20480.0;
+			t_f		-= 0.1f;
+			set_sample_trim_end(&samples[banknum][samplenum], t_f);
+		}
+
+
+
+		//
+		// Trim Start
+		// 0 to 1.0 with ch1 knob
+		// +/- 0.1 with ch2 knob
+		//
+
+		if (flag_pot_changed[START_POT*2+0])
+			samples[banknum][samplenum].knob_pos_start1	= (i_smoothed_potadc[START_POT*2+0]);
+
+		if (flag_pot_changed[START_POT*2+1])
+			samples[banknum][samplenum].knob_pos_start2	= (i_smoothed_potadc[START_POT*2+1]);
+
+		if (flag_pot_changed[START_POT*2+1] || flag_pot_changed[START_POT*2+0])
+		{
+			t_f 	 = samples[banknum][samplenum].knob_pos_start1 / 4096.0;
+			t_f 	+= samples[banknum][samplenum].knob_pos_start2 / 20480.0;
+			t_f		-= 0.1f;
+			set_sample_trim_start(&samples[banknum][samplenum], t_f);
+		}
+
+		//
+		// Gain (sample ch2 pot): 
+		// 0.1 to 2.1 with just the knob (jack disabled)
+		//
+		if (flag_pot_changed[SAMPLE_POT*2+1])
+		{
+			t_f 	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] + 204.8f) / 2048.0f;
+			set_sample_gain(&samples[banknum][samplenum], t_f);
+		}
 
 		//
 		// PITCH POT
 		//
-		//f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]];
 
-		if ((old_i_smoothed_cvadc[PITCH_CV*2+chan] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+chan] > 2058)) //positive voltage on 1V/oct jack
+		if ((old_i_smoothed_cvadc[PITCH_CV*2+0] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+0] > 2058)) //positive voltage on 1V/oct jack
 		{
-			f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
-			//if (chan==1) f_param[chan][PITCH] *= 1.009227524f;
+			f_param[0][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+0]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+0]];
 		}
 		else
-			f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]];
+			f_param[0][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+0]];
 
-		if (f_param[chan][PITCH] > MAX_RS)
-			f_param[chan][PITCH] = MAX_RS;
+		if (f_param[0][PITCH] > MAX_RS)
+			f_param[0][PITCH] = MAX_RS;
 
 		//
-		// SAMPLE POT
+		// SAMPLE POT + CV
 		//
-		old_val = i_param[chan][SAMPLE];
-		new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+chan] + old_i_smoothed_cvadc[SAMPLE_CV*2+chan] );
-
+		old_val = i_param[0][SAMPLE];
+		new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+0] + old_i_smoothed_cvadc[SAMPLE_CV*2+0] );
 
 		if (old_val != new_val)
 		{
-			i_param[chan][SAMPLE] = new_val;
-			flags[PlaySample1Changed + chan*2] = 1;
+			i_param[0][SAMPLE] = new_val;
+			flags[PlaySample1Changed] = 1;
 
-			if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
-				flags[PlaySample1Changed_empty + chan] = 6;
+			if (samples[ i_param[0][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
+				flags[PlaySample1Changed_empty] = 6;
 			else
-				flags[PlaySample1Changed_valid + chan] = 6;
-		}
-
-		if (stereo_switch==SW_LINK)
-		{
-			if (i_param[1][SAMPLE] != i_param[0][SAMPLE])
-				flags[PlaySample2Changed] = 1;
-
-			if (i_param[1][BANK] != i_param[0][BANK])
-				flags[PlayBank2Changed] = 1;
-
-			i_param[1][SAMPLE] 		= i_param[0][SAMPLE];
-			i_param[1][BANK] 		= i_param[0][BANK];
-			i_param[1][LOOPING] 	= i_param[0][LOOPING];
-			f_param[1][PITCH] 		= f_param[0][PITCH];
-			f_param[1][START] 		= f_param[0][START];
-			f_param[1][LENGTH] 		= f_param[0][LENGTH];
-
-			//flags[PlaySample2Changed] = flags[PlaySample1Changed];
-
-
-			break; //only calculate channel 0's parameters, because in LINK mode channel 1's params are copied from channel 0
+				flags[PlaySample1Changed_valid] = 6;
 		}
 
 
-	}
-
-
-	//
-	// REC SAMPLE POT
-	//
-	old_val = i_param[REC][SAMPLE];
-	new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
-
-	if (old_val != new_val)
+	} //if assign_mode
+	else 
 	{
-		i_param[REC][SAMPLE] = new_val;
-		flags[RecSampleChanged] = 1;
-		if (global_mode[MONITOR_RECORDING])
-		{
-			flags[RecSampleChanged_light] = 10;
-			//?? DO THIS???
-			//play the sample selected by rec bank/sample
-			//have to override i_param[0][BANK] and [SAMPLE] and all params (pitch, length...)
-		}
-	}
 
+		for (chan=0;chan<2;chan++)
+		{
+			//
+			// LENGTH POT + CV
+			//
+			f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
+
+			if (f_param[chan][LENGTH] > 1.0)			f_param[chan][LENGTH] = 1.0;
+			if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
+
+
+			//
+			// START POT + CV
+			//
+			f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
+
+			if (f_param[chan][START] > 1.0)
+				f_param[chan][START] = 1.0;
+
+			//
+			// PITCH POT + CV
+			//
+
+			if ((old_i_smoothed_cvadc[PITCH_CV*2+chan] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+chan] > 2058)) //positive voltage on 1V/oct jack
+			{
+				f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
+				//if (chan==1) f_param[chan][PITCH] *= 1.009227524f;
+			}
+			else
+				f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]];
+
+			if (f_param[chan][PITCH] > MAX_RS)
+				f_param[chan][PITCH] = MAX_RS;
+
+			//
+			// SAMPLE POT + CV
+			//
+			old_val = i_param[chan][SAMPLE];
+			new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+chan] + old_i_smoothed_cvadc[SAMPLE_CV*2+chan] );
+
+			if (old_val != new_val)
+			{
+				i_param[chan][SAMPLE] = new_val;
+				flags[PlaySample1Changed + chan*2] = 1;
+
+				if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
+					flags[PlaySample1Changed_empty + chan] = 6;
+				else
+					flags[PlaySample1Changed_valid + chan] = 6;
+			}
+
+			if (global_mode[STEREO_LINK])
+			{
+				if (i_param[1][SAMPLE] != i_param[0][SAMPLE])
+					flags[PlaySample2Changed] = 1;
+
+				if (i_param[1][BANK] != i_param[0][BANK])
+					flags[PlayBank2Changed] = 1;
+
+				i_param[1][SAMPLE] 		= i_param[0][SAMPLE];
+				i_param[1][BANK] 		= i_param[0][BANK];
+				i_param[1][LOOPING] 	= i_param[0][LOOPING];
+				f_param[1][PITCH] 		= f_param[0][PITCH];
+				f_param[1][START] 		= f_param[0][START];
+				f_param[1][LENGTH] 		= f_param[0][LENGTH];
+
+				//flags[PlaySample2Changed] = flags[PlaySample1Changed];
+
+
+				break; //only calculate channel 0's parameters, because in LINK mode channel 1's params are copied from channel 0
+			}
+
+
+		} //for chan
+
+
+		//
+		// REC SAMPLE POT
+		//
+		old_val = i_param[REC][SAMPLE];
+		new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+
+		if (old_val != new_val)
+		{
+			i_param[REC][SAMPLE] = new_val;
+			flags[RecSampleChanged] = 1;
+			if (global_mode[MONITOR_RECORDING])
+			{
+				flags[RecSampleChanged_light] = 10;
+				//?? DO THIS???
+				//play the sample selected by rec bank/sample
+				//have to override i_param[0][BANK] and [SAMPLE] and all params (pitch, length...)
+			}
+		}
+
+	} //else if assign_mode
 }
 
 
@@ -405,7 +502,7 @@ void process_mode_flags(void)
 		{
 			flags[Play1Trig]=0;
 
-			if (STEREOSW==SW_LINK)
+			if (global_mode[STEREO_LINK])
 			{
 				play_state[1] = play_state[0];
 				//if (play_state[0]==SILENT && (play_state[1]== PLAYING || play_state[1] == PLAYING_PERC)) play_state[1]=SILENT;
@@ -428,7 +525,7 @@ void process_mode_flags(void)
 		{
 			flags[Play2Trig]=0;
 
-			if (STEREOSW==SW_LINK)
+			if (global_mode[STEREO_LINK])
 			{
 				play_state[0] = play_state[1];
 				if (i_param[0][REV]!=i_param[1][REV])
@@ -480,12 +577,12 @@ void process_mode_flags(void)
 		{
 			flags[Rev1Trig]=0;
 
-			if (STEREOSW==SW_LINK && i_param[0][REV]!=i_param[1][REV])
+			if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
 				i_param[1][REV] = i_param[0][REV];
 
 			toggle_reverse(0);
 
-			if (STEREOSW==SW_LINK)
+			if (global_mode[STEREO_LINK])
 				toggle_reverse(1);
 
 		}
@@ -494,12 +591,12 @@ void process_mode_flags(void)
 
 			flags[Rev2Trig]=0;
 
-			if (STEREOSW==SW_LINK && i_param[0][REV]!=i_param[1][REV])
+			if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
 				i_param[0][REV] = i_param[1][REV];
 
 			toggle_reverse(1);
 
-			if (STEREOSW==SW_LINK)
+			if (global_mode[STEREO_LINK])
 				toggle_reverse(0);
 
 		}
@@ -512,7 +609,7 @@ void process_mode_flags(void)
 			{
 				i_param[0][LOOPING] = 0;
 
-				if (STEREOSW==SW_LINK)
+				if (global_mode[STEREO_LINK])
 					i_param[1][LOOPING] = 0;
 			}
 			else
@@ -520,7 +617,7 @@ void process_mode_flags(void)
 				i_param[0][LOOPING] = 1;
 				flags[Play1Trig] = 1;
 
-				if (STEREOSW==SW_LINK)
+				if (global_mode[STEREO_LINK])
 				{
 					i_param[1][LOOPING] = 1;
 					flags[Play2Trig] = 1;
@@ -535,7 +632,7 @@ void process_mode_flags(void)
 		{
 			flags[ToggleLooping2] = 0;
 
-			if (STEREOSW!=SW_LINK)
+			if (!global_mode[STEREO_LINK])
 			{
 				if (i_param[1][LOOPING])
 				{

@@ -40,13 +40,19 @@ typedef struct Sample {
 	uint8_t 	numChannels;
 	uint8_t 	blockAlign;
 	float		peak_dBFS; //not yet implemented
+
+	uint32_t	inst_start;
+	uint32_t	inst_end;
+	float		inst_gain;
+
+	uint32_t	knob_pos_start1;
+	uint32_t	knob_pos_start2;
+	uint32_t	knob_pos_length1;
+	uint32_t	knob_pos_length2;
+
 } Sample;
 
-typedef struct Slot {
-	float		start;
-	float		length;
-	float		gain;
-} Slot;
+
 
 uint8_t bank_to_color(uint8_t bank, char *color);
 
@@ -65,13 +71,7 @@ void disable_bank(uint8_t bank);
 uint8_t load_sampleindex_file(void);
 uint8_t write_sampleindex_file(void);
 
-void enter_assignment_mode(void);
-void save_exit_assignment_mode(void);
-void cancel_exit_assignment_mode(void);
-uint8_t load_samples_to_assign(uint8_t bank);
 
-void next_unassigned_sample(void);
-uint8_t find_current_sample_in_assign(Sample *s);
 
 
 #endif /* INC_STS_FILESYSTEM_H_ */
