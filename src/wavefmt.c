@@ -1,17 +1,26 @@
 #include "wavefmt.h"
 
-uint8_t is_valid_wav_format(WaveHeader sample_header)
+uint8_t is_valid_wav_header(WaveHeader sample_header)
 {
 	if (	sample_header.RIFFId 		!= ccRIFF			//'RIFF'
 			|| sample_header.fileSize		 < 16			//File size - 8
 			|| sample_header.WAVEId 		!= ccWAVE		//'WAVE'
-			|| sample_header.fmtId 			!= ccFMT		//'fmt '
-			|| sample_header.fmtSize 		 < 16			//Format Chunk size
-			|| sample_header.audioFormat	!= 0x0001		//PCM format
-			|| sample_header.numChannels 	 > 0x0002		//Stereo or mono allowed
-			|| sample_header.sampleRate 	 > 48000		//Between 8k and 48k sampling rate allowed
-			|| sample_header.sampleRate		 < 8000
-			|| (sample_header.bitsPerSample		!= 16 		//Only 16 bit samplerate allowed (for now)
+		)
+		return 0;
+	else
+		return 1;
+
+}
+
+uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
+{
+	if (	fmt_chunk.fmtId 			!= ccFMT		//'fmt '
+			|| fmt_chunk.fmtSize 		 < 16			//Format Chunk size
+			|| fmt_chunk.audioFormat	!= 0x0001		//PCM format
+			|| fmt_chunk.numChannels 	 > 0x0002		//Stereo or mono allowed
+			|| fmt_chunk.sampleRate 	 > 48000		//Between 8k and 48k sampling rate allowed
+			|| fmt_chunk.sampleRate		 < 8000
+			|| (fmt_chunk.bitsPerSample		!= 16 		//Only 16 bit samplerate allowed (for now)
 				//&& sample_header.bitsPerSample	!= 8
 				//&& sample_header.bitsPerSample	!= 24
 				//&& sample_header.bitsPerSample	!= 32
@@ -23,19 +32,20 @@ uint8_t is_valid_wav_format(WaveHeader sample_header)
 
 }
 
-void create_waveheader(WaveHeader *w)
+void create_waveheader(WaveHeader *w, WaveFmtChunk *f)
 {
 	w->RIFFId		= ccRIFF;
-	w->fileSize 	= sizeof(WaveHeader) - 8; //filesize - 8, for now we let this be the size of the wave header - 8
+	w->fileSize 	= sizeof(WaveHeader) + sizeof(WaveFmtChunk) - 8; //filesize - 8, for now we let this be the size of the wave header - 8
 	w->WAVEId 		= ccWAVE;
-	w->fmtId 		= ccFMT;
-	w->fmtSize		= 16;
-	w->audioFormat	= 1;
-	w->numChannels	= 2;
-	w->sampleRate	= 44100;
-	w->byteRate		= (44100 * 2 * 2); //sampleRate * numChannels * bitsPerSample
-	w->blockAlign	= 4;
-	w->bitsPerSample= 16;
+
+	f->fmtId 		= ccFMT;
+	f->fmtSize		= 16;
+	f->audioFormat	= 1;
+	f->numChannels	= 2;
+	f->sampleRate	= 44100;
+	f->byteRate		= (44100 * 2 * 2); //sampleRate * numChannels * bitsPerSample
+	f->blockAlign	= 4;
+	f->bitsPerSample= 16;
 }
 
 void create_chunk(uint32_t chunkId, uint32_t chunkSize, WaveChunk *wc)
