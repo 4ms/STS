@@ -242,7 +242,7 @@ void write_buffer_to_storage(void)
 				//buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
 				buffer_lead = CB_distance(rec_buff, 0);
 
-				if (buffer_lead > WRITE_BLOCK_SIZE)
+				if (buffer_lead > WRITE_BLOCK_SIZE) //Error: comparing # samples to # bytes. Should be buffer_lead*SAMPLINGBYTES
 				{
 
 					addr_exceeded = memory_read16_cb(rec_buff, t_buff16, WRITE_BLOCK_SIZE>>1, 0);

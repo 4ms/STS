@@ -242,7 +242,6 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 	uint32_t br;
 	uint32_t rd;
 	WaveChunk chunk;
-	uint32_t t32;
 
 	rd = sizeof(WaveHeader);
 	res = f_read(sample_file, &sample_header, rd, &br);
