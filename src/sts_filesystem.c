@@ -238,6 +238,7 @@ void clear_sample_header(Sample *s_sample)
 uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 {
 	WaveHeader sample_header;
+	WaveFmtChunk fmt_chunk;
 	FRESULT res;
 	uint32_t br;
 	uint32_t rd;
@@ -248,14 +249,15 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 
 	if (res != FR_OK)	{g_error |= FILE_READ_FAIL; return(res);}//file not opened
 	else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading first header
-	else if ( !is_valid_wav_format(sample_header) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//first header error (not a valid wav file)
+	else if ( !is_valid_wav_header(sample_header) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//first header error (not a valid wav file)
 
 	else
 	{
+		//Look for a WaveFmtChunk (which starts off as a chunk)
 		chunk.chunkId = 0;
 		rd = sizeof(WaveChunk);
 
-		while (chunk.chunkId != ccDATA)
+		while (chunk.chunkId != ccFMT)
 		{
 			res = f_read(sample_file, &chunk, rd, &br);
 
@@ -263,38 +265,69 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 			if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
 			//fast-forward to the next chunk
-			if (chunk.chunkId != ccDATA)
+			if (chunk.chunkId != ccFMT)
 				f_lseek(sample_file, f_tell(sample_file) + chunk.chunkSize);
 
-			//Set the sampleSize as defined in the chunk
+		}
+
+		if (chunk.chunkId == ccFMT)
+		{
+			//Go back to beginning of chunk --probably could do this more elegantly by removing fmtID and fmtSize from WaveFmtChunk and just reading the next bit of data
+			f_lseek(sample_file, f_tell(sample_file) - sizeof(WaveChunk));
+
+			//Re-read whole chunk, since it's a WaveFmtChunk
+			rd = sizeof(WaveFmtChunk);
+			res = f_read(sample_file, &fmt_chunk, rd, &br);
+
+			if (res != FR_OK)	{g_error |= FILE_READ_FAIL; return(res);}//file not read
+			else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading format header
+			else if ( !is_valid_format_chunk(fmt_chunk) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//format header error (not a valid wav file)
 			else
 			{
-				if(chunk.chunkSize == 0)
+
+				//Look for the DATA chunk
+				chunk.chunkId = 0;
+				rd = sizeof(WaveChunk);
+
+				while (chunk.chunkId != ccDATA)
 				{
-					f_close(sample_file);break;
-				}
-				s_sample->sampleSize = chunk.chunkSize;
-				s_sample->sampleByteSize = sample_header.bitsPerSample>>3;
-				s_sample->sampleRate = sample_header.sampleRate;
-				s_sample->numChannels = sample_header.numChannels;
-				s_sample->blockAlign = sample_header.numChannels * sample_header.bitsPerSample>>3;
-				s_sample->startOfData = f_tell(sample_file);
+					res = f_read(sample_file, &chunk, rd, &br);
 
-				s_sample->inst_end = s_sample->sampleSize;
-				s_sample->inst_start = 0;
-				s_sample->inst_gain = 1.0;
-				s_sample->knob_pos_start1 = 0;
-				s_sample->knob_pos_start2 = 2048;
-				s_sample->knob_pos_length1 = 4095;
-				s_sample->knob_pos_length2 = 2048;
+					if (res != FR_OK)	{g_error |= FILE_READ_FAIL; f_close(sample_file); break;}
+					if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
+					//fast-forward to the next chunk
+					if (chunk.chunkId != ccDATA)
+						f_lseek(sample_file, f_tell(sample_file) + chunk.chunkSize);
 
+					//Set the sampleSize as defined in the chunk
+					else
+					{
+						if(chunk.chunkSize == 0)
+						{
+							f_close(sample_file);break;
+						}
+						s_sample->sampleSize = chunk.chunkSize;
+						s_sample->sampleByteSize = fmt_chunk.bitsPerSample>>3;
+						s_sample->sampleRate = fmt_chunk.sampleRate;
+						s_sample->numChannels = fmt_chunk.numChannels;
+						s_sample->blockAlign = fmt_chunk.numChannels * fmt_chunk.bitsPerSample>>3;
+						s_sample->startOfData = f_tell(sample_file);
 
+						s_sample->inst_end = s_sample->sampleSize;
+						s_sample->inst_start = 0;
+						s_sample->inst_gain = 1.0;
+						s_sample->knob_pos_start1 = 0;
+						s_sample->knob_pos_start2 = 2048;
+						s_sample->knob_pos_length1 = 4095;
+						s_sample->knob_pos_length2 = 2048;
 
-				return(FR_OK);
+						return(FR_OK);
 
-			} //else chunk
-		} //while chunk
+					} //else chunk
+				} //while chunk
+			} //is_valid_format_chunk
+		}//if ccFMT
 	}//no file error
 
 	return(FR_INT_ERR);

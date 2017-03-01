@@ -215,7 +215,7 @@ void write_buffer_to_storage(void)
 			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
 			if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_REC_OPEN_FAIL; check_errors(); break;}
 
-			create_waveheader(&whac.wh);
+			create_waveheader(&whac.wh, &whac.fc);
 			create_chunk(ccDATA, 0, &whac.wc);
 
 			sz = sizeof(WaveHeaderAndChunk);

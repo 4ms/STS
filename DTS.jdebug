@@ -11,7 +11,7 @@
 void OnProjectLoad (void) {
 
   Project.SetDevice ("STM32F427ZG");
-  Project.SetHostIF ("USB", "751000024");
+  Project.SetHostIF ("IP", "192.168.1.101");
   Project.SetTargetIF ("SWD");
   Project.SetTIFSpeed ("2 MHz");
   Project.AddSvdFile ("Cortex-M4.svd");

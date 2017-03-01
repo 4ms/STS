@@ -3,76 +3,23 @@
 	{
 		"selected_items":
 		[
-			[
-				"sample",
-				"samplenum"
-			],
-			[
-				"SAM",
-				"SAMPLE_POT"
-			],
-			[
-				"PIT",
-				"PITCH_POT"
-			],
-			[
-				"LENGTH",
-				"LENGTH_POT"
-			],
-			[
-				"ST",
-				"START_POT"
-			],
-			[
-				"START",
-				"START_POT"
-			],
-			[
-				"LEN",
-				"LENGTH_POT"
-			],
-			[
-				"sa",
-				"samplenum"
-			],
-			[
-				"bank",
-				"banknum"
-			],
-			[
-				"in",
-				"inst_start"
-			],
-			[
-				"inst_",
-				"inst_size"
-			],
-			[
-				"sam",
-				"sampleSize"
-			],
-			[
-				"RL",
-				"RLEVELLED2_ON"
-			],
-			[
-				"LL",
-				"LLEVELLED2_ON"
-			],
-			[
-				"RLE",
-				"RLEVELLED1_ON"
-			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "src/sts_filesystem.c",
+			"file": "src/main.c",
 			"settings":
 			{
-				"buffer_size": 10259,
-				"encoding": "UTF-8",
+				"buffer_size": 6718,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/buttons.c",
+			"settings":
+			{
+				"buffer_size": 6378,
 				"line_ending": "Unix"
 			}
 		},
@@ -80,26 +27,7 @@
 			"file": "src/params.c",
 			"settings":
 			{
-				"buffer_size": 16449,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "src/edit_mode.c",
-			"settings":
-			{
-				"buffer_size": 6584,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "inc/edit_mode.h",
-			"settings":
-			{
-				"buffer_size": 588,
-				"encoding": "UTF-8",
+				"buffer_size": 13611,
 				"line_ending": "Unix"
 			}
 		},
@@ -107,34 +35,25 @@
 			"file": "inc/params.h",
 			"settings":
 			{
-				"buffer_size": 1730,
+				"buffer_size": 1728,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "inc/sts_filesystem.h",
+			"file": "inc/dig_pins.h",
 			"settings":
 			{
-				"buffer_size": 1631,
+				"buffer_size": 4958,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/dig_pins.c",
+			"settings":
+			{
+				"buffer_size": 3915,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "src/sampler.c",
-			"settings":
-			{
-				"buffer_size": 31693,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "Makefile",
-			"settings":
-			{
-				"buffer_size": 4442,
-				"line_ending": "Windows"
 			}
 		}
 	],
@@ -177,22 +96,6 @@
 				]
 			],
 			[
-				"Packages/C++/C++ Single File.sublime-build",
-				""
-			]
-		],
-		[
-			[
-				[
-					"Packages/Makefile/Make.sublime-build",
-					""
-				],
-				[
-					"Packages/Makefile/Make.sublime-build",
-					"Clean"
-				]
-			],
-			[
 				"Packages/Makefile/Make.sublime-build",
 				""
 			]
@@ -201,47 +104,22 @@
 	"build_varint": "",
 	"command_palette":
 	{
-		"height": 247.0,
-		"last_filter": ":w",
+		"height": 87.0,
+		"last_filter": ":q",
 		"selected_items":
 		[
-			[
-				":w",
-				":w - Save"
-			],
-			[
-				":W",
-				":w - Save"
-			],
-			[
-				"pack inst",
-				"Package Control: Install Package"
-			],
-			[
-				"add",
-				"Package Control: Add Repository"
-			],
-			[
-				"Package Control: ",
-				"Package Control: Install Package"
-			],
-			[
-				"package",
-				"Package Control: Install Package"
-			],
 			[
 				":q",
 				"Set Syntax: SQL"
 			]
 		],
-		"width": 449.0
+		"width": 392.0
 	},
 	"console":
 	{
 		"height": 126.0,
 		"history":
 		[
-			"import urllib.request,os,hashlib; h = 'df21e130d211cfc94d9b0905775a7c0f' + '1e3d39e33b79698005270310898eea76'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
 		]
 	},
 	"distraction_free":
@@ -256,69 +134,17 @@
 	"expanded_folders":
 	[
 		"/Users/design/4ms/stm32/DTS",
-		"/Users/design/4ms/stm32/DTS/inc",
 		"/Users/design/4ms/stm32/DTS/src"
 	],
 	"file_history":
 	[
-		"/Users/design/4ms/stm32/DLD/compressor.c",
-		"/Users/design/4ms/stm32/DLD/params.c",
-		"/Users/design/4ms/stm32/DTS/inc/edit_mode.h",
-		"/Users/design/4ms/stm32/DTS/src/sampler.c",
-		"/Users/design/4ms/stm32/DTS/src/buttons.c",
-		"/Users/design/4ms/stm32/DTS/src/edit_mode.c",
-		"/Users/design/4ms/stm32/DTS/inc/sampler.h",
-		"/Users/design/4ms/stm32/DTS/inc/params.h",
-		"/Users/design/4ms/stm32/DTS/src/rgb_leds.c",
-		"/Users/design/4ms/stm32/DTS/inc/dig_pins.h",
-		"/Users/design/4ms/stm32/DTS/inc/buttons.h",
-		"/Users/design/4ms/stm32/DTS/src/dig_pins.c",
-		"/Users/design/4ms/stm32/DTS/inc/globals.h",
-		"/Users/design/4ms/stm32/DTS/inc/sts_filesystem.h",
-		"/Users/design/4ms/stm32/DTS/inc/headers.h",
-		"/Users/design/4ms/stm32/DTS/src/assignment_mode.h",
-		"/Users/design/4ms/stm32/DTS/inc/tm_stm32f4_fatfs.h",
-		"/Users/design/4ms/stm32/DTS/LICENSE",
-		"/Users/design/4ms/stm32/RECORDER/src/rgb_leds.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/dig_pins.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/audio_memory.h",
-		"/Users/design/4ms/stm32/RECORDER/src/audio_memory.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/audio_sdram.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/globals.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/trigger_jacks.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/params.h",
-		"/Users/design/4ms/stm32/RECORDER/src/trigger_jacks.c",
-		"/Users/design/4ms/stm32/RECORDER/src/timekeeper.c",
-		"/Users/design/4ms/stm32/RECORDER/src/sts_filesystem.c",
-		"/Users/design/4ms/stm32/RECORDER/src/main.c",
-		"/Users/design/4ms/stm32/RECORDER/src/dig_pins.c",
-		"/Users/design/4ms/stm32/RECORDER/src/buttons.c",
-		"/Users/design/4ms/stm32/RECORDER/src/params.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/sts_filesystem.h",
-		"/Users/design/4ms/stm32/RECORDER/src/sampler.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/sampler.h",
-		"/Users/design/4ms/stm32/RECORDER/src/wav_recording.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/buttons.h",
-		"/Users/design/4ms/stm32/RECORDER/src/audio_util.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/audio_util.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/wav_recording.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/rgb_leds.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/timekeeper.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/codec.h",
-		"/Users/design/Library/Application Support/Sublime Text 3/Packages/User/untitled.sublime-macro",
-		"/Users/design/Library/Application Support/Sublime Text 3/Packages/User/find-selection-in-project.sublime-macro",
-		"/Users/design/4ms/stm32/DTS/.gitignore",
-		"/Users/design/4ms/stm32/DTS/main.map",
-		"/Users/design/Library/Application Support/Sublime Text 3/Packages/FileHeader/FileHeader.sublime-settings",
-		"/Users/design/Library/Application Support/Sublime Text 3/Packages/FileHeader/Default (OSX).sublime-keymap",
-		"/Users/design/4ms/stm32/DTS/src/system_settings.c",
-		"/Users/design/4ms/stm32/DTS/src/params.c",
-		"/Users/design/4ms/stm32/DTS/src/leds.c",
-		"/Users/design/4ms/stm32/DTS/src/main.c",
-		"/Users/design/4ms/stm32/DTS/src/audio_sdram.c",
 		"/Users/design/4ms/stm32/DTS/src/flash.c",
 		"/Users/design/4ms/stm32/DTS/stm32/periph/include/stm32f4xx_flash.h",
+		"/Users/design/4ms/stm32/DTS/src/buttons.c",
 		"/Users/design/4ms/stm32/DTS/DTS.sublime-project",
+		"/Users/design/4ms/stm32/DTS/src/sampler.c",
+		"/Users/design/4ms/stm32/DTS/inc/sampler.h",
+		"/Users/design/4ms/stm32/DTS/inc/dig_pins.h",
 		"/Users/design/4ms/stm32/DTS/DTS.jdebug",
 		"/Users/design/4ms/stm32/SMR/adc.c",
 		"/Users/design/4ms/stm32/SMR/adc.h",
@@ -329,123 +155,21 @@
 	],
 	"find":
 	{
-		"height": 35.0
+		"height": 23.0
 	},
 	"find_in_files":
 	{
 		"height": 93.0,
 		"where_history":
 		[
-			"<project>",
 			""
 		]
 	},
 	"find_state":
 	{
-		"case_sensitive": true,
+		"case_sensitive": false,
 		"find_history":
 		[
-			"startOfData",
-			"\n\t\t\t\t",
-			"load_bank_from_disk",
-			"load_sample_header",
-			"startOfData",
-			";",
-			"knob_pos_start1",
-			"uint32_t\t",
-			"startOfData",
-			"t_out",
-			"t_out ",
-			"t_out",
-			"out[i]",
-			"t_out",
-			"chan",
-			"+chan",
-			"s_sample->",
-			"sample[",
-			"sample",
-			"start",
-			"START_POT",
-			"length1\t",
-			"LENGTH",
-			"sampleSize",
-			"sz ",
-			"size",
-			"trimsize",
-			"sz",
-			"sampleSize",
-			"INC_ASSIGNMENT_MODE_H_",
-			"assignment_mode",
-			"ASSIGN_MODE",
-			"SW_LINK",
-			"STEREOSW",
-			"STEREOSW!=SW_LINK",
-			"STEREOSW==SW_LINK",
-			"BANKRECBUT",
-			"STEREOSW",
-			"START",
-			"LENGTH",
-			"AssignModeRefused1",
-			"AssignModeRefused2",
-			"AssigningEmptySample2",
-			"AssigningEmptySample1",
-			"ASSIGN_CH2",
-			"ASSIGN_CH1",
-			"enter_assignment_mode",
-			"assign_sample",
-			"play_state",
-			"TM_FATFS_Search",
-			"TM_FATFS_CheckCardDetectPin",
-			"TM_FATFS_TruncateBeginning",
-			"TM_FATFS_USBDriveSize",
-			"TM_FATFS_DriveSize",
-			"TM_FATFS_GetDriveSize",
-			"REC_CHAN",
-			"audio_sdram.h",
-			";",
-			"RecTrig",
-			"samples[sample_bank_now_recording][sample_num_now_recording]",
-			"bank_status",
-			"play_state",
-			"samples",
-			"out[1]",
-			"out[0]",
-			"Sample",
-			"samples",
-			"next_enabled_bank",
-			"ButLED",
-			"NUM_FLAGS",
-			"init_adc_param_update_IRQ",
-			"ButLED",
-			"[i]",
-			"_OFF",
-			"RLEVELLED3",
-			"RLEVELLED",
-			"PLAYLED1",
-			"_R_",
-			"_B_",
-			"CLIPLED2",
-			"LLEVELLED",
-			"LEVELLED",
-			"PLAY",
-			"RECBUT",
-			"PLAY1BUT",
-			"super+shift+f",
-			"bank_status",
-			"t_assign_samples",
-			"original_assigned_sample_i",
-			"end_assigned_sample_i",
-			"cur_assigned_sample_i",
-			"[chan]",
-			"chan",
-			"[chan]",
-			"ASSIGN_CH2",
-			"enter_assignment_mode",
-			"chan",
-			"params",
-			"Sample",
-			"t",
-			"CLIPLED1_ON",
 			"STEREOSW",
 			"uint16_t",
 			"potadc_buffer",
@@ -461,121 +185,67 @@
 		"regex": false,
 		"replace_history":
 		[
-			"AssignModeRefused",
-			"AssigningEmptySample",
-			"ASSIGN_MODE",
-			"TM_FATFS_USBDriveSize",
-			"outR",
-			"outL",
-			"_ON",
-			"REC_G_LED",
-			"REC_B_LED",
-			"REC_R_LED",
-			"LLEVELLED",
-			"BUSYLED",
-			"RLEVELLED3",
-			"RLEVELLED2",
-			"RLEVELLED1",
-			"LLEVELLED3",
-			"LLEVELLED2",
-			"LLEVELLED1",
-			"RLEVELLED3",
-			"RLEVELLED2",
-			"RLEVELLED1",
-			"LLEVELLED3",
-			"LLEVELLED2",
-			"LLEVELLED1",
-			"_B_",
-			"_G_",
-			"_R_",
-			"RLEVELLED",
-			"LLEVELLED"
 		],
 		"reverse": false,
-		"show_context": false,
-		"use_buffer2": false,
-		"whole_word": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
 		"wrap": true
 	},
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 1,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "src/sts_filesystem.c",
+					"file": "src/main.c",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 10259,
+						"buffer_size": 6718,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3965,
-								3965
+								458,
+								458
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/C++/C.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 3608.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
-					"type": "text"
-				},
-				{
-					"buffer": 1,
-					"file": "src/params.c",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 16449,
-						"regions":
-						{
-						},
-						"selection":
-						[
+							"rulers":
 							[
-								8183,
-								8183
-							]
-						],
-						"settings":
-						{
+							],
 							"syntax": "Packages/C++/C.sublime-syntax",
-							"translate_tabs_to_spaces": false
+							"word_wrap": true,
+							"wrap_width": 120
 						},
 						"translation.x": 0.0,
-						"translation.y": 4643.0,
+						"translation.y": 3232.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 5,
 					"type": "text"
 				},
 				{
-					"buffer": 2,
-					"file": "src/edit_mode.c",
+					"buffer": 1,
+					"file": "src/buttons.c",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 6584,
+						"buffer_size": 6378,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2119,
-								2119
+								321,
+								321
 							]
 						],
 						"settings":
@@ -584,38 +254,10 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 779.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 3,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "inc/edit_mode.h",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 588,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								400,
-								400
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C++.sublime-syntax"
-						},
-						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 6,
+					"stack_index": 0,
 					"type": "text"
 				}
 			]
@@ -625,12 +267,12 @@
 			"sheets":
 			[
 				{
-					"buffer": 4,
-					"file": "inc/params.h",
+					"buffer": 2,
+					"file": "src/params.c",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1730,
+						"buffer_size": 13611,
 						"regions":
 						{
 						},
@@ -643,36 +285,35 @@
 						],
 						"settings":
 						{
-							"syntax": "Packages/C++/C++.sublime-syntax",
+							"syntax": "Packages/C++/C.sublime-syntax",
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 7,
+					"stack_index": 3,
 					"type": "text"
 				},
 				{
-					"buffer": 5,
-					"file": "inc/sts_filesystem.h",
+					"buffer": 3,
+					"file": "inc/params.h",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1631,
+						"buffer_size": 1728,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								979,
-								1089
+								0,
+								0
 							]
 						],
 						"settings":
 						{
-							"history_list_is_closing": true,
 							"syntax": "Packages/C++/C++.sublime-syntax",
 							"translate_tabs_to_spaces": false
 						},
@@ -684,20 +325,48 @@
 					"type": "text"
 				},
 				{
-					"buffer": 6,
-					"file": "src/sampler.c",
+					"buffer": 4,
+					"file": "inc/dig_pins.h",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 31693,
+						"buffer_size": 4958,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								7285,
-								7285
+								2084,
+								2076
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 456.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "src/dig_pins.c",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3915,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1119,
+								1119
 							]
 						],
 						"settings":
@@ -706,38 +375,10 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 3437.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
-					"type": "text"
-				},
-				{
-					"buffer": 7,
-					"file": "Makefile",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 4442,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								0,
-								0
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Makefile/Makefile.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 1188.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
+					"stack_index": 1,
 					"type": "text"
 				}
 			]
@@ -749,7 +390,7 @@
 	},
 	"input":
 	{
-		"height": 31.0
+		"height": 0.0
 	},
 	"layout":
 	{
@@ -771,7 +412,7 @@
 		"cols":
 		[
 			0.0,
-			0.442755189963,
+			0.5,
 			1.0
 		],
 		"rows":
@@ -783,13 +424,13 @@
 	"menu_visible": true,
 	"output.exec":
 	{
-		"height": 176.0
+		"height": 100.0
 	},
 	"output.find_results":
 	{
-		"height": 254.0
+		"height": 0.0
 	},
-	"pinned_build_system": "Packages/Makefile/Make.sublime-build",
+	"pinned_build_system": "",
 	"project": "DTS.sublime-project",
 	"replace":
 	{
@@ -802,42 +443,6 @@
 		"last_filter": "",
 		"selected_items":
 		[
-			[
-				"mak",
-				"Makefile"
-			],
-			[
-				"sample",
-				"src/sampler.c"
-			],
-			[
-				"params",
-				"inc/params.h"
-			],
-			[
-				"sts_filesystem",
-				"inc/sts_filesystem.h"
-			],
-			[
-				"rgb",
-				"src/rgb_leds.c"
-			],
-			[
-				"dig_",
-				"inc/dig_pins.h"
-			],
-			[
-				"globals.h",
-				"inc/globals.h"
-			],
-			[
-				"global",
-				"inc/globals.h"
-			],
-			[
-				"dig_pins",
-				"inc/dig_pins.h"
-			],
 			[
 				"butto",
 				"src/buttons.c"
@@ -871,7 +476,7 @@
 		],
 		"width": 449.0
 	},
-	"selected_group": 1,
+	"selected_group": 0,
 	"settings":
 	{
 	},
@@ -879,7 +484,7 @@
 	"show_open_files": true,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 185.0,
+	"side_bar_width": 245.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{

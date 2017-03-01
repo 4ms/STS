@@ -21,7 +21,15 @@ typedef struct WaveHeader {
 	uint32_t RIFFId;
     uint32_t fileSize;
     uint32_t WAVEId;
+} WaveHeader;
 
+typedef struct WaveChunk {
+    // Data Subchunk
+    uint32_t chunkId;
+    uint32_t  chunkSize;
+} WaveChunk;
+
+typedef struct WaveFmtChunk {
     // Format Subchunk
     uint32_t fmtId;
     uint32_t fmtSize;
@@ -31,23 +39,20 @@ typedef struct WaveHeader {
     uint32_t byteRate;
     uint16_t blockAlign;
     uint16_t bitsPerSample;
-} WaveHeader;
+} WaveFmtChunk;
 
-typedef struct WaveChunk {
-    // Data Subchunk
-    uint32_t chunkId;
-    uint32_t  chunkSize;
 
-} WaveChunk;
 
 typedef struct WaveHeaderAndChunk {
 	WaveHeader wh;
+    WaveFmtChunk fc;
 	WaveChunk wc;
 } WaveHeaderAndChunk;
 
-uint8_t is_valid_wav_format(WaveHeader sample_header);
+uint8_t is_valid_wav_header(WaveHeader sample_header);
+uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk);
 
-void create_waveheader(WaveHeader *w);
+void create_waveheader(WaveHeader *w, WaveFmtChunk *f);
 void create_chunk(uint32_t chunkId, uint32_t chunkSize, WaveChunk *wc);
 
 #endif /* INC_WAVEFMT_H_ */
