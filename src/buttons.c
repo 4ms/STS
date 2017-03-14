@@ -115,7 +115,7 @@ void Button_Debounce_IRQHandler(void)
 						break;
 
 					case Edit:
-						global_mode[ASSIGN_MODE] = 1;
+						global_mode[EDIT_MODE] = 1;
 						break;
 
 				}
@@ -136,7 +136,7 @@ void Button_Debounce_IRQHandler(void)
 							i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
 
 							//load assignment samples for new bank
-							//if (global_mode[ASSIGN_MODE]) enter_assignment_mode();
+							//if (global_mode[EDIT_MODE]) enter_assignment_mode();
 							break;
 
 						case Bank2:
@@ -156,7 +156,7 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 						case Rev1:
-							//if (!global_mode[ASSIGN_MODE] && !flags[AssignModeRefused])
+							//if (!global_mode[EDIT_MODE] && !flags[AssignModeRefused])
 								flags[Rev1Trig]=1;
 							//else
 							//	next_unassigned_sample();
@@ -172,7 +172,7 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 						case Edit:
-							global_mode[ASSIGN_MODE] = 0;
+							global_mode[EDIT_MODE] = 0;
 							break;
 
 						default:
@@ -260,7 +260,7 @@ void Button_Debounce_IRQHandler(void)
 		//Sample Assignment mode
 		// if (button_state[Play1] >= SHORT_PRESSED && button_state[Rev1] >= SHORT_PRESSED)
 		// {
-		// 	if (global_mode[ASSIGN_MODE])
+		// 	if (global_mode[EDIT_MODE])
 		// 		save_exit_assignment_mode();
 		// 	else
 		// 		enter_assignment_mode();

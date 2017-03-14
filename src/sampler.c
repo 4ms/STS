@@ -67,6 +67,7 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 #include "file_util.h"
 #include "wav_recording.h"
 #include "sts_filesystem.h"
+#include "edit_mode.h"
 
 
 //
@@ -139,6 +140,15 @@ uint32_t		sample_file_seam		[NUM_PLAY_CHAN];
 uint32_t 		play_buff_bufferedamt	[NUM_PLAY_CHAN];
 uint32_t		play_buff_outputted		[NUM_PLAY_CHAN];
 enum PlayLoadTriage play_load_triage;
+
+#define goto_filepos(p)	f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + (p));
+
+// static FRESULT goto_filepos(FIL *sfil, Sample *sample, uint32_t pos)
+// {
+// 	f_lseek(sfil, pos + sample->startOfData);
+
+// }
+// FRESULT goto_filepos(FIL *sfil, Sample *sample, uint32_t pos);
 
 
 
@@ -326,7 +336,8 @@ void toggle_reverse(uint8_t chan)
 				sample_file_curpos[chan] = map_low[chan];
 			}
 
-			f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start + sample_file_curpos[chan]);
+			goto_filepos(sample_file_curpos[chan]);
+			//f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + sample_file_curpos[chan]);
 
 		}
 
@@ -375,7 +386,7 @@ void toggle_playing(uint8_t chan)
 {
 	uint8_t samplenum, banknum;
 	FRESULT res;
-	uint32_t fwd_stop_point, tt;
+	uint32_t stop_point;
 
 
 	//If we can restart without reading from sdcard
@@ -390,8 +401,6 @@ void toggle_playing(uint8_t chan)
 	//Start playing, or re-start if we have a short length
 	if (play_state[chan]==SILENT || play_state[chan]==PLAY_FADEDOWN || play_state[chan]==RETRIG_FADEDOWN )
 	{
-
-
 
 		samplenum = i_param[chan][SAMPLE];
 		banknum = i_param[chan][BANK];
@@ -462,8 +471,8 @@ void toggle_playing(uint8_t chan)
 
 			sample_file_endpos[chan] = sample_file_startpos[chan] + READ_BLOCK_SIZE;
 
-			calc_stop_points(f_param[chan][LENGTH], &samples[banknum][samplenum], sample_file_endpos[chan], &fwd_stop_point, &tt);
-			sample_file_startpos[chan] = fwd_stop_point;
+			calc_stop_points(f_param[chan][LENGTH], &samples[banknum][samplenum], sample_file_endpos[chan], &stop_point);
+			sample_file_startpos[chan] = stop_point;
 
 //			sample_file_endpos[chan] = startpos32 + READ_BLOCK_SIZE;
 //			startpos32 = fwd_stop_point + READ_BLOCK_SIZE;
@@ -474,12 +483,12 @@ void toggle_playing(uint8_t chan)
 		}
 		else
 		{
-			calc_stop_points(f_param[chan][LENGTH], &samples[banknum][samplenum], sample_file_startpos[chan], &fwd_stop_point, &tt);
-			sample_file_endpos[chan] = fwd_stop_point;
+			calc_stop_points(f_param[chan][LENGTH], &samples[banknum][samplenum], sample_file_startpos[chan], &stop_point);
+			sample_file_endpos[chan] = stop_point;
 		}
 
-
-		res = f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start + sample_file_startpos[chan]);
+		res = goto_filepos(sample_file_curpos[chan]);
+		//res = f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + sample_file_startpos[chan]);
 		f_sync(&fil[chan]);
 
 		if (res != FR_OK) g_error |= FILE_SEEK_FAIL;
@@ -555,75 +564,71 @@ void toggle_playing(uint8_t chan)
 uint32_t calc_start_point(float start_param, Sample *sample)
 {
 	uint32_t align;
+	uint32_t zeropt, inst_size;
 
 	if (sample->blockAlign == 4)		align = 0xFFFFFFFC;
 	else if (sample->blockAlign == 2)	align = 0xFFFFFFFC; //was E? but it clicks if we align to 2 not 4, even if our file claims blockAlign = 2
 	else if (sample->blockAlign == 8)	align = 0xFFFFFFF8;
 
-	//Determine the starting address
-	if (start_param < 0.002)			return(0);
-	else if (start_param > 0.998)		return( sample->sampleSize - READ_BLOCK_SIZE*32 ); //just play the last 32 blocks
+	zeropt = sample->inst_start;
+	if (sample->inst_end > sample->inst_start)
+		inst_size = sample->inst_end - sample->inst_start;
+	else
+		inst_size = sample->inst_start - sample->inst_end;
 
-	else								return( align & ( (uint32_t)(start_param * (float)sample->sampleSize) ) );
+	//Determine the starting address
+	if (start_param < 0.002)			return(align & zeropt);
+	//else if (start_param > 0.998)		return(align & (zeropt + inst_size - READ_BLOCK_SIZE) ); //just play the last 32 blocks (~64k samples)
+
+	else								return(align & (zeropt - READ_BLOCK_SIZE +  ( (uint32_t)(start_param * (float)inst_size) )) );
 
 
 }
 
 
-void calc_stop_points(float length, Sample *sample, uint32_t startpos, uint32_t *fwd_stop_point, uint32_t *rev_stop_point)
+void calc_stop_points(float length, Sample *sample, uint32_t startpos, uint32_t *fwd_stop_point)
 {
 	uint32_t dist;
 
-	if (length > 0.98)
-		dist = sample->sampleSize * (length-0.9) * 10;
-
-	else if (length>=0.5) //>0.5 to <0.9
-	{
-		dist = (length - 0.4375) * 16.0 * sample->sampleRate;
-	}
-
-	else //length < 0.5
-	{
-//		dist = sample->sampleRate * 4.0;
-		dist = 88200.0 * length; //close enough
-	}
+	dist = calc_play_length(length, sample);
 
 	*fwd_stop_point = startpos + dist;
-	if (*fwd_stop_point > sample->sampleSize)
-		*fwd_stop_point = sample->sampleSize;
+	if (*fwd_stop_point > sample->inst_end)
+		*fwd_stop_point = sample->inst_end;
 
-	if (startpos > dist)
-		*rev_stop_point = startpos - dist;
-	else
-		*rev_stop_point = 0;
-
-
-	if (sample->blockAlign == 4)			*fwd_stop_point &= 0xFFFFFFFC;
+	if (sample->blockAlign == 4)		*fwd_stop_point &= 0xFFFFFFFC;
 	else if (sample->blockAlign == 2)	*fwd_stop_point &= 0xFFFFFFFC;
 	else if (sample->blockAlign == 8)	*fwd_stop_point &= 0xFFFFFFF8;
 
-	if (sample->blockAlign == 4)			*rev_stop_point &= 0xFFFFFFFC;
-	else if (sample->blockAlign == 2)	*rev_stop_point &= 0xFFFFFFFC;
-	else if (sample->blockAlign == 8)	*rev_stop_point &= 0xFFFFFFF8;
 
 }
 
 uint32_t calc_play_length(float length, Sample *sample)
 {
 	uint32_t dist;
+	uint32_t inst_size;
 
-	if (length > 0.98)
-		dist = sample->sampleSize * (length-0.9) * 10;
+	if (sample->inst_end > sample->inst_start)
+		inst_size = sample->inst_end - sample->inst_start;
+	else
+		inst_size = sample->inst_start - sample->inst_end;
 
-	else if (length>=0.5) //>0.5 to <0.9
+
+	// if (length > 0.95)
+	// 	dist = inst_size * (length-0.9) * 10;
+
+	// else 
+	if (length>=0.5) //>=0.5 to <0.95
 	{
-		dist = (length - 0.4375) * 16.0 * sample->sampleRate;
+		if (inst_size > (5 * sample->sampleRate * sample->blockAlign) ) //sample is > 5 seconds long
+			dist = (length - (0.5-1.0/8.0)) * 8.0 * sample->sampleRate  * sample->blockAlign; //1.0 .. 5.0 seconds
+		else
+			dist = (length - (0.5-1.0/8.0)) * 1.6 * inst_size; //sampletime/5.0 .. sampletime seconds
 	}
 
 	else //length < 0.5
 	{
-//		dist = sample->sampleRate * 4.0;
-		dist = 88200.0 * length; //close enough
+		dist = sample->sampleRate * sample->blockAlign * length; //very small to 0.5 seconds
 	}
 
 	return(dist);
@@ -663,7 +668,7 @@ void check_change_sample(void)
 			else
 				play_state[0] = SILENT;
 
-			if (global_mode[ASSIGN_MODE])
+			if (global_mode[EDIT_MODE])
 				flags[AssigningEmptySample] = 1;
 
 		}
@@ -675,7 +680,7 @@ void check_change_sample(void)
 			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
 				play_state[0] = PLAY_FADEDOWN;
 
-			if (global_mode[ASSIGN_MODE])
+			if (global_mode[EDIT_MODE])
 			{
 				find_current_sample_in_assign(&samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]);
 				flags[AssigningEmptySample] = 0;
@@ -758,28 +763,30 @@ void read_storage_to_buffer(void)
 				else
 				{
 
-					//Read from file forward
+					//
+					// Forward reading:
+					//
 					if (i_param[chan][REV]==0)
 					{
-						rd = samples[banknum][ samplenum ].sampleSize -  sample_file_curpos[chan];
+						rd = samples[banknum][ samplenum ].inst_end -  sample_file_curpos[chan];
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 
-				DEBUG1_ON;
+						DEBUG1_ON;
 						res = f_read(&fil[chan], t_buff16, rd, &br);
 						f_sync(&fil[chan]);
-				DEBUG1_OFF;
+						DEBUG1_OFF;
 
 						if (br < rd)
 							g_error |= FILE_UNEXPECTEDEOF; //unexpected end of file, but we can continue writing out the data we read
 
 						sample_file_curpos[chan] += br;
 
-						err = samples[banknum][ samplenum ].sampleSize;
+						err = samples[banknum][ samplenum ].inst_end;
 
-						if (sample_file_curpos[chan] >= samples[banknum][ samplenum ].sampleSize)
+						if (sample_file_curpos[chan] >= samples[banknum][ samplenum ].inst_end)
 						{
-							sample_file_curpos[chan] = samples[banknum][ samplenum ].sampleSize;
+							sample_file_curpos[chan] = samples[banknum][ samplenum ].inst_end;
 							is_buffered_to_file_end[chan] = 1;
 						}
 
@@ -788,16 +795,25 @@ void read_storage_to_buffer(void)
 
 					}
 
-					//Read from file Reverse
+					//
+					// Reverse reading:
+					//
 					else
 					{
-						rd = sample_file_curpos[chan];
+						if (sample_file_curpos[chan] > samples[banknum][samplenum].inst_start)
+							rd = sample_file_curpos[chan] - samples[banknum][samplenum].inst_start;
+						else
+							rd = 0;
+
 						if (rd > READ_BLOCK_SIZE)
 						{
 							//Jump back a block
-				DEBUG2_ON;
-							f_lseek(&fil[chan], rd - READ_BLOCK_SIZE);
-				DEBUG2_OFF;
+							goto_filepos(rd - READ_BLOCK_SIZE);
+							//f_lseek(&fil[chan], rd - READ_BLOCK_SIZE + samples[banknum][samplenum].startOfData);
+							//what about this?:
+						//	t_fptr=f_tell(&fil[chan]);
+						//	f_lseek(&fil[chan], t_fptr - READ_BLOCK_SIZE);
+
 							rd = READ_BLOCK_SIZE;
 							sample_file_curpos[chan] -= READ_BLOCK_SIZE;
 
@@ -805,8 +821,9 @@ void read_storage_to_buffer(void)
 						else
 						{
 							//Jump to the beginning
-							f_lseek(&fil[chan], 0);
-							sample_file_curpos[chan] = 0;
+							goto_filepos(samples[banknum][samplenum].inst_start);
+							//f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start);
+							sample_file_curpos[chan] = samples[banknum][samplenum].inst_start;
 							is_buffered_to_file_end[chan] = 1;
 						}
 
@@ -826,12 +843,10 @@ void read_storage_to_buffer(void)
 
 						if (res != FR_OK)	g_error |= FILE_READ_FAIL;
 						if (br < rd)		g_error |= FILE_UNEXPECTEDEOF;
-			DEBUG2_ON;
 						//Jump backwards to where we started reading
 						fil[chan].fptr = t_fptr;
 						//res = f_lseek(&fil[chan], f_tell(&fil[chan]) - br);
 						f_sync(&fil[chan]);
-			DEBUG2_OFF;
 
 						if (res != FR_OK)	g_error |= FILE_SEEK_FAIL;
 
@@ -904,7 +919,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 	uint32_t resampled_buffer_size;
 	float gain;
 	uint8_t samplenum, banknum;
-
+	uint8_t starting_polarity, ending_polarity, starting_wrapping,	ending_wrapping, polarity_changed, wrapping_changed;
 
 
 	samplenum = sample_num_now_playing[chan];
@@ -947,7 +962,21 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 		//Resample data read from the play_buff and store into out[]
 		t_out = play_buff[chan]->out;
 
+		//check for polarity of buffer (in<out or in>out)
+		starting_polarity = (play_buff[chan]->in < play_buff[chan]->out)?1:0;
+		starting_wrapping = play_buff[chan]->wrapping;
+
 		resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, stereomode, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, out);
+
+		ending_polarity = (play_buff[chan]->in < play_buff[chan]->out)?1:0;
+		ending_wrapping = play_buff[chan]->wrapping;
+
+		polarity_changed = (ending_polarity == starting_polarity)?1:0;
+		wrapping_changed = (starting_wrapping == ending_wrapping)?1:0;
+
+		if (polarity_changed != wrapping_changed)
+			play_state[chan] = PLAY_FADEDOWN;
+
 
 		t_out = CB_distance_points(play_buff[chan]->out, t_out, play_buff[chan]->size, i_param[chan][REV]);
 		play_buff_outputted[chan] += t_out;

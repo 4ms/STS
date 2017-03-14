@@ -117,15 +117,11 @@ void init_modes(void)
 	global_mode[MONITOR_RECORDING] = 0;
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[STEREO_LINK] = 0;
-	global_mode[ASSIGN_MODE] = 0;
+	global_mode[EDIT_MODE] = 0;
 
 }
 
 
-inline float LowPassSmoothingFilter(float current_value, float new_value, float coef)
-{
-	return (current_value * coef) + (new_value * (1.0f-coef));
-}
 
 void init_LowPassCoefs(void)
 {
@@ -277,9 +273,10 @@ void update_params(void)
 	uint8_t chan;
 	uint8_t old_val;
 	uint8_t new_val;
-	uint8_t ok_sampleslot;
+	//uint8_t ok_sampleslot;
 	float t_f;
-	uint32_t t_32;
+	float t_fine, t_coarse;
+	//uint32_t t_32;
 	uint8_t samplenum, banknum;
 
 	recording_enabled=1;
@@ -299,15 +296,15 @@ void update_params(void)
 	// Assignment mode
 	// Channel 2's knobs control the sample instance (assignment) parameters
 	//
-	if (global_mode[ASSIGN_MODE])
+	if (global_mode[EDIT_MODE])
 	{
-		samplenum = i_param[chan][SAMPLE];
-		banknum = i_param[chan][BANK];
+		samplenum = i_param[0][SAMPLE];
+		banknum = i_param[0][BANK];
 
 		//
 		// Trim End 
 		// 0 to 1.0 with ch1 knob
-		// +/- 0.1 with ch2 knob
+		// +/- 1.0 with ch2 knob
 		//
 		if (flag_pot_changed[LENGTH_POT*2+0])
 			samples[banknum][samplenum].knob_pos_length1	= i_smoothed_potadc[LENGTH_POT*2+0];
@@ -317,10 +314,11 @@ void update_params(void)
 
 		if (flag_pot_changed[LENGTH_POT*2+1] || flag_pot_changed[LENGTH_POT*2+0])
 		{
-			t_f 	 = samples[banknum][samplenum].knob_pos_length1 / 4096.0;
-			t_f 	+= samples[banknum][samplenum].knob_pos_length2 / 20480.0;
-			t_f		-= 0.1f;
-			set_sample_trim_end(&samples[banknum][samplenum], t_f);
+			t_coarse = samples[banknum][samplenum].knob_pos_length1 / 4096.0;
+			t_fine	 = ((float)samples[banknum][samplenum].knob_pos_length2 - 2048.0) / 2048.0;
+
+		//	set_sample_trim_end(&samples[banknum][samplenum], t_f);
+			set_sample_trim_size(&samples[banknum][samplenum], t_coarse, t_fine);
 		}
 
 
@@ -387,7 +385,7 @@ void update_params(void)
 		}
 
 
-	} //if assign_mode
+	} //if EDIT_MODE
 	else 
 	{
 
@@ -486,7 +484,7 @@ void update_params(void)
 			}
 		}
 
-	} //else if assign_mode
+	} //else if EDIT_MODE
 }
 
 

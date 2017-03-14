@@ -83,7 +83,7 @@ enum GlobalModes
 	SYSTEM_SETTINGS,
 	MONITOR_RECORDING,
 	ENABLE_RECORDING,
-	ASSIGN_MODE,
+	EDIT_MODE,
 	STEREO_LINK,
 
 	NUM_GLOBAL_MODES
@@ -105,6 +105,14 @@ enum GlobaliParams
 	LED_BRIGHTNESS,
 	NUM_GLOBAL_I_PARAMS
 };
+
+
+static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef)
+{
+	return (current_value * coef) + (new_value * (1.0f-coef));
+}
+float LowPassSmoothingFilter(float current_value, float new_value, float coef);
+
 
 void update_params(void);
 void process_adc(void);

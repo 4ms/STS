@@ -43,12 +43,13 @@ typedef struct Sample {
 
 	uint32_t	inst_start;
 	uint32_t	inst_end;
+	uint32_t	inst_size;
 	float		inst_gain;
 
-	uint32_t	knob_pos_start1;
-	uint32_t	knob_pos_start2;
-	uint32_t	knob_pos_length1;
-	uint32_t	knob_pos_length2;
+	int16_t		knob_pos_start1;
+	int16_t		knob_pos_start2;
+	int16_t		knob_pos_length1;
+	int16_t		knob_pos_length2;
 
 } Sample;
 
@@ -70,7 +71,6 @@ void disable_bank(uint8_t bank);
 
 uint8_t load_sampleindex_file(void);
 uint8_t write_sampleindex_file(void);
-
 
 
 

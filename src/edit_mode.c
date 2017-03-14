@@ -170,7 +170,7 @@ void enter_assignment_mode(void)
 		end_assigned_sample_i ++;
 
 		cur_assigned_sample_i = original_assigned_sample_i;
-		//global_mode[ASSIGN_MODE] = 1;
+		//global_mode[EDIT_MODE] = 1;
 
 	} else
 	{
@@ -220,7 +220,7 @@ void save_exit_assignment_mode(void)
 {
 	FRESULT res;
 
-	//global_mode[ASSIGN_MODE] = 0;
+	//global_mode[EDIT_MODE] = 0;
 
 	check_enabled_banks(); //disables a bank if we cleared it out
 
@@ -232,7 +232,7 @@ void save_exit_assignment_mode(void)
 void cancel_exit_assignment_mode(void)
 {
 	assign_sample(original_assigned_sample_i);
-	//global_mode[ASSIGN_MODE] = 0;
+	//global_mode[EDIT_MODE] = 0;
 }
 
 
@@ -271,7 +271,9 @@ void set_sample_trim_end(Sample *s_sample, float en)
 
 	trimend &= 0xFFFFFFF8;
 
-	s_sample->inst_end = trimend;
+	if (trimend > s_sample->inst_start)
+		s_sample->inst_end = trimend;
+
 
 }
 
@@ -286,6 +288,39 @@ void set_sample_trim_start(Sample *s_sample, float st)
 
 	trimstart &= 0xFFFFFFF8;
 
+	// if (trimstart < s_sample->inst_end)
+
 	s_sample->inst_start = trimstart;
+
+	if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
+		s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+
+	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+
+}
+
+void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
+{
+	uint32_t trimsize;
+	int32_t fine_trim;
+
+
+	if (coarse >= 1.0f) 				trimsize = s_sample->sampleSize;
+	else if (coarse <= (1.0/4096.0))	trimsize = 4420;
+	else 								trimsize = (s_sample->sampleSize - 4420) * coarse + 4420;
+
+	fine_trim = fine * s_sample->sampleRate * s_sample->blockAlign * 0.5; // +/- 500ms
+
+	if ((-1.0*fine_trim) > trimsize) trimsize = 4420;
+	else trimsize += fine_trim;
+
+	trimsize &= 0xFFFFFFF8;
+
+	if ((s_sample->inst_start +  trimsize) > s_sample->sampleSize)
+		s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+	else
+		s_sample->inst_size = trimsize;
+
+	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 
 }
