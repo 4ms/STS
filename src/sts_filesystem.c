@@ -220,6 +220,7 @@ void clear_sample_header(Sample *s_sample)
 
 	s_sample->inst_start = 0;
 	s_sample->inst_end = s_sample->sampleSize;
+	s_sample->inst_size = s_sample->sampleSize;
 	s_sample->inst_gain = 1.0;
 
 	s_sample->knob_pos_start1 = 0;
@@ -315,6 +316,7 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 						s_sample->startOfData = f_tell(sample_file);
 
 						s_sample->inst_end = s_sample->sampleSize;
+						s_sample->inst_size = s_sample->sampleSize;
 						s_sample->inst_start = 0;
 						s_sample->inst_gain = 1.0;
 						s_sample->knob_pos_start1 = 0;

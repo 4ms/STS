@@ -337,10 +337,9 @@ void update_params(void)
 
 		if (flag_pot_changed[START_POT*2+1] || flag_pot_changed[START_POT*2+0])
 		{
-			t_f 	 = samples[banknum][samplenum].knob_pos_start1 / 4096.0;
-			t_f 	+= samples[banknum][samplenum].knob_pos_start2 / 20480.0;
-			t_f		-= 0.1f;
-			set_sample_trim_start(&samples[banknum][samplenum], t_f);
+			t_coarse 	 = samples[banknum][samplenum].knob_pos_start1 / 4096.0;
+			t_fine	 	+= (samples[banknum][samplenum].knob_pos_start2 - 2048.0) / 2048.0;
+			set_sample_trim_start(&samples[banknum][samplenum], t_coarse, t_fine);
 		}
 
 		//
@@ -383,6 +382,10 @@ void update_params(void)
 			else
 				flags[PlaySample1Changed_valid] = 6;
 		}
+
+		//Set Lenght and Start to playing full sample so that trim start/end/size makes sense
+		f_param[0][LENGTH] = 1.0f;
+		f_param[0][START] = 0.0f;
 
 
 	} //if EDIT_MODE
@@ -613,7 +616,8 @@ void process_mode_flags(void)
 			else
 			{
 				i_param[0][LOOPING] = 1;
-				flags[Play1Trig] = 1;
+				if (play_state[0] == SILENT) 
+					flags[Play1Trig] = 1;
 
 				if (global_mode[STEREO_LINK])
 				{
@@ -639,7 +643,8 @@ void process_mode_flags(void)
 				else
 				{
 					i_param[1][LOOPING] = 1;
-					flags[Play2Trig] = 1;
+					if (play_state[1] == SILENT) 
+						flags[Play2Trig] = 1;
 				}
 			}
 		}

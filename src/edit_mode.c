@@ -278,17 +278,21 @@ void set_sample_trim_end(Sample *s_sample, float en)
 }
 
 //sets the trim start point between 0 and 100ms before the end of the sample file
-void set_sample_trim_start(Sample *s_sample, float st)
+void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
 {
 	uint32_t trimstart;
+	int32_t fine_trim;
 
-	if (st >= 1.0f) 				trimstart = s_sample->sampleSize - 4420;
-	else if (st <= (1.0/4096.0))	trimstart = 0;
-	else 							trimstart = (s_sample->sampleSize - 4420) * st;
+	if (coarse >= 1.0f) 				trimstart = s_sample->sampleSize - 4420;
+	else if (coarse <= (1.0/4096.0))	trimstart = 0;
+	else 								trimstart = (s_sample->sampleSize - 4420) * coarse;
+
+	fine_trim = fine * s_sample->sampleRate * s_sample->blockAlign * 0.5; // +/- 500ms
+
+	if ((-1.0*fine_trim) > trimstart) trimstart = 0;
+	else trimstart += fine_trim;
 
 	trimstart &= 0xFFFFFFF8;
-
-	// if (trimstart < s_sample->inst_end)
 
 	s_sample->inst_start = trimstart;
 

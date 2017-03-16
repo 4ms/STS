@@ -17,7 +17,7 @@ uint8_t load_samples_to_assign(uint8_t bank);
 void next_unassigned_sample(void);
 uint8_t find_current_sample_in_assign(Sample *s);
 
-void set_sample_trim_start(Sample *s_sample, float st);
+void set_sample_trim_start(Sample *s_sample, float coarse, float fine);
 void set_sample_trim_end(Sample *s_sample, float en);
 void set_sample_trim_size(Sample *s_sample, float coarse, float fine);
 

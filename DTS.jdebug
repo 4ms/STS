@@ -16,6 +16,19 @@ void OnProjectLoad (void) {
   Project.SetTIFSpeed ("2 MHz");
   Project.AddSvdFile ("Cortex-M4.svd");
   File.Open ("/Users/design/4ms/stm32/DTS/build/main.elf");
+
+  Window.Add ("Watched Data", "f_param");
+  Window.Add ("Watched Data", "sample[93]");
+  Window.Add ("Watched Data", "g_Error");
+  Window.Add ("Watched Data", "map_high[0]");
+  Window.Add ("Watched Data", "map_low[0]");
+  Window.Add ("Watched Data", "map_offset[0]");
+  Window.Add ("Watched Data", "play_buff_outputted[0]");
+  Window.Add ("Watched Data", "sample_file_curpos[0]");
+  Window.Add ("Watched Data", "sample_file_endpos[0]");
+  Window.Add ("Watched Data", "sample_file_startpos[0]");
+  Window.Add ("Watched Data", "splay_buff[0]");
+
 }
 
 /*********************************************************************

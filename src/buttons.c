@@ -90,12 +90,14 @@ void Button_Debounce_IRQHandler(void)
 				switch (i)
 				{
 					case Play1:
-						flags[Play1Trig]=1;
+						if (!i_param[0][LOOPING]) 
+							flags[Play1Trig]=1;
 						clear_errors();
 						break;
 
 					case Play2:
-						flags[Play2Trig]=1;
+						if (!i_param[1][LOOPING]) 
+							flags[Play2Trig]=1;
 						clear_errors();
 						break;
 
@@ -153,6 +155,16 @@ void Button_Debounce_IRQHandler(void)
 							flags[RecBankChanged] = 1;
 							if (i_param[2][BANK] >= (MAX_NUM_REC_BANKS-1))	i_param[2][BANK]=0;
 							else											i_param[2][BANK]++;
+							break;
+
+						case Play1:
+							if (i_param[0][LOOPING] && button_state[Play1] == DOWN) 
+								flags[Play1Trig] = 1; //if looping, stop playing when lifted (assuming it's a short press)
+							break;
+
+						case Play2:
+							if (i_param[1][LOOPING] && button_state[Play1] == DOWN) 
+								flags[Play2Trig] = 1;
 							break;
 
 						case Rev1:
