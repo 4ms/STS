@@ -28,6 +28,13 @@ void OnProjectLoad (void) {
   Window.Add ("Watched Data", "sample_file_endpos[0]");
   Window.Add ("Watched Data", "sample_file_startpos[0]");
   Window.Add ("Watched Data", "splay_buff[0]");
+  Window.Add ("Watched Data", "play_buff_bufferedamt[0]");
+Break.SetOnSrc ("sampler.c:1108");
+Break.SetOnSrc ("sampler.c:1097");
+Break.SetOnSrc ("sampler.c:1112");
+Window.Add ("Watched Data", "play_length");
+Window.Add ("Watched Data", "resampled_buffer_size");
+
 
 }
 

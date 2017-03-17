@@ -100,25 +100,6 @@ uint8_t CB_offset_out_address(CircularBuffer *b, uint32_t amt, uint8_t subtract)
 	return(0);
 }
 
-//uint32_t CB_distance_to_stop(CircularBuffer *b, uint8_t reverse)
-//{
-//
-//	if (reverse)
-//	{
-//		if (b->out >= b->stop_pt)
-//			return (b->out - b->stop_pt);
-//		else	//wrapping
-//			return ((b->out + b->size) - b->stop_pt);
-//	}
-//	else
-//	{
-//		if (b->stop_pt >= b->out)
-//			return (b->stop_pt - b->out);
-//		else	//wrapping
-//			return ((b->stop_pt + b->size) - b->out);
-//	}
-//}
-
 uint32_t CB_distance_points(uint32_t leader, uint32_t follower, uint32_t size, uint8_t reverse)
 {
 
@@ -162,20 +143,16 @@ uint32_t CB_distance(CircularBuffer *b, uint8_t reverse)
 void CB_init(CircularBuffer *b, uint8_t rev)
 {
 	b->wrapping = 0;
-	b->filled 	= 0;
-	b->stop_pt 	= 0;
 
 	if (rev)
 	{
 		b->in 	= b->max - READ_BLOCK_SIZE;
 		b->out 	= b->max;
-		b->seam = b->max;
 	}
 	else
 	{
 		b->in 	= b->min;
 		b->out 	= b->min;
-		b->seam = b->min;
 	}
 
 }

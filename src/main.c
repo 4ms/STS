@@ -50,38 +50,7 @@ void check_errors(void){
 	//while(1){
  		CLIPLED1_OFF;
 		CLIPLED2_OFF;
- /*
-			if (g_error & 1) ButLED_state[0]=1;
-			if (g_error & 2) ButLED_state[1]=1;
-			if (g_error & 4) ButLED_state[2]=1;
-			if (g_error & 8) ButLED_state[3]=1;
-			if (g_error & 16) ButLED_state[4]=1;
-			if (g_error & 32) ButLED_state[5]=1;
-			if (g_error & 64) ButLED_state[6]=1;
-			if (g_error & 128) ButLED_state[7]=1;
-			if (g_error & 256) play_led_state[0]=1;
-			if (g_error & 512) clip_led_state[0]=1;
-			if (g_error & 1024) clip_led_state[1]=1;
-			if (g_error & 2048) play_led_state[1]=1;
-
-			delay_ms(100);
-
-			ButLED_state[0]=0;
-			ButLED_state[1]=0;
-			ButLED_state[2]=0;
-			ButLED_state[3]=0;
-			ButLED_state[4]=0;
-			ButLED_state[5]=0;
-			ButLED_state[6]=0;
-			ButLED_state[7]=0;
-			play_led_state[0]=0;
-			clip_led_state[0]=0;
-			clip_led_state[1]=0;
-			play_led_state[1]=0;
-
-			delay_ms(100);
-			*/
-
+ 
 		//}
 
 	}

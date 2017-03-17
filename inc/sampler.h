@@ -1,15 +1,16 @@
 /*
- * looping_delay.h
+ * sampler.h
  */
 
-#ifndef __audio__
-#define __audio__
+#ifndef __sampler_h__
+#define __sampler_h__
 
 //#define ARM_MATH_CM4
 
 #include <stm32f4xx.h>
 #include "sts_filesystem.h"
 #include "ff.h"
+#include "circular_buffer.h"
 
 
 /* Playback states */
@@ -39,11 +40,8 @@ enum PlayLoadTriage{
 
 void audio_buffer_init(void);
 void read_storage_to_buffer(void);
-//void play_audio_from_buffer(int32_t *out, uint8_t chan);
 void play_audio_from_buffer(int32_t *out, uint8_t chan);
 
-//void increment_read_fade(uint8_t channel);
-void process_audio_block_codec(int16_t *src, int16_t *dst);
 
 void toggle_playing(uint8_t chan);
 void toggle_reverse(uint8_t chan);
@@ -55,6 +53,7 @@ uint32_t calc_start_point(float start_param, Sample *sample);
 uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos);
 uint32_t calc_play_length(float length, Sample *sample);
 
+uint32_t map_cache_to_buffer(uint32_t cache_point, uint32_t ref_cachepos, uint32_t ref_bufferpos, CircularBuffer *b);
 
 #endif
 

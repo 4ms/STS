@@ -122,17 +122,7 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		color[0]=0;
 		return(0);
 	}
-//
-//	if (bank > MAX_NUM_REC_BANKS)
-//	{
-//		//Append "-SAVE" to directory name
-//		path[i++] = '-';
-//		path[i++] = 'S';
-//		path[i++] = 'A';
-//		path[i++] = 'V';
-//		path[i++] = 'E';
-//		path[i] = 0;
-//	}
+
 
 }
 
