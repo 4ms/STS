@@ -284,6 +284,12 @@ void audio_buffer_init(void)
 
 }
 
+//
+void clear_is_buffered_to_file_end(uint8_t chan)
+{
+	is_buffered_to_file_end[chan] = 0;
+	flags[ForceFileReload1+chan] = 1;
+}
 
 //
 //Given: the starting address of the cache, and the address in the buffer to which it refers.

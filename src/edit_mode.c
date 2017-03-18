@@ -274,6 +274,7 @@ void set_sample_trim_end(Sample *s_sample, float en)
 	if (trimend > s_sample->inst_start)
 		s_sample->inst_end = trimend;
 
+	clear_is_buffered_to_file_end(0);
 
 }
 
@@ -300,6 +301,8 @@ void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
 		s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
 
 	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+	
+	clear_is_buffered_to_file_end(0);
 
 }
 
@@ -313,7 +316,7 @@ void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
 	else if (coarse <= (1.0/4096.0))	trimsize = 4420;
 	else 								trimsize = (s_sample->sampleSize - 4420) * coarse + 4420;
 
-	fine_trim = fine * s_sample->sampleRate * s_sample->blockAlign * 0.5; // +/- 500ms
+	fine_trim = fine * s_sample->sampleRate * s_sample->blockAlign * 2.5; // +/- 500ms
 
 	if ((-1.0*fine_trim) > trimsize) trimsize = 4420;
 	else trimsize += fine_trim;
@@ -326,5 +329,7 @@ void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
 		s_sample->inst_size = trimsize;
 
 	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+
+	clear_is_buffered_to_file_end(0);
 
 }

@@ -181,8 +181,8 @@ void init_LowPassCoefs(void)
 	MIN_POT_ADC_CHANGE[START_POT*2] = 10;
 	MIN_POT_ADC_CHANGE[START_POT*2+1] = 10;
 
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 20;
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 20;
+	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 10;
+	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 10;
 
 	MIN_POT_ADC_CHANGE[SAMPLE_POT*2] = 60;
 	MIN_POT_ADC_CHANGE[SAMPLE_POT*2+1] = 60;
@@ -317,11 +317,29 @@ void update_params(void)
 			t_coarse = samples[banknum][samplenum].knob_pos_length1 / 4096.0;
 			t_fine	 = ((float)samples[banknum][samplenum].knob_pos_length2 - 2048.0) / 2048.0;
 
-		//	set_sample_trim_end(&samples[banknum][samplenum], t_f);
 			set_sample_trim_size(&samples[banknum][samplenum], t_coarse, t_fine);
 		}
 
+/*
+		if (flag_pot_changed[LENGTH_POT*2+0])
+		{
+			t_coarse = pot_delta[LENGTH_POT*2+0] / 4096.0;
 
+			samples[banknum][samplenum].knob_pos_length1	= i_smoothed_potadc[LENGTH_POT*2+0];
+		}
+
+		if (flag_pot_changed[LENGTH_POT*2+1])
+			samples[banknum][samplenum].knob_pos_length2	= i_smoothed_potadc[LENGTH_POT*2+1];
+
+		if (flag_pot_changed[LENGTH_POT*2+1] || flag_pot_changed[LENGTH_POT*2+0])
+		{
+
+			set_sample_trim_size(&samples[banknum][samplenum], t_coarse, t_fine);
+
+			flag_pot_changed[LENGTH_POT*2+0] = 0;
+			flag_pot_changed[LENGTH_POT*2+1] = 0;
+		}
+*/
 
 		//
 		// Trim Start
