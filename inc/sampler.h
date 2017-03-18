@@ -54,6 +54,7 @@ uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos);
 uint32_t calc_play_length(float length, Sample *sample);
 
 uint32_t map_cache_to_buffer(uint32_t cache_point, uint32_t ref_cachepos, uint32_t ref_bufferpos, CircularBuffer *b);
+uint32_t map_buffer_to_cache(uint32_t buffer_point, uint32_t ref_cachepos, uint32_t ref_bufferpos, CircularBuffer *b);
 
 #endif
 

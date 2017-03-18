@@ -2,7 +2,8 @@
  * sampler.c
 
 //Is checking polarity and wrapping changes necessary? Line 940
-//Is reversing while PREBUFFERING working?
+//Is reversing while PREBUFFERING working? Line 341
+//Still kind of weird when running the same trigger into REV and PLAY
 
 
 		//improvement idea #1: load all 19 samples in the current bank, opening their files. So we have:
@@ -285,15 +286,33 @@ void audio_buffer_init(void)
 
 
 //
-//Given ref, a point whose address in the cache is ref_cachepos, and address in the buffer is ref_bufferpos. 
-//Returns an address in the buffer for cache_point.
-//Assumes ref_cachepos is the lowest value of the cache (or else we will have to use int32_t)
+//Given: the starting address of the cache, and the address in the buffer to which it refers.
+//Returns: a cache address equivalent to the buffer_point
+//Assumes cache_start is the lowest value of the cache 
 //
-uint32_t map_cache_to_buffer(uint32_t cache_point, uint32_t ref_cachepos, uint32_t ref_bufferpos, CircularBuffer *b)
+uint32_t map_buffer_to_cache(uint32_t buffer_point, uint32_t cache_start, uint32_t buffer_start, CircularBuffer *b)
+{
+	uint32_t p;
+
+	//Find out how far ahead the buffer_point is from the buffer reference
+	p = CB_distance_points(buffer_point, buffer_start, b->size, 0);
+
+	//add that to the cache reference
+	p += cache_start;
+
+	return(p);
+}
+
+//
+//Given: the starting address of the cache, and the address in the buffer to which it refers.
+//Returns: a buffer address equivalent to cache_point
+//Assumes cache_start is the lowest value of the cache (to overcome this, we would have to use int32_t or compare cache_point>cache_start)
+//
+uint32_t map_cache_to_buffer(uint32_t cache_point, uint32_t cache_start, uint32_t buffer_start, CircularBuffer *b)
 {
 	uint32_t p;
 	//find the distance the cache_pos is ahead of the reference, and 
-	p = ref_bufferpos + (cache_point - ref_cachepos);
+	p = buffer_start + (cache_point - cache_start);
 	while (p > b->max)
 		p -= b->size;
 
@@ -305,7 +324,7 @@ void toggle_reverse(uint8_t chan)
 	uint8_t samplenum, banknum;
 	uint32_t t;
 
-	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC || play_state[chan] == PREBUFFERING)
+	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC || play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
 	{
 		samplenum =sample_num_now_playing[chan];
 		banknum = sample_bank_now_playing[chan];
@@ -316,40 +335,47 @@ void toggle_reverse(uint8_t chan)
 		banknum = i_param[chan][BANK];
 	}
 
-	// Swap sample_file_curpos with cache_high or _low
-	// This gets us ready to add to the opposite end of the cache.
 
-	if (play_state[chan] != PREBUFFERING)
-	{
-		if (i_param[chan][REV])
-		{
-			sample_file_curpos[chan] = cache_high[chan];
-			play_buff[chan]->in = map_cache_to_buffer(cache_high[chan], cache_low[chan], cache_offset[chan], play_buff[chan]);
-		}
-		else
-		{
-			sample_file_curpos[chan] = cache_low[chan];
-			play_buff[chan]->in = cache_offset[chan];
-		}
-		goto_filepos(sample_file_curpos[chan]);
+					//If we are PREBUFFERING or PLAY_FADEUP, then that means we just started playing. 
+					//It could be the case a common trigger fired into PLAY and REV, but the PLAY trig was detected first
+					//So we actually want to make it play from the end of the sample rather than reverse direction from the current spot
+					//if (play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
 
+	//Check the cache position of play_buff[chan]->out, to see if it's a certain distance from sample_file_startpos[chan]
+	//If so, reverse direction (by keeping ->out the same)
+	//If not, play from the other end (by moving ->out to the opposite end) 
+	t = map_buffer_to_cache(play_buff[chan]->out, cache_low[chan], cache_offset[chan], play_buff[chan]);
+	if (i_param[chan][REV]){
+		if (t > sample_file_startpos[chan]) t = t - sample_file_startpos[chan]; else t=0;
+	}else{
+		if (t < sample_file_startpos[chan]) t = sample_file_startpos[chan] - t; else t=0;
 	}
+	if (t <= READ_BLOCK_SIZE * 2)
+		play_buff[chan]->out = map_cache_to_buffer(sample_file_endpos[chan], cache_low[chan], cache_offset[chan], play_buff[chan]);
 
-	//If we are PREBUFFERING, then re-start the playback
+	// Swap sample_file_curpos with cache_high or _low
+	// and move ->in to the equivlant address in play_buff
+	// This gets us ready to read new data to the opposite end of the cache.
+
+	if (i_param[chan][REV])
+	{
+		sample_file_curpos[chan] = cache_high[chan];
+		play_buff[chan]->in = map_cache_to_buffer(cache_high[chan], cache_low[chan], cache_offset[chan], play_buff[chan]);
+	}
 	else
 	{
-		sample_file_curpos[chan] 	= sample_file_endpos[chan];
-		goto_filepos(sample_file_curpos[chan]);
-
-		CB_init(play_buff[chan], i_param[chan][REV]);
-
+		sample_file_curpos[chan] = cache_low[chan];
+		play_buff[chan]->in = cache_offset[chan]; //cache_offset is the map of cache_low
 	}
+
+
 
 	//swap the endpos with the startpos
 	t							= sample_file_endpos[chan];
 	sample_file_endpos[chan]	= sample_file_startpos[chan];
 	sample_file_startpos[chan]	= t;
 
+	goto_filepos(sample_file_curpos[chan]);
 
 	if (i_param[chan][REV])	i_param[chan][REV] = 0;
 	else 					i_param[chan][REV] = 1;
@@ -941,7 +967,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 		wrapping_changed = (starting_wrapping == ending_wrapping)?0:1;
 
 		if (polarity_changed != wrapping_changed)
-			play_state[chan] = PLAY_FADEDOWN;
+			DEBUG3_ON;//play_state[chan] = PLAY_FADEDOWN;
 
 
 		//Calculate length and where to stop playing
