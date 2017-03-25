@@ -68,6 +68,10 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = CLIPLED1_pin;	GPIO_Init(CLIPLED1_GPIO, &gpio);
 	gpio.GPIO_Pin = CLIPLED2_pin;	GPIO_Init(CLIPLED2_GPIO, &gpio);
 
+	//Line Switch
+	gpio.GPIO_Pin = LINESWITCH_pin;	GPIO_Init(LINESWITCH_GPIO, &gpio);
+	LINESWITCH_OFF;
+	
 	PLAYLED1_OFF;
 	PLAYLED2_OFF;
 	CLIPLED1_OFF;

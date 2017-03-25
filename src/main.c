@@ -121,7 +121,7 @@ int main(void)
 
     //Initialize digital in/out pins
     init_dig_inouts();
-    test_dig_inouts();
+ //   test_dig_inouts();
 	init_timekeeper();
 
 

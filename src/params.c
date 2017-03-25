@@ -144,8 +144,8 @@ void init_LowPassCoefs(void)
 	CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
-	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 10;
-	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 10;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 20;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 20;
 
 	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
@@ -275,7 +275,7 @@ void update_params(void)
 	uint8_t new_val;
 	//uint8_t ok_sampleslot;
 	float t_f;
-	float t_fine, t_coarse;
+	float t_fine=0, t_coarse=0;
 	//uint32_t t_32;
 	uint8_t samplenum, banknum;
 
@@ -293,8 +293,7 @@ void update_params(void)
 	}
 
 	//
-	// Assignment mode
-	// Channel 2's knobs control the sample instance (assignment) parameters
+	// Edit mode
 	//
 	if (global_mode[EDIT_MODE])
 	{
@@ -302,63 +301,65 @@ void update_params(void)
 		banknum = i_param[0][BANK];
 
 		//
-		// Trim End 
-		// 0 to 1.0 with ch1 knob
-		// +/- 1.0 with ch2 knob
-		//
-		if (flag_pot_changed[LENGTH_POT*2+0])
-			samples[banknum][samplenum].knob_pos_length1	= i_smoothed_potadc[LENGTH_POT*2+0];
-
-		if (flag_pot_changed[LENGTH_POT*2+1])
-			samples[banknum][samplenum].knob_pos_length2	= i_smoothed_potadc[LENGTH_POT*2+1];
-
-		if (flag_pot_changed[LENGTH_POT*2+1] || flag_pot_changed[LENGTH_POT*2+0])
-		{
-			t_coarse = samples[banknum][samplenum].knob_pos_length1 / 4096.0;
-			t_fine	 = ((float)samples[banknum][samplenum].knob_pos_length2 - 2048.0) / 2048.0;
-
-			set_sample_trim_size(&samples[banknum][samplenum], t_coarse, t_fine);
-		}
-
-/*
+		// Trim Size 
+		// 
 		if (flag_pot_changed[LENGTH_POT*2+0])
 		{
-			t_coarse = pot_delta[LENGTH_POT*2+0] / 4096.0;
-
-			samples[banknum][samplenum].knob_pos_length1	= i_smoothed_potadc[LENGTH_POT*2+0];
-		}
-
-		if (flag_pot_changed[LENGTH_POT*2+1])
-			samples[banknum][samplenum].knob_pos_length2	= i_smoothed_potadc[LENGTH_POT*2+1];
-
-		if (flag_pot_changed[LENGTH_POT*2+1] || flag_pot_changed[LENGTH_POT*2+0])
-		{
-
-			set_sample_trim_size(&samples[banknum][samplenum], t_coarse, t_fine);
+			t_coarse 	 = old_i_smoothed_potadc[LENGTH_POT*2+0] / 4096.0;
+			set_sample_trim_size(&samples[banknum][samplenum], t_coarse, 0);
 
 			flag_pot_changed[LENGTH_POT*2+0] = 0;
-			flag_pot_changed[LENGTH_POT*2+1] = 0;
+
+			f_param[0][START] = 0.9f;
+			f_param[0][LENGTH] = 0.501f;
+			i_param[0][LOOPING] = 1;
+			i_param[0][REV] = 0;
 		}
-*/
+
+		if (flag_pot_changed[LENGTH_POT*2+1])
+		{
+			nudge_trim_size(&samples[banknum][samplenum], 0, pot_delta[LENGTH_POT*2+1]);
+
+			flag_pot_changed[LENGTH_POT*2+1] = 0;
+			pot_delta[LENGTH_POT*2+1] = 0;
+
+			f_param[0][START] = 0.9f;
+			f_param[0][LENGTH] = 0.501f;
+			i_param[0][LOOPING] = 1;
+			i_param[0][REV] = 0;
+
+		}
+		
 
 		//
 		// Trim Start
-		// 0 to 1.0 with ch1 knob
-		// +/- 0.1 with ch2 knob
-		//
-
+		// 
 		if (flag_pot_changed[START_POT*2+0])
-			samples[banknum][samplenum].knob_pos_start1	= (i_smoothed_potadc[START_POT*2+0]);
+		{
+			t_coarse 	 = old_i_smoothed_potadc[START_POT*2+0] / 4096.0;
+			set_sample_trim_start(&samples[banknum][samplenum], t_coarse, 0);
+			flag_pot_changed[START_POT*2+0] = 0;
+
+			f_param[0][START] = 0.003f;
+			f_param[0][LENGTH] = 0.501f;
+			i_param[0][LOOPING] = 1;
+			i_param[0][REV] = 0;
+		}
 
 		if (flag_pot_changed[START_POT*2+1])
-			samples[banknum][samplenum].knob_pos_start2	= (i_smoothed_potadc[START_POT*2+1]);
-
-		if (flag_pot_changed[START_POT*2+1] || flag_pot_changed[START_POT*2+0])
 		{
-			t_coarse 	 = samples[banknum][samplenum].knob_pos_start1 / 4096.0;
-			t_fine	 	+= (samples[banknum][samplenum].knob_pos_start2 - 2048.0) / 2048.0;
-			set_sample_trim_start(&samples[banknum][samplenum], t_coarse, t_fine);
+			nudge_trim_start(&samples[banknum][samplenum], pot_delta[START_POT*2+1]);
+			flag_pot_changed[START_POT*2+0] = 0;
+			pot_delta[START_POT*2+1] = 0;
+
+			f_param[0][START] = 0.003f;
+			f_param[0][LENGTH] = 0.501f;
+			i_param[0][LOOPING] = 1;
+			i_param[0][REV] = 0;
 		}
+
+	//	clear_is_buffered_to_file_end(0);
+	//	check_trim_bounds();
 
 		//
 		// Gain (sample ch2 pot): 
@@ -401,9 +402,7 @@ void update_params(void)
 				flags[PlaySample1Changed_valid] = 6;
 		}
 
-		//Set Lenght and Start to playing full sample so that trim start/end/size makes sense
-		f_param[0][LENGTH] = 1.0f;
-		f_param[0][START] = 0.0f;
+	
 
 
 	} //if EDIT_MODE

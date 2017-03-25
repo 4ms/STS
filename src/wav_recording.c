@@ -29,6 +29,7 @@ extern enum PlayLoadTriage play_load_triage;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
+//#define WRITE_BLOCK_SIZE 8192
 #define WRITE_BLOCK_SIZE 8192
 
 //
@@ -319,6 +320,18 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].numChannels = 2;
 				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign = 4;
 				samples[sample_bank_now_recording][sample_num_now_recording].startOfData = 44;
+
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_start = 0;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
+
+				samples[sample_bank_now_recording][sample_num_now_recording].knob_pos_start1 = 0;
+				samples[sample_bank_now_recording][sample_num_now_recording].knob_pos_start2 = 2048;
+				samples[sample_bank_now_recording][sample_num_now_recording].knob_pos_length1 = 4095;
+				samples[sample_bank_now_recording][sample_num_now_recording].knob_pos_length2 = 2048;
+
+
 				res = write_sampleindex_file();
 				if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
 

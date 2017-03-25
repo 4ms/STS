@@ -100,10 +100,10 @@ LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT)
 
 #vpath %.c src
 
-build/src/params.o: CFLAGS = $(C0FLAGS)
-build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
+#build/src/params.o: CFLAGS = $(C0FLAGS)
+#build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
 #build/src/resample.o: CFLAGS = $(C0FLAGS)
-build/src/sampler.o: CFLAGS = $(C0FLAGS)
+#build/src/sampler.o: CFLAGS = $(C0FLAGS)
 #build/src/circular_buffer.o: CFLAGS = $(C0FLAGS)
 #build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
 #build/src/wav_recoding.o: CFLAGS = $(C0FLAGS)

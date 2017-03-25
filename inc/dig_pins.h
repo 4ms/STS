@@ -134,6 +134,12 @@
 #define EXTI_CLOCK_IRQ EXTI15_10_IRQn
 #define EXTI_Handler EXTI15_10_IRQHandler
 
+//pin to control an analog switch which selects line level (switch open) or modular level (switch closed)
+#define LINESWITCH_pin GPIO_Pin_7
+#define LINESWITCH_GPIO GPIOG
+#define LINESWITCH_OFF LINESWITCH_GPIO->BSRRL = LINESWITCH_pin
+#define LINESWITCH_ON LINESWITCH_GPIO->BSRRH = LINESWITCH_pin
+
 
 /*
 #define JUMPER_1_GPIO GPIOD

@@ -17,6 +17,7 @@ uint8_t cur_assigned_sample_i;
 uint8_t end_assigned_sample_i;
 uint8_t original_assigned_sample_i;
 Sample t_assign_samples[MAX_ASSIGNED];
+uint8_t cur_assign_bank=0xFF;
 
 extern enum g_Errors g_error;
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
@@ -147,34 +148,39 @@ void enter_assignment_mode(void)
 {
 	uint8_t i;
 
-	//force us to be on a non -SAVE bank
-	if (i_param[0][BANK] >= MAX_NUM_REC_BANKS)
+	//Loads first 32 sample files in a folder into an assignment array
+
+	if (cur_assign_bank != i_param[0][BANK])
 	{
-		do i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
-		while (i_param[0][BANK] >= MAX_NUM_REC_BANKS);
+		//force us to be on a non -SAVE bank
+		if (i_param[0][BANK] >= MAX_NUM_REC_BANKS)
+		{
+			do i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
+			while (i_param[0][BANK] >= MAX_NUM_REC_BANKS);
 
-		flags[PlayBank1Changed] = 1;
-	}
+			flags[PlayBank1Changed] = 1;
+		}
 
-	end_assigned_sample_i = load_samples_to_assign(i_param[0][BANK]);
+		end_assigned_sample_i = load_samples_to_assign(i_param[0][BANK]);
 
-	if (end_assigned_sample_i)
-	{
-		//find the current sample in the t_assigned_samples array
-		i = find_current_sample_in_assign(&(samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]));
-		if (i)	{flags[AssigningEmptySample] = 1;}
+		if (end_assigned_sample_i)
+		{
+			//find the current sample in the t_assigned_samples array
+			i = find_current_sample_in_assign(&(samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]));
+			if (i)	{flags[AssigningEmptySample] = 1;}
 
-		//Add a blank/erase sample at the end
-		t_assign_samples[end_assigned_sample_i].filename[0] = 0;
-		t_assign_samples[end_assigned_sample_i].sampleSize = 0;
-		end_assigned_sample_i ++;
+			//Add a blank/erase sample at the end
+			t_assign_samples[end_assigned_sample_i].filename[0] = 0;
+			t_assign_samples[end_assigned_sample_i].sampleSize = 0;
+			end_assigned_sample_i ++;
 
-		cur_assigned_sample_i = original_assigned_sample_i;
-		//global_mode[EDIT_MODE] = 1;
+			cur_assigned_sample_i = original_assigned_sample_i;
+			cur_assign_bank = i_param[0][BANK];
 
-	} else
-	{
-		flags[AssignModeRefused] = 4;
+		} else
+		{
+			flags[AssignModeRefused] = 4;
+		}
 	}
 }
 
@@ -182,7 +188,6 @@ void enter_assignment_mode(void)
 void assign_sample(uint8_t assigned_sample_i)
 {
 	uint8_t sample, bank;
-	uint32_t t32;
 
 	bank = i_param[0][BANK];
 	sample = i_param[0][SAMPLE];
@@ -195,15 +200,15 @@ void assign_sample(uint8_t assigned_sample_i)
 	samples[bank][sample].sampleSize 		= t_assign_samples[ assigned_sample_i ].sampleSize;
 	samples[bank][sample].startOfData 		= t_assign_samples[ assigned_sample_i ].startOfData;
 
-	if (samples[bank][sample].inst_end > samples[bank][sample].sampleSize)
-		samples[bank][sample].inst_end = samples[bank][sample].sampleSize;
+	samples[bank][sample].inst_size 		= t_assign_samples[ assigned_sample_i ].inst_size;
+	samples[bank][sample].inst_start 		= t_assign_samples[ assigned_sample_i ].inst_start;
+	samples[bank][sample].inst_end 			= t_assign_samples[ assigned_sample_i ].inst_end;
 
-	if (samples[bank][sample].inst_start > samples[bank][sample].inst_end)
-	{
-		t32 								= samples[bank][sample].inst_start;
-		samples[bank][sample].inst_start 	= samples[bank][sample].inst_end;
-		samples[bank][sample].inst_end 		= t32;
-	}
+	samples[bank][sample].knob_pos_start1 	= t_assign_samples[ assigned_sample_i ].knob_pos_start1;
+	samples[bank][sample].knob_pos_start2 	= t_assign_samples[ assigned_sample_i ].knob_pos_start2;
+	samples[bank][sample].knob_pos_length1 	= t_assign_samples[ assigned_sample_i ].knob_pos_length1;
+	samples[bank][sample].knob_pos_length2 	= t_assign_samples[ assigned_sample_i ].knob_pos_length2;
+
 
 
 	flags[ForceFileReload1] = 1;
@@ -226,16 +231,26 @@ void save_exit_assignment_mode(void)
 
 	res = write_sampleindex_file();
 	if (res!=FR_OK) {g_error|=CANNOT_WRITE_INDEX; check_errors();}
+//	else
+//		flags[Animate_Good_Save] = 16;
 
 }
 
 void cancel_exit_assignment_mode(void)
 {
-	assign_sample(original_assigned_sample_i);
+	load_sampleindex_file();
+	//flags[Animate_Revert] = 8;
+
+//	assign_sample(original_assigned_sample_i);
 	//global_mode[EDIT_MODE] = 0;
 }
 
-
+//Loads the next sample in the array.
+//Note: This could be changed to just find the next file in the folder, 
+//and when we get to the end we have a blank sample
+//and after that we load the original file name
+//then continue looking for the next wav file
+//The benefit of this method would be that we aren't just limited to 32 samples per folder, and it uses less memory
 void next_unassigned_sample(void)
 {
 
@@ -250,6 +265,46 @@ void next_unassigned_sample(void)
 
 	flags[Play1Trig]=1;
 }
+
+
+void assign_sample_from_other_bank(uint8_t src_bank, uint8_t src_sample)
+{
+
+	uint8_t sample, bank;
+
+	bank = i_param[0][BANK];
+	sample = i_param[0][SAMPLE];
+
+	str_cpy(samples[bank][sample].filename,   samples[src_bank][src_sample].filename);
+	samples[bank][sample].blockAlign 		= samples[src_bank][src_sample].blockAlign;
+	samples[bank][sample].numChannels 		= samples[src_bank][src_sample].numChannels;
+	samples[bank][sample].sampleByteSize 	= samples[src_bank][src_sample].sampleByteSize;
+	samples[bank][sample].sampleRate 		= samples[src_bank][src_sample].sampleRate;
+	samples[bank][sample].sampleSize 		= samples[src_bank][src_sample].sampleSize;
+	samples[bank][sample].startOfData 		= samples[src_bank][src_sample].startOfData;
+
+	samples[bank][sample].inst_size 		= samples[src_bank][src_sample].inst_size;
+	samples[bank][sample].inst_start 		= samples[src_bank][src_sample].inst_start;
+	samples[bank][sample].inst_end 			= samples[src_bank][src_sample].inst_end;
+
+	samples[bank][sample].knob_pos_start1 	= samples[src_bank][src_sample].knob_pos_start1;
+	samples[bank][sample].knob_pos_start2 	= samples[src_bank][src_sample].knob_pos_start2;
+	samples[bank][sample].knob_pos_length1 	= samples[src_bank][src_sample].knob_pos_length1;
+	samples[bank][sample].knob_pos_length2 	= samples[src_bank][src_sample].knob_pos_length2;
+
+	flags[ForceFileReload1] = 1;
+
+	if (samples[bank][sample].filename[0] == 0)
+		flags[AssigningEmptySample] = 1;
+	else
+		flags[AssigningEmptySample] = 0;
+
+	//flags[Animate_Copy_2_1] = 4;
+
+}
+
+
+
 
 
 void set_sample_gain(Sample *s_sample, float gain)
@@ -274,7 +329,6 @@ void set_sample_trim_end(Sample *s_sample, float en)
 	if (trimend > s_sample->inst_start)
 		s_sample->inst_end = trimend;
 
-	clear_is_buffered_to_file_end(0);
 
 }
 
@@ -302,9 +356,57 @@ void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
 
 	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 	
-	clear_is_buffered_to_file_end(0);
 
 }
+
+#define TS_MIN 4412
+#define TSZC 10
+#define TSZF 1
+
+void nudge_trim_start(Sample *s_sample, int32_t fine)
+{
+	int32_t trimdelta;
+
+	float sample_size_secs;
+	uint32_t samples_per_adc;
+
+	sample_size_secs = (float)s_sample->sampleSize / (float)(s_sample->sampleRate * s_sample->blockAlign); // Bytes / (samples/sec * bytes/sample)
+
+	if (sample_size_secs > TSZF)
+		samples_per_adc = (TSZF * s_sample->sampleRate * s_sample->blockAlign) >> 12;
+	else if (s_sample->sampleSize >= 32768)
+		samples_per_adc = s_sample->sampleSize >> 14;
+	else
+		samples_per_adc = 1;
+
+	trimdelta = samples_per_adc * fine * fine;
+	if (fine < 0) trimdelta *= -1;
+
+	if (trimdelta<0)
+	{
+		trimdelta = -1 * trimdelta;
+
+		if (s_sample->inst_start > trimdelta)
+			s_sample->inst_start -= trimdelta;
+		else
+			s_sample->inst_start = 0;
+	}
+	else
+	{
+		s_sample->inst_start += trimdelta;
+		if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
+			s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+	}
+
+	s_sample->inst_size &= 0xFFFFFFF8;
+
+	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+	s_sample->inst_end &= 0xFFFFFFF8;
+
+
+}
+
+
 
 void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
 {
@@ -330,6 +432,70 @@ void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
 
 	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 
-	clear_is_buffered_to_file_end(0);
 
 }
+
+//
+//coarse and fine range from -4095 to +4095
+//
+// If total sample time is > XX seconds then coarse +/-4095 adjusts length by +/- XX seconds
+// Else coarse +/-4095 adjusts length by total sample time
+//
+
+void nudge_trim_size(Sample *s_sample, int32_t coarse, int32_t fine)
+{
+	int32_t trimdelta;
+
+	float sample_size_secs;
+	uint32_t samples_per_adc;
+
+	sample_size_secs = (float)s_sample->sampleSize / (float)(s_sample->sampleRate * s_sample->blockAlign); // Bytes / (samples/sec * bytes/sample)
+
+	if (sample_size_secs > TSZC)
+		samples_per_adc = (TSZC * s_sample->sampleRate * s_sample->blockAlign) >> 12;
+	else if (s_sample->sampleSize >= 8192)
+		samples_per_adc = s_sample->sampleSize >> 12;
+	else
+		samples_per_adc = 1;
+
+	trimdelta = samples_per_adc * coarse * coarse;
+	if (coarse < 0) trimdelta *= -1;
+
+	if (sample_size_secs > TSZF)
+		samples_per_adc = (TSZF * s_sample->sampleRate * s_sample->blockAlign) >> 12;
+	else if (s_sample->sampleSize >= 32768)
+		samples_per_adc = s_sample->sampleSize >> 14;
+	else
+		samples_per_adc = 1;
+
+	trimdelta += samples_per_adc * fine * fine;
+	if (fine < 0) trimdelta *= -1;
+
+	//clip ->inst_size+trimdelta to TS_MIN...->sampleSize
+	//Is there a more efficient way of doing this?
+	//We don't want to convert ->sampleSize or ->instSize to an int, it must stay unsigned
+	if (trimdelta<0)
+	{
+		trimdelta = -1 * trimdelta;
+		if (s_sample->inst_size > trimdelta)
+			s_sample->inst_size -= trimdelta;
+		else
+			s_sample->inst_size = TS_MIN;
+	}
+	else
+	{
+		s_sample->inst_size += trimdelta;
+		if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
+			s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+	}
+
+	s_sample->inst_size &= 0xFFFFFFF8;
+
+	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+	s_sample->inst_end &= 0xFFFFFFF8;
+
+}
+
+
+
+

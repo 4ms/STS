@@ -90,15 +90,24 @@ void Button_Debounce_IRQHandler(void)
 				switch (i)
 				{
 					case Play1:
-						if (!i_param[0][LOOPING]) 
-							flags[Play1Trig]=1;
-						clear_errors();
+						if (global_mode[EDIT_MODE])
+							save_exit_assignment_mode();
+						else {
+							if (!i_param[0][LOOPING]) 
+								flags[Play1Trig]=1;
+							clear_errors();
+						}
 						break;
 
 					case Play2:
-						if (!i_param[1][LOOPING]) 
-							flags[Play2Trig]=1;
-						clear_errors();
+						if (global_mode[EDIT_MODE])
+							assign_sample_from_other_bank(i_param[1][BANK], i_param[1][SAMPLE]);
+						else 
+						{
+							if (!i_param[1][LOOPING]) 
+								flags[Play2Trig]=1;
+							clear_errors();
+						}
 						break;
 
 					case Bank1:
@@ -158,27 +167,39 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 						case Play1:
-							if (i_param[0][LOOPING] && button_state[Play1] == DOWN) 
-								flags[Play1Trig] = 1; //if looping, stop playing when lifted (assuming it's a short press)
+							if (!global_mode[EDIT_MODE])
+							{
+								if (i_param[0][LOOPING] && button_state[Play1] == DOWN) 
+									flags[Play1Trig] = 1; //if looping, stop playing when lifted (assuming it's a short press)
+							}
 							break;
 
 						case Play2:
-							if (i_param[1][LOOPING] && button_state[Play1] == DOWN) 
-								flags[Play2Trig] = 1;
+							if (!global_mode[EDIT_MODE])
+							{
+								if (i_param[1][LOOPING] && button_state[Play1] == DOWN) 
+									flags[Play2Trig] = 1;
+							}
 							break;
 
 						case Rev1:
-							//if (!global_mode[EDIT_MODE] && !flags[AssignModeRefused])
+							if (global_mode[EDIT_MODE])
+							{
+								enter_assignment_mode();
+								next_unassigned_sample();
+							}
+							else if (!flags[AssignModeRefused])
 								flags[Rev1Trig]=1;
-							//else
-							//	next_unassigned_sample();
-
+			
 
 							clear_errors();
 							break;
 
 						case Rev2:
-							flags[Rev2Trig]=1;
+							if (global_mode[EDIT_MODE])
+								load_sampleindex_file();
+							else
+								flags[Rev2Trig]=1;
 
 							clear_errors();
 							break;

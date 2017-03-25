@@ -90,7 +90,7 @@ void ITM_Init(uint32_t SWOSpeed)
 	//   *((volatile unsigned *)0xE0042004) = 0x00000027; // DBGMCU->CR = standby stop sleep trace_enable
 	//   *((volatile unsigned *)0xE00400F0) = 0x00000002;   // "Selected PIN Protocol Register": Select which protocol to use for trace output (2: SWO)
 
-	  SWOPrescaler = (168000000 / SWOSpeed) - 1;  // SWOSpeed in Hz
+	  SWOPrescaler = (180000000 / SWOSpeed) - 1;  // SWOSpeed in Hz
 	   *((volatile unsigned *)0xE0040010) = SWOPrescaler; // "Async Clock Prescaler Register". Scale the baud rate of the asynchronous output
 
 

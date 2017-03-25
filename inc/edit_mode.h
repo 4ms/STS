@@ -16,10 +16,15 @@ uint8_t load_samples_to_assign(uint8_t bank);
 
 void next_unassigned_sample(void);
 uint8_t find_current_sample_in_assign(Sample *s);
+void assign_sample_from_other_bank(uint8_t src_bank, uint8_t src_sample);
 
 void set_sample_trim_start(Sample *s_sample, float coarse, float fine);
+void nudge_trim_start(Sample *s_sample, int32_t fine);
+
 void set_sample_trim_end(Sample *s_sample, float en);
+
 void set_sample_trim_size(Sample *s_sample, float coarse, float fine);
+void nudge_trim_size(Sample *s_sample, int32_t coarse, int32_t fine);
 
 void set_sample_gain(Sample *s_sample, float gain);
 

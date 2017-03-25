@@ -26,15 +26,15 @@ enum Flags {
 	PlaySample2Changed,
 	PlayBank2Changed,
 	RecSampleChanged,
-	RecBankChanged,
+	RecBankChanged, //5
 	Play1Trig,
 	Play2Trig,
 	RecTrig,
 	Rev1Trig,
-	Rev2Trig,
+	Rev2Trig, //10
 	PlayBuff1_Discontinuity,
 	PlayBuff2_Discontinuity,
-	ToggleMonitor,
+	ToggleMonitor, //13
 	ToggleLooping1,
 	ToggleLooping2,
 	PlaySample1Changed_valid,
