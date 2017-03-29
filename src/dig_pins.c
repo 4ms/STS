@@ -62,6 +62,9 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = ENDOUT1_pin;	GPIO_Init(ENDOUT1_GPIO, &gpio);
 	gpio.GPIO_Pin = ENDOUT2_pin;	GPIO_Init(ENDOUT2_GPIO, &gpio);
 
+	gpio.GPIO_Pin = EDIT_BUTTONREF_pin;	GPIO_Init(EDIT_BUTTONREF_GPIO, &gpio);
+	EDIT_BUTTONREF_OFF;
+
 	//LEDs
 	gpio.GPIO_Pin = PLAYLED1_pin;	GPIO_Init(PLAYLED1_GPIO, &gpio);
 	gpio.GPIO_Pin = PLAYLED2_pin;	GPIO_Init(PLAYLED2_GPIO, &gpio);

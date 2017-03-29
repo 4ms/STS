@@ -89,7 +89,7 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 //extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 //volatile uint32_t*  SDIOSTA;
 
-
+uint32_t WATCHAMT;
 //
 // System-wide parameters, flags, modes, states
 //
@@ -153,7 +153,13 @@ enum PlayLoadTriage play_load_triage;
 // FRESULT goto_filepos(FIL *sfil, Sample *sample, uint32_t pos);
 
 
-
+#define DBG_SIZE 32
+uint32_t DBG_i=0;
+uint32_t DBG_buffi=0;
+uint32_t DBG_last_i = DBG_SIZE-1;
+uint32_t DBG_last_buffi = DBG_SIZE-1;
+uint32_t DBG_buffadd[DBG_SIZE];
+uint32_t DBG_sdadd[DBG_SIZE];
 
 //
 // Cross-fading:
@@ -406,6 +412,8 @@ void toggle_playing(uint8_t chan)
 	if (play_state[chan]==SILENT || play_state[chan]==PLAY_FADEDOWN || play_state[chan]==RETRIG_FADEDOWN )
 	{
 
+		if (chan==0) {DBG_i=0;DBG_buffi=0;}
+
 		samplenum = i_param[chan][SAMPLE];
 		banknum = i_param[chan][BANK];
 
@@ -549,21 +557,20 @@ uint32_t calc_start_point(float start_param, Sample *sample)
 {
 	uint32_t align;
 	uint32_t zeropt;
-	// uint32_t inst_size;
+	uint32_t inst_size;
 
 	if (sample->blockAlign == 4)		align = 0xFFFFFFFC;
 	else if (sample->blockAlign == 2)	align = 0xFFFFFFFC; //was E? but it clicks if we align to 2 not 4, even if our file claims blockAlign = 2
 	else if (sample->blockAlign == 8)	align = 0xFFFFFFF8;
 
 	zeropt = sample->inst_start;
-	//if (sample->inst_end > sample->inst_start) 	inst_size = sample->inst_end - sample->inst_start;
-	//else 										inst_size = sample->inst_start - sample->inst_end;
+	inst_size = sample->inst_end - sample->inst_start;
 
 	//Determine the starting address
 	if (start_param < 0.002)			return(align & zeropt);
 	//else if (start_param > 0.998)		return(align & (zeropt + inst_size - READ_BLOCK_SIZE) ); //just play the last 32 blocks (~64k samples)
 
-	else								return(align & (zeropt  +  ( (uint32_t)(start_param * (float)sample->inst_size) )) );
+	else								return(align & (zeropt  +  ( (uint32_t)(start_param * (float)inst_size) )) );
 
 
 }
@@ -590,22 +597,20 @@ uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos)
 uint32_t calc_play_length(float length, Sample *sample)
 {
 	uint32_t dist;
-	// uint32_t inst_size;
+	uint32_t inst_size;
 
-	// if (sample->inst_end > sample->inst_start)	inst_size = sample->inst_end - sample->inst_start;
-	// else 										inst_size = sample->inst_start - sample->inst_end;
+	inst_size = sample->inst_end - sample->inst_start; //as opposed to taking sample->inst_size because that won't be clipped to the end of a sample file
 
+	if (length > 0.98)
+	 	dist = inst_size * (length-0.9) * 10; //80% to 100%
 
-	 if (length > 0.98)
-	 	dist = sample->inst_size * (length-0.9) * 10; //80% to 100%
-
-	 else 
+	else 
 	if (length>=0.5) //>=0.5 to <0.95
 	{
-		if (sample->inst_size > (5 * sample->sampleRate * sample->blockAlign) ) //sample is > 5 seconds long
+		if (inst_size > (5 * sample->sampleRate * sample->blockAlign) ) //sample is > 5 seconds long
 			dist = (length - (0.5-0.25/8.0)) * 8.0 * sample->sampleRate  * sample->blockAlign; //0.25 .. 4.25 seconds
 		else
-			dist = (length - (0.5-0.25/8.0)) * 1.6 * sample->inst_size; //sampletime/5.0 .. sampletime seconds
+			dist = (length - (0.5-0.25/8.0)) * 1.6 * inst_size; //sampletime/5.0 .. sampletime seconds
 	}
 
 	else //length < 0.5
@@ -738,6 +743,7 @@ void read_storage_to_buffer(void)
 	check_change_sample();
 
 
+
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
 		if (play_state[chan] == SILENT)
@@ -747,28 +753,30 @@ void read_storage_to_buffer(void)
 
 		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN && play_state[chan] != RETRIG_FADEDOWN)
 		{
-			// Check if we need to buffer ahead more
+			samplenum = sample_num_now_playing[chan];
+			banknum = sample_bank_now_playing[chan];
 
 			//We should buffer more if:
 			//     play_buff[]->out is approaching play_buff[]->in (buffer_lead)
 			//     OR the circular buffer is not full (cache_left > READ_BLOCK_SIZE)
 			// Unless the entire file has been read from startpos to endpos (is_buffered_to_file_end)
+			//don't read more if it will make play_buff[chan]->in wrap past the cache_offset[chan].... unless we have to because buffer_lead < PRE_BUFF_SIZE
 
 			buffer_lead = CB_distance(play_buff[chan], i_param[chan][REV]);
-
-			//don't read more if it will make play_buff[chan]->in wrap past the cache_offset[chan].... unless we have to because buffer_lead < PRE_BUFF_SIZE
-		//	cache_left = CB_distance_points(cache_offset[chan], play_buff[chan]->in, play_buff[chan]->size, i_param[chan][REV] );
 
 			cache_left = play_buff[chan]->size - (cache_high[chan] - cache_low[chan]);
 			if (cache_left>play_buff[chan]->size) cache_left = 0;
 
-			if (sample_file_curpos[chan] < samples[banknum][samplenum].inst_end)
+			if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < samples[banknum][samplenum].inst_end))
+			 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > samples[banknum][samplenum].inst_start)) )
 				is_buffered_to_file_end[chan] = 0;
 
-			if (!is_buffered_to_file_end[chan] && ((cache_left > READ_BLOCK_SIZE) || (buffer_lead < PRE_BUFF_SIZE))) //FixMe: should be PRE_BUFF_SIZE * blockAlign
+			if (!is_buffered_to_file_end[chan] && (
+					   (cache_left > READ_BLOCK_SIZE) 
+					|| (play_state[chan]==PREBUFFERING && (buffer_lead < PRE_BUFF_SIZE))
+					|| (play_state[chan]!=PREBUFFERING && (buffer_lead < ACTIVE_BUFF_SIZE))
+					)) //FixMe: should be PRE_BUFF_SIZE * blockAlign
 			{
-				samplenum = sample_num_now_playing[chan];
-				banknum = sample_bank_now_playing[chan];
 
 				if (sample_file_curpos[chan] > samples[banknum][ samplenum ].sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
 					g_error |= FILE_WAVEFORMATERR;							//Breakpoint
@@ -796,6 +804,16 @@ void read_storage_to_buffer(void)
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 
+						if (chan==0) {	
+										if (++DBG_i==DBG_SIZE) DBG_i=0; 
+										DBG_sdadd[DBG_i] = f_tell(&fil[chan]);
+	
+										if (abs_diff(DBG_sdadd[DBG_i], DBG_sdadd[DBG_last_i]) != 0x2000) 
+											DEBUG0_ON;
+										else DEBUG0_OFF;
+										DBG_last_i = DBG_i;
+									}
+
 						DEBUG1_ON;
 						res = f_read(&fil[chan], t_buff16, rd, &br);
 					//	f_sync(&fil[chan]);
@@ -817,7 +835,6 @@ void read_storage_to_buffer(void)
 							//Breakpoint
 							is_buffered_to_file_end[chan] = 1;
 						}
-
 
 					}
 
@@ -853,8 +870,15 @@ void read_storage_to_buffer(void)
 							//f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start);
 							is_buffered_to_file_end[chan] = 1;
 						}
+						if (chan==0) {	
+										if (++DBG_i==DBG_SIZE) DBG_i=0; 
+										DBG_sdadd[DBG_i] = f_tell(&fil[chan]);
 
-
+										if (abs_diff(DBG_sdadd[DBG_i], DBG_sdadd[DBG_last_i]) != 0x2000) 
+											DEBUG0_ON;
+										else DEBUG0_OFF;
+										DBG_last_i = DBG_i;
+									}
 						DEBUG1_ON;
 						//Read one block forward
 						t_fptr=f_tell(&fil[chan]);
@@ -880,6 +904,20 @@ void read_storage_to_buffer(void)
 					if (res != FR_OK) 		g_error |= FILE_READ_FAIL;
 					else
 					{
+
+						if (chan==0) {	
+										if (++DBG_buffi==DBG_SIZE) DBG_buffi=0; 
+										DBG_buffadd[DBG_buffi] = play_buff[chan]->in;
+										
+										if (abs_diff(DBG_buffadd[DBG_buffi], DBG_buffadd[DBG_last_buffi]) != 0x2000) 
+											DEBUG0_ON;
+										else DEBUG0_OFF;
+										DBG_last_buffi = DBG_buffi;
+
+										if (DBG_buffi != DBG_i) 
+											DEBUG3_ON;
+									}
+
 						//Todo: avoid using a tbuff16 and copying it, rewrite f_read so that it writes directly to play_buff[] in SDRAM
 						err = memory_write16_cb(play_buff[chan], t_buff16, rd>>1, 0);
 
@@ -1101,7 +1139,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 						{
 							//Check if we are about to hit the end of the file (or buffer undderrun)
 							play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
-
+WATCHAMT = play_buff_bufferedamt[0];
 							if (play_buff_bufferedamt[chan] <= resampled_buffer_size)
 							{
 
@@ -1122,7 +1160,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 									//if (i_param[chan][REV]) resampled_buffer_size *= 2;
 
 									CB_offset_out_address(play_buff[chan], resampled_buffer_size, !i_param[chan][REV]);
-									play_buff[chan]->out &= 0xFFFFFFFC;
+									play_buff[chan]->out &= 0xFFFFFFF8;
 
 								}
 							}

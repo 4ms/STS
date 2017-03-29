@@ -33,7 +33,7 @@ enum PlayLoadTriage{
 
 
 #define PRE_BUFF_SIZE (8192*3) /*0x6000*/
-
+#define ACTIVE_BUFF_SIZE (8192*64) /* measured gaps of about 32 blocks, so this is twice enough */
 
 #define MAX_RS 4
 #define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)

@@ -321,7 +321,7 @@ void update_params(void)
 			nudge_trim_size(&samples[banknum][samplenum], 0, pot_delta[LENGTH_POT*2+1]);
 
 			flag_pot_changed[LENGTH_POT*2+1] = 0;
-			pot_delta[LENGTH_POT*2+1] = 0;
+			//pot_delta[LENGTH_POT*2+1] = 0;
 
 			f_param[0][START] = 0.9f;
 			f_param[0][LENGTH] = 0.501f;
@@ -350,7 +350,7 @@ void update_params(void)
 		{
 			nudge_trim_start(&samples[banknum][samplenum], pot_delta[START_POT*2+1]);
 			flag_pot_changed[START_POT*2+0] = 0;
-			pot_delta[START_POT*2+1] = 0;
+			//pot_delta[START_POT*2+1] = 0;
 
 			f_param[0][START] = 0.003f;
 			f_param[0][LENGTH] = 0.501f;

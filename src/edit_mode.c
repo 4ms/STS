@@ -316,21 +316,21 @@ void set_sample_gain(Sample *s_sample, float gain)
 
 }
 
-void set_sample_trim_end(Sample *s_sample, float en)
-{
-	uint32_t trimend;
+// void set_sample_trim_end(Sample *s_sample, float en)
+// {
+// 	uint32_t trimend;
 
-	if (en >= 1.0f) 				trimend = s_sample->sampleSize;
-	else 							trimend = s_sample->sampleSize * en;
-	if (trimend <= 0) 				trimend = 4420;
+// 	if (en >= 1.0f) 				trimend = s_sample->sampleSize;
+// 	else 							trimend = s_sample->sampleSize * en;
+// 	if (trimend <= 0) 				trimend = 4420;
 
-	trimend &= 0xFFFFFFF8;
+// 	trimend &= 0xFFFFFFF8;
 
-	if (trimend > s_sample->inst_start)
-		s_sample->inst_end = trimend;
+// 	if (trimend > s_sample->inst_start)
+// 		s_sample->inst_end = trimend;
 
 
-}
+// }
 
 //sets the trim start point between 0 and 100ms before the end of the sample file
 void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
@@ -351,11 +351,14 @@ void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
 
 	s_sample->inst_start = trimstart;
 
-	if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
-		s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+	//if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
+	//	s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
 
-	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
-	
+	//Clip inst_end to the sampleSize (but keep inst_size the same)
+	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
+		s_sample->inst_end = s_sample->sampleSize;
+	else
+		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 
 }
 
@@ -394,13 +397,18 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 	else
 	{
 		s_sample->inst_start += trimdelta;
-		if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
-			s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+		//if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
+		//	s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
 	}
 
 	s_sample->inst_size &= 0xFFFFFFF8;
 
-	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+	//Clip inst_end to the sampleSize (but keep inst_size the same)
+	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
+		s_sample->inst_end = s_sample->sampleSize;
+	else
+		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+
 	s_sample->inst_end &= 0xFFFFFFF8;
 
 
@@ -425,12 +433,16 @@ void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
 
 	trimsize &= 0xFFFFFFF8;
 
-	if ((s_sample->inst_start +  trimsize) > s_sample->sampleSize)
-		s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
-	else
+	//if ((s_sample->inst_start +  trimsize) > s_sample->sampleSize)
+	//	s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+	//else
 		s_sample->inst_size = trimsize;
 
-	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+	//Clip inst_end to the sampleSize (but keep inst_size the same)
+	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
+		s_sample->inst_end = s_sample->sampleSize;
+	else
+		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 
 
 }
@@ -485,13 +497,18 @@ void nudge_trim_size(Sample *s_sample, int32_t coarse, int32_t fine)
 	else
 	{
 		s_sample->inst_size += trimdelta;
-		if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
-			s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+		// if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
+		// 	s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
 	}
 
 	s_sample->inst_size &= 0xFFFFFFF8;
 
-	s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+	//Clip inst_end to the sampleSize (but keep inst_size the same)
+	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
+		s_sample->inst_end = s_sample->sampleSize;
+	else
+		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+
 	s_sample->inst_end &= 0xFFFFFFF8;
 
 }
