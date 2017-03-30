@@ -562,7 +562,7 @@ uint32_t calc_start_point(float start_param, Sample *sample)
 	uint32_t inst_size;
 
 	if (sample->blockAlign == 4)		align = 0xFFFFFFFC;
-	else if (sample->blockAlign == 2)	align = 0xFFFFFFFC; //was E? but it clicks if we align to 2 not 4, even if our file claims blockAlign = 2
+	else if (sample->blockAlign == 2)	align = 0xFFFFFFF8; //was E? but it clicks if we align to 2 not 4, even if our file claims blockAlign = 2
 	else if (sample->blockAlign == 8)	align = 0xFFFFFFF8;
 
 	zeropt = sample->inst_start;
@@ -589,7 +589,7 @@ uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos)
 		fwd_stop_point = sample->inst_end;
 
 	if (sample->blockAlign == 4)		fwd_stop_point &= 0xFFFFFFFC;
-	else if (sample->blockAlign == 2)	fwd_stop_point &= 0xFFFFFFFC;
+	else if (sample->blockAlign == 2)	fwd_stop_point &= 0xFFFFFFF8;
 	else if (sample->blockAlign == 8)	fwd_stop_point &= 0xFFFFFFF8;
 
 	return(fwd_stop_point);
@@ -1169,7 +1169,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 						{
 							//Check if we are about to hit the end of the file (or buffer undderrun)
 							play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
-WATCHAMT = play_buff_bufferedamt[0];
+
 							if (play_buff_bufferedamt[chan] <= resampled_buffer_size)
 							{
 
