@@ -153,13 +153,15 @@ enum PlayLoadTriage play_load_triage;
 // FRESULT goto_filepos(FIL *sfil, Sample *sample, uint32_t pos);
 
 
-#define DBG_SIZE 32
-uint32_t DBG_i=0;
-uint32_t DBG_buffi=0;
-uint32_t DBG_last_i = DBG_SIZE-1;
-uint32_t DBG_last_buffi = DBG_SIZE-1;
-uint32_t DBG_buffadd[DBG_SIZE];
-uint32_t DBG_sdadd[DBG_SIZE];
+// #define DBG_SIZE 64
+// uint32_t DBG_i=0;
+// uint32_t DBG_buffi=0;
+// uint32_t DBG_last_i = DBG_SIZE-1;
+// uint32_t DBG_last_buffi = DBG_SIZE-1;
+// uint32_t DBG_buffadd[DBG_SIZE];
+// uint32_t DBG_sdadd[DBG_SIZE];
+// uint32_t DBG_err[16];
+// uint8_t DBG_err_i;
 
 //
 // Cross-fading:
@@ -412,7 +414,7 @@ void toggle_playing(uint8_t chan)
 	if (play_state[chan]==SILENT || play_state[chan]==PLAY_FADEDOWN || play_state[chan]==RETRIG_FADEDOWN )
 	{
 
-		if (chan==0) {DBG_i=0;DBG_buffi=0;}
+		// if (chan==1) {DBG_i=0;DBG_buffi=0;}
 
 		samplenum = i_param[chan][SAMPLE];
 		banknum = i_param[chan][BANK];
@@ -722,15 +724,18 @@ void check_trim_bounds(void)
 
 }
 
+int16_t tmp_buff_i16[READ_BLOCK_SIZE>>1]; 
+
 void read_storage_to_buffer(void)
 {
 	uint8_t chan=0;
 	uint32_t err;
-	int16_t t_buff16[READ_BLOCK_SIZE]; //shouldn't this be >>1 ?
 
 	FRESULT res;
 	uint32_t br;
 	uint32_t rd;
+	uint16_t i;
+	int32_t a,b,c;
 
 	//convenience variables
 	uint8_t samplenum, banknum;
@@ -804,20 +809,36 @@ void read_storage_to_buffer(void)
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 
-						if (chan==0) {	
-										if (++DBG_i==DBG_SIZE) DBG_i=0; 
-										DBG_sdadd[DBG_i] = f_tell(&fil[chan]);
-	
-										if (abs_diff(DBG_sdadd[DBG_i], DBG_sdadd[DBG_last_i]) != 0x2000) 
-											DEBUG0_ON;
-										else DEBUG0_OFF;
-										DBG_last_i = DBG_i;
-									}
+						// if (chan==1) {	
+						// 	if (DBG_i<DBG_SIZE) {
+						// 		DBG_sdadd[DBG_i] = f_tell(&fil[chan]);
+
+						// 		//if (DBG_i && (abs_diff(DBG_sdadd[DBG_i], DBG_sdadd[DBG_last_i]) != 0x2000) )
+						// 		//	DBG_err[DBG_err_i++] = DBG_i;
+						// 		DBG_last_i = DBG_i;
+						// 		DBG_i ++;
+						// 	}
+						// }
 
 						DEBUG1_ON;
-						res = f_read(&fil[chan], t_buff16, rd, &br);
+						res = f_read(&fil[chan], (uint8_t *)tmp_buff_i16, rd, &br);
 					//	f_sync(&fil[chan]);
 						DEBUG1_OFF;
+
+						DEBUG0_OFF;	
+						for(i=2;i<(rd>>1);i++)
+						{
+							a = tmp_buff_i16[i];
+							b = tmp_buff_i16[i-2];
+
+							if (a > b)
+								c = a - b;
+							else
+								c = b - a;
+							if (c > 0x2000)
+								DEBUG0_ON;
+							
+						}
 
 						if (br < rd)
 						{
@@ -870,19 +891,22 @@ void read_storage_to_buffer(void)
 							//f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start);
 							is_buffered_to_file_end[chan] = 1;
 						}
-						if (chan==0) {	
-										if (++DBG_i==DBG_SIZE) DBG_i=0; 
-										DBG_sdadd[DBG_i] = f_tell(&fil[chan]);
+						// if (chan==1) {	
+						// 	if (DBG_i<DBG_SIZE) {
+						// 		DBG_sdadd[DBG_i] = f_tell(&fil[chan]);
 
-										if (abs_diff(DBG_sdadd[DBG_i], DBG_sdadd[DBG_last_i]) != 0x2000) 
-											DEBUG0_ON;
-										else DEBUG0_OFF;
-										DBG_last_i = DBG_i;
-									}
+						// 		if (DBG_i && (abs_diff(DBG_sdadd[DBG_i], DBG_sdadd[DBG_last_i]) != 0x2000) )
+						// 			DBG_err[DBG_err_i++] = DBG_i;
+
+						// 		DBG_last_i = DBG_i;
+						// 		DBG_i++;
+						// 	}
+						// }
+
 						DEBUG1_ON;
 						//Read one block forward
 						t_fptr=f_tell(&fil[chan]);
-						res = f_read(&fil[chan], t_buff16, rd, &br);
+						res = f_read(&fil[chan], tmp_buff_i16, rd, &br);
 						//f_sync(&fil[chan]);
 						DEBUG1_OFF;
 
@@ -896,7 +920,6 @@ void read_storage_to_buffer(void)
 						if (f_tell(&fil[chan])!=t_fptr)
 											g_error |= LSEEK_FPTR_MISMATCH;
 
-
 					}
 
 
@@ -904,22 +927,21 @@ void read_storage_to_buffer(void)
 					if (res != FR_OK) 		g_error |= FILE_READ_FAIL;
 					else
 					{
+						// if (chan==1) {	
+						// 	if (DBG_buffi<DBG_SIZE) {
+						// 		DBG_buffadd[DBG_buffi] = play_buff[chan]->in;
 
-						if (chan==0) {	
-										if (++DBG_buffi==DBG_SIZE) DBG_buffi=0; 
-										DBG_buffadd[DBG_buffi] = play_buff[chan]->in;
-										
-										if (abs_diff(DBG_buffadd[DBG_buffi], DBG_buffadd[DBG_last_buffi]) != 0x2000) 
-											DEBUG0_ON;
-										else DEBUG0_OFF;
-										DBG_last_buffi = DBG_buffi;
-
-										if (DBG_buffi != DBG_i) 
-											DEBUG3_ON;
-									}
+						// 		if (DBG_buffi && (abs_diff(DBG_buffadd[DBG_buffi], DBG_buffadd[DBG_last_buffi]) != 0x2000) )
+						// 			DBG_err[DBG_err_i++] = play_buff[chan]->in;
+								
+						// 		DBG_last_buffi = DBG_buffi;
+						// 		DBG_buffi++;
+						// 	}
+						// }
+	
 
 						//Todo: avoid using a tbuff16 and copying it, rewrite f_read so that it writes directly to play_buff[] in SDRAM
-						err = memory_write16_cb(play_buff[chan], t_buff16, rd>>1, 0);
+						err = memory_write16_cb(play_buff[chan], tmp_buff_i16, rd>>1, 0);
 
 						//Update the cache addresses
 						if (i_param[chan][REV])

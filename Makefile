@@ -39,7 +39,7 @@ BIN = $(BUILDDIR)/$(BINARYNAME).bin
 ARCH = arm-none-eabi
 CC = $(ARCH)-gcc
 ##Use -gcc instead of -ld
-LD = $(ARCH)-gcc
+LD = $(ARCH)-gcc -Wl,-Map,build/main.map
 #LD = $(ARCH)-ld -v -Map main.map
 AS = $(ARCH)-as
 OBJCPY = $(ARCH)-objcopy

@@ -43,6 +43,7 @@ void Button_Debounce_IRQHandler(void)
 
 	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET) {
 
+
 		for (i=0;i<NUM_BUTTONS;i++)
 		{
 			//Load the button's state
@@ -134,9 +135,9 @@ void Button_Debounce_IRQHandler(void)
 			}
 
 			//Check for debounced up-state
-			else if (State[i]==0xe0ff)
+			//else if ((State[i] & 0xefff)==0xe0ff)
+			else if (State[i]==0xffff)
 			{
-
 				if (button_state[i] != UP)
 				{
 					switch (i)
@@ -286,8 +287,7 @@ void Button_Debounce_IRQHandler(void)
 				long_press[i]=0;
 				//button_state[i] = UNKNOWN; //If we are just getting noise that makes State[i]==0x0001, we need to set button_state[i] to something other than LONG/MED/SHORT_PRESSED
 			}
-
-
+//			DEBUG0_OFF;
 		}
 
 		//Sample Assignment mode

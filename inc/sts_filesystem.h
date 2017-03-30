@@ -39,18 +39,12 @@ typedef struct Sample {
 	uint32_t 	sampleRate;
 	uint8_t 	numChannels;
 	uint8_t 	blockAlign;
-	float		peak_dBFS; //not yet implemented
+//	float		peak_dBFS; //not yet implemented
 
 	uint32_t	inst_start;
 	uint32_t	inst_end;
 	uint32_t	inst_size;
 	float		inst_gain;
-
-	int16_t		knob_pos_start1;
-	int16_t		knob_pos_start2;
-	int16_t		knob_pos_length1;
-	int16_t		knob_pos_length2;
-
 } Sample;
 
 

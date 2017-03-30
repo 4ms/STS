@@ -209,15 +209,9 @@ void clear_sample_header(Sample *s_sample)
 	s_sample->startOfData = 0;
 
 	s_sample->inst_start = 0;
-	s_sample->inst_end = s_sample->sampleSize;
-	s_sample->inst_size = s_sample->sampleSize;
+	s_sample->inst_end = s_sample->sampleSize & 0xFFFFFFF8;
+	s_sample->inst_size = s_sample->sampleSize & 0xFFFFFFF8;
 	s_sample->inst_gain = 1.0;
-
-	s_sample->knob_pos_start1 = 0;
-	s_sample->knob_pos_start2 = 2048;
-	s_sample->knob_pos_length1 = 4095;
-	s_sample->knob_pos_length2 = 2048;
-
 }
 
 
@@ -305,14 +299,10 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 						s_sample->blockAlign = fmt_chunk.numChannels * fmt_chunk.bitsPerSample>>3;
 						s_sample->startOfData = f_tell(sample_file);
 
-						s_sample->inst_end = s_sample->sampleSize;
-						s_sample->inst_size = s_sample->sampleSize;
+						s_sample->inst_end = s_sample->sampleSize & 0xFFFFFFF8;
+						s_sample->inst_size = s_sample->sampleSize & 0xFFFFFFF8;
 						s_sample->inst_start = 0;
 						s_sample->inst_gain = 1.0;
-						s_sample->knob_pos_start1 = 0;
-						s_sample->knob_pos_start2 = 2048;
-						s_sample->knob_pos_length1 = 4095;
-						s_sample->knob_pos_length2 = 2048;
 
 						return(FR_OK);
 

@@ -200,16 +200,9 @@ void assign_sample(uint8_t assigned_sample_i)
 	samples[bank][sample].sampleSize 		= t_assign_samples[ assigned_sample_i ].sampleSize;
 	samples[bank][sample].startOfData 		= t_assign_samples[ assigned_sample_i ].startOfData;
 
-	samples[bank][sample].inst_size 		= t_assign_samples[ assigned_sample_i ].inst_size;
-	samples[bank][sample].inst_start 		= t_assign_samples[ assigned_sample_i ].inst_start;
-	samples[bank][sample].inst_end 			= t_assign_samples[ assigned_sample_i ].inst_end;
-
-	samples[bank][sample].knob_pos_start1 	= t_assign_samples[ assigned_sample_i ].knob_pos_start1;
-	samples[bank][sample].knob_pos_start2 	= t_assign_samples[ assigned_sample_i ].knob_pos_start2;
-	samples[bank][sample].knob_pos_length1 	= t_assign_samples[ assigned_sample_i ].knob_pos_length1;
-	samples[bank][sample].knob_pos_length2 	= t_assign_samples[ assigned_sample_i ].knob_pos_length2;
-
-
+	samples[bank][sample].inst_size 		= t_assign_samples[ assigned_sample_i ].inst_size  & 0xFFFFFFF8;
+	samples[bank][sample].inst_start 		= t_assign_samples[ assigned_sample_i ].inst_start  & 0xFFFFFFF8;
+	samples[bank][sample].inst_end 			= t_assign_samples[ assigned_sample_i ].inst_end  & 0xFFFFFFF8;
 
 	flags[ForceFileReload1] = 1;
 
@@ -283,14 +276,9 @@ void assign_sample_from_other_bank(uint8_t src_bank, uint8_t src_sample)
 	samples[bank][sample].sampleSize 		= samples[src_bank][src_sample].sampleSize;
 	samples[bank][sample].startOfData 		= samples[src_bank][src_sample].startOfData;
 
-	samples[bank][sample].inst_size 		= samples[src_bank][src_sample].inst_size;
-	samples[bank][sample].inst_start 		= samples[src_bank][src_sample].inst_start;
-	samples[bank][sample].inst_end 			= samples[src_bank][src_sample].inst_end;
-
-	samples[bank][sample].knob_pos_start1 	= samples[src_bank][src_sample].knob_pos_start1;
-	samples[bank][sample].knob_pos_start2 	= samples[src_bank][src_sample].knob_pos_start2;
-	samples[bank][sample].knob_pos_length1 	= samples[src_bank][src_sample].knob_pos_length1;
-	samples[bank][sample].knob_pos_length2 	= samples[src_bank][src_sample].knob_pos_length2;
+	samples[bank][sample].inst_size 		= samples[src_bank][src_sample].inst_size  & 0xFFFFFFF8;
+	samples[bank][sample].inst_start 		= samples[src_bank][src_sample].inst_start  & 0xFFFFFFF8;
+	samples[bank][sample].inst_end 			= samples[src_bank][src_sample].inst_end  & 0xFFFFFFF8;
 
 	flags[ForceFileReload1] = 1;
 
@@ -316,22 +304,6 @@ void set_sample_gain(Sample *s_sample, float gain)
 
 }
 
-// void set_sample_trim_end(Sample *s_sample, float en)
-// {
-// 	uint32_t trimend;
-
-// 	if (en >= 1.0f) 				trimend = s_sample->sampleSize;
-// 	else 							trimend = s_sample->sampleSize * en;
-// 	if (trimend <= 0) 				trimend = 4420;
-
-// 	trimend &= 0xFFFFFFF8;
-
-// 	if (trimend > s_sample->inst_start)
-// 		s_sample->inst_end = trimend;
-
-
-// }
-
 //sets the trim start point between 0 and 100ms before the end of the sample file
 void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
 {
@@ -347,18 +319,15 @@ void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
 	if ((-1.0*fine_trim) > trimstart) trimstart = 0;
 	else trimstart += fine_trim;
 
-	trimstart &= 0xFFFFFFF8;
-
-	s_sample->inst_start = trimstart;
-
-	//if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
-	//	s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
+	s_sample->inst_start = trimstart & 0xFFFFFFF8;
 
 	//Clip inst_end to the sampleSize (but keep inst_size the same)
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
 		s_sample->inst_end = s_sample->sampleSize;
 	else
 		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+
+	s_sample->inst_end &= 0xFFFFFFF8;
 
 }
 
@@ -397,11 +366,9 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 	else
 	{
 		s_sample->inst_start += trimdelta;
-		//if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
-		//	s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
 	}
 
-	s_sample->inst_size &= 0xFFFFFFF8;
+	s_sample->inst_start &= 0xFFFFFFF8;
 
 	//Clip inst_end to the sampleSize (but keep inst_size the same)
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
@@ -431,19 +398,15 @@ void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
 	if ((-1.0*fine_trim) > trimsize) trimsize = 4420;
 	else trimsize += fine_trim;
 
-	trimsize &= 0xFFFFFFF8;
-
-	//if ((s_sample->inst_start +  trimsize) > s_sample->sampleSize)
-	//	s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
-	//else
-		s_sample->inst_size = trimsize;
+	s_sample->inst_size = trimsize & 0xFFFFFFF8;
 
 	//Clip inst_end to the sampleSize (but keep inst_size the same)
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
 		s_sample->inst_end = s_sample->sampleSize;
 	else
-		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+		s_sample->inst_end = (s_sample->inst_start + s_sample->inst_size);
 
+	s_sample->inst_end &= 0xFFFFFFF8;
 
 }
 
@@ -497,8 +460,6 @@ void nudge_trim_size(Sample *s_sample, int32_t coarse, int32_t fine)
 	else
 	{
 		s_sample->inst_size += trimdelta;
-		// if ((s_sample->inst_start +  s_sample->inst_size) > s_sample->sampleSize)
-		// 	s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
 	}
 
 	s_sample->inst_size &= 0xFFFFFFF8;

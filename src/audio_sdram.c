@@ -276,14 +276,13 @@ uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_sam
 	uint32_t i;
 	uint32_t heads_crossed=0;
 
+	b->in = (b->in & 0xFFFFFFFE);
+
 	for (i=0;i<num_samples;i++)
 	{
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
-
-		b->in = (b->in & 0xFFFFFFFE);
-
 		*((int16_t *)b->in) = wr_buff[i];
 
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
 		CB_offset_in_address(b, 2, decrement);
 
