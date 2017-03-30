@@ -772,15 +772,18 @@ void read_storage_to_buffer(void)
 			cache_left = play_buff[chan]->size - (cache_high[chan] - cache_low[chan]);
 			if (cache_left>play_buff[chan]->size) cache_left = 0;
 
-			if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < samples[banknum][samplenum].inst_end))
-			 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > samples[banknum][samplenum].inst_start)) )
-				is_buffered_to_file_end[chan] = 0;
+			if ( !(g_error & (FILE_READ_FAIL_1 << chan)))
+			{
+				if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < samples[banknum][samplenum].inst_end))
+				 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > samples[banknum][samplenum].inst_start)) )
+					is_buffered_to_file_end[chan] = 0;
+			}
 
-			if (!is_buffered_to_file_end[chan] && (
-					   (cache_left > READ_BLOCK_SIZE) 
+			if (!is_buffered_to_file_end[chan] && 
+				( (cache_left > READ_BLOCK_SIZE) 
 					|| (play_state[chan]==PREBUFFERING && (buffer_lead < PRE_BUFF_SIZE))
 					|| (play_state[chan]!=PREBUFFERING && (buffer_lead < ACTIVE_BUFF_SIZE))
-					)) //FixMe: should be PRE_BUFF_SIZE * blockAlign
+				)) //FixMe: should be PRE_BUFF_SIZE * blockAlign
 			{
 
 				if (sample_file_curpos[chan] > samples[banknum][ samplenum ].sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
@@ -822,6 +825,11 @@ void read_storage_to_buffer(void)
 
 						DEBUG1_ON;
 						res = f_read(&fil[chan], (uint8_t *)tmp_buff_i16, rd, &br);
+						if (res != FR_OK) 
+						{
+							g_error |= FILE_READ_FAIL_1 << chan; 
+							is_buffered_to_file_end[chan] = 1;
+						}
 					//	f_sync(&fil[chan]);
 						DEBUG1_OFF;
 
@@ -907,10 +915,10 @@ void read_storage_to_buffer(void)
 						//Read one block forward
 						t_fptr=f_tell(&fil[chan]);
 						res = f_read(&fil[chan], tmp_buff_i16, rd, &br);
-						//f_sync(&fil[chan]);
+						if (res != FR_OK) 
+							g_error |= FILE_READ_FAIL_1 << chan;
 						DEBUG1_OFF;
 
-						if (res != FR_OK)	g_error |= FILE_READ_FAIL;
 						if (br < rd)		g_error |= FILE_UNEXPECTEDEOF;
 						//Jump backwards to where we started reading
 						//fil[chan].fptr = t_fptr;
@@ -924,7 +932,7 @@ void read_storage_to_buffer(void)
 
 
 					//Write temporary buffer to play_buff[]->in
-					if (res != FR_OK) 		g_error |= FILE_READ_FAIL;
+					if (res != FR_OK) 		g_error |= FILE_READ_FAIL_1 << chan;
 					else
 					{
 						// if (chan==1) {	

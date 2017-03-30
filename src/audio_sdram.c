@@ -280,6 +280,7 @@ uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_sam
 
 	for (i=0;i<num_samples;i++)
 	{
+
 		*((int16_t *)b->in) = wr_buff[i];
 
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}

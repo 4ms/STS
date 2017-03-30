@@ -232,7 +232,7 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 	rd = sizeof(WaveHeader);
 	res = f_read(sample_file, &sample_header, rd, &br);
 
-	if (res != FR_OK)	{g_error |= FILE_READ_FAIL; return(res);}//file not opened
+	if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; return(res);}//file not opened
 	else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading first header
 	else if ( !is_valid_wav_header(sample_header) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//first header error (not a valid wav file)
 
@@ -246,7 +246,7 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 		{
 			res = f_read(sample_file, &chunk, rd, &br);
 
-			if (res != FR_OK)	{g_error |= FILE_READ_FAIL; f_close(sample_file); break;}
+			if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
 			if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
 			//fast-forward to the next chunk
@@ -264,7 +264,7 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 			rd = sizeof(WaveFmtChunk);
 			res = f_read(sample_file, &fmt_chunk, rd, &br);
 
-			if (res != FR_OK)	{g_error |= FILE_READ_FAIL; return(res);}//file not read
+			if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; return(res);}//file not read
 			else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading format header
 			else if ( !is_valid_format_chunk(fmt_chunk) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//format header error (not a valid wav file)
 			else
@@ -278,7 +278,7 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 				{
 					res = f_read(sample_file, &chunk, rd, &br);
 
-					if (res != FR_OK)	{g_error |= FILE_READ_FAIL; f_close(sample_file); break;}
+					if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
 					if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
 					//fast-forward to the next chunk

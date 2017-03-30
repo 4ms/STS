@@ -211,12 +211,12 @@ DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void) {
 	// Configure the NVIC Preemption Priority Bits
 	NVIC_InitStructure.NVIC_IRQChannel = SDIO_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init (&NVIC_InitStructure);
 
 	NVIC_InitStructure.NVIC_IRQChannel = SD_SDIO_DMA_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_Init (&NVIC_InitStructure);
 
 	SD_LowLevel_DeInit();
@@ -257,34 +257,28 @@ DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
 	SD_Error err=0;
 	uint16_t i;
 	int16_t a, b,c;
-	uint8_t *d;
 
 
 	err = SD_ReadMultiBlocksFIXED(data, addr, 512, count);
-
-
-
 
 	//err=SD_ReadBlock(data, addr*512, 512);
 	if (err==SD_OK)
 	{
 		err = SD_WaitReadOperation();
 
-		// d=data;
+		for(i=5;i<512;i+=2)
+		{
+			a = (data[i-4] << 8) + data[i-5];
+			b = (data[i] << 8) + data[i-1];
 
-		// for(i=5;i<512;i+=2)
-		// {
-		// 	a = (d[i-4] << 8) + d[i-5];
-		// 	b = (d[i] << 8) + d[i-1];
-
-		// 	if (a > b)
-		// 		c = a - b;
-		// 	else
-		// 		c = b - a;
-		// 	if (c > 0x2000)
-		// 		c = 0xFFFF;
+			if (a > b)
+				c = a - b;
+			else
+				c = b - a;
+			if (c > 0x2000)
+				c = 0xFFFF;
 			
-		// }
+		}
 
 		if (err)
 			return(err);

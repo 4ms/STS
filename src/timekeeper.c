@@ -130,7 +130,7 @@ void init_LED_PWM_IRQ(void)
 
 	nvic.NVIC_IRQChannel = TIM2_IRQn;
 	nvic.NVIC_IRQChannelPreemptionPriority = 0;
-	nvic.NVIC_IRQChannelSubPriority = 0;
+	nvic.NVIC_IRQChannelSubPriority = 3;
 	nvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&nvic);
 
