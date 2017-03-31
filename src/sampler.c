@@ -337,6 +337,7 @@ void toggle_reverse(uint8_t chan)
 {
 	uint8_t samplenum, banknum;
 	uint32_t t;
+	FRESULT res;
 
 	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC || play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
 	{
@@ -389,7 +390,9 @@ void toggle_reverse(uint8_t chan)
 	sample_file_endpos[chan]	= sample_file_startpos[chan];
 	sample_file_startpos[chan]	= t;
 
-	goto_filepos(sample_file_curpos[chan]);
+	res = goto_filepos(sample_file_curpos[chan]);
+	if (res!=FR_OK)
+		g_error |= FILE_SEEK_FAIL;
 
 	if (i_param[chan][REV])	i_param[chan][REV] = 0;
 	else 					i_param[chan][REV] = 1;
@@ -895,7 +898,10 @@ void read_storage_to_buffer(void)
 						{
 							//Jump to the beginning
 							sample_file_curpos[chan] = samples[banknum][samplenum].inst_start;
-							goto_filepos(sample_file_curpos[chan]);
+							res = goto_filepos(sample_file_curpos[chan]);
+							if (res!=FR_OK)
+								g_error |= FILE_SEEK_FAIL;
+
 							//f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start);
 							is_buffered_to_file_end[chan] = 1;
 						}

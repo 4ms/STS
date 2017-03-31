@@ -255,53 +255,64 @@ DSTATUS TM_FATFS_SD_SDIO_disk_status(void) {
 DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
 {
 	SD_Error err=0;
-	uint16_t i;
-	int16_t a, b,c;
+	//uint16_t i;
+	//int16_t a, b,c;
+	SDTransferState State;
 
 
 	err = SD_ReadMultiBlocksFIXED(data, addr, 512, count);
 
-	//err=SD_ReadBlock(data, addr*512, 512);
 	if (err==SD_OK)
 	{
 		err = SD_WaitReadOperation();
 
-		for(i=5;i<512;i+=2)
-		{
-			a = (data[i-4] << 8) + data[i-5];
-			b = (data[i] << 8) + data[i-1];
+		//while(SD_GetStatus() != SD_TRANSFER_OK);
+		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY);
 
-			if (a > b)
-				c = a - b;
-			else
-				c = b - a;
-			if (c > 0x2000)
-				c = 0xFFFF;
-			
+		if ((State == SD_TRANSFER_ERROR) || (err != SD_OK))
+		{
+			return RES_ERROR;
+
+		} else {
+
+			// for(i=5;i<512;i+=2)
+			// {
+			// 	a = (data[i-4] << 8) + data[i-5];
+			// 	b = (data[i] << 8) + data[i-1];
+
+			// 	if (a > b)
+			// 		c = a - b;
+			// 	else
+			// 		c = b - a;
+			// 	if (c > 0x2000)
+			// 		c = 0xFFFF;
+				
+			// }
+			return RES_OK;
 		}
 
-		if (err)
-			return(err);
 
-		while(SD_GetStatus() != SD_TRANSFER_OK);
 	}
 	else
 	{
 		return(err);
 	}
 
-//	while (--count)
-//	{
-//		data += 512;
-//		addr++;
-//
-//		err=SD_ReadBlock(data, addr*512, 512);
-//		if (err==SD_OK){
-//			err = SD_WaitReadOperation();
-//			while(SD_GetStatus() != SD_TRANSFER_OK);
-//		}
-//
-//	}
+	// while (count--)
+	// {
+
+	// 	err=SD_ReadBlock(data, addr*512, 512);
+	// 	data += 512;
+	// 	addr++;
+
+	// 	if (err==SD_OK){
+	// 		err = SD_WaitReadOperation();
+	// 		while(SD_GetStatus() != SD_TRANSFER_OK);
+	// 	}
+	// 	else
+	// 		return (err);
+
+	// }
 
 	return(err);
 }
