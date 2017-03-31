@@ -783,9 +783,9 @@ void read_storage_to_buffer(void)
 			}
 
 			if (!is_buffered_to_file_end[chan] && 
-				( (cache_left > READ_BLOCK_SIZE) 
-					|| (play_state[chan]==PREBUFFERING && (buffer_lead < PRE_BUFF_SIZE))
-					|| (play_state[chan]!=PREBUFFERING && (buffer_lead < ACTIVE_BUFF_SIZE))
+				( //(cache_left > READ_BLOCK_SIZE) ||
+					(play_state[chan]==PREBUFFERING && (buffer_lead < PRE_BUFF_SIZE)) ||
+					(play_state[chan]!=PREBUFFERING && (buffer_lead < ACTIVE_BUFF_SIZE))
 				)) //FixMe: should be PRE_BUFF_SIZE * blockAlign
 			{
 
