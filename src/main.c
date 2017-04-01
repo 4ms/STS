@@ -24,6 +24,7 @@
 #include "wav_recording.h"
 #include "rgb_leds.h"
 #include "ff.h"
+#include "sampler.h"
 
 
 enum g_Errors g_error=0;
@@ -236,7 +237,7 @@ int main(void)
 
 	delay();
 
-
+	init_SDIO_read_IRQ();
 
 	//Main loop
 	while(1){
@@ -248,7 +249,7 @@ int main(void)
 
 		//DEBUG0_OFF;
 
-		read_storage_to_buffer();
+	//	read_storage_to_buffer();
 
 		process_mode_flags();
 

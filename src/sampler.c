@@ -743,7 +743,7 @@ void read_storage_to_buffer(void)
 	//convenience variables
 	uint8_t samplenum, banknum;
 	uint32_t buffer_lead;
-	uint32_t cache_left;
+	//uint32_t cache_left;
 //	uint32_t fwd_stop_point, rev_stop_point;
 	FSIZE_t t_fptr;
 
@@ -772,8 +772,8 @@ void read_storage_to_buffer(void)
 
 			buffer_lead = CB_distance(play_buff[chan], i_param[chan][REV]);
 
-			cache_left = play_buff[chan]->size - (cache_high[chan] - cache_low[chan]);
-			if (cache_left>play_buff[chan]->size) cache_left = 0;
+			//cache_left = play_buff[chan]->size - (cache_high[chan] - cache_low[chan]);
+			//if (cache_left>play_buff[chan]->size) cache_left = 0;
 
 			if ( !(g_error & (FILE_READ_FAIL_1 << chan)))
 			{
@@ -1278,38 +1278,12 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 
 
+void SDIO_read_IRQHandler(void)
+{
+	if (TIM_GetITStatus(SDIO_read_TIM, TIM_IT_Update) != RESET) {
 
+		read_storage_to_buffer();
 
-
-
-
-//If we're fading, increment the fade position
-//If we've cross-faded 100%:
-//	-Stop the cross-fade
-//	-Set read_addr to the destination
-//	-Load the next queued fade (if it exists)
-//void increment_read_fade(uint8_t channel)
-//{
-//
-//	if (read_fade_pos[channel]>0.0)
-//	{
-//		read_fade_pos[channel] += global_param[SLOW_FADE_INCREMENT];
-//
-//		//If we faded 100%, stop fading by setting read_fade_pos to 0
-//		if (read_fade_pos[channel] > 1.0)
-//		{
-//			read_fade_pos[channel] = 0.0;
-//			play_buff[channel]->out = fade_dest_read_addr[channel];
-//			flags[PlayBuff1_Discontinuity+channel] = 1;
-//
-//			//Load the next queued fade (if it exists)
-//			if (fade_queued_dest_read_addr[channel])
-//			{
-//				fade_dest_read_addr[channel] = fade_queued_dest_read_addr[channel];
-//				fade_queued_dest_read_addr[channel]=0;
-//				read_fade_pos[channel] = global_param[SLOW_FADE_INCREMENT];
-//			}
-//		}
-//	}
-//}
-
+		TIM_ClearITPendingBit(SDIO_read_TIM, TIM_IT_Update);
+	}
+}

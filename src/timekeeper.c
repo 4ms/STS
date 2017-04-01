@@ -232,3 +232,30 @@ void init_TrigJackDebounce_IRQ(void)
 	TIM_Cmd(TIM5, ENABLE);
 
 }
+
+void init_SDIO_read_IRQ(void)
+{
+
+	TIM_TimeBaseInitTypeDef  tim;
+
+	NVIC_InitTypeDef nvic;
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);
+
+	nvic.NVIC_IRQChannel = TIM7_IRQn;
+	nvic.NVIC_IRQChannelPreemptionPriority = 1;
+	nvic.NVIC_IRQChannelSubPriority = 0;
+	nvic.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&nvic);
+
+	TIM_TimeBaseStructInit(&tim);
+	//30000 --> 1.4kHz
+	tim.TIM_Period = 60000; 
+	tim.TIM_Prescaler = 15; //200Hz
+	tim.TIM_ClockDivision = 0;
+	tim.TIM_CounterMode = TIM_CounterMode_Up;
+
+	TIM_TimeBaseInit(TIM7, &tim);
+	TIM_ITConfig(TIM7, TIM_IT_Update, ENABLE);
+	TIM_Cmd(TIM7, ENABLE);
+
+}
