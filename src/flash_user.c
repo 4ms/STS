@@ -15,9 +15,9 @@
 #include "leds.h"
 #include "dig_pins.h"
 
-extern int16_t CV_CALIBRATION_OFFSET[6];
-extern int16_t CODEC_DAC_CALIBRATION_DCOFFSET[4];
-extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
+extern int16_t CV_CALIBRATION_OFFSET[NUM_CV_ADCS];
+extern int16_t CODEC_DAC_CALIBRATION_DCOFFSET[2];
+extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[2];
 
 
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
@@ -102,7 +102,7 @@ extern int16_t i_smoothed_cvadc[NUM_POT_ADCS];
 
 uint32_t flash_firmware_version=0;
 
-int32_t flash_CV_CALIBRATION_OFFSET[6];
+int32_t flash_CV_CALIBRATION_OFFSET[NUM_CV_ADCS];
 int32_t flash_CODEC_DAC_CALIBRATION_DCOFFSET[4];
 int32_t flash_CODEC_ADC_CALIBRATION_DCOFFSET[4];
 

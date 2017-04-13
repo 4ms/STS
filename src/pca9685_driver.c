@@ -289,6 +289,45 @@ void LEDDriver_setRGBLED(uint8_t rgbled_number, uint32_t rgb){
 
 }
 
+/*
+ * Sets one RGB LED with a 10+10+10 bit color value, shifted to 12+12+12bit values
+ */
+void LEDDriver_setRGBLED_12bit(uint8_t rgbled_number, uint32_t rgb){
+	uint8_t driverAddr;
+	uint8_t led_number;
+
+	uint16_t c_red= (rgb >> 20) & 0b1111111111;
+	uint16_t c_green= (rgb >> 10) & 0b1111111111;
+	uint16_t c_blue= rgb & 0b1111111111;
+
+	c_red <<= 2;
+	c_green <<= 2;
+	c_blue <<= 2;
+
+	driverAddr = driverRGBBaseAddress[rgbled_number];
+	led_number = driverRGBBaseElement[rgbled_number];
+
+	LEDDriver_startxfer(driverAddr);
+
+	LEDDriver_senddata(PCA9685_LED0 + (led_number*4)); //4 registers per LED element
+	LEDDriver_senddata(0); //on-time = 0
+	LEDDriver_senddata(0);
+	LEDDriver_senddata(c_red & 0xFF); //off-time = brightness
+	LEDDriver_senddata(c_red >> 8);
+
+	LEDDriver_senddata(0); //on-time = 0 //four senddata commands take 140us
+	LEDDriver_senddata(0);
+	LEDDriver_senddata(c_green & 0xFF); //off-time = brightness
+	LEDDriver_senddata(c_green >> 8);
+
+	LEDDriver_senddata(0); //on-time = 0
+	LEDDriver_senddata(0);
+	LEDDriver_senddata(c_blue & 0xFF); //off-time = brightness
+	LEDDriver_senddata(c_blue >> 8);
+
+	LEDDriver_endxfer();
+
+}
 
 
 void LEDDriver_Reset(uint8_t driverAddr){

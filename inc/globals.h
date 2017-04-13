@@ -27,8 +27,8 @@ enum Flags {
 	PlayBank2Changed,
 	RecSampleChanged,
 	RecBankChanged, //5
-	Play1Trig,
-	Play2Trig,
+	Play1But,
+	Play2But,
 	RecTrig,
 	Rev1Trig,
 	Rev2Trig, //10
@@ -46,6 +46,9 @@ enum Flags {
 	ForceFileReload2,
 	AssignModeRefused,
 	AssigningEmptySample,
+	TimeToReadStorage,
+	Play1Trig,
+	Play2Trig,
 
 	NUM_FLAGS
 };

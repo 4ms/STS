@@ -92,6 +92,7 @@ void display_one_ButtonLED(uint8_t ButtonLED_number)
 
 }
 
+//#define BIG_PLAY_BUTTONS
 
 /*
  * display_all_ButtonLEDs()
@@ -107,7 +108,15 @@ void display_all_ButtonLEDs(void)
 		//Update each LED that has a different color
 		if ((cached_ButLED_color[i][0] != ButLED_color[i][0]) || (cached_ButLED_color[i][1] != ButLED_color[i][1]) || (cached_ButLED_color[i][2] != ButLED_color[i][2]))
 		{
+#ifdef BIG_PLAY_BUTTONS
+			if (i ==  Play1ButtonLED || i == Play2ButtonLED)
+				LEDDriver_setRGBLED_12bit(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+			else
+				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+
+#else
 			LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+#endif
 			cached_ButLED_color[i][0]=ButLED_color[i][0];
 			cached_ButLED_color[i][1]=ButLED_color[i][1];
 			cached_ButLED_color[i][2]=ButLED_color[i][2];

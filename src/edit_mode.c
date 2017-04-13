@@ -256,7 +256,7 @@ void next_unassigned_sample(void)
 
 	assign_sample(cur_assigned_sample_i);
 
-	flags[Play1Trig]=1;
+	flags[Play1But]=1;
 }
 
 
@@ -383,7 +383,7 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 
 
 
-void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
+void set_sample_trim_size(Sample *s_sample, float coarse)
 {
 	uint32_t trimsize;
 	int32_t fine_trim;
@@ -393,14 +393,9 @@ void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
 	else if (coarse <= (1.0/4096.0))	trimsize = 4420;
 	else 								trimsize = (s_sample->sampleSize - 4420) * coarse + 4420;
 
-	fine_trim = fine * s_sample->sampleRate * s_sample->blockAlign * 2.5; // +/- 500ms
-
-	if ((-1.0*fine_trim) > trimsize) trimsize = 4420;
-	else trimsize += fine_trim;
-
 	s_sample->inst_size = trimsize & 0xFFFFFFF8;
 
-	//Clip inst_end to the sampleSize (but keep inst_size the same)
+	//Set inst_end to start+size and clip it to the sampleSize
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
 		s_sample->inst_end = s_sample->sampleSize;
 	else
@@ -408,16 +403,17 @@ void set_sample_trim_size(Sample *s_sample, float coarse, float fine)
 
 	s_sample->inst_end &= 0xFFFFFFF8;
 
+
 }
 
 //
-//coarse and fine range from -4095 to +4095
+//fine ranges from -4095 to +4095
 //
 // If total sample time is > XX seconds then coarse +/-4095 adjusts length by +/- XX seconds
 // Else coarse +/-4095 adjusts length by total sample time
 //
 
-void nudge_trim_size(Sample *s_sample, int32_t coarse, int32_t fine)
+void nudge_trim_size(Sample *s_sample, int32_t fine)
 {
 	int32_t trimdelta;
 
@@ -426,15 +422,15 @@ void nudge_trim_size(Sample *s_sample, int32_t coarse, int32_t fine)
 
 	sample_size_secs = (float)s_sample->sampleSize / (float)(s_sample->sampleRate * s_sample->blockAlign); // Bytes / (samples/sec * bytes/sample)
 
-	if (sample_size_secs > TSZC)
-		samples_per_adc = (TSZC * s_sample->sampleRate * s_sample->blockAlign) >> 12;
-	else if (s_sample->sampleSize >= 8192)
-		samples_per_adc = s_sample->sampleSize >> 12;
-	else
-		samples_per_adc = 1;
+	// if (sample_size_secs > TSZC)
+	// 	samples_per_adc = (TSZC * s_sample->sampleRate * s_sample->blockAlign) >> 12;
+	// else if (s_sample->sampleSize >= 8192)
+	// 	samples_per_adc = s_sample->sampleSize >> 12;
+	// else
+	// 	samples_per_adc = 1;
 
-	trimdelta = samples_per_adc * coarse * coarse;
-	if (coarse < 0) trimdelta *= -1;
+	// trimdelta = samples_per_adc * coarse * coarse;
+	// if (coarse < 0) trimdelta *= -1;
 
 	if (sample_size_secs > TSZF)
 		samples_per_adc = (TSZF * s_sample->sampleRate * s_sample->blockAlign) >> 12;
@@ -443,10 +439,10 @@ void nudge_trim_size(Sample *s_sample, int32_t coarse, int32_t fine)
 	else
 		samples_per_adc = 1;
 
-	trimdelta += samples_per_adc * fine * fine;
+	trimdelta = samples_per_adc * fine * fine;
 	if (fine < 0) trimdelta *= -1;
 
-	//clip ->inst_size+trimdelta to TS_MIN...->sampleSize
+	//clip ->inst_size+trimdelta to TS_MIN..inst_size
 	//Is there a more efficient way of doing this?
 	//We don't want to convert ->sampleSize or ->instSize to an int, it must stay unsigned
 	if (trimdelta<0)
@@ -462,9 +458,13 @@ void nudge_trim_size(Sample *s_sample, int32_t coarse, int32_t fine)
 		s_sample->inst_size += trimdelta;
 	}
 
+	//Clip inst_size to sampleSize
+	if (s_sample->inst_size > s_sample->sampleSize)
+		s_sample->inst_size = s_sample->sampleSize;
+
 	s_sample->inst_size &= 0xFFFFFFF8;
 
-	//Clip inst_end to the sampleSize (but keep inst_size the same)
+	//Set inst_end to inst_start+inst_size and clip it to the sampleSize
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
 		s_sample->inst_end = s_sample->sampleSize;
 	else

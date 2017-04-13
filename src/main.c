@@ -33,6 +33,7 @@ __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
+extern uint8_t 	flags[NUM_FLAGS];
 
 //extern uint8_t ButLED_state[NUM_RGBBUTTONS];
 //extern uint8_t play_led_state[NUM_PLAY_CHAN];
@@ -88,6 +89,7 @@ int main(void)
 	uint8_t i;
 	uint8_t err=0;
 	uint32_t do_factory_reset=0;
+	uint32_t timeout_boot;
 
 	FATFS FatFs;
 	FIL fil;
@@ -134,8 +136,9 @@ int main(void)
 	delay();
 
 
+	timeout_boot = 0x00800000;
 	PLAYLED1_OFF;
-	while(!REV1BUT && !REV2BUT  && !PLAY1BUT  && !PLAY2BUT && !BANK1BUT && !BANK2BUT){;}
+	while((timeout_boot--) && !REV1BUT && !REV2BUT  && !PLAY1BUT  && !PLAY2BUT && !BANK1BUT && !BANK2BUT){;}
 	PLAYLED1_OFF;
 
 	//Initialize SD Card
@@ -184,7 +187,7 @@ int main(void)
 	//Turn on the lights
 	LEDDriver_Init(2);
 	LEDDRIVER_OUTPUTENABLE_ON;
-	if (PLAY1BUT && BANK1BUT) test_all_buttonLEDs();
+	if (PLAY2BUT && BANK2BUT) test_all_buttonLEDs();
 
 	init_buttonLEDs();
 	init_ButtonLED_IRQ();
@@ -249,7 +252,11 @@ int main(void)
 
 		//DEBUG0_OFF;
 
-	//	read_storage_to_buffer();
+		if (flags[TimeToReadStorage])
+		{
+			flags[TimeToReadStorage]=0;
+			read_storage_to_buffer();
+		}
 
 		process_mode_flags();
 

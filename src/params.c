@@ -21,6 +21,7 @@
 #include "pitch_pot_cv.h"
 #include "buttons.h"
 #include "edit_mode.h"
+#include "calibration.h"
 
 extern float pitch_pot_cv[4096];
 const float voltoct[4096];
@@ -83,6 +84,8 @@ void init_params(void)
 {
 	uint8_t chan,i;
 
+	set_default_calibration_values();
+
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++){
 		f_param[chan][PITCH] 	= 1.0;
 		f_param[chan][START] 	= 0.0;
@@ -144,8 +147,8 @@ void init_LowPassCoefs(void)
 	CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
-	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 20;
-	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 20;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 30;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 30;
 
 	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
@@ -155,7 +158,6 @@ void init_LowPassCoefs(void)
 
 	MIN_CV_ADC_CHANGE[SAMPLE_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[SAMPLE_CV*2+1] = 20;
-
 
 	t=20.0; //50.0 = about 100ms to turn a knob fully
 
@@ -306,11 +308,11 @@ void update_params(void)
 		if (flag_pot_changed[LENGTH_POT*2+0])
 		{
 			t_coarse 	 = old_i_smoothed_potadc[LENGTH_POT*2+0] / 4096.0;
-			set_sample_trim_size(&samples[banknum][samplenum], t_coarse, 0);
+			set_sample_trim_size(&samples[banknum][samplenum], t_coarse);
 
 			flag_pot_changed[LENGTH_POT*2+0] = 0;
 
-			f_param[0][START] = 0.9f;
+			f_param[0][START] = 0.999f;
 			f_param[0][LENGTH] = 0.501f;
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
@@ -318,13 +320,13 @@ void update_params(void)
 
 		if (flag_pot_changed[LENGTH_POT*2+1])
 		{
-			nudge_trim_size(&samples[banknum][samplenum], 0, pot_delta[LENGTH_POT*2+1]);
+			nudge_trim_size(&samples[banknum][samplenum], pot_delta[LENGTH_POT*2+1]);
 
 			flag_pot_changed[LENGTH_POT*2+1] = 0;
 			//pot_delta[LENGTH_POT*2+1] = 0;
 
-			f_param[0][START] = 0.9f;
-			f_param[0][LENGTH] = 0.501f;
+			f_param[0][START] = 0.999f;
+			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
 
@@ -340,8 +342,8 @@ void update_params(void)
 			set_sample_trim_start(&samples[banknum][samplenum], t_coarse, 0);
 			flag_pot_changed[START_POT*2+0] = 0;
 
-			f_param[0][START] = 0.003f;
-			f_param[0][LENGTH] = 0.501f;
+			f_param[0][START] = 0.000f;
+			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
 		}
@@ -352,8 +354,8 @@ void update_params(void)
 			flag_pot_changed[START_POT*2+0] = 0;
 			//pot_delta[START_POT*2+1] = 0;
 
-			f_param[0][START] = 0.003f;
-			f_param[0][LENGTH] = 0.501f;
+			f_param[0][START] = 0.000f;
+			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
 		}
@@ -405,7 +407,7 @@ void update_params(void)
 	
 
 
-	} //if EDIT_MODE
+	} //if not EDIT_MODE
 	else 
 	{
 
@@ -516,9 +518,9 @@ void process_mode_flags(void)
 	if (!disable_mode_changes)
 	{
 
-		if (flags[Play1Trig])
+		if (flags[Play1But])
 		{
-			flags[Play1Trig]=0;
+			flags[Play1But]=0;
 
 			if (global_mode[STEREO_LINK])
 			{
@@ -530,18 +532,15 @@ void process_mode_flags(void)
 				i_param[1][LOOPING] = i_param[0][LOOPING];
 
 				toggle_playing(0);
-
 				toggle_playing(1);
-
 			}
 			else
 				toggle_playing(0);
-
 		}
 
-		if (flags[Play2Trig])
+		if (flags[Play2But])
 		{
-			flags[Play2Trig]=0;
+			flags[Play2But]=0;
 
 			if (global_mode[STEREO_LINK])
 			{
@@ -550,18 +549,21 @@ void process_mode_flags(void)
 					toggle_reverse(1);
 
 				toggle_playing(0);
-
 				toggle_playing(1);
 
 				i_param[0][LOOPING] = i_param[1][LOOPING];
-
 			}
 			else
 				toggle_playing(1);
 
 			//if (play_state[1]==SILENT && (play_state[0]== PLAYING || play_state[0] == PLAYING_PERC)) play_state[1]=SILENT;
+		}
 
+		if (flags[Play1Trig])
+		{
+			flags[Play1Trig] = 0;
 
+			start_playing(0);
 
 		}
 
@@ -634,12 +636,12 @@ void process_mode_flags(void)
 			{
 				i_param[0][LOOPING] = 1;
 				if (play_state[0] == SILENT) 
-					flags[Play1Trig] = 1;
+					flags[Play1But] = 1;
 
 				if (global_mode[STEREO_LINK])
 				{
 					i_param[1][LOOPING] = 1;
-					flags[Play2Trig] = 1;
+					flags[Play2But] = 1;
 				}
 
 			}
@@ -661,7 +663,7 @@ void process_mode_flags(void)
 				{
 					i_param[1][LOOPING] = 1;
 					if (play_state[1] == SILENT) 
-						flags[Play2Trig] = 1;
+						flags[Play2But] = 1;
 				}
 			}
 		}

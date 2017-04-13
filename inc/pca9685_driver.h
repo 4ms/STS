@@ -72,6 +72,7 @@
 
 void LEDDriver_set_one_LED(uint8_t led_number, uint16_t brightness);
 void LEDDriver_setRGBLED(uint8_t led_number, uint32_t rgb);
+void LEDDriver_setRGBLED_12bit(uint8_t rgbled_number, uint32_t rgb);
 
 void LEDDriver_Init(uint8_t numdrivers);
 uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8_t RegisterValue);

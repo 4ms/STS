@@ -95,7 +95,7 @@ void Button_Debounce_IRQHandler(void)
 							save_exit_assignment_mode();
 						else {
 							if (!i_param[0][LOOPING]) 
-								flags[Play1Trig]=1;
+								flags[Play1But]=1;
 							clear_errors();
 						}
 						break;
@@ -106,7 +106,7 @@ void Button_Debounce_IRQHandler(void)
 						else 
 						{
 							if (!i_param[1][LOOPING]) 
-								flags[Play2Trig]=1;
+								flags[Play2But]=1;
 							clear_errors();
 						}
 						break;
@@ -171,7 +171,7 @@ void Button_Debounce_IRQHandler(void)
 							if (!global_mode[EDIT_MODE])
 							{
 								if (i_param[0][LOOPING] && button_state[Play1] == DOWN) 
-									flags[Play1Trig] = 1; //if looping, stop playing when lifted (assuming it's a short press)
+									flags[Play1But] = 1; //if looping, stop playing when lifted (assuming it's a short press)
 							}
 							break;
 
@@ -179,7 +179,7 @@ void Button_Debounce_IRQHandler(void)
 							if (!global_mode[EDIT_MODE])
 							{
 								if (i_param[1][LOOPING] && button_state[Play1] == DOWN) 
-									flags[Play2Trig] = 1;
+									flags[Play2But] = 1;
 							}
 							break;
 
@@ -207,6 +207,7 @@ void Button_Debounce_IRQHandler(void)
 
 						case Edit:
 							global_mode[EDIT_MODE] = 0;
+							flags[Play1But] = 1;
 							break;
 
 						default:

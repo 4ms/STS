@@ -292,6 +292,13 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 						{
 							f_close(sample_file);break;
 						}
+
+						//Check the file is really as long as the data chunkSize says it is
+						if (f_size(sample_file) < (f_tell(sample_file) + chunk.chunkSize))
+						{
+							chunk.chunkSize = f_size(sample_file) - f_tell(sample_file);
+						}
+
 						s_sample->sampleSize = chunk.chunkSize;
 						s_sample->sampleByteSize = fmt_chunk.bitsPerSample>>3;
 						s_sample->sampleRate = fmt_chunk.sampleRate;
