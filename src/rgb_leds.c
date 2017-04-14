@@ -110,7 +110,7 @@ void display_all_ButtonLEDs(void)
 		{
 #ifdef BIG_PLAY_BUTTONS
 			if (i ==  Play1ButtonLED || i == Play2ButtonLED)
-				LEDDriver_setRGBLED_12bit(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+				LEDDriver_setRGBLED_12bit(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][2] <<10) | ButLED_color[i][1] );
 			else
 				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
 

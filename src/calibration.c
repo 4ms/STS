@@ -24,7 +24,7 @@ void set_default_calibration_values(void)
 	uint8_t i;
 
 	for (i=0;i<NUM_CV_ADCS;i++)
-		CV_CALIBRATION_OFFSET[i] = -30;
+		CV_CALIBRATION_OFFSET[i] = -10;
 }
 
 

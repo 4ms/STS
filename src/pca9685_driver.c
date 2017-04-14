@@ -300,9 +300,9 @@ void LEDDriver_setRGBLED_12bit(uint8_t rgbled_number, uint32_t rgb){
 	uint16_t c_green= (rgb >> 10) & 0b1111111111;
 	uint16_t c_blue= rgb & 0b1111111111;
 
-	c_red <<= 2;
-	c_green <<= 2;
-	c_blue <<= 2;
+	c_red *= 2;
+	c_green *= 2;
+	c_blue *= 2;
 
 	driverAddr = driverRGBBaseAddress[rgbled_number];
 	led_number = driverRGBBaseElement[rgbled_number];

@@ -104,7 +104,7 @@ void init_params(void)
 	i_param[REC][SAMPLE] = 0;
 
 	global_param[SLOW_FADE_INCREMENT] = 0.001;
-	global_i_param[LED_BRIGHTNESS] = 4;
+	global_i_param[LED_BRIGHTNESS] = 2;
 
 	for (i=0;i<NUM_FLAGS;i++)
 	{
@@ -147,8 +147,8 @@ void init_LowPassCoefs(void)
 	CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
-	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 30;
-	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 30;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 15;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 15;
 
 	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;

@@ -138,7 +138,6 @@ uint32_t		sample_file_endpos		[NUM_PLAY_CHAN];
 uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN];
 
 uint32_t 		play_buff_bufferedamt	[NUM_PLAY_CHAN];
-uint32_t		play_buff_outputted		[NUM_PLAY_CHAN];
 enum PlayLoadTriage play_load_triage;
 
 //must have chan, banknum, and samplenum defined to use this macro!
@@ -231,9 +230,6 @@ void audio_buffer_init(void)
 	play_buff[1]->max		= AUDIO_MEM_BASE[1] + MEM_SIZE;
 	play_buff[1]->size		= MEM_SIZE;
 	play_buff[1]->wrapping	= 0;
-
-	play_buff_outputted[0] 	= 0;
-	play_buff_outputted[1]  = 0;
 
 	flags[PlayBuff1_Discontinuity] = 1;
 	flags[PlayBuff2_Discontinuity] = 1;
@@ -542,8 +538,6 @@ void start_playing(uint8_t chan)
 
 	play_led_state[chan]=1;
 
-	play_buff_outputted[chan] = 0;
-
 	if (global_mode[MONITOR_RECORDING])	global_mode[MONITOR_RECORDING] = 0;
 
 }
@@ -765,9 +759,6 @@ void read_storage_to_buffer(void)
 
 	//convenience variables
 	uint8_t samplenum, banknum;
-//	uint32_t buffer_lead;
-	//uint32_t cache_left;
-//	uint32_t fwd_stop_point, rev_stop_point;
 	FSIZE_t t_fptr;
 	uint32_t pre_buff_size;
 	uint32_t active_buff_size;
@@ -1146,7 +1137,6 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 
 						//Stop playback if we've played enough sampleso
-						//if ((play_buff_outputted[chan] + resampled_buffer_size) >= play_length)
 
 
 						//Find out how far ahead our output data is from the start of the cache

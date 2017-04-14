@@ -41,12 +41,12 @@ void LED_PWM_IRQHandler(void)
 	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
 		 //begin1: 300ns - 450ns
 
-		if (play_led_state[0] && (loop_led_PWM_ctr<global_i_param[LED_BRIGHTNESS]))
+		if (play_led_state[0] && (loop_led_PWM_ctr<global_i_param[LED_BRIGHTNESS]) && !end_out_ctr[0])
 			PLAYLED1_ON;
 		else
 			PLAYLED1_OFF;
 
-		if (play_led_state[1] && (loop_led_PWM_ctr<global_i_param[LED_BRIGHTNESS]))
+		if (play_led_state[1] && (loop_led_PWM_ctr<global_i_param[LED_BRIGHTNESS]) && !end_out_ctr[1])
 			PLAYLED2_ON;
 		else
 			PLAYLED2_OFF;
@@ -61,10 +61,11 @@ void LED_PWM_IRQHandler(void)
 //		else
 //			CLIPLED2_OFF;
 
+		loop_led_PWM_ctr++;
 		loop_led_PWM_ctr &= 0xF;
 
-//		if (loop_led_PWM_ctr++>16)
-//			loop_led_PWM_ctr=0;
+	//	if (loop_led_PWM_ctr++>16)
+	//		loop_led_PWM_ctr=0;
 
 		//end1: 300ns - 450ns
 
