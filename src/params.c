@@ -567,9 +567,13 @@ void process_mode_flags(void)
 		if (flags[Play1Trig])
 		{
 			flags[Play1Trig] = 0;
-
 			start_playing(0);
-
+		}
+		
+		if (flags[Play2Trig])
+		{
+			flags[Play2Trig] = 0;
+			start_playing(1);
 		}
 
 		if (flags[RecTrig]==1)

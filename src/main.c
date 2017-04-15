@@ -46,12 +46,12 @@ void check_errors(void);
 void check_errors(void){
 	if (g_error>0)
 	{
-		CLIPLED1_ON;
-		CLIPLED2_ON;
+		//CLIPLED1_ON;
+		//CLIPLED2_ON;
 
 	//while(1){
- 		CLIPLED1_OFF;
-		CLIPLED2_OFF;
+ 		//CLIPLED1_OFF;
+		//CLIPLED2_OFF;
  
 		//}
 
