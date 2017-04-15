@@ -316,6 +316,8 @@ void update_params(void)
 			f_param[0][LENGTH] = 0.501f;
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
+			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
+
 		}
 
 		if (flag_pot_changed[LENGTH_POT*2+1])
@@ -329,6 +331,7 @@ void update_params(void)
 			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
+			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
 
 		}
 		
@@ -346,6 +349,7 @@ void update_params(void)
 			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
+			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
 		}
 
 		if (flag_pot_changed[START_POT*2+1])
@@ -358,6 +362,7 @@ void update_params(void)
 			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
+			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
 		}
 
 	//	clear_is_buffered_to_file_end(0);

@@ -368,6 +368,9 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 		s_sample->inst_start += trimdelta;
 	}
 
+	if (s_sample->inst_start > s_sample->inst_end)
+		s_sample->inst_start = s_sample->inst_end;
+
 	s_sample->inst_start &= 0xFFFFFFF8;
 
 	//Clip inst_end to the sampleSize (but keep inst_size the same)
