@@ -4,6 +4,7 @@
 #include "globals.h"
 #include "dig_pins.h"
 #include "params.h"
+#include "adc.h"
 #include "rgb_leds.h"
 #include "LED_palette.h"
 #include "pca9685_driver.h"
@@ -24,6 +25,9 @@ extern uint8_t flags[NUM_FLAGS];
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 extern volatile uint32_t sys_tmr;
+
+extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
+
 
 
 /*
@@ -93,7 +97,8 @@ void display_one_ButtonLED(uint8_t ButtonLED_number)
 }
 
 //#define BIG_PLAY_BUTTONS
-
+//#define SETBANK1RGB
+#define FROSTEDBANK1
 /*
  * display_all_ButtonLEDs()
  *
@@ -115,7 +120,12 @@ void display_all_ButtonLEDs(void)
 				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
 
 #else
-			LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+#ifdef FROSTEDBANK1
+			if (i ==  Bank1ButtonLED){
+				LEDDriver_setRGBLED_RGB(i, ButLED_color[i][0]*4, ButLED_color[i][1]*4, ButLED_color[i][2]*4 );
+ 			}else
+ #endif
+				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
 #endif
 			cached_ButLED_color[i][0]=ButLED_color[i][0];
 			cached_ButLED_color[i][1]=ButLED_color[i][1];
@@ -136,7 +146,6 @@ void test_all_buttonLEDs(void)
 {
 	uint8_t i, j;
 	float t=0.0f;
-	uint32_t r,g,b;
 
 	for (j=0;j<8;j++)
 	{
@@ -170,16 +179,16 @@ void update_ButtonLEDs(void)
 	uint8_t ButLEDnum;
 	uint8_t chan;
 	//uint32_t tm=sys_tmr & 0x3FFF; //14-bit counter
-	uint32_t tm_7 = sys_tmr & 0x7F; //7-bit counter
+	//uint32_t tm_7 = sys_tmr & 0x7F; //7-bit counter
 	uint32_t tm_12 = sys_tmr & 0xFFF; //12-bit counter
 	uint32_t tm_13 = sys_tmr & 0x1FFF; //13-bit counter
 	uint32_t tm_14 = sys_tmr & 0x3FFF; //14-bit counter
-	uint32_t tm_15 = sys_tmr & 0x7FFF; //15-bit counter
-	uint32_t tm_16 = sys_tmr & 0xFFFF; //16-bit counter
-	float tri_16;
-	float tri_15;
+	//uint32_t tm_15 = sys_tmr & 0x7FFF; //15-bit counter
+	//uint32_t tm_16 = sys_tmr & 0xFFFF; //16-bit counter
+	//float tri_16;
+	//float tri_15;
 	float tri_14;
-	float tri_13;
+//	float tri_13;
 
 
 //	if (tm_16>0x8000)
@@ -192,15 +201,15 @@ void update_ButtonLEDs(void)
 //		else
 //			tri_15 = ((float)(0x4000 - tm_15)) / 16384.0f;
 
-		if (tm_14>0x2000)
-			tri_14 = ((float)(tm_14 - 0x2000)) / 8192.0f;
-		else
-			tri_14 = ((float)(0x2000 - tm_14)) / 8192.0f;
+	if (tm_14>0x2000)
+		tri_14 = ((float)(tm_14 - 0x2000)) / 8192.0f;
+	else
+		tri_14 = ((float)(0x2000 - tm_14)) / 8192.0f;
 
-		if (tm_13>0x1000)
-			tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
-		else
-			tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
+	// if (tm_13>0x1000)
+	// 	tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
+	// else
+	// 	tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
 
 	for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 	{
@@ -212,6 +221,10 @@ void update_ButtonLEDs(void)
 			else if (ButLEDnum == Bank2ButtonLED) chan = 1;
 			else chan = 2;
 
+#ifdef SETBANK1RGB
+			if (chan==0) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0], i_smoothed_potadc[1], i_smoothed_potadc[2]);
+			else 
+#endif
 			if (chan==2 && global_mode[EDIT_MODE])
 			{
 				set_ButtonLED_byPalette(ButLEDnum, OFF);
@@ -232,9 +245,7 @@ void update_ButtonLEDs(void)
 					set_ButtonLED_byPalette(ButLEDnum, OFF );
 				else
 					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 1 - MAX_NUM_REC_BANKS*2 );
-
 			}
-
 		}
 
 		// PLAY lights

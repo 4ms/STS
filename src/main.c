@@ -26,6 +26,10 @@
 #include "ff.h"
 #include "sampler.h"
 
+uint32_t WATCH0;
+uint32_t WATCH1;
+uint32_t WATCH2;
+uint32_t WATCH3;
 
 enum g_Errors g_error=0;
 

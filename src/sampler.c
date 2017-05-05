@@ -89,7 +89,12 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 //extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 //volatile uint32_t*  SDIOSTA;
 
-uint32_t WATCHAMT;
+extern uint32_t WATCH0;
+extern uint32_t WATCH1;
+extern uint32_t WATCH2;
+extern uint32_t WATCH3;
+
+
 //
 // System-wide parameters, flags, modes, states
 //
@@ -334,6 +339,9 @@ void toggle_reverse(uint8_t chan)
 	uint8_t samplenum, banknum;
 	uint32_t t;
 	FRESULT res;
+	enum PlayStates tplay_state;
+
+	//DEBUG2_ON;
 
 	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC || play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
 	{
@@ -346,23 +354,39 @@ void toggle_reverse(uint8_t chan)
 		banknum = i_param[chan][BANK];
 	}
 
+	tplay_state = play_state[chan];
+	play_state[chan] = SILENT;
 
-					//If we are PREBUFFERING or PLAY_FADEUP, then that means we just started playing. 
-					//It could be the case a common trigger fired into PLAY and REV, but the PLAY trig was detected first
-					//So we actually want to make it play from the end of the sample rather than reverse direction from the current spot
-					//if (play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
+	//If we are PREBUFFERING or PLAY_FADEUP, then that means we just started playing. 
+	//It could be the case a common trigger fired into PLAY and REV, but the PLAY trig was detected first
+	//So we actually want to make it play from the end of the sample rather than reverse direction from the current spot
+	//if (play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
 
 	//Check the cache position of play_buff[chan]->out, to see if it's a certain distance from sample_file_startpos[chan]
 	//If so, reverse direction (by keeping ->out the same)
 	//If not, play from the other end (by moving ->out to the opposite end) 
 	t = map_buffer_to_cache(play_buff[chan]->out, cache_low[chan], cache_offset[chan], play_buff[chan]);
-	if (!i_param[chan][REV]){
+
+	if (!i_param[chan][REV]){ //currently going forward, so find distance ->out is ahead of startpos
 		if (t > sample_file_startpos[chan]) t = t - sample_file_startpos[chan]; else t=0;
 	}else{
 		if (t < sample_file_startpos[chan]) t = sample_file_startpos[chan] - t; else t=0;
 	}
+
 	if (t <= READ_BLOCK_SIZE * 2)
-		play_buff[chan]->out = map_cache_to_buffer(sample_file_endpos[chan], cache_low[chan], cache_offset[chan], play_buff[chan]);
+	{
+		if (sample_file_endpos[chan] <= cache_high[chan])
+			play_buff[chan]->out = map_cache_to_buffer(sample_file_endpos[chan], cache_low[chan], cache_offset[chan], play_buff[chan]);
+		else
+		{
+			DEBUG2_ON;
+			if (i_param[chan][REV])	i_param[chan][REV] = 0;
+			else 					i_param[chan][REV] = 1;
+
+			start_playing(chan);
+			return;
+		}
+	}
 
 	// Swap sample_file_curpos with cache_high or _low
 	// and move ->in to the equivlant address in play_buff
@@ -370,11 +394,13 @@ void toggle_reverse(uint8_t chan)
 
 	if (i_param[chan][REV])
 	{
+		i_param[chan][REV] = 0;
 		sample_file_curpos[chan] = cache_high[chan];
 		play_buff[chan]->in = map_cache_to_buffer(cache_high[chan], cache_low[chan], cache_offset[chan], play_buff[chan]);
 	}
 	else
 	{
+		i_param[chan][REV] = 1;
 		sample_file_curpos[chan] = cache_low[chan];
 		play_buff[chan]->in = cache_offset[chan]; //cache_offset is the map of cache_low
 	}
@@ -386,12 +412,14 @@ void toggle_reverse(uint8_t chan)
 	sample_file_endpos[chan]	= sample_file_startpos[chan];
 	sample_file_startpos[chan]	= t;
 
-	res = goto_filepos(sample_file_curpos[chan]);
+	res = goto_filepos(sample_file_curpos[chan]); //uses samplenum and banknum to find startOfData
+
 	if (res!=FR_OK)
 		g_error |= FILE_SEEK_FAIL;
 
-	if (i_param[chan][REV])	i_param[chan][REV] = 0;
-	else 					i_param[chan][REV] = 1;
+	 play_state[chan] = tplay_state;
+
+	DEBUG2_OFF;
 }
 
 
@@ -409,6 +437,8 @@ void start_playing(uint8_t chan)
 {
 	uint8_t samplenum, banknum;
 	FRESULT res;
+
+	DEBUG1_ON;
 
 	samplenum = i_param[chan][SAMPLE];
 	banknum = i_param[chan][BANK];
@@ -477,8 +507,8 @@ void start_playing(uint8_t chan)
 
 		cache_low[chan] = 0;
 		cache_high[chan] = 0;
-		cache_offset[chan] = play_buff[chan]->min;;
-
+		cache_offset[chan] = play_buff[chan]->min;
+WATCH0=cache_low[0]; WATCH1=cache_high[0];
 	}
 
 	//Determine starting and ending addresses
@@ -529,7 +559,7 @@ void start_playing(uint8_t chan)
 		is_buffered_to_file_end[chan] = 0;
 
 		play_state[chan]=PREBUFFERING;
-
+ WATCH0=cache_low[0]; WATCH1=cache_high[0];
 	}
 
 	if (i_param[chan][REV])	decay_amp_i[chan]=0.0;
@@ -540,6 +570,7 @@ void start_playing(uint8_t chan)
 
 	if (global_mode[MONITOR_RECORDING])	global_mode[MONITOR_RECORDING] = 0;
 
+	DEBUG1_OFF;
 }
 
 
@@ -833,7 +864,7 @@ void read_storage_to_buffer(void)
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 
-						DEBUG1_ON;
+					//	DEBUG1_ON;
 						res = f_read(&fil[chan], (uint8_t *)tmp_buff_i16, rd, &br);
 						if (res != FR_OK) 
 						{
@@ -841,7 +872,7 @@ void read_storage_to_buffer(void)
 							is_buffered_to_file_end[chan] = 1;
 						}
 					//	f_sync(&fil[chan]);
-						DEBUG1_OFF;
+					//	DEBUG1_OFF;
 
 						// DEBUG0_OFF;	
 						// for(i=2;i<(rd>>1);i++)
@@ -913,13 +944,13 @@ void read_storage_to_buffer(void)
 						}
 
 
-						DEBUG1_ON;
+					//	DEBUG1_ON;
 						//Read one block forward
 						t_fptr=f_tell(&fil[chan]);
 						res = f_read(&fil[chan], tmp_buff_i16, rd, &br);
 						if (res != FR_OK) 
 							g_error |= FILE_READ_FAIL_1 << chan;
-						DEBUG1_OFF;
+					//	DEBUG1_OFF;
 
 						if (br < rd)		g_error |= FILE_UNEXPECTEDEOF;
 						//Jump backwards to where we started reading
@@ -961,7 +992,8 @@ void read_storage_to_buffer(void)
 									cache_high[chan] = 0;
 							}
 							cache_offset[chan] = play_buff[chan]->in;
-							cache_low[chan] = sample_file_curpos[chan];
+							cache_low[chan] = sample_file_curpos[chan]; 
+
 						} 
 						else {
 
@@ -974,13 +1006,14 @@ void read_storage_to_buffer(void)
 							cache_high[chan] = sample_file_curpos[chan];
 						}
 
-
+WATCH0=cache_low[0]; WATCH1=cache_high[0];
 						if (err)
 						{
-							DEBUG3_ON;
+//							DEBUG3_ON;
 							g_error |= READ_BUFF1_OVERRUN*(1+chan);
-						} else
-							DEBUG3_OFF;
+						}
+//						 else
+//							DEBUG3_OFF;
 
 					}
 
@@ -1024,6 +1057,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 	uint8_t starting_polarity, ending_polarity, starting_wrapping,	ending_wrapping, polarity_changed, wrapping_changed;
 	uint32_t sample_file_playpos;
 
+	DEBUG3_ON;
 
 	samplenum = sample_num_now_playing[chan];
 	banknum = sample_bank_now_playing[chan];
@@ -1074,8 +1108,8 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 		polarity_changed = (ending_polarity == starting_polarity)?0:1;
 		wrapping_changed = (starting_wrapping == ending_wrapping)?0:1;
 
-		if (polarity_changed != wrapping_changed)
-			DEBUG3_ON;//play_state[chan] = PLAY_FADEDOWN;
+//		if (polarity_changed != wrapping_changed)
+//			DEBUG3_ON;//play_state[chan] = PLAY_FADEDOWN;
 
 
 		//Calculate length and where to stop playing
@@ -1170,7 +1204,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 								{
 									g_error |= READ_BUFF1_OVERRUN<<chan;
 									check_errors();
-									DEBUG2_ON;
+//									DEBUG2_ON;
 
 									//play_state[chan] = PREBUFFERING;
 									//is_buffered_to_file_end[chan] = 0;
@@ -1184,8 +1218,8 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 								}
 							}
-							else
-								DEBUG2_OFF;
+//							else
+//								DEBUG2_OFF;
 
 						}
 
@@ -1257,6 +1291,10 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 	else
 		play_load_triage = NO_PRIORITY;
 
+	//put this here so we have maximum time to set up all new parameters/modes before processing a block of audio 
+//	process_mode_flags();
+
+	DEBUG3_OFF;
 }
 
 

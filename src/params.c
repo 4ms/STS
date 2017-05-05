@@ -370,11 +370,13 @@ void update_params(void)
 
 		//
 		// Gain (sample ch2 pot): 
-		// 0.1 to 2.1 with just the knob (jack disabled)
+		// was: 0.1 to 2.1 with just the knob (jack disabled)
+		// 0.1 to 5.1 with just the knob (jack disabled)
 		//
 		if (flag_pot_changed[SAMPLE_POT*2+1])
 		{
-			t_f 	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] + 204.8f) / 2048.0f;
+		//	t_f 	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] + 204.8f) / 2048.0f;
+			t_f 	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] + 81.92f) / 819.2f;
 			set_sample_gain(&samples[banknum][samplenum], t_f);
 		}
 
@@ -520,8 +522,41 @@ void update_params(void)
 //
 void process_mode_flags(void)
 {
+	DEBUG0_ON;
+
 	if (!disable_mode_changes)
 	{
+
+
+		if (flags[Rev1Trig])
+		{
+			flags[Rev1Trig]=0;
+
+			if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
+				i_param[1][REV] = i_param[0][REV];
+
+			toggle_reverse(0);
+
+			if (global_mode[STEREO_LINK])
+				toggle_reverse(1);
+
+		}
+		if (flags[Rev2Trig])
+		{
+
+			flags[Rev2Trig]=0;
+
+			if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
+				i_param[0][REV] = i_param[1][REV];
+
+			toggle_reverse(1);
+
+			if (global_mode[STEREO_LINK])
+				toggle_reverse(0);
+
+		}
+
+
 
 		if (flags[Play1But])
 		{
@@ -576,6 +611,7 @@ void process_mode_flags(void)
 			start_playing(1);
 		}
 
+
 		if (flags[RecTrig]==1)
 		{
 			flags[RecTrig]=0;
@@ -601,34 +637,6 @@ void process_mode_flags(void)
 			}
 		}
 
-
-		if (flags[Rev1Trig])
-		{
-			flags[Rev1Trig]=0;
-
-			if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
-				i_param[1][REV] = i_param[0][REV];
-
-			toggle_reverse(0);
-
-			if (global_mode[STEREO_LINK])
-				toggle_reverse(1);
-
-		}
-		if (flags[Rev2Trig])
-		{
-
-			flags[Rev2Trig]=0;
-
-			if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
-				i_param[0][REV] = i_param[1][REV];
-
-			toggle_reverse(1);
-
-			if (global_mode[STEREO_LINK])
-				toggle_reverse(0);
-
-		}
 
 		if (flags[ToggleLooping1])
 		{
@@ -677,6 +685,7 @@ void process_mode_flags(void)
 			}
 		}
 	}
+	DEBUG0_OFF;
 }
 
 uint8_t detent_num(uint16_t adc_val)

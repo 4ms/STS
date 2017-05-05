@@ -15,7 +15,7 @@ void OnProjectLoad (void) {
   Project.SetTargetIF ("SWD");
   Project.SetTIFSpeed ("2 MHz");
   Project.AddSvdFile ("Cortex-M4.svd");
-  File.Open ("/Users/design/4ms/stm32/DTS/build/main.elf");
+  File.Open ("/Users/design/4ms/stm32/STS/build/main.elf");
 
   Window.Add ("Watched Data", "f_param");
   Window.Add ("Watched Data", "samples[93]");

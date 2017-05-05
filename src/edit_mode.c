@@ -297,7 +297,7 @@ void assign_sample_from_other_bank(uint8_t src_bank, uint8_t src_sample)
 
 void set_sample_gain(Sample *s_sample, float gain)
 {
-	if (gain >= 2.1) 		gain = 2.1f;
+	if (gain >= 5.1) 		gain = 5.1f;
 	else if (gain <= 0.1)	gain = 0.1f;
 
 	s_sample->inst_gain = gain;

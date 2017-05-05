@@ -21,7 +21,8 @@ enum PlayStates {
 	PLAYING,
 	PLAYING_PERC,
 	PLAY_FADEDOWN,
-	RETRIG_FADEDOWN
+	RETRIG_FADEDOWN,
+	HOLD
 
 };
 
@@ -36,7 +37,7 @@ enum PlayLoadTriage{
 
 #define PRE_BUFF_SIZE (8192*3) /*0x6000*/
 //#define ACTIVE_BUFF_SIZE (8192*64) /* measured gaps of about 32 blocks, so this is twice enough */
-#define ACTIVE_BUFF_SIZE (8192*16) /* measured gaps of about 32 blocks, so this is twice enough */
+#define ACTIVE_BUFF_SIZE (8192*16) 
 
 #define MAX_RS 32
 //#define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)
