@@ -1037,27 +1037,25 @@ WATCH0=cache_low[0]; WATCH1=cache_high[0];
 
 }
 
-void play_audio_from_buffer(int32_t *out, uint8_t chan)
+void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 {
 	uint16_t i;
-	//uint32_t play_length;
-	//uint32_t t_out;
-	int32_t	t_i32;
+	int32_t t_i32;
+	float t_f;
+	uint32_t t_u32;
 
 	//Resampling:
-	static float resampling_fpos[NUM_PLAY_CHAN]={0.0f, 0.0f};
+	static float resampling_fpos[NUM_PLAY_CHAN*2]={0.0f, 0.0f, 0.0f, 0.0f};
 	float rs;
-	enum Stereo_Modes stereomode;
+	uint32_t resampled_buffer_size;
+
+	uint32_t sample_file_playpos;
+	float gain;
 
 	//convenience variables
 	float length;
-	uint32_t resampled_buffer_size;
-	float gain;
 	uint8_t samplenum, banknum;
-	uint8_t starting_polarity, ending_polarity, starting_wrapping,	ending_wrapping, polarity_changed, wrapping_changed;
-	uint32_t sample_file_playpos;
 
-	DEBUG3_ON;
 
 	samplenum = sample_num_now_playing[chan];
 	banknum = sample_bank_now_playing[chan];
@@ -1066,8 +1064,10 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
 	{
 		 for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-			 out[i]=0;
-
+		 {
+			 outL[i]=0;
+			 outR[i]=0;
+		}
 	}
 	else
 	{
@@ -1076,41 +1076,23 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 		//Re-sampling rate (0.0 < rs <= 4.0)
 		rs = f_param[chan][PITCH];
 
-		//Stereo Mode
-		if (samples[banknum][samplenum].numChannels == 1)
-			stereomode = MONO;
-
-		else if	(samples[banknum][samplenum].numChannels == 2)
+	DEBUG3_ON;
+		//Resample data read from the play_buff and store into out[]
+		if (samples[banknum][samplenum].numChannels == 2)
 		{
-			if (   i_param[chan][STEREO_MODE] == STEREO_LEFT
-				|| i_param[chan][STEREO_MODE] == STEREO_RIGHT )
-				stereomode = STEREO_LEFT+chan; //L or R
+			t_u32 = play_buff[chan]->out;
+			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
 
-			else
-				stereomode = STEREO_SUM; //mono or sum
+			play_buff[chan]->out = t_u32;
+			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outR);
 		}
 		else
 		{
-			g_error |= FILE_WAVEFORMATERR; //invalid number of channels
-			return;
+			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
+			for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
 		}
 
-		//check for polarity of buffer (in<out or in>out)
-		starting_polarity = (play_buff[chan]->in < play_buff[chan]->out)?1:0;
-		starting_wrapping = play_buff[chan]->wrapping;
-
-		//Resample data read from the play_buff and store into out[]
-		resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, stereomode, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, out);
-
-		ending_polarity = (play_buff[chan]->in < play_buff[chan]->out)?1:0;
-		ending_wrapping = play_buff[chan]->wrapping;
-
-		polarity_changed = (ending_polarity == starting_polarity)?0:1;
-		wrapping_changed = (starting_wrapping == ending_wrapping)?0:1;
-
-//		if (polarity_changed != wrapping_changed)
-//			DEBUG3_ON;//play_state[chan] = PLAY_FADEDOWN;
-
+	DEBUG3_OFF;
 
 		//Calculate length and where to stop playing
 		length = f_param[chan][LENGTH];
@@ -1132,10 +1114,17 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
-					out[i] = ((float)out[i] * (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN);
-					t_i32 = (float)out[i] * gain;
+					t_f = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
+
+					outL[i] = (float)outL[i] * t_f;
+					t_i32 = (float)outL[i] * gain;
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					out[i] = t_i32;
+					outL[i] = t_i32;
+
+					outR[i] = (float)outR[i] * t_f;
+					t_i32 = (float)outR[i] * gain;
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					outR[i] = t_i32;
 				}
 
 				play_led_state[chan] = 0;
@@ -1152,15 +1141,37 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 			 case (PLAYING):
 			 case (PLAY_FADEUP):
+			 		if (play_state[chan] == PLAY_FADEUP) 
+			 		{
+						for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+						{
+							t_f = gain * (float)i / (float)HT16_CHAN_BUFF_LEN;
 
-					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+							t_i32 = (float)outL[i] * t_f;
+							asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+							outL[i] = t_i32;
+
+							t_i32 = (float)outR[i] * t_f;
+							asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+							outR[i] = t_i32;
+						}
+					} 
+					else
 					{
-						t_i32 = (float)out[i] * gain;
-						if (play_state[chan] == PLAY_FADEUP) t_i32 *= (float)i / (float)HT16_CHAN_BUFF_LEN;
+						for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+						{
+							t_i32 = (float)outL[i] * gain;
+							asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+							outL[i] = t_i32;
 
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						out[i] = t_i32;
+							t_i32 = (float)outR[i] * gain;
+							asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+							outR[i] = t_i32;
+						}
+
+
 					}
+
 
 					if (length>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
 					{
@@ -1170,8 +1181,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 						resampled_buffer_size *= 2;
 
 
-						//Stop playback if we've played enough sampleso
-
+						//Stop playback if we've played enough samples
 
 						//Find out how far ahead our output data is from the start of the cache
 						sample_file_playpos = CB_distance_points(play_buff[chan]->out, cache_offset[chan], play_buff[chan]->size, 0);
@@ -1240,13 +1250,18 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 					if (decay_amp_i[chan] < 0.0f) 		decay_amp_i[chan] = 0.0f;
 					else if (decay_amp_i[chan] > 1.0f) 	decay_amp_i[chan] = 1.0f;
 
-					if (length>0.02) //fixme: not efficient to have an if inside the for-loop! All we want to do is use decay_amp_i as a duration counter, but not apply an envelope if we have a very short length
-						out[i] = ((float)out[i]) * decay_amp_i[chan];
+					if (length>0.02){ //fixme: not efficient to have an if inside the for-loop! All we want to do is use decay_amp_i as a duration counter, but not apply an envelope if we have a very short length
+						outL[i] = ((float)outL[i]) * decay_amp_i[chan];
+						outR[i] = ((float)outR[i]) * decay_amp_i[chan];
+					}
 
-					t_i32 = (float)out[i] * gain;
+					t_i32 = (float)outL[i] * gain;
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					out[i] = t_i32;
+					outL[i] = t_i32;
 
+					t_i32 = (float)outR[i] * gain;
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					outR[i] = t_i32;
 				}
 
 				if (decay_amp_i[chan] <= 0.0f || decay_amp_i[chan] >= 1.0f)
@@ -1266,11 +1281,7 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 
 						play_state[chan] = SILENT;
 					}
-
-
 				}
-
-
 				break;
 
 			 case (SILENT):
@@ -1291,10 +1302,6 @@ void play_audio_from_buffer(int32_t *out, uint8_t chan)
 	else
 		play_load_triage = NO_PRIORITY;
 
-	//put this here so we have maximum time to set up all new parameters/modes before processing a block of audio 
-//	process_mode_flags();
-
-	DEBUG3_OFF;
 }
 
 
@@ -1305,7 +1312,7 @@ void SDIO_read_IRQHandler(void)
 	if (TIM_GetITStatus(SDIO_read_TIM, TIM_IT_Update) != RESET) {
 
 		//Set the flag to tell the main loop to read more from the sdcard
-		//We don't want to read_storate_to_buffer() here inside the interrupt because we might be interrupting a current read/write process
+		//We don't want to read_storage_to_buffer() here inside the interrupt because we might be interrupting a current read/write process
 		//Keeping sdcard read/writes out of interrupts forces us to complete each read/write before beginning another
 
 		flags[TimeToReadStorage] = 1;

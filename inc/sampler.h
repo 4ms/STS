@@ -44,7 +44,8 @@ enum PlayLoadTriage{
 
 void audio_buffer_init(void);
 void read_storage_to_buffer(void);
-void play_audio_from_buffer(int32_t *out, uint8_t chan);
+//void play_audio_from_buffer(int32_t *out, uint8_t chan);
+void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan);
 
 
 void toggle_playing(uint8_t chan);

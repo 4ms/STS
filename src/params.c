@@ -119,7 +119,7 @@ void init_modes(void)
 	global_mode[SYSTEM_SETTINGS] = 0;
 	global_mode[MONITOR_RECORDING] = 0;
 	global_mode[ENABLE_RECORDING] = 0;
-	global_mode[STEREO_LINK] = 0;
+	global_mode[STEREO_LINK] = 1;
 	global_mode[EDIT_MODE] = 0;
 
 }
@@ -282,17 +282,6 @@ void update_params(void)
 	uint8_t samplenum, banknum;
 
 	recording_enabled=1;
-
-	if (!global_mode[STEREO_LINK])
-	{
-		i_param[0][STEREO_MODE] = STEREO_SUM;
-		i_param[1][STEREO_MODE] = STEREO_SUM;
-	}
-	else
-	{
-		i_param[0][STEREO_MODE] = STEREO_LEFT;
-		i_param[1][STEREO_MODE] = STEREO_RIGHT;
-	}
 
 	//
 	// Edit mode
@@ -469,26 +458,26 @@ void update_params(void)
 					flags[PlaySample1Changed_valid + chan] = 6;
 			}
 
-			if (global_mode[STEREO_LINK])
-			{
-				if (i_param[1][SAMPLE] != i_param[0][SAMPLE])
-					flags[PlaySample2Changed] = 1;
+			// if (global_mode[STEREO_LINK])
+			// {
+			// 	if (i_param[1][SAMPLE] != i_param[0][SAMPLE])
+			// 		flags[PlaySample2Changed] = 1;
 
-				if (i_param[1][BANK] != i_param[0][BANK])
-					flags[PlayBank2Changed] = 1;
+			// 	if (i_param[1][BANK] != i_param[0][BANK])
+			// 		flags[PlayBank2Changed] = 1;
 
-				i_param[1][SAMPLE] 		= i_param[0][SAMPLE];
-				i_param[1][BANK] 		= i_param[0][BANK];
-				i_param[1][LOOPING] 	= i_param[0][LOOPING];
-				f_param[1][PITCH] 		= f_param[0][PITCH];
-				f_param[1][START] 		= f_param[0][START];
-				f_param[1][LENGTH] 		= f_param[0][LENGTH];
+			// 	i_param[1][SAMPLE] 		= i_param[0][SAMPLE];
+			// 	i_param[1][BANK] 		= i_param[0][BANK];
+			// 	i_param[1][LOOPING] 	= i_param[0][LOOPING];
+			// 	f_param[1][PITCH] 		= f_param[0][PITCH];
+			// 	f_param[1][START] 		= f_param[0][START];
+			// 	f_param[1][LENGTH] 		= f_param[0][LENGTH];
 
-				//flags[PlaySample2Changed] = flags[PlaySample1Changed];
+			// 	//flags[PlaySample2Changed] = flags[PlaySample1Changed];
 
 
-				break; //only calculate channel 0's parameters, because in LINK mode channel 1's params are copied from channel 0
-			}
+			// 	break; //only calculate channel 0's parameters, because in LINK mode channel 1's params are copied from channel 0
+			// }
 
 
 		} //for chan
@@ -532,13 +521,13 @@ void process_mode_flags(void)
 		{
 			flags[Rev1Trig]=0;
 
-			if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
-				i_param[1][REV] = i_param[0][REV];
+			// if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
+			// 	i_param[1][REV] = i_param[0][REV];
 
 			toggle_reverse(0);
 
-			if (global_mode[STEREO_LINK])
-				toggle_reverse(1);
+			// if (global_mode[STEREO_LINK])
+			// 	toggle_reverse(1);
 
 		}
 		if (flags[Rev2Trig])
@@ -546,13 +535,13 @@ void process_mode_flags(void)
 
 			flags[Rev2Trig]=0;
 
-			if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
-				i_param[0][REV] = i_param[1][REV];
+			// if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
+			// 	i_param[0][REV] = i_param[1][REV];
 
 			toggle_reverse(1);
 
-			if (global_mode[STEREO_LINK])
-				toggle_reverse(0);
+			// if (global_mode[STEREO_LINK])
+			// 	toggle_reverse(0);
 
 		}
 
@@ -562,19 +551,19 @@ void process_mode_flags(void)
 		{
 			flags[Play1But]=0;
 
-			if (global_mode[STEREO_LINK])
-			{
-				play_state[1] = play_state[0];
-				//if (play_state[0]==SILENT && (play_state[1]== PLAYING || play_state[1] == PLAYING_PERC)) play_state[1]=SILENT;
-				if (i_param[0][REV]!=i_param[1][REV])
-					toggle_reverse(0);
+			// if (global_mode[STEREO_LINK])
+			// {
+			// 	play_state[1] = play_state[0];
+			// 	//if (play_state[0]==SILENT && (play_state[1]== PLAYING || play_state[1] == PLAYING_PERC)) play_state[1]=SILENT;
+			// 	if (i_param[0][REV]!=i_param[1][REV])
+			// 		toggle_reverse(0);
 
-				i_param[1][LOOPING] = i_param[0][LOOPING];
+			// 	i_param[1][LOOPING] = i_param[0][LOOPING];
 
-				toggle_playing(0);
-				toggle_playing(1);
-			}
-			else
+			// 	toggle_playing(0);
+			// 	toggle_playing(1);
+			// }
+			// else
 				toggle_playing(0);
 		}
 
@@ -582,18 +571,18 @@ void process_mode_flags(void)
 		{
 			flags[Play2But]=0;
 
-			if (global_mode[STEREO_LINK])
-			{
-				play_state[0] = play_state[1];
-				if (i_param[0][REV]!=i_param[1][REV])
-					toggle_reverse(1);
+			// if (global_mode[STEREO_LINK])
+			// {
+			// 	play_state[0] = play_state[1];
+			// 	if (i_param[0][REV]!=i_param[1][REV])
+			// 		toggle_reverse(1);
 
-				toggle_playing(0);
-				toggle_playing(1);
+			// 	toggle_playing(0);
+			// 	toggle_playing(1);
 
-				i_param[0][LOOPING] = i_param[1][LOOPING];
-			}
-			else
+			// 	i_param[0][LOOPING] = i_param[1][LOOPING];
+			// }
+			// else
 				toggle_playing(1);
 
 			//if (play_state[1]==SILENT && (play_state[0]== PLAYING || play_state[0] == PLAYING_PERC)) play_state[1]=SILENT;
@@ -646,8 +635,8 @@ void process_mode_flags(void)
 			{
 				i_param[0][LOOPING] = 0;
 
-				if (global_mode[STEREO_LINK])
-					i_param[1][LOOPING] = 0;
+				// if (global_mode[STEREO_LINK])
+				// 	i_param[1][LOOPING] = 0;
 			}
 			else
 			{
@@ -655,11 +644,11 @@ void process_mode_flags(void)
 				if (play_state[0] == SILENT) 
 					flags[Play1But] = 1;
 
-				if (global_mode[STEREO_LINK])
-				{
-					i_param[1][LOOPING] = 1;
-					flags[Play2But] = 1;
-				}
+				// if (global_mode[STEREO_LINK])
+				// {
+				// 	i_param[1][LOOPING] = 1;
+				// 	flags[Play2But] = 1;
+				// }
 
 			}
 
@@ -670,8 +659,8 @@ void process_mode_flags(void)
 		{
 			flags[ToggleLooping2] = 0;
 
-			if (!global_mode[STEREO_LINK])
-			{
+			// if (!global_mode[STEREO_LINK])
+			// {
 				if (i_param[1][LOOPING])
 				{
 					i_param[1][LOOPING] = 0;
@@ -682,7 +671,7 @@ void process_mode_flags(void)
 					if (play_state[1] == SILENT) 
 						flags[Play2But] = 1;
 				}
-			}
+			// }
 		}
 	}
 	DEBUG0_OFF;
