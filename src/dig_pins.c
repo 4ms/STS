@@ -11,8 +11,59 @@
 #include "dig_pins.h"
 #include "buttons.h"
 
+extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 
+void test_noise(void)
+{
+	uint32_t i,j;
 
+	GPIO_InitTypeDef gpio;
+
+	GPIO_StructInit(&gpio);
+
+	/* Configure PC.08, PC.09, PC.10, PC.11 pins: D0, D1, D2, D3 pins */
+	gpio.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11;
+	gpio.GPIO_Speed = GPIO_Speed_50MHz;
+	gpio.GPIO_Mode = GPIO_Mode_OUT;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_Init(GPIOC, &gpio);
+
+	/* Configure PD.02 CMD line */
+	gpio.GPIO_Pin = GPIO_Pin_2;
+	GPIO_Init(GPIOD, &gpio);
+
+	/* Configure PC.12 pin: CLK pin */
+	gpio.GPIO_Pin = GPIO_Pin_12;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOC, &gpio);
+
+	j=0;
+	while (1)
+	{
+		i=potadc_buffer[0]*100;while(i--){;}
+		GPIOC->BSRRL = GPIO_Pin_8;
+		GPIOC->BSRRL = GPIO_Pin_9;
+		GPIOC->BSRRL = GPIO_Pin_10;
+		GPIOC->BSRRL = GPIO_Pin_11;
+		GPIOC->BSRRL = GPIO_Pin_12;
+		GPIOD->BSRRL = GPIO_Pin_2;
+
+		i=potadc_buffer[0]*100;while(i--){;}
+		GPIOC->BSRRH = GPIO_Pin_8;
+		GPIOC->BSRRH = GPIO_Pin_9;
+		GPIOC->BSRRH = GPIO_Pin_10;
+		GPIOC->BSRRH = GPIO_Pin_11;
+		GPIOC->BSRRH = GPIO_Pin_12;
+		GPIOD->BSRRH = GPIO_Pin_2;
+
+		j++;if (j==1000){
+			j=0;
+			i=2000000;while(i--){;}
+		}
+	}
+
+}
 
 void init_dig_inouts(void){
 	GPIO_InitTypeDef gpio;

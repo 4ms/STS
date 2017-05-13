@@ -7,6 +7,7 @@
 #include "file_util.h"
 #include "sampler.h"
 #include "wavefmt.h"
+#include "audio_util.h"
 
 #include "edit_mode.h"
 
@@ -200,9 +201,9 @@ void assign_sample(uint8_t assigned_sample_i)
 	samples[bank][sample].sampleSize 		= t_assign_samples[ assigned_sample_i ].sampleSize;
 	samples[bank][sample].startOfData 		= t_assign_samples[ assigned_sample_i ].startOfData;
 
-	samples[bank][sample].inst_size 		= t_assign_samples[ assigned_sample_i ].inst_size  & 0xFFFFFFF8;
-	samples[bank][sample].inst_start 		= t_assign_samples[ assigned_sample_i ].inst_start  & 0xFFFFFFF8;
-	samples[bank][sample].inst_end 			= t_assign_samples[ assigned_sample_i ].inst_end  & 0xFFFFFFF8;
+	samples[bank][sample].inst_size 		= t_assign_samples[ assigned_sample_i ].inst_size  ;//& 0xFFFFFFF8;
+	samples[bank][sample].inst_start 		= t_assign_samples[ assigned_sample_i ].inst_start  ;//& 0xFFFFFFF8;
+	samples[bank][sample].inst_end 			= t_assign_samples[ assigned_sample_i ].inst_end  ;//& 0xFFFFFFF8;
 
 	flags[ForceFileReload1] = 1;
 
@@ -276,9 +277,9 @@ void assign_sample_from_other_bank(uint8_t src_bank, uint8_t src_sample)
 	samples[bank][sample].sampleSize 		= samples[src_bank][src_sample].sampleSize;
 	samples[bank][sample].startOfData 		= samples[src_bank][src_sample].startOfData;
 
-	samples[bank][sample].inst_size 		= samples[src_bank][src_sample].inst_size  & 0xFFFFFFF8;
-	samples[bank][sample].inst_start 		= samples[src_bank][src_sample].inst_start  & 0xFFFFFFF8;
-	samples[bank][sample].inst_end 			= samples[src_bank][src_sample].inst_end  & 0xFFFFFFF8;
+	samples[bank][sample].inst_size 		= samples[src_bank][src_sample].inst_size  ;//& 0xFFFFFFF8;
+	samples[bank][sample].inst_start 		= samples[src_bank][src_sample].inst_start  ;//& 0xFFFFFFF8;
+	samples[bank][sample].inst_end 			= samples[src_bank][src_sample].inst_end  ;//& 0xFFFFFFF8;
 
 	flags[ForceFileReload1] = 1;
 
@@ -319,7 +320,7 @@ void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
 	if ((-1.0*fine_trim) > trimstart) trimstart = 0;
 	else trimstart += fine_trim;
 
-	s_sample->inst_start = trimstart & 0xFFFFFFF8;
+	s_sample->inst_start = align_addr(trimstart, s_sample->blockAlign);
 
 	//Clip inst_end to the sampleSize (but keep inst_size the same)
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
@@ -327,7 +328,7 @@ void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
 	else
 		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 
-	s_sample->inst_end &= 0xFFFFFFF8;
+	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
 
 }
 
@@ -371,7 +372,7 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 	if (s_sample->inst_start > s_sample->inst_end)
 		s_sample->inst_start = s_sample->inst_end;
 
-	s_sample->inst_start &= 0xFFFFFFF8;
+	s_sample->inst_start = align_addr(s_sample->inst_start, s_sample->blockAlign);
 
 	//Clip inst_end to the sampleSize (but keep inst_size the same)
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
@@ -379,8 +380,7 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 	else
 		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 
-	s_sample->inst_end &= 0xFFFFFFF8;
-
+	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
 
 }
 
@@ -396,7 +396,7 @@ void set_sample_trim_size(Sample *s_sample, float coarse)
 	else if (coarse <= (1.0/4096.0))	trimsize = 4420;
 	else 								trimsize = (s_sample->sampleSize - 4420) * coarse + 4420;
 
-	s_sample->inst_size = trimsize & 0xFFFFFFF8;
+	s_sample->inst_size = align_addr(trimsize, s_sample->blockAlign);
 
 	//Set inst_end to start+size and clip it to the sampleSize
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
@@ -404,7 +404,7 @@ void set_sample_trim_size(Sample *s_sample, float coarse)
 	else
 		s_sample->inst_end = (s_sample->inst_start + s_sample->inst_size);
 
-	s_sample->inst_end &= 0xFFFFFFF8;
+	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
 
 
 }
@@ -465,7 +465,7 @@ void nudge_trim_size(Sample *s_sample, int32_t fine)
 	if (s_sample->inst_size > s_sample->sampleSize)
 		s_sample->inst_size = s_sample->sampleSize;
 
-	s_sample->inst_size &= 0xFFFFFFF8;
+	s_sample->inst_size = align_addr(s_sample->inst_size, s_sample->blockAlign);
 
 	//Set inst_end to inst_start+inst_size and clip it to the sampleSize
 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
@@ -473,7 +473,7 @@ void nudge_trim_size(Sample *s_sample, int32_t fine)
 	else
 		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 
-	s_sample->inst_end &= 0xFFFFFFF8;
+	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
 
 }
 

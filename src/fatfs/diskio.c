@@ -275,19 +275,6 @@ DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
 
 		} else {
 
-			// for(i=5;i<512;i+=2)
-			// {
-			// 	a = (data[i-4] << 8) + data[i-5];
-			// 	b = (data[i] << 8) + data[i-1];
-
-			// 	if (a > b)
-			// 		c = a - b;
-			// 	else
-			// 		c = b - a;
-			// 	if (c > 0x2000)
-			// 		c = 0xFFFF;
-				
-			// }
 			return RES_OK;
 		}
 
@@ -297,22 +284,6 @@ DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
 	{
 		return(err);
 	}
-
-	// while (count--)
-	// {
-
-	// 	err=SD_ReadBlock(data, addr*512, 512);
-	// 	data += 512;
-	// 	addr++;
-
-	// 	if (err==SD_OK){
-	// 		err = SD_WaitReadOperation();
-	// 		while(SD_GetStatus() != SD_TRANSFER_OK);
-	// 	}
-	// 	else
-	// 		return (err);
-
-	// }
 
 	return(err);
 }

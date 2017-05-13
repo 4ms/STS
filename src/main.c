@@ -142,7 +142,7 @@ int main(void)
 
 	timeout_boot = 0x00800000;
 	PLAYLED1_OFF;
-	while((timeout_boot--) && !REV1BUT && !REV2BUT  && !PLAY1BUT  && !PLAY2BUT && !BANK1BUT && !BANK2BUT){;}
+	while(timeout_boot--){;}
 	PLAYLED1_OFF;
 
 	//Initialize SD Card
@@ -167,24 +167,7 @@ int main(void)
 		CLIPLED1_ON;
 		CLIPLED2_ON;
 		res = f_mount(&FatFs, "", 0);
-
-		//while(1){;}
 	}
-
-
-//	res = f_open(&fil, "hello.txt", FA_CREATE_NEW | FA_WRITE);
-//	if (res==FR_OK)
-//	{
-//		res = f_write(&fil, "Hello, World!\r\n", 15, &bw);
-//		if (bw==15)
-//		{
-//			f_close(&fil);
-//			f_mount(0,"",0);
-//		}
-//		else CLIPLED1_ON; //write failed
-//	}
-//	else CLIPLED2_ON; //file open failed
-
 
 
 
@@ -203,8 +186,6 @@ int main(void)
 	init_LowPassCoefs();
 	Init_Pot_ADC((uint16_t *)potadc_buffer, NUM_POT_ADCS);
 	Init_CV_ADC((uint16_t *)cvadc_buffer, NUM_CV_ADCS);
-
-
 
 
 	//Initialize Codec
@@ -243,6 +224,11 @@ int main(void)
 	Start_I2SDMA();
 
 	delay();
+
+
+
+	//test_noise();
+
 
 	init_SDIO_read_IRQ();
 

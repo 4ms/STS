@@ -18,6 +18,8 @@
 #define HT16_BUFF_LEN (codec_BUFF_LEN>>2)
 #define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1)
 
+#define BASE_SAMPLE_RATE 44100
+
 #define FW_VERSION 0
 
 enum Flags {
@@ -49,6 +51,8 @@ enum Flags {
 	TimeToReadStorage,
 	Play1Trig,
 	Play2Trig,
+	StereoModeTurningOn,
+	StereoModeTurningOff,
 
 	NUM_FLAGS
 };
@@ -115,7 +119,8 @@ enum g_Errors{
 
 #define TRIG_TIME 400
 
-#define READ_BLOCK_SIZE 8192
+//#define READ_BLOCK_SIZE 8192
+#define READ_BLOCK_SIZE 9216
 
 
 //About 45ms delay

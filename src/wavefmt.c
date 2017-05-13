@@ -18,12 +18,12 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 			|| fmt_chunk.fmtSize 		 < 16			//Format Chunk size
 			|| fmt_chunk.audioFormat	!= 0x0001		//PCM format
 			|| fmt_chunk.numChannels 	 > 0x0002		//Stereo or mono allowed
-			|| fmt_chunk.sampleRate 	 > 48000		//Between 8k and 48k sampling rate allowed
+			|| fmt_chunk.sampleRate 	 > 96000		//Between 8k and 96k sampling rate allowed
 			|| fmt_chunk.sampleRate		 < 8000
 			|| (fmt_chunk.bitsPerSample		!= 16 		//Only 16 bit samplerate allowed (for now)
-				//&& sample_header.bitsPerSample	!= 8
-				//&& sample_header.bitsPerSample	!= 24
-				//&& sample_header.bitsPerSample	!= 32
+				&& fmt_chunk.bitsPerSample	!= 24
+				//&& fmt_chunk.bitsPerSample	!= 32
+				//&& fmt_chunk.bitsPerSample	!= 8
 				)
 		)
 		return 0;

@@ -209,8 +209,8 @@ void clear_sample_header(Sample *s_sample)
 	s_sample->startOfData = 0;
 
 	s_sample->inst_start = 0;
-	s_sample->inst_end = s_sample->sampleSize & 0xFFFFFFF8;
-	s_sample->inst_size = s_sample->sampleSize & 0xFFFFFFF8;
+	s_sample->inst_end = 0;
+	s_sample->inst_size = 0;
 	s_sample->inst_gain = 1.0;
 }
 
@@ -306,8 +306,8 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 						s_sample->blockAlign = fmt_chunk.numChannels * fmt_chunk.bitsPerSample>>3;
 						s_sample->startOfData = f_tell(sample_file);
 
-						s_sample->inst_end = s_sample->sampleSize & 0xFFFFFFF8;
-						s_sample->inst_size = s_sample->sampleSize & 0xFFFFFFF8;
+						s_sample->inst_end = s_sample->sampleSize ;//& 0xFFFFFFF8;
+						s_sample->inst_size = s_sample->sampleSize ;//& 0xFFFFFFF8;
 						s_sample->inst_start = 0;
 						s_sample->inst_gain = 1.0;
 
@@ -418,7 +418,7 @@ uint8_t load_bank_from_disk(uint8_t bank)
 	{
 		tname[0]=0;
 
-		while (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)
+		while (sample_num < NUM_SAMPLES_PER_BANK)
 		{
 			res = find_next_ext_in_dir(&dir, ".wav", tname);
 			if (res!=FR_OK) break;

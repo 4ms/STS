@@ -11,6 +11,7 @@
 #include "audio_util.h"
 #include "wav_recording.h"
 #include "sts_filesystem.h"
+#include "dig_pins.h"
 
 
 
@@ -250,9 +251,11 @@ void write_buffer_to_storage(void)
 
 					if (!addr_exceeded)
 					{
+						DEBUG1_ON;
 						sz = WRITE_BLOCK_SIZE;
 						res = f_write(&recfil, t_buff16, sz, &written);
 						f_sync(&recfil);
+						DEBUG1_OFF;
 						if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
 						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
 						samplebytes_recorded += written;

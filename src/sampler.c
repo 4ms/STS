@@ -115,6 +115,8 @@ extern uint8_t play_led_state[NUM_PLAY_CHAN];
 uint8_t SAMPLINGBYTES=2;
 
 uint32_t end_out_ctr[NUM_PLAY_CHAN]={0,0};
+uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
+
 
 //
 // Memory
@@ -368,9 +370,13 @@ void toggle_reverse(uint8_t chan)
 	t = map_buffer_to_cache(play_buff[chan]->out, cache_low[chan], cache_offset[chan], play_buff[chan]);
 
 	if (!i_param[chan][REV]){ //currently going forward, so find distance ->out is ahead of startpos
-		if (t > sample_file_startpos[chan]) t = t - sample_file_startpos[chan]; else t=0;
+		if (t > sample_file_startpos[chan])
+			t = t - sample_file_startpos[chan];
+		else t=0;
 	}else{
-		if (t < sample_file_startpos[chan]) t = sample_file_startpos[chan] - t; else t=0;
+		if (t < sample_file_startpos[chan])
+			t = sample_file_startpos[chan] - t;
+		else t=0;
 	}
 
 	if (t <= READ_BLOCK_SIZE * 2)
@@ -438,7 +444,7 @@ void start_playing(uint8_t chan)
 	uint8_t samplenum, banknum;
 	FRESULT res;
 
-	DEBUG1_ON;
+//	DEBUG1_ON;
 
 	samplenum = i_param[chan][SAMPLE];
 	banknum = i_param[chan][BANK];
@@ -547,7 +553,7 @@ WATCH0=cache_low[0]; WATCH1=cache_high[0];
 
 		if (g_error & LSEEK_FPTR_MISMATCH)
 		{
-			sample_file_startpos[chan] = f_tell(&fil[chan]) - samples[banknum][samplenum].startOfData;
+			sample_file_startpos[chan] = align_addr(f_tell(&fil[chan]) - samples[banknum][samplenum].startOfData, samples[banknum][samplenum].blockAlign);
 		}
 
 		sample_file_curpos[chan] 		= sample_file_startpos[chan];
@@ -570,7 +576,7 @@ WATCH0=cache_low[0]; WATCH1=cache_high[0];
 
 	if (global_mode[MONITOR_RECORDING])	global_mode[MONITOR_RECORDING] = 0;
 
-	DEBUG1_OFF;
+//	DEBUG1_OFF;
 }
 
 
@@ -605,25 +611,19 @@ void toggle_playing(uint8_t chan)
 }
 
 
-
 uint32_t calc_start_point(float start_param, Sample *sample)
 {
-	uint32_t align;
 	uint32_t zeropt;
 	uint32_t inst_size;
-
-	if (sample->blockAlign == 4)		align = 0xFFFFFFFC;
-	else if (sample->blockAlign == 2)	align = 0xFFFFFFF8; //was E? but it clicks if we align to 2 not 4, even if our file claims blockAlign = 2
-	else if (sample->blockAlign == 8)	align = 0xFFFFFFF8;
 
 	zeropt = sample->inst_start;
 	inst_size = sample->inst_end - sample->inst_start;
 
 	//Determine the starting address
-	if (start_param < 0.002)			return(align & zeropt);
-	else if (start_param > 0.998)		return(align & (zeropt + inst_size - (READ_BLOCK_SIZE*2)) ); //just play the last 32 blocks (~64k samples)
+	if (start_param < 0.002)			return(align_addr(zeropt, sample->blockAlign));
+	else if (start_param > 0.998)		return(align_addr( (zeropt + inst_size - (READ_BLOCK_SIZE*2)), sample->blockAlign )); //just play the last 32 blocks (~64k samples)
 
-	else								return(align & (zeropt  +  ( (uint32_t)(start_param * (float)inst_size) )) );
+	else								return(align_addr( (zeropt  +  ( (uint32_t)(start_param * (float)inst_size) )), sample->blockAlign ));
 
 
 }
@@ -639,11 +639,7 @@ uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos)
 	if (fwd_stop_point > sample->inst_end)
 		fwd_stop_point = sample->inst_end;
 
-	if (sample->blockAlign == 4)		fwd_stop_point &= 0xFFFFFFFC;
-	else if (sample->blockAlign == 2)	fwd_stop_point &= 0xFFFFFFF8;
-	else if (sample->blockAlign == 8)	fwd_stop_point &= 0xFFFFFFF8;
-
-	return(fwd_stop_point);
+	return (align_addr(fwd_stop_point, sample->blockAlign));
 
 }
 
@@ -1074,25 +1070,48 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		//Read from SDRAM into out[]
 
 		//Re-sampling rate (0.0 < rs <= 4.0)
-		rs = f_param[chan][PITCH];
+		rs = f_param[chan][PITCH] * (samples[banknum][samplenum].sampleRate / BASE_SAMPLE_RATE);
 
-	DEBUG3_ON;
+		DEBUG3_ON;
+		//
 		//Resample data read from the play_buff and store into out[]
-		if (samples[banknum][samplenum].numChannels == 2)
+		//
+		if (samples[banknum][samplenum].sampleByteSize == 2)
 		{
-			t_u32 = play_buff[chan]->out;
-			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
+			if (samples[banknum][samplenum].numChannels == 2)
+			{
+				t_u32 = play_buff[chan]->out;
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
 
-			play_buff[chan]->out = t_u32;
-			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outR);
-		}
-		else
+				play_buff[chan]->out = t_u32;
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outR);
+			}
+			else
+			{
+				//MONO: read left channel and copy to right
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+			}
+		} else 
+		if (samples[banknum][samplenum].sampleByteSize == 3)
 		{
-			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
-			for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
-		}
+			if (samples[banknum][samplenum].numChannels == 2)
+			{
+				t_u32 = play_buff[chan]->out;
+				resample_read24(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
 
-	DEBUG3_OFF;
+				play_buff[chan]->out = t_u32;
+				resample_read24(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outR);
+			}
+			else
+			{
+				//MONO: read left channel and copy to right
+				resample_read24(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+			}
+		}  
+
+		DEBUG3_OFF;
 
 		//Calculate length and where to stop playing
 		length = f_param[chan][LENGTH];
@@ -1129,7 +1148,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 				play_led_state[chan] = 0;
 
-				end_out_ctr[chan]=35;
+				end_out_ctr[chan] = (length>0.05)? 35 : ((length * 540) + 8);
+				play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+10);
 
 				if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
 					flags[Play1But+chan] = 1;
@@ -1224,7 +1244,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 									//if (i_param[chan][REV]) resampled_buffer_size *= 2;
 
 									CB_offset_out_address(play_buff[chan], resampled_buffer_size, !i_param[chan][REV]);
-									play_buff[chan]->out &= 0xFFFFFFF8;
+									play_buff[chan]->out = align_addr(play_buff[chan]->out, samples[banknum][samplenum].blockAlign);
 
 								}
 							}
@@ -1268,7 +1288,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				{
 					decay_amp_i[chan] = 0.0f;
 
-					end_out_ctr[chan] = 35;
+					end_out_ctr[chan] = (length>0.05)? 35 : ((length * 540) + 8);
+					play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+10);
 					play_led_state[chan] = 0;
 
 					if (i_param[chan][REV])

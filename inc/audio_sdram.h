@@ -23,7 +23,14 @@
 //#define MEM_RECORD_BUFFER_2			0xD1800000
 //#define MEM_RECORD_BUFFER_SIZE 		0x007FFFFF
 
-#define MEM_SIZE (SDRAM_SIZE>>2) /* 0x02000000 / 4 = 0x00800000 */
+//#define MEM_SIZE (SDRAM_SIZE>>2) /* 0x02000000 / 4 = 0x00800000 */
+#define MEM_SIZE 0x600000
+
+//Play buffer 1: 0xD0000000 - 0xD05FFFFF
+//Play buffer 2: 0xD0600000 - 0xD0BFFFFF
+//Record buffer: 0xD0C00000 - 0xD11FFFFF
+//unused.......: 0xD1200000 - 0xD1FFFFFF (0x00E00000 space = 14MB of the 32MB chip)
+//Todo: maximum buffer sizes!
 
 
 //#define PRE_BUFF_SIZE (64*256)
