@@ -102,7 +102,7 @@ LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT)
 
 #build/src/params.o: CFLAGS = $(C0FLAGS)
 #build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
-build/src/resample.o: CFLAGS = $(C0FLAGS)
+#build/src/resample.o: CFLAGS = $(C0FLAGS)
 #build/src/sampler.o: CFLAGS = $(C0FLAGS)
 #build/src/dig_pins.o: CFLAGS = $(C0FLAGS)
 #build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)

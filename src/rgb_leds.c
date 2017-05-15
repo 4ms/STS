@@ -282,8 +282,8 @@ void update_ButtonLEDs(void)
 			else if (flags[StereoModeTurningOn])
 			{
 				if (tm_14 <100) flags[StereoModeTurningOn]--;
-
-				set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, tri_14);
+				if (flags[StereoModeTurningOn] < 4)
+					set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, tri_14);
 
 				//if (tm_13 < 0x1000)	set_ButtonLED_byPalette(ButLEDnum, GREENER);
 				//else				set_ButtonLED_byPalette(ButLEDnum, OFF);
@@ -292,10 +292,11 @@ void update_ButtonLEDs(void)
 			{
 				if (tm_14 <100) flags[StereoModeTurningOff]--;
 
-			//	if (chan) set_ButtonLED_byPaletteFade(ButLEDnum, BLUE, OFF, tri_14);
-				//else set_ButtonLED_byPaletteFade(ButLEDnum, BLUE, OFF, tri_13);
-
-				if (flags[StereoModeTurningOff] > 3){
+				if (flags[StereoModeTurningOn] == 4){
+					set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+					set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+				}
+				else if (flags[StereoModeTurningOff] > 2){
 					if (tm_13 < 0x1000)	set_ButtonLED_byPalette(Play1ButtonLED, OFF);
 					else				set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
 

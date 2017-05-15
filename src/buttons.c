@@ -296,7 +296,7 @@ void Button_Debounce_IRQHandler(void)
 			if (global_mode[STEREO_LINK] == 1)
 			{
 				global_mode[STEREO_LINK] = 0;
-				flags[StereoModeTurningOff] = 6;
+				flags[StereoModeTurningOff] = 4;
 			} else {
 				global_mode[STEREO_LINK] = 1;
 				flags[StereoModeTurningOn] = 4;

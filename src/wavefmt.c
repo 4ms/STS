@@ -21,7 +21,7 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 			|| fmt_chunk.sampleRate 	 > 96000		//Between 8k and 96k sampling rate allowed
 			|| fmt_chunk.sampleRate		 < 8000
 			|| (fmt_chunk.bitsPerSample		!= 16 		//Only 16 bit samplerate allowed (for now)
-				&& fmt_chunk.bitsPerSample	!= 24
+				//&& fmt_chunk.bitsPerSample	!= 24
 				//&& fmt_chunk.bitsPerSample	!= 32
 				//&& fmt_chunk.bitsPerSample	!= 8
 				)

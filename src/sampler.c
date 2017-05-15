@@ -489,11 +489,11 @@ void start_playing(uint8_t chan)
 		if (res != FR_OK)
 		{
 			g_error |= FILE_CANNOT_CREATE_CLTBL;
-			sample_num_now_playing[chan] = 0xFF;
-			sample_bank_now_playing[chan] = 0xFF;
+		//	sample_num_now_playing[chan] = 0xFF;
+		//	sample_bank_now_playing[chan] = 0xFF;
 
-			f_close(&fil[chan]);
-			return;
+		//	f_close(&fil[chan]);
+		//	return;
 		}
 
 		//Check the file is really as long as the sampleSize says it is
