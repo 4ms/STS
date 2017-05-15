@@ -418,7 +418,7 @@ uint8_t load_bank_from_disk(uint8_t bank)
 	{
 		tname[0]=0;
 
-		while (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)
+		while (sample_num < NUM_SAMPLES_PER_BANK)
 		{
 			res = find_next_ext_in_dir(&dir, ".wav", tname);
 			if (res!=FR_OK) break;

@@ -142,7 +142,7 @@ int main(void)
 
 	timeout_boot = 0x00800000;
 	PLAYLED1_OFF;
-	while((timeout_boot--) && !REV1BUT && !REV2BUT  && !PLAY1BUT  && !PLAY2BUT && !BANK1BUT && !BANK2BUT){;}
+	while((timeout_boot--)){;}
 	PLAYLED1_OFF;
 
 	//Initialize SD Card

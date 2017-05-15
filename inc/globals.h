@@ -49,6 +49,8 @@ enum Flags {
 	TimeToReadStorage,
 	Play1Trig,
 	Play2Trig,
+	StereoModeTurningOn,
+	StereoModeTurningOff,
 
 	NUM_FLAGS
 };

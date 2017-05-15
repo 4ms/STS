@@ -291,41 +291,24 @@ void Button_Debounce_IRQHandler(void)
 //			DEBUG0_OFF;
 		}
 
-		//Sample Assignment mode
-		// if (button_state[Play1] >= SHORT_PRESSED && button_state[Rev1] >= SHORT_PRESSED)
-		// {
-		// 	if (global_mode[EDIT_MODE])
-		// 		save_exit_assignment_mode();
-		// 	else
-		// 		enter_assignment_mode();
+		if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED)
+		{
+			if (global_mode[STEREO_LINK] == 1)
+			{
+				global_mode[STEREO_LINK] = 0;
+				flags[StereoModeTurningOff] = 6;
+			} else {
+				global_mode[STEREO_LINK] = 1;
+				flags[StereoModeTurningOn] = 4;
+			}
 
-		// 	long_press[Play1] = 0xFFFFFFFF;
-		// 	long_press[Rev1] = 0xFFFFFFFF;
-		// 	button_state[Play1] = UP;
-		// 	button_state[Rev1] = UP;
+			long_press[Bank1] = 0xFFFFFFFF;
+			long_press[Bank2] = 0xFFFFFFFF;
+			button_state[Bank1] = UP;
+			button_state[Bank2] = UP;
+		}
 
-		// }
-		//ToDo:
-		//only allow assign mode on ch2
-		//we will use ch1 to move samples from different banks
-		//on entering ASSIGN mode: change ch1 bank to ch2 bank
-		//during ASSIGN mode:
-		//turn off Play1 and Rev1
-		//Bank1 changes the source bank (loads t_assign_samples from directory selected by ch1)
-		//Bank2 changes the destination bank
-		//Rev2 changes the sample within the selected source directoy
-		//??
-		//Or we could scan the sdcard for samples, everytime you press Rev2 is looks for the next sample
-		//MEDIUM PRESS on Rev2 makes it blank (turns red/flashing)
-		//Pressing Rev1 leaves the directory and tries another dir in the tree (dim slow flashing orange)
-		//Play1 is off, no effect
-		//Bank1 is off, no effect
-		//
 
-		// if (button_state[Play2] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED)
-		// {
-		// 	cancel_exit_assignment_mode();
-		// }
 
 
 		// Clear TIM update interrupt

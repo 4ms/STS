@@ -458,27 +458,6 @@ void update_params(void)
 					flags[PlaySample1Changed_valid + chan] = 6;
 			}
 
-			// if (global_mode[STEREO_LINK])
-			// {
-			// 	if (i_param[1][SAMPLE] != i_param[0][SAMPLE])
-			// 		flags[PlaySample2Changed] = 1;
-
-			// 	if (i_param[1][BANK] != i_param[0][BANK])
-			// 		flags[PlayBank2Changed] = 1;
-
-			// 	i_param[1][SAMPLE] 		= i_param[0][SAMPLE];
-			// 	i_param[1][BANK] 		= i_param[0][BANK];
-			// 	i_param[1][LOOPING] 	= i_param[0][LOOPING];
-			// 	f_param[1][PITCH] 		= f_param[0][PITCH];
-			// 	f_param[1][START] 		= f_param[0][START];
-			// 	f_param[1][LENGTH] 		= f_param[0][LENGTH];
-
-			// 	//flags[PlaySample2Changed] = flags[PlaySample1Changed];
-
-
-			// 	break; //only calculate channel 0's parameters, because in LINK mode channel 1's params are copied from channel 0
-			// }
-
 
 		} //for chan
 

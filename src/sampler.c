@@ -115,6 +115,8 @@ extern uint8_t play_led_state[NUM_PLAY_CHAN];
 uint8_t SAMPLINGBYTES=2;
 
 uint32_t end_out_ctr[NUM_PLAY_CHAN]={0,0};
+uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
+
 
 //
 // Memory
@@ -1129,7 +1131,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 				play_led_state[chan] = 0;
 
-				end_out_ctr[chan]=35;
+				end_out_ctr[chan] = (length>0.05)? 35 : ((length * 540) + 8);
+				play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+10);
+
 
 				if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
 					flags[Play1But+chan] = 1;
@@ -1268,7 +1272,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				{
 					decay_amp_i[chan] = 0.0f;
 
-					end_out_ctr[chan] = 35;
+					end_out_ctr[chan] = (length>0.05)? 35 : ((length * 540) + 8);
+					play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+10);
+
 					play_led_state[chan] = 0;
 
 					if (i_param[chan][REV])
