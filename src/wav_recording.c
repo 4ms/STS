@@ -323,6 +323,7 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].numChannels = 2;
 				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign = 4;
 				samples[sample_bank_now_recording][sample_num_now_recording].startOfData = 44;
+				samples[sample_bank_now_recording][sample_num_now_recording].PCM = 1;
 
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_start = 0;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded & 0xFFFFFFF8;

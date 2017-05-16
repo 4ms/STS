@@ -288,51 +288,51 @@ DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
 	return(err);
 }
 
-DRESULT TM_FATFS_SD_SDIO_disk_read(BYTE *buff, DWORD sector, UINT count) {
-	SD_Error Status = SD_OK;
+// DRESULT TM_FATFS_SD_SDIO_disk_read(BYTE *buff, DWORD sector, UINT count) {
+// 	SD_Error Status = SD_OK;
 
-	if ((TM_FATFS_SD_SDIO_Stat & STA_NOINIT)) {
-		return RES_NOTRDY;
-	}
+// 	if ((TM_FATFS_SD_SDIO_Stat & STA_NOINIT)) {
+// 		return RES_NOTRDY;
+// 	}
 
-	if ((DWORD)buff & 3) {
-		DRESULT res = RES_OK;
-		DWORD scratch[BLOCK_SIZE / 4];
+// 	if ((DWORD)buff & 3) {
+// 		DRESULT res = RES_OK;
+// 		DWORD scratch[BLOCK_SIZE / 4];
 
-		while (count--) {
-			res = TM_FATFS_SD_SDIO_disk_read((void *)scratch, sector++, 1);
+// 		while (count--) {
+// 			res = TM_FATFS_SD_SDIO_disk_read((void *)scratch, sector++, 1);
 
-			if (res != RES_OK) {
-				break;
-			}
+// 			if (res != RES_OK) {
+// 				break;
+// 			}
 
-			memcpy(buff, scratch, BLOCK_SIZE);
+// 			memcpy(buff, scratch, BLOCK_SIZE);
 
-			buff += BLOCK_SIZE;
-		}
+// 			buff += BLOCK_SIZE;
+// 		}
 
-		return res;
-	}
+// 		return res;
+// 	}
 
-//	Status = SD_ReadMultiBlocks(buff, sector << 9, BLOCK_SIZE, count);
-	Status = SD_ReadMultiBlocksFIXED(buff, sector << 9, BLOCK_SIZE, count);
+// //	Status = SD_ReadMultiBlocks(buff, sector << 9, BLOCK_SIZE, count);
+// 	Status = SD_ReadMultiBlocksFIXED(buff, sector << 9, BLOCK_SIZE, count);
 
-	if (Status == SD_OK) {
-		SDTransferState State;
+// 	if (Status == SD_OK) {
+// 		SDTransferState State;
 
-		Status = SD_WaitReadOperation();
+// 		Status = SD_WaitReadOperation();
 
-		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY);
+// 		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY);
 
-		if ((State == SD_TRANSFER_ERROR) || (Status != SD_OK)) {
-			return RES_ERROR;
-		} else {
-			return RES_OK;
-		}
-	} else {
-		return RES_ERROR;
-	}
-}
+// 		if ((State == SD_TRANSFER_ERROR) || (Status != SD_OK)) {
+// 			return RES_ERROR;
+// 		} else {
+// 			return RES_OK;
+// 		}
+// 	} else {
+// 		return RES_ERROR;
+// 	}
+// }
 
 DRESULT TM_FATFS_SD_SDIO_disk_write(const BYTE *buff, DWORD sector, UINT count) {
 	SD_Error Status = SD_OK;

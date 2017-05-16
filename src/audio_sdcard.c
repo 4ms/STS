@@ -5,6 +5,8 @@
  *  Created on: Jun 8, 2014
  *      Author: design
  */
+
+/*
 #include "audio_sdcard.h"
 #include "dig_pins.h"
 #include "globals.h"
@@ -91,24 +93,7 @@ uint8_t test_sdcard(void){
 	i=0;
 	//i=180;
 	//i=90;
-/*
-	SD_ReadSingleBlock((uint8_t *)test2, i);
-	SD_ReadSingleBlock((uint8_t *)test2, i+1);
-	SD_ReadSingleBlock((uint8_t *)test2, i+2);
-	SD_ReadSingleBlock((uint8_t *)test2, i+3);
-	SD_ReadSingleBlock((uint8_t *)test2, i+4);
-	SD_ReadSingleBlock((uint8_t *)test2, i+5);
-	SD_ReadSingleBlock((uint8_t *)test2, i+6);
-	SD_ReadSingleBlock((uint8_t *)test2, i+7);
-	SD_ReadSingleBlock((uint8_t *)test2, i+8);
-	SD_ReadSingleBlock((uint8_t *)test2, i+9);
-	SD_ReadSingleBlock((uint8_t *)test2, i+10);
-	SD_ReadSingleBlock((uint8_t *)test2, i+11);
-	SD_ReadSingleBlock((uint8_t *)test2, i+12);
-	SD_ReadSingleBlock((uint8_t *)test2, i+13);
-	SD_ReadSingleBlock((uint8_t *)test2, i+14);
-	SD_ReadSingleBlock((uint8_t *)test2, i+15);
-*/
+
 
 	for (i=0;i<num_bytes;i++){
 		if (test[i]!=test2[i])
@@ -134,4 +119,6 @@ uint8_t test_sdcard(void){
 
 	return(err);
 }
+
+*/
 

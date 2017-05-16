@@ -1364,7 +1364,7 @@ SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t Block
 }
 
 // FIXED Version where ReadAddr is in BLOCKS NOT BYTES, permits SDHC media >4GB
-
+// FIX #2: readbuff has to be aligned to 32-bit boundaries in order to use DMA, thus it should be a uint32_t * not uint8_t *
 SD_Error SD_ReadMultiBlocksFIXED(uint8_t *readbuff, uint32_t ReadAddr, uint32_t BlockSize, uint32_t NumberOfBlocks)
 {
   SD_Error errorstatus = SD_OK;
@@ -1422,7 +1422,8 @@ SD_Error SD_ReadMultiBlocksFIXED(uint8_t *readbuff, uint32_t ReadAddr, uint32_t 
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_STBITERR, ENABLE);
 
    //swapped order:
-  SD_LowLevel_DMA_RxConfig((uint32_t *)readbuff, (NumberOfBlocks * BlockSize));
+  //SD_LowLevel_DMA_RxConfig((uint32_t *)readbuff, (NumberOfBlocks * BlockSize));
+  SD_LowLevel_DMA_RxConfigFIXED(readbuff, (NumberOfBlocks * BlockSize));
   SDIO_DMACmd(ENABLE);
 
   return(errorstatus);
@@ -3156,6 +3157,45 @@ void SD_LowLevel_DMA_RxConfig(uint32_t *BufferDST, uint32_t BufferSize)
   /* DMA2 Stream3 or Stream6 enable */
   DMA_Cmd(SD_SDIO_DMA_STREAM, ENABLE);
 }
+
+void SD_LowLevel_DMA_RxConfigFIXED(uint8_t *BufferDST, uint32_t BufferSize)
+{
+ //Fixed: BufferAddr does not need to align to 32-bit boundaries
+
+  DMA_InitTypeDef SDDMA_InitStructure;
+
+  DMA_ClearFlag(SD_SDIO_DMA_STREAM, SD_SDIO_DMA_FLAG_FEIF | SD_SDIO_DMA_FLAG_DMEIF | SD_SDIO_DMA_FLAG_TEIF | SD_SDIO_DMA_FLAG_HTIF | SD_SDIO_DMA_FLAG_TCIF);
+
+  /* DMA2 Stream3  or Stream6 disable */
+  DMA_Cmd(SD_SDIO_DMA_STREAM, DISABLE);
+
+  /* DMA2 Stream3 or Stream6 Config */
+  DMA_DeInit(SD_SDIO_DMA_STREAM);
+
+  SDDMA_InitStructure.DMA_Channel = SD_SDIO_DMA_CHANNEL;
+  SDDMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)SDIO_FIFO_ADDRESS;
+  SDDMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)BufferDST;
+  SDDMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  SDDMA_InitStructure.DMA_BufferSize = 0;
+  SDDMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  SDDMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  SDDMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word; //try DMA_PeripheralDataSize_Byte
+  SDDMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte; //was DMA_MemoryDataSize_Word
+  SDDMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  SDDMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
+  SDDMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Enable;
+  SDDMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_Full;
+  SDDMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_INC4; //try DMA_MemoryBurst_Single
+  SDDMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_INC4; //try DMA_MemoryBurst_Single
+  DMA_Init(SD_SDIO_DMA_STREAM, &SDDMA_InitStructure);
+  DMA_ITConfig(SD_SDIO_DMA_STREAM, DMA_IT_TC, ENABLE);
+  DMA_FlowControllerConfig(SD_SDIO_DMA_STREAM, DMA_FlowCtrl_Peripheral);
+
+  /* DMA2 Stream3 or Stream6 enable */
+  DMA_Cmd(SD_SDIO_DMA_STREAM, ENABLE);
+}
+
+
 
 /**end from stm32f4xx_discovery.c**/
 

@@ -458,6 +458,10 @@ void start_playing(uint8_t chan)
 
 	//Check if sample/bank changed, or file is flagged for reload
 	//if so, close the current file and open the new sample file
+
+	//debug:
+//flags[ForceFileReload1+chan] = 1;
+
 	if (flags[ForceFileReload1+chan] || (sample_num_now_playing[chan] != samplenum) || (sample_bank_now_playing[chan] != banknum) || fil[chan].obj.fs==0)
 	{
 		flags[ForceFileReload1+chan] = 0;
@@ -491,7 +495,6 @@ void start_playing(uint8_t chan)
 			g_error |= FILE_CANNOT_CREATE_CLTBL;
 		//	sample_num_now_playing[chan] = 0xFF;
 		//	sample_bank_now_playing[chan] = 0xFF;
-
 		//	f_close(&fil[chan]);
 		//	return;
 		}
@@ -514,7 +517,6 @@ void start_playing(uint8_t chan)
 		cache_low[chan] = 0;
 		cache_high[chan] = 0;
 		cache_offset[chan] = play_buff[chan]->min;
-WATCH0=cache_low[0]; WATCH1=cache_high[0];
 	}
 
 	//Determine starting and ending addresses
@@ -565,7 +567,6 @@ WATCH0=cache_low[0]; WATCH1=cache_high[0];
 		is_buffered_to_file_end[chan] = 0;
 
 		play_state[chan]=PREBUFFERING;
- WATCH0=cache_low[0]; WATCH1=cache_high[0];
 	}
 
 	if (i_param[chan][REV])	decay_amp_i[chan]=0.0;
@@ -786,6 +787,7 @@ void read_storage_to_buffer(void)
 
 	//convenience variables
 	uint8_t samplenum, banknum;
+	Sample *s_sample;
 	FSIZE_t t_fptr;
 	uint32_t pre_buff_size;
 	uint32_t active_buff_size;
@@ -805,6 +807,7 @@ void read_storage_to_buffer(void)
 		{
 			samplenum = sample_num_now_playing[chan];
 			banknum = sample_bank_now_playing[chan];
+			s_sample = &(samples[banknum][samplenum]);
 
 			//We should buffer more if:
 			//     play_buff[]->out is approaching play_buff[]->in (buffer_lead)
@@ -819,33 +822,33 @@ void read_storage_to_buffer(void)
 
 			if ( !(g_error & (FILE_READ_FAIL_1 << chan)))
 			{
-				if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < samples[banknum][samplenum].inst_end))
-				 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > samples[banknum][samplenum].inst_start)) )
+				if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < s_sample->inst_end))
+				 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > s_sample->inst_start)) )
 					is_buffered_to_file_end[chan] = 0;
 			}
 
-			pre_buff_size = PRE_BUFF_SIZE;// * (f_param[chan][PITCH]);
-			active_buff_size = ACTIVE_BUFF_SIZE;// * (f_param[chan][PITCH]);
+			pre_buff_size = BASE_BUFFER_THRESHOLD * s_sample->blockAlign;// * (f_param[chan][PITCH]);
+			active_buff_size = pre_buff_size * 4;// * (f_param[chan][PITCH]);
 
 			if (!is_buffered_to_file_end[chan] && 
 				(
 					(play_state[chan]==PREBUFFERING && (play_buff_bufferedamt[chan] < pre_buff_size)) ||
 					(play_state[chan]!=PREBUFFERING && (play_buff_bufferedamt[chan] < active_buff_size))
-				)) //FixMe: should be PRE_BUFF_SIZE * blockAlign
+				))
 			{
 
-				if (sample_file_curpos[chan] > samples[banknum][ samplenum ].sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
+				if (sample_file_curpos[chan] > s_sample->sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
 					g_error |= FILE_WAVEFORMATERR;							//Breakpoint
 
 
-				else if (sample_file_curpos[chan] > samples[banknum][samplenum].inst_end)
+				else if (sample_file_curpos[chan] > s_sample->inst_end)
 				{
 					//if (i_param[chan][LOOPING])
 					//	flags[Play1But]=1;
 					//else
 						is_buffered_to_file_end[chan] = 1;
 
-					//sample_file_curpos[chan] = samples[banknum][samplenum].inst_end;
+					//sample_file_curpos[chan] = s_sample->inst_end;
 					//goto_filepos(sample_file_curpos[chan]);
 				}
 
@@ -856,7 +859,7 @@ void read_storage_to_buffer(void)
 					//
 					if (i_param[chan][REV]==0)
 					{
-						rd = samples[banknum][ samplenum ].inst_end -  sample_file_curpos[chan];
+						rd = s_sample->inst_end -  sample_file_curpos[chan];
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 
@@ -867,23 +870,7 @@ void read_storage_to_buffer(void)
 							g_error |= FILE_READ_FAIL_1 << chan; 
 							is_buffered_to_file_end[chan] = 1;
 						}
-					//	f_sync(&fil[chan]);
-					//	DEBUG1_OFF;
 
-						// DEBUG0_OFF;	
-						// for(i=2;i<(rd>>1);i++)
-						// {
-						// 	a = tmp_buff_i16[i];
-						// 	b = tmp_buff_i16[i-2];
-
-						// 	if (a > b)
-						// 		c = a - b;
-						// 	else
-						// 		c = b - a;
-						// 	if (c > 0x2000)
-						// 		DEBUG0_ON;
-							
-						// }
 
 						if (br < rd)
 						{
@@ -892,11 +879,11 @@ void read_storage_to_buffer(void)
 						}
 
 						//sample_file_curpos[chan] += br;
-						sample_file_curpos[chan] = f_tell(&fil[chan]) - samples[banknum][ samplenum ].startOfData;
+						sample_file_curpos[chan] = f_tell(&fil[chan]) - s_sample->startOfData;
 
-						if (sample_file_curpos[chan] >= samples[banknum][ samplenum ].inst_end)
+						if (sample_file_curpos[chan] >= s_sample->inst_end)
 						{
-							//sample_file_curpos[chan] = samples[banknum][ samplenum ].inst_end;
+							//sample_file_curpos[chan] = s_sample->inst_end;
 							//Breakpoint
 							is_buffered_to_file_end[chan] = 1;
 						}
@@ -908,8 +895,8 @@ void read_storage_to_buffer(void)
 					//
 					else
 					{
-						if (sample_file_curpos[chan] > samples[banknum][samplenum].inst_start)
-							rd = sample_file_curpos[chan] - samples[banknum][samplenum].inst_start;
+						if (sample_file_curpos[chan] > s_sample->inst_start)
+							rd = sample_file_curpos[chan] - s_sample->inst_start;
 						else
 							rd = 0;
 
@@ -924,18 +911,18 @@ void read_storage_to_buffer(void)
 							if (res || (f_tell(&fil[chan])!=(t_fptr - READ_BLOCK_SIZE)))
 								g_error |= LSEEK_FPTR_MISMATCH;
 							
-							sample_file_curpos[chan] = f_tell(&fil[chan]) - samples[banknum][ samplenum ].startOfData;
+							sample_file_curpos[chan] = f_tell(&fil[chan]) - s_sample->startOfData;
 
 						}
 						else
 						{
 							//Jump to the beginning
-							sample_file_curpos[chan] = samples[banknum][samplenum].inst_start;
+							sample_file_curpos[chan] = s_sample->inst_start;
 							res = goto_filepos(sample_file_curpos[chan]);
 							if (res!=FR_OK)
 								g_error |= FILE_SEEK_FAIL;
 
-							//f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + samples[banknum][samplenum].inst_start);
+							//f_lseek(&fil[chan], s_sample->startOfData + s_sample->inst_start);
 							is_buffered_to_file_end[chan] = 1;
 						}
 
@@ -1002,7 +989,6 @@ void read_storage_to_buffer(void)
 							cache_high[chan] = sample_file_curpos[chan];
 						}
 
-WATCH0=cache_low[0]; WATCH1=cache_high[0];
 						if (err)
 						{
 //							DEBUG3_ON;
@@ -1051,10 +1037,13 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	//convenience variables
 	float length;
 	uint8_t samplenum, banknum;
+	Sample *s_sample;
+
 
 
 	samplenum = sample_num_now_playing[chan];
 	banknum = sample_bank_now_playing[chan];
+	s_sample = &(samples[banknum][samplenum]);
 
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
@@ -1067,49 +1056,80 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	}
 	else
 	{
-		//Read from SDRAM into out[]
+	//Read from SDRAM into out[]
 
-		//Re-sampling rate (0.0 < rs <= 4.0)
-		rs = f_param[chan][PITCH] * (samples[banknum][samplenum].sampleRate / BASE_SAMPLE_RATE);
+		if (s_sample->sampleRate == BASE_SAMPLE_RATE)
+			rs = f_param[chan][PITCH];
+		else
+			rs = f_param[chan][PITCH] * (s_sample->sampleRate / BASE_SAMPLE_RATE);
+
 
 		DEBUG3_ON;
 		//
 		//Resample data read from the play_buff and store into out[]
 		//
-		if (samples[banknum][samplenum].sampleByteSize == 2)
+		if (s_sample->sampleByteSize == 2) //16bit
 		{
-			if (samples[banknum][samplenum].numChannels == 2)
-			{
-				t_u32 = play_buff[chan]->out;
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
+			t_u32 = play_buff[chan]->out;
+			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, resampling_fpos, outL);
 
-				play_buff[chan]->out = t_u32;
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outR);
-			}
-			else
+			if (s_sample->numChannels == 2)
 			{
-				//MONO: read left channel and copy to right
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
-				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+				play_buff[chan]->out = t_u32;
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, resampling_fpos, outR);
 			}
+			else	//MONO: read left channel and copy to right
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+
 		} else 
-		if (samples[banknum][samplenum].sampleByteSize == 3)
-		{
-			if (samples[banknum][samplenum].numChannels == 2)
-			{
-				t_u32 = play_buff[chan]->out;
-				resample_read24(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
 
-				play_buff[chan]->out = t_u32;
-				resample_read24(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outR);
-			}
-			else
+		if (s_sample->sampleByteSize == 3) //24bit
+		{
+			t_u32 = play_buff[chan]->out;
+			resample_read24(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, resampling_fpos, outL);
+
+			if (s_sample->numChannels == 2)
 			{
-				//MONO: read left channel and copy to right
-				resample_read24(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, samples[banknum][samplenum].blockAlign, chan, resampling_fpos, outL);
-				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+				play_buff[chan]->out = t_u32;
+				resample_read24(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, resampling_fpos, outR);
 			}
-		}  
+			else	//MONO: read left channel and copy to right
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+			
+		} 
+		// else 
+
+		// if (s_sample->sampleByteSize == 4) //32bit
+		// {
+		// 	if (s_sample->PCM == 3) //float
+		// 	{
+		// 		t_u32 = play_buff[chan]->out;
+		// 		resample_read32f(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, resampling_fpos, outL);
+
+		// 		if (s_sample->numChannels == 2)
+		// 		{
+		// 			play_buff[chan]->out = t_u32;
+		// 			resample_read32f(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, resampling_fpos, outR);
+		// 		}
+		// 		else //MONO: read left channel and copy to right
+		// 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+				
+		// 	} else if (s_sample->PCM == 1) //32-bit int
+		// 	{
+		// 		t_u32 = play_buff[chan]->out;
+		// 		resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, resampling_fpos, outL);
+
+		// 		if (s_sample->numChannels == 2)
+		// 		{
+		// 			play_buff[chan]->out = t_u32;
+		// 			resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, resampling_fpos, outR);
+		// 		}
+		// 		else //MONO: read left channel and copy to right
+		// 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+				
+
+		// 	}
+		//} 
 
 		DEBUG3_OFF;
 
@@ -1123,7 +1143,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 			sample_file_endpos[chan] = calc_stop_points(length, &samples[banknum][samplenum], sample_file_startpos[chan]);
 	
 
-		gain = samples[banknum][samplenum].inst_gain;
+		gain = s_sample->inst_gain;
 
 		 switch (play_state[chan])
 		 {
@@ -1197,7 +1217,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					{
 	 					play_state[chan]=PLAYING;
 
-						resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * samples[banknum][samplenum].blockAlign) * rs);
+						resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * s_sample->blockAlign) * rs);
 						resampled_buffer_size *= 2;
 
 
@@ -1244,7 +1264,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 									//if (i_param[chan][REV]) resampled_buffer_size *= 2;
 
 									CB_offset_out_address(play_buff[chan], resampled_buffer_size, !i_param[chan][REV]);
-									play_buff[chan]->out = align_addr(play_buff[chan]->out, samples[banknum][samplenum].blockAlign);
+									play_buff[chan]->out = align_addr(play_buff[chan]->out, s_sample->blockAlign);
 
 								}
 							}

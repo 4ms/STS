@@ -200,6 +200,7 @@ void assign_sample(uint8_t assigned_sample_i)
 	samples[bank][sample].sampleRate 		= t_assign_samples[ assigned_sample_i ].sampleRate;
 	samples[bank][sample].sampleSize 		= t_assign_samples[ assigned_sample_i ].sampleSize;
 	samples[bank][sample].startOfData 		= t_assign_samples[ assigned_sample_i ].startOfData;
+	samples[bank][sample].PCM 				= t_assign_samples[ assigned_sample_i ].PCM;
 
 	samples[bank][sample].inst_size 		= t_assign_samples[ assigned_sample_i ].inst_size  ;//& 0xFFFFFFF8;
 	samples[bank][sample].inst_start 		= t_assign_samples[ assigned_sample_i ].inst_start  ;//& 0xFFFFFFF8;
@@ -276,6 +277,7 @@ void assign_sample_from_other_bank(uint8_t src_bank, uint8_t src_sample)
 	samples[bank][sample].sampleRate 		= samples[src_bank][src_sample].sampleRate;
 	samples[bank][sample].sampleSize 		= samples[src_bank][src_sample].sampleSize;
 	samples[bank][sample].startOfData 		= samples[src_bank][src_sample].startOfData;
+	samples[bank][sample].PCM 				= samples[src_bank][src_sample].PCM;
 
 	samples[bank][sample].inst_size 		= samples[src_bank][src_sample].inst_size  ;//& 0xFFFFFFF8;
 	samples[bank][sample].inst_start 		= samples[src_bank][src_sample].inst_start  ;//& 0xFFFFFFF8;
