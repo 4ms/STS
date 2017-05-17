@@ -12,7 +12,7 @@
 #include "wav_recording.h"
 
 
-#define BIG_PLAY_BUTTONS
+//#define BIG_PLAY_BUTTONS
 //#define SETBANK1RGB
 //#define FROSTEDBANK1
 

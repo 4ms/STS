@@ -108,14 +108,14 @@ int main(void)
 	//
 	// Bootloader:
 	//
-//    if (check_bootloader_keys())
-//    	JumpTo(0x08000000);
-//    NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
+	if (check_bootloader_keys())
+		JumpTo(0x08000000);
+	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
 
 	//
 	// No bootloader:
 	//
-	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
+	// NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
 
 	TRACE_init();
 	//ITM_Init(6000000);

@@ -287,7 +287,7 @@ void audio_buffer_init(void)
 		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
 	}
 
-	i = next_enabled_bank(0xFF); //find the first enabled bank
+	i = next_enabled_bank(2); //find the first enabled bank
 	i_param[0][BANK] = i;
 	i_param[1][BANK] = i;
 

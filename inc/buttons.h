@@ -11,11 +11,16 @@
 
 
 #define BOOTLOADER_BUTTONS (\
-		REV1BUT &&\
-		REV2BUT &&\
-		BANK1BUT &&\
-		BANK2BUT &&\
-		0)
+		PLAY1BUT && \
+		RECBUT &&\
+		EDIT_BUTTON &&\
+		!REV1BUT &&\
+		!BANK1BUT && \
+		!BANKRECBUT &&\
+		!PLAY2BUT && \
+		!BANK2BUT && \
+		!REV2BUT\
+		)
 
 #define ENTER_SYSMODE_BUTTONS (\
 		REV1BUT &&\
