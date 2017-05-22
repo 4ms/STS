@@ -229,6 +229,7 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 	uint32_t br;
 	uint32_t rd;
 	WaveChunk chunk;
+	uint32_t next_chunk_start;
 
 	rd = sizeof(WaveHeader);
 	res = f_read(sample_file, &sample_header, rd, &br);
@@ -250,18 +251,19 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 			if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
 			if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
+			next_chunk_start = f_tell(sample_file) + chunk.chunkSize;
 			//fast-forward to the next chunk
 			if (chunk.chunkId != ccFMT)
-				f_lseek(sample_file, f_tell(sample_file) + chunk.chunkSize);
+				f_lseek(sample_file, next_chunk_start);
 
 		}
 
 		if (chunk.chunkId == ccFMT)
 		{
 			//Go back to beginning of chunk --probably could do this more elegantly by removing fmtID and fmtSize from WaveFmtChunk and just reading the next bit of data
-			f_lseek(sample_file, f_tell(sample_file) - sizeof(WaveChunk));
+			f_lseek(sample_file, f_tell(sample_file) - br);
 
-			//Re-read whole chunk, since it's a WaveFmtChunk
+			//Re-read the whole chunk (or at least the fields we need) since it's a WaveFmtChunk
 			rd = sizeof(WaveFmtChunk);
 			res = f_read(sample_file, &fmt_chunk, rd, &br);
 
@@ -270,6 +272,9 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 			else if ( !is_valid_format_chunk(fmt_chunk) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//format header error (not a valid wav file)
 			else
 			{
+				//We found the 'fmt ' chunk, now skip to the next chunk
+				//Note: this is necessary in case the 'fmt ' chunk is not exactly sizeof(WaveFmtChunk) bytes, even though that's how many we care about
+				f_lseek(sample_file, next_chunk_start);
 
 				//Look for the DATA chunk
 				chunk.chunkId = 0;
