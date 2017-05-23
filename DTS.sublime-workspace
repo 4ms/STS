@@ -4,155 +4,86 @@
 		"selected_items":
 		[
 			[
-				"Wave",
-				"WaveFmtChunk"
+				"set_ButtonLED_",
+				"set_ButtonLED_byRGB"
 			],
 			[
-				"sample",
-				"samplenum"
+				"sample_size",
+				"sample_size_secs"
 			],
 			[
-				"SAM",
-				"SAMPLE_POT"
+				"sample_",
+				"sample_size_secs"
 			],
 			[
-				"PIT",
-				"PITCH_POT"
+				"sample_fil",
+				"sample_file_startpos"
 			],
 			[
-				"LENGTH",
-				"LENGTH_POT"
-			],
-			[
-				"ST",
-				"START_POT"
-			],
-			[
-				"START",
-				"START_POT"
-			],
-			[
-				"LEN",
-				"LENGTH_POT"
-			],
-			[
-				"sa",
-				"samplenum"
-			],
-			[
-				"bank",
-				"banknum"
-			],
-			[
-				"in",
-				"inst_start"
-			],
-			[
-				"inst_",
-				"inst_size"
+				"PLAY_",
+				"PLAY_FADEUP"
 			],
 			[
 				"sam",
-				"sampleSize"
+				"sample_file_startpos"
 			],
 			[
-				"RL",
-				"RLEVELLED2_ON"
+				"start",
+				"startOfData"
 			],
 			[
-				"LL",
-				"LLEVELLED2_ON"
+				"samepl",
+				"sample_file_endpos"
 			],
 			[
-				"RLE",
-				"RLEVELLED1_ON"
+				"Play",
+				"Play1Trig"
+			],
+			[
+				"CB_disa",
+				"CB_distance_points"
+			],
+			[
+				"NUM",
+				"NUM_PLAY_CHAN"
+			],
+			[
+				"map",
+				"mapped_fully"
+			],
+			[
+				"inst",
+				"inst_start"
+			],
+			[
+				"wrap",
+				"wrapping_changed"
+			],
+			[
+				"pol",
+				"polarity_changed"
+			],
+			[
+				"endin",
+				"ending_wrapping"
+			],
+			[
+				"star",
+				"starting_wrapping"
+			],
+			[
+				"block",
+				"blockAlign"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "src/sts_filesystem.c",
+			"file": "src/main.c",
 			"settings":
 			{
-				"buffer_size": 16498,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "inc/wavefmt.h",
-			"settings":
-			{
-				"buffer_size": 1135,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "src/wav_recording.c",
-			"settings":
-			{
-				"buffer_size": 8573,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "src/params.c",
-			"settings":
-			{
-				"buffer_size": 13611,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "/* assignment_mode.c */\n#include \"globals.h\"\n#include \"params.h\"\n\n#include \"ff.h\"\n#include \"sts_filesystem.h\"\n#include \"file_util.h\"\n#include \"sampler.h\"\n#include \"wavefmt.h\"\n\n#include \"edit_mode.h\"\n\n\n\n#define MAX_ASSIGNED 32\nuint8_t cur_assigned_sample_i;\nuint8_t end_assigned_sample_i;\nuint8_t original_assigned_sample_i;\nSample t_assign_samples[MAX_ASSIGNED];\n\nextern enum g_Errors g_error;\nextern uint8_t\ti_param[NUM_ALL_CHAN][NUM_I_PARAMS];\nextern uint8_t \tflags[NUM_FLAGS];\nextern uint8_t global_mode[NUM_GLOBAL_MODES];\n\nextern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];\nextern enum PlayStates play_state\t\t\t\t[NUM_PLAY_CHAN];\n\n\nuint8_t load_samples_to_assign(uint8_t bank)\n{\n\tuint32_t i;\n\tuint32_t sample_num;\n\tFIL temp_file;\n\tFRESULT res;\n\tDIR dir;\n\tchar path[10];\n\tchar tname[_MAX_LFN+1];\n\tchar path_tname[_MAX_LFN+1];\n\n\tif (bank >= MAX_NUM_REC_BANKS)\tbank -= MAX_NUM_REC_BANKS;\n\n\tsample_num=0;\n\ti = bank_to_color(bank, path);\n\n\tres = f_opendir(&dir, path);\n\tif (res==FR_NO_PATH)\treturn(0);\n\t//ToDo: check for variations of capital letters (or can we just check the short fname?)\n\n\tif (res==FR_OK)\n\t{\n\t\ttname[0]=0;\n\n\t\twhile (sample_num < MAX_ASSIGNED)\n\t\t{\n\t\t\tres = find_next_ext_in_dir(&dir, \".wav\", tname);\n\t\t\tif (res!=FR_OK) break;\n\n\t\t\ti = str_len(path);\n\t\t\tstr_cpy(path_tname, path);\n\t\t\tpath_tname[i]='/';\n\t\t\tstr_cpy(&(path_tname[i+1]), tname);\n\n\t\t\tres = f_open(&temp_file, path_tname, FA_READ);\n\t\t\tf_sync(&temp_file);\n\n\t\t\tif (res==FR_OK)\n\t\t\t{\n\t\t\t\tres = load_sample_header(&t_assign_samples[sample_num], &temp_file);\n\n\t\t\t\tif (res==FR_OK)\n\t\t\t\t{\n\t\t\t\t\tstr_cpy(t_assign_samples[sample_num++].filename, path_tname);\n\t\t\t\t}\n\n\t\t\t}\n\t\t\tf_close(&temp_file);\n\t\t}\n\t\tf_closedir(&dir);\n\n\t\t//Special try again using root directory for first bank\n\t\tif (bank==0 && sample_num < MAX_ASSIGNED)\n\t\t{\n\t\t\tres = f_opendir(&dir, \"/\");\n\t\t\tif (res==FR_OK)\n\t\t\t{\n\t\t\t\ttname[0]=0;\n\t\t\t\twhile (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)\n\t\t\t\t{\n\t\t\t\t\tres = find_next_ext_in_dir(&dir, \".wav\", tname);\n\t\t\t\t\tif (res!=FR_OK) break;\n\n\t\t\t\t\tres = f_open(&temp_file, tname, FA_READ);\n\t\t\t\t\tf_sync(&temp_file);\n\n\t\t\t\t\tif (res==FR_OK)\n\t\t\t\t\t{\n\t\t\t\t\t\tres = load_sample_header(&t_assign_samples[sample_num], &temp_file);\n\n\t\t\t\t\t\tif (res==FR_OK)\n\t\t\t\t\t\t{\n\t\t\t\t\t\t\tstr_cpy(t_assign_samples[sample_num++].filename, tname);\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tf_close(&temp_file);\n\t\t\t\t}\n\t\t\t\tf_closedir(&dir);\n\t\t\t}\n\t\t}\n\n\n\t}\n\telse\n\t{\n\t\tg_error=CANNOT_OPEN_ROOT_DIR;\n\t\treturn(0);\n\t}\n\n\treturn(sample_num);\n}\n\nuint8_t find_current_sample_in_assign(Sample *s)\n{\n\tuint8_t i;\n\n\toriginal_assigned_sample_i = 0xFF;//error, not found\n\n\tfor (i=0; i<end_assigned_sample_i; i++)\n\t{\n\t\tif (str_cmp(t_assign_samples[i].filename, s->filename))\n\t\t{\n\t\t\toriginal_assigned_sample_i = i;\n\t\t\tbreak;\n\t\t}\n\t}\n\n\tif (original_assigned_sample_i == 0xFF)\n\t\treturn(1); //fail\n\n\tcur_assigned_sample_i = original_assigned_sample_i;\n\treturn(0);\n\n}\n\n\nvoid enter_assignment_mode(void)\n{\n\tuint8_t i;\n\n\t//force us to be on a non -SAVE bank\n\tif (i_param[0][BANK] >= MAX_NUM_REC_BANKS)\n\t{\n\t\tdo i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);\n\t\twhile (i_param[0][BANK] >= MAX_NUM_REC_BANKS);\n\n\t\tflags[PlayBank1Changed] = 1;\n\t}\n\n\tend_assigned_sample_i = load_samples_to_assign(i_param[0][BANK]);\n\n\tif (end_assigned_sample_i)\n\t{\n\t\t//find the current sample in the t_assigned_samples array\n\t\ti = find_current_sample_in_assign(&(samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]));\n\t\tif (i)\t{flags[AssigningEmptySample] = 1;}\n\n\t\t//Add a blank/erase sample at the end\n\t\tt_assign_samples[end_assigned_sample_i].filename[0] = 0;\n\t\tt_assign_samples[end_assigned_sample_i].sampleSize = 0;\n\t\tend_assigned_sample_i ++;\n\n\t\tcur_assigned_sample_i = original_assigned_sample_i;\n\t\t//global_mode[ASSIGN_MODE] = 1;\n\n\t} else\n\t{\n\t\tflags[AssignModeRefused] = 4;\n\t}\n}\n\n\nvoid assign_sample(uint8_t assigned_sample_i)\n{\n\tuint8_t sample, bank;\n\tuint32_t t32;\n\n\tbank = i_param[0][BANK];\n\tsample = i_param[0][SAMPLE];\n\n\tstr_cpy(samples[bank][sample].filename,   t_assign_samples[ assigned_sample_i ].filename);\n\tsamples[bank][sample].blockAlign \t\t= t_assign_samples[ assigned_sample_i ].blockAlign;\n\tsamples[bank][sample].numChannels \t\t= t_assign_samples[ assigned_sample_i ].numChannels;\n\tsamples[bank][sample].sampleByteSize \t= t_assign_samples[ assigned_sample_i ].sampleByteSize;\n\tsamples[bank][sample].sampleRate \t\t= t_assign_samples[ assigned_sample_i ].sampleRate;\n\tsamples[bank][sample].sampleSize \t\t= t_assign_samples[ assigned_sample_i ].sampleSize;\n\tsamples[bank][sample].startOfData \t\t= t_assign_samples[ assigned_sample_i ].startOfData;\n\n\tif (samples[bank][sample].inst_end > samples[bank][sample].sampleSize)\n\t\tsamples[bank][sample].inst_end = samples[bank][sample].sampleSize;\n\n\tif (samples[bank][sample].inst_start > samples[bank][sample].inst_end)\n\t{\n\t\tt32 \t\t\t\t\t\t\t\t= samples[bank][sample].inst_start;\n\t\tsamples[bank][sample].inst_start \t= samples[bank][sample].inst_end;\n\t\tsamples[bank][sample].inst_end \t\t= t32;\n\t}\n\n\n\tflags[ForceFileReload1] = 1;\n\n\tif (samples[bank][sample].filename[0] == 0)\n\t\tflags[AssigningEmptySample] = 1;\n\telse\n\t\tflags[AssigningEmptySample] = 0;\n\n}\n\n\nvoid save_exit_assignment_mode(void)\n{\n\tFRESULT res;\n\n\t//global_mode[ASSIGN_MODE] = 0;\n\n\tcheck_enabled_banks(); //disables a bank if we cleared it out\n\n\tres = write_sampleindex_file();\n\tif (res!=FR_OK) {g_error|=CANNOT_WRITE_INDEX; check_errors();}\n\n}\n\nvoid cancel_exit_assignment_mode(void)\n{\n\tassign_sample(original_assigned_sample_i);\n\t//global_mode[ASSIGN_MODE] = 0;\n}\n\n\nvoid next_unassigned_sample(void)\n{\n\n\tplay_state[0]=SILENT;\n\tplay_state[1]=SILENT;\n\n\tcur_assigned_sample_i ++;\n\tif (cur_assigned_sample_i >= end_assigned_sample_i || cur_assigned_sample_i >= MAX_ASSIGNED)\n\t\tcur_assigned_sample_i = 0;\n\n\tassign_sample(cur_assigned_sample_i);\n\n\tflags[Play1Trig]=1;\n}\n\n\nvoid set_sample_gain(Sample *s_sample, float gain)\n{\n\tif (gain >= 2.1) \t\tgain = 2.1f;\n\telse if (gain <= 0.1)\tgain = 0.1f;\n\n\ts_sample->inst_gain = gain;\n\n}\n\nvoid set_sample_trim_end(Sample *s_sample, float en)\n{\n\tuint32_t trimend;\n\n\tif (en >= 1.0f) \t\t\t\ttrimend = s_sample->sampleSize;\n\telse \t\t\t\t\t\t\ttrimend = s_sample->sampleSize * en;\n\tif (trimend <= 0) \t\t\t\ttrimend = 4420;\n\n\ttrimend &= 0xFFFFFFF8;\n\n\ts_sample->inst_end = trimend;\n\n}\n\n//sets the trim start point between 0 and 100ms before the end of the sample file\nvoid set_sample_trim_start(Sample *s_sample, float st)\n{\n\tuint32_t trimstart;\n\n\tif (st >= 1.0f) \t\t\t\ttrimstart = s_sample->sampleSize - 4420;\n\telse if (st <= (1.0/4096.0))\ttrimstart = 0;\n\telse \t\t\t\t\t\t\ttrimstart = (s_sample->sampleSize - 4420) * st;\n\n\ttrimstart &= 0xFFFFFFF8;\n\n\ts_sample->inst_start = trimstart;\n\n}\n",
-			"file": "src/edit_mode.c",
-			"file_size": 6584,
-			"file_write_time": 131327197500000000,
-			"settings":
-			{
-				"buffer_size": 6584,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "/*\n * edit_mode.h\n *\n *  Created on: Feb 27, 2017\n *      Author: design\n */\n\n#ifndef INC_EDIT_MODE_H\n#define INC_EDIT_MODE_H\n#include <stm32f4xx.h>\n\nvoid enter_assignment_mode(void);\nvoid save_exit_assignment_mode(void);\nvoid cancel_exit_assignment_mode(void);\nuint8_t load_samples_to_assign(uint8_t bank);\n\nvoid next_unassigned_sample(void);\nuint8_t find_current_sample_in_assign(Sample *s);\n\nvoid set_sample_trim_start(Sample *s_sample, float st);\nvoid set_sample_trim_end(Sample *s_sample, float en);\nvoid set_sample_gain(Sample *s_sample, float gain);\n\n\n#endif /* INC_EDIT_MODE_H */\n",
-			"file": "inc/edit_mode.h",
-			"file_size": 588,
-			"file_write_time": 131327146080000000,
-			"settings":
-			{
-				"buffer_size": 588,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "inc/params.h",
-			"settings":
-			{
-				"buffer_size": 1728,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "inc/sts_filesystem.h",
-			"settings":
-			{
-				"buffer_size": 1210,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "src/wavefmt.c",
-			"settings":
-			{
-				"buffer_size": 2017,
+				"buffer_size": 6155,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -161,9 +92,73 @@
 			"file": "src/sampler.c",
 			"settings":
 			{
-				"buffer_size": 31215,
+				"buffer_size": 36713,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "inc/dig_pins.h",
+			"settings":
+			{
+				"buffer_size": 5569,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/params.c",
+			"settings":
+			{
+				"buffer_size": 17043,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/rgb_leds.c",
+			"settings":
+			{
+				"buffer_size": 10444,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "inc/res/LED_palette.h",
+			"settings":
+			{
+				"buffer_size": 464,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "Searching 145 files for \"display_all_ButtonLEDs\" (case sensitive)\n\n/Users/design/4ms/stm32/STS/main.map:\n  840                  0x0000000008008328                set_ButtonLED_byPaletteFade\n  841                  0x00000000080083c4                display_one_ButtonLED\n  842:                 0x0000000008008420                display_all_ButtonLEDs\n  843                  0x0000000008008490                test_all_buttonLEDs\n  844                  0x00000000080084fc                update_ButtonLEDs\n\n/Users/design/4ms/stm32/STS/inc/rgb_leds.h:\n   34  void set_ButtonLED_byPaletteFade(uint8_t ButtonLED_number, uint16_t paletteIndexA, uint16_t paletteIndexB, float fade);\n   35  void display_one_ButtonLED(uint8_t ButtonLED_number);\n   36: void display_all_ButtonLEDs(void);\n   37  \n   38  void test_all_buttonLEDs(void);\n\n/Users/design/4ms/stm32/STS/src/rgb_leds.c:\n  100  #define FROSTEDBANK1\n  101  /*\n  102:  * display_all_ButtonLEDs()\n  103   *\n  104   * Tells the LED Driver chip to set the RGB color of all LEDs that have changed value\n  105   */\n  106: void display_all_ButtonLEDs(void)\n  107  {\n  108  \tuint8_t i;\n  ...\n  166  \t\t\t}\n  167  \n  168: \t\t\tdisplay_all_ButtonLEDs();\n  169  \t\t}\n  170  \t}\n  ...\n  363  \n  364  \n  365: \tdisplay_all_ButtonLEDs();\n  366  }\n  367  \n\n6 matches across 3 files\n",
+			"settings":
+			{
+				"buffer_size": 1306,
+				"line_ending": "Unix",
+				"name": "Find Results",
+				"scratch": true
+			}
+		},
+		{
+			"file": "src/pca9685_driver.c",
+			"settings":
+			{
+				"buffer_size": 12042,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "Makefile",
+			"settings":
+			{
+				"buffer_size": 4694,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
 			}
 		}
 	],
@@ -206,7 +201,7 @@
 				]
 			],
 			[
-				"Packages/C++/C++ Single File.sublime-build",
+				"Packages/Makefile/Make.sublime-build",
 				""
 			]
 		],
@@ -223,14 +218,14 @@
 			],
 			[
 				"Packages/Makefile/Make.sublime-build",
-				""
+				"Clean"
 			]
 		]
 	],
 	"build_varint": "",
 	"command_palette":
 	{
-		"height": 227.0,
+		"height": 247.0,
 		"last_filter": ":w",
 		"selected_items":
 		[
@@ -243,34 +238,17 @@
 				":w - Save"
 			],
 			[
-				"pack inst",
-				"Package Control: Install Package"
-			],
-			[
-				"add",
-				"Package Control: Add Repository"
-			],
-			[
-				"Package Control: ",
-				"Package Control: Install Package"
-			],
-			[
-				"package",
-				"Package Control: Install Package"
-			],
-			[
 				":q",
 				"Set Syntax: SQL"
 			]
 		],
-		"width": 485.0
+		"width": 449.0
 	},
 	"console":
 	{
 		"height": 126.0,
 		"history":
 		[
-			"import urllib.request,os,hashlib; h = 'df21e130d211cfc94d9b0905775a7c0f' + '1e3d39e33b79698005270310898eea76'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
 		]
 	},
 	"distraction_free":
@@ -284,72 +262,50 @@
 	},
 	"expanded_folders":
 	[
-		"/Users/design/4ms/stm32/DTS",
-		"/Users/design/4ms/stm32/DTS/inc",
-		"/Users/design/4ms/stm32/DTS/src"
+		"/Users/design/4ms/stm32/STS",
+		"/Users/design/4ms/stm32/STS/inc",
+		"/Users/design/4ms/stm32/STS/inc/res"
 	],
 	"file_history":
 	[
-		"/Users/design/4ms/stm32/DTS/DTS.jdebug",
-		"/Users/design/4ms/stm32/DTS/Makefile",
-		"/Users/design/4ms/stm32/DLD/compressor.c",
-		"/Users/design/4ms/stm32/DLD/params.c",
-		"/Users/design/4ms/stm32/DTS/inc/edit_mode.h",
-		"/Users/design/4ms/stm32/DTS/src/sampler.c",
-		"/Users/design/4ms/stm32/DTS/src/buttons.c",
-		"/Users/design/4ms/stm32/DTS/src/edit_mode.c",
-		"/Users/design/4ms/stm32/DTS/inc/sampler.h",
-		"/Users/design/4ms/stm32/DTS/inc/params.h",
-		"/Users/design/4ms/stm32/DTS/src/rgb_leds.c",
-		"/Users/design/4ms/stm32/DTS/inc/dig_pins.h",
-		"/Users/design/4ms/stm32/DTS/inc/buttons.h",
+		"/Users/design/4ms/stm32/STS/DTS.jdebug",
+		"/Users/design/4ms/stm32/STS/inc/pca9685_driver.h",
+		"/Users/design/4ms/stm32/STS/inc/edit_mode.h",
+		"/Users/design/4ms/stm32/STS/src/edit_mode.c",
+		"/Users/design/4ms/stm32/STS/inc/params.h",
+		"/Users/design/4ms/stm32/STS/inc/res/LED_palette.h",
 		"/Users/design/4ms/stm32/DTS/src/dig_pins.c",
-		"/Users/design/4ms/stm32/DTS/inc/globals.h",
-		"/Users/design/4ms/stm32/DTS/inc/sts_filesystem.h",
-		"/Users/design/4ms/stm32/DTS/inc/headers.h",
-		"/Users/design/4ms/stm32/DTS/src/assignment_mode.h",
-		"/Users/design/4ms/stm32/DTS/inc/tm_stm32f4_fatfs.h",
-		"/Users/design/4ms/stm32/DTS/LICENSE",
-		"/Users/design/4ms/stm32/RECORDER/src/rgb_leds.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/dig_pins.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/audio_memory.h",
-		"/Users/design/4ms/stm32/RECORDER/src/audio_memory.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/audio_sdram.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/globals.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/trigger_jacks.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/params.h",
-		"/Users/design/4ms/stm32/RECORDER/src/trigger_jacks.c",
-		"/Users/design/4ms/stm32/RECORDER/src/timekeeper.c",
-		"/Users/design/4ms/stm32/RECORDER/src/sts_filesystem.c",
-		"/Users/design/4ms/stm32/RECORDER/src/main.c",
-		"/Users/design/4ms/stm32/RECORDER/src/dig_pins.c",
-		"/Users/design/4ms/stm32/RECORDER/src/buttons.c",
-		"/Users/design/4ms/stm32/RECORDER/src/params.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/sts_filesystem.h",
-		"/Users/design/4ms/stm32/RECORDER/src/sampler.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/sampler.h",
-		"/Users/design/4ms/stm32/RECORDER/src/wav_recording.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/buttons.h",
-		"/Users/design/4ms/stm32/RECORDER/src/audio_util.c",
-		"/Users/design/4ms/stm32/RECORDER/inc/audio_util.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/wav_recording.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/rgb_leds.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/timekeeper.h",
-		"/Users/design/4ms/stm32/RECORDER/inc/codec.h",
-		"/Users/design/Library/Application Support/Sublime Text 3/Packages/User/untitled.sublime-macro",
-		"/Users/design/Library/Application Support/Sublime Text 3/Packages/User/find-selection-in-project.sublime-macro",
-		"/Users/design/4ms/stm32/DTS/.gitignore",
-		"/Users/design/4ms/stm32/DTS/main.map",
-		"/Users/design/Library/Application Support/Sublime Text 3/Packages/FileHeader/FileHeader.sublime-settings",
-		"/Users/design/Library/Application Support/Sublime Text 3/Packages/FileHeader/Default (OSX).sublime-keymap",
+		"/Users/design/4ms/stm32/DTS/inc/circular_buffer.h",
+		"/Users/design/4ms/stm32/DTS/src/circular_buffer.c",
+		"/Users/design/4ms/stm32/DTS/inc/sampler.h",
+		"/Users/design/4ms/stm32/DTS/stm32/device/include/system_stm32f4xx.h",
 		"/Users/design/4ms/stm32/DTS/src/system_settings.c",
-		"/Users/design/4ms/stm32/DTS/src/params.c",
-		"/Users/design/4ms/stm32/DTS/src/leds.c",
-		"/Users/design/4ms/stm32/DTS/src/main.c",
+		"/Users/design/4ms/stm32/DTS/src/sts_filesystem.c",
 		"/Users/design/4ms/stm32/DTS/src/audio_sdram.c",
+		"/Users/design/4ms/stm32/DTS/src/fatfs/ff.c",
+		"/Users/design/4ms/stm32/DTS/inc/fatfs/ff.h",
+		"/Users/design/4ms/stm32/DTS/inc/globals.h",
+		"/Users/design/4ms/stm32/DTS/inc/fatfs/ffconf.h",
+		"/Users/design/4ms/stm32/DTS/src/buttons.c",
+		"/Users/design/4ms/stm32/DTS/src/audio_codec.c",
+		"/Users/design/4ms/stm32/DTS/src/i2s.c",
+		"/Users/design/4ms/stm32/DTS/inc/params.h",
+		"/Users/design/4ms/stm32/DTS/inc/audio_codec.h",
+		"/Users/design/4ms/stm32/DTS/Makefile",
+		"/Users/design/4ms/stm32/DTS/src/params.c",
+		"/Users/design/4ms/stm32/DTS/inc/sts_filesystem.h",
+		"/Users/design/4ms/stm32/DTS/src/edit_mode.c",
+		"/Users/design/4ms/stm32/DTS/DTS.jdebug",
+		"/Users/design/4ms/stm32/DTS/inc/edit_mode.h",
+		"/Users/design/4ms/stm32/DTS/src/resample.c",
+		"/Users/design/4ms/stm32/DTS/src/rgb_leds.c",
+		"/Users/design/4ms/stm32/DTS/inc/system_settings.h",
+		"/Users/design/4ms/stm32/DTS/src/wav_recording.c",
+		"/Users/design/4ms/stm32/DTS/inc/dig_pins.h",
 		"/Users/design/4ms/stm32/DTS/src/flash.c",
 		"/Users/design/4ms/stm32/DTS/stm32/periph/include/stm32f4xx_flash.h",
 		"/Users/design/4ms/stm32/DTS/DTS.sublime-project",
+		"/Users/design/4ms/stm32/DTS/src/sampler.c",
 		"/Users/design/4ms/stm32/SMR/adc.c",
 		"/Users/design/4ms/stm32/SMR/adc.h",
 		"/Users/design/4ms/stm32/SMR/audio_util.c",
@@ -375,116 +331,111 @@
 		"case_sensitive": true,
 		"find_history":
 		[
-			"sample_header",
-			"is_valid_wav",
-			"is_valid_wav_header",
-			"WaveHeaderAndChunk",
-			"create_waveheader",
-			"w",
-			"WaveHeader",
-			"sample_header",
-			"WaveHeader",
-			"startOfData",
-			"\n\t\t\t\t",
+			"display_all_ButtonLEDs",
+			"NUM_POT_ADCS",
+			"set_sample_gain",
+			"CLIPLED2",
+			"CLIPLED1",
+			"is_buffered_to_file_end",
+			"ref_bufferpos",
+			"ref_cachepos",
+			"wrapping",
+			"filled",
+			"seam",
+			"filled",
+			"stop_pt",
+			"LSEEK",
+			"play_buff_bufferedamt",
+			"goto_fil",
+			"goto_",
+			"f_lseek",
+			"startpos",
+			"sample_file_seam",
+			"cached_fully",
+			"while",
+			"play_buff[chan]",
+			"sample_file_seam",
 			"load_bank_from_disk",
 			"load_sample_header",
-			"startOfData",
-			";",
-			"knob_pos_start1",
-			"uint32_t\t",
-			"startOfData",
+			"sample_file_seam",
+			"seam",
+			"filled",
+			"cache_offset",
+			"sample_file_startpos",
+			"end",
+			"cache_low",
 			"t_out",
-			"t_out ",
-			"t_out",
-			"out[i]",
-			"t_out",
-			"chan",
-			"+chan",
-			"s_sample->",
-			"sample[",
-			"sample",
-			"start",
-			"START_POT",
-			"length1\t",
+			"play_buff_outputted",
+			"play_length",
+			"play_buff_outputted",
+			"PLAY_FADED",
+			"seam",
+			"play_buff[chan]->seam",
+			"play_buff[chan]->in",
+			"->in",
+			"FADED",
+			"calc_stop_points",
 			"LENGTH",
-			"sampleSize",
-			"sz ",
-			"size",
-			"trimsize",
+			"PLAYING",
+			"is_buffered",
+			"flags[ToggleLooping1]",
+			"FILE_SEEK",
+			"g_error",
+			"FILE_SEEK_FAIL",
+			"FILE_W",
+			"goto_file",
+			"sample_file_curpos",
+			"cache_lead",
+			"filled",
+			"cached_fully",
+			"play_buff[chan]->filled",
+			"READ_BUFF1",
+			"length",
+			"5",
+			"map",
+			"mapped_fully",
+			"map",
+			"map_",
+			"map_offset",
+			"filled",
+			"is_buffered_to_file_end",
+			"->in",
+			"play_buff[chan]->in",
+			"CB_offset_in_address",
+			"filled",
+			"map_low",
+			"play_buff_out",
+			"length",
+			"play_length",
+			"inst_end",
+			"inst_size",
+			"inst_end",
+			"inst_size",
+			"inst_end",
+			"st",
+			"coarse_size",
 			"sz",
+			"end",
+			"set_sample_trim_end",
+			"sample_file_startpos",
+			"f_lseek",
+			"fl_seek",
+			"flseek",
+			"sample_file_startpos",
+			"file_curpos",
+			"fwd_st",
+			"calc_stop_points",
+			"calc_play_length",
+			"curpos",
+			"startpos",
 			"sampleSize",
-			"INC_ASSIGNMENT_MODE_H_",
-			"assignment_mode",
+			"f_tell",
+			"f_lseek",
+			"inst_",
+			"LowPassSmoothingFilter",
 			"ASSIGN_MODE",
-			"SW_LINK",
-			"STEREOSW",
-			"STEREOSW!=SW_LINK",
-			"STEREOSW==SW_LINK",
-			"BANKRECBUT",
-			"STEREOSW",
-			"START",
-			"LENGTH",
-			"AssignModeRefused1",
-			"AssignModeRefused2",
-			"AssigningEmptySample2",
-			"AssigningEmptySample1",
-			"ASSIGN_CH2",
-			"ASSIGN_CH1",
-			"enter_assignment_mode",
-			"assign_sample",
-			"play_state",
-			"TM_FATFS_Search",
-			"TM_FATFS_CheckCardDetectPin",
-			"TM_FATFS_TruncateBeginning",
-			"TM_FATFS_USBDriveSize",
-			"TM_FATFS_DriveSize",
-			"TM_FATFS_GetDriveSize",
-			"REC_CHAN",
-			"audio_sdram.h",
-			";",
-			"RecTrig",
-			"samples[sample_bank_now_recording][sample_num_now_recording]",
-			"bank_status",
-			"play_state",
-			"samples",
-			"out[1]",
-			"out[0]",
-			"Sample",
-			"samples",
-			"next_enabled_bank",
-			"ButLED",
-			"NUM_FLAGS",
-			"init_adc_param_update_IRQ",
-			"ButLED",
-			"[i]",
-			"_OFF",
-			"RLEVELLED3",
-			"RLEVELLED",
-			"PLAYLED1",
-			"_R_",
-			"_B_",
-			"CLIPLED2",
-			"LLEVELLED",
-			"LEVELLED",
-			"PLAY",
-			"RECBUT",
-			"PLAY1BUT",
-			"super+shift+f",
-			"bank_status",
-			"t_assign_samples",
-			"original_assigned_sample_i",
-			"end_assigned_sample_i",
-			"cur_assigned_sample_i",
-			"[chan]",
-			"chan",
-			"[chan]",
-			"ASSIGN_CH2",
-			"enter_assignment_mode",
-			"chan",
-			"params",
-			"Sample",
-			"t",
-			"CLIPLED1_ON",
+			"DEBUG1_ON",
+			"DEBUG",
 			"STEREOSW",
 			"uint16_t",
 			"potadc_buffer",
@@ -500,236 +451,30 @@
 		"regex": false,
 		"replace_history":
 		[
-			"AssignModeRefused",
-			"AssigningEmptySample",
-			"ASSIGN_MODE",
-			"TM_FATFS_USBDriveSize",
-			"outR",
-			"outL",
-			"_ON",
-			"REC_G_LED",
-			"REC_B_LED",
-			"REC_R_LED",
-			"LLEVELLED",
-			"BUSYLED",
-			"RLEVELLED3",
-			"RLEVELLED2",
-			"RLEVELLED1",
-			"LLEVELLED3",
-			"LLEVELLED2",
-			"LLEVELLED1",
-			"RLEVELLED3",
-			"RLEVELLED2",
-			"RLEVELLED1",
-			"LLEVELLED3",
-			"LLEVELLED2",
-			"LLEVELLED1",
-			"_B_",
-			"_G_",
-			"_R_",
-			"RLEVELLED",
-			"LLEVELLED"
+			"cached_fully",
+			"cache_",
+			"map_",
+			"EDIT_MODE"
 		],
 		"reverse": false,
-		"show_context": false,
-		"use_buffer2": false,
+		"show_context": true,
+		"use_buffer2": true,
 		"whole_word": false,
 		"wrap": true
 	},
 	"groups":
 	[
 		{
-			"selected": 1,
+			"selected": 5,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "src/sts_filesystem.c",
+					"file": "src/main.c",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 16498,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								3981,
-								3991
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 3375.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 6,
-					"type": "text"
-				},
-				{
-					"buffer": 1,
-					"file": "inc/wavefmt.h",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1135,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								372,
-								372
-							]
-						],
-						"settings":
-						{
-							"history_list_is_closing": true,
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
-					"file": "src/wav_recording.c",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 8573,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								3245,
-								3263
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 2355.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 4,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "src/params.c",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 13611,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								8183,
-								8183
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 4643.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 8,
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "src/edit_mode.c",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 6584,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								2119,
-								2119
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 779.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 7,
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "inc/edit_mode.h",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 588,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								400,
-								400
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/C++/C++.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 9,
-					"type": "text"
-				}
-			]
-		},
-		{
-			"selected": 3,
-			"sheets":
-			[
-				{
-					"buffer": 6,
-					"file": "inc/params.h",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1728,
+						"buffer_size": 6155,
 						"regions":
 						{
 						},
@@ -742,61 +487,35 @@
 						],
 						"settings":
 						{
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"translate_tabs_to_spaces": false
+							"rulers":
+							[
+							],
+							"syntax": "Packages/C++/C.sublime-syntax",
+							"word_wrap": true,
+							"wrap_width": 120
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 10,
+					"stack_index": 8,
 					"type": "text"
 				},
 				{
-					"buffer": 7,
-					"file": "inc/sts_filesystem.h",
+					"buffer": 1,
+					"file": "src/sampler.c",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1210,
+						"buffer_size": 36713,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								438,
-								438
-							]
-						],
-						"settings":
-						{
-							"history_list_is_closing": true,
-							"syntax": "Packages/C++/C++.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 3,
-					"type": "text"
-				},
-				{
-					"buffer": 0,
-					"file": "src/sts_filesystem.c",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 16498,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								6783,
-								6783
+								0,
+								0
 							]
 						],
 						"settings":
@@ -805,32 +524,118 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 3897.0,
+						"translation.y": 4881.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 7,
 					"type": "text"
 				},
 				{
-					"buffer": 8,
-					"file": "src/wavefmt.c",
+					"buffer": 2,
+					"file": "inc/dig_pins.h",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2017,
+						"buffer_size": 5569,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1018,
-								1018
+								3684,
+								3692
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 1308.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "src/params.c",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 17043,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1533,
+								1545
 							]
 						],
 						"settings":
 						{
 							"syntax": "Packages/C++/C.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "src/rgb_leds.c",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 10444,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4063,
+								4063
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1287.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "inc/res/LED_palette.h",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 464,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								204,
+								204
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++/C++.sublime-syntax",
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
@@ -841,20 +646,86 @@
 					"type": "text"
 				},
 				{
-					"buffer": 9,
-					"file": "src/sampler.c",
+					"buffer": 6,
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 31215,
+						"buffer_size": 1306,
+						"regions":
+						{
+							"match":
+							{
+								"flags": 112,
+								"regions":
+								[
+									[
+										326,
+										348
+									],
+									[
+										746,
+										768
+									],
+									[
+										916,
+										938
+									],
+									[
+										1067,
+										1089
+									],
+									[
+										1160,
+										1182
+									],
+									[
+										1237,
+										1259
+									]
+								],
+								"scope": ""
+							}
+						},
+						"selection":
+						[
+							[
+								1167,
+								1167
+							]
+						],
+						"settings":
+						{
+							"detect_indentation": false,
+							"line_numbers": false,
+							"output_tag": 1,
+							"result_base_dir": "",
+							"result_file_regex": "^([^ \t].*):$",
+							"result_line_regex": "^ +([0-9]+):",
+							"scroll_past_end": true,
+							"syntax": "Packages/Default/Find Results.hidden-tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "src/pca9685_driver.c",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 12042,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								7093,
-								7093
+								10408,
+								10508
 							]
 						],
 						"settings":
@@ -863,10 +734,38 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 3262.0,
+						"translation.y": 4510.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 5,
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "Makefile",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4694,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3404,
+								3404
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Makefile/Makefile.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 1009.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
 					"type": "text"
 				}
 			]
@@ -878,7 +777,7 @@
 	},
 	"input":
 	{
-		"height": 31.0
+		"height": 0.0
 	},
 	"layout":
 	{
@@ -889,18 +788,11 @@
 				0,
 				1,
 				1
-			],
-			[
-				1,
-				0,
-				2,
-				1
 			]
 		],
 		"cols":
 		[
 			0.0,
-			0.442755189963,
 			1.0
 		],
 		"rows":
@@ -912,17 +804,17 @@
 	"menu_visible": true,
 	"output.exec":
 	{
-		"height": 176.0
+		"height": 233.0
 	},
 	"output.find_results":
 	{
-		"height": 254.0
+		"height": 0.0
 	},
-	"pinned_build_system": "Packages/Makefile/Make.sublime-build",
+	"pinned_build_system": "",
 	"project": "DTS.sublime-project",
 	"replace":
 	{
-		"height": 42.0
+		"height": 64.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -932,40 +824,44 @@
 		"selected_items":
 		[
 			[
-				"mak",
+				"rg",
+				"src/rgb_leds.c"
+			],
+			[
+				"edit_mode",
+				"inc/edit_mode.h"
+			],
+			[
+				"sampler",
+				"inc/sampler.h"
+			],
+			[
+				"glo",
+				"inc/globals.h"
+			],
+			[
+				"buttc",
+				"src/buttons.c"
+			],
+			[
+				"make",
 				"Makefile"
 			],
 			[
-				"sample",
+				"sampl",
 				"src/sampler.c"
+			],
+			[
+				"ma",
+				"Makefile"
 			],
 			[
 				"params",
 				"inc/params.h"
 			],
 			[
-				"sts_filesystem",
-				"inc/sts_filesystem.h"
-			],
-			[
-				"rgb",
-				"src/rgb_leds.c"
-			],
-			[
-				"dig_",
-				"inc/dig_pins.h"
-			],
-			[
-				"globals.h",
-				"inc/globals.h"
-			],
-			[
-				"global",
-				"inc/globals.h"
-			],
-			[
-				"dig_pins",
-				"inc/dig_pins.h"
+				"system_settings",
+				"inc/system_settings.h"
 			],
 			[
 				"butto",
@@ -1000,7 +896,7 @@
 		],
 		"width": 449.0
 	},
-	"selected_group": 1,
+	"selected_group": 0,
 	"settings":
 	{
 	},
@@ -1008,7 +904,7 @@
 	"show_open_files": true,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 185.0,
+	"side_bar_width": 245.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{

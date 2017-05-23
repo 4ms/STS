@@ -19,5 +19,6 @@ void init_inputread_IRQ(void);
 void init_TrigJackDebounce_IRQ(void);
 void init_ButtonLED_IRQ(void);
 
+void init_SDIO_read_IRQ(void);
 
 #endif /* TIMEKEEPER_H_ */

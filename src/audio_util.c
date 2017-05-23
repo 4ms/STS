@@ -7,6 +7,26 @@ extern const uint32_t AUDIO_MEM_BASE[4];
 
 extern uint8_t SAMPLINGBYTES;
 
+uint32_t align_addr(uint32_t addr, uint32_t blockAlign)
+{
+	volatile uint32_t t;
+
+	if (blockAlign == 4)		
+		addr &= 0xFFFFFFFC;
+	else if (blockAlign == 2)
+		addr &= 0xFFFFFFF8; //was E? but it clicks if we align to 2 not 4, even if our file claims blockAlign = 2
+	else if (blockAlign == 8)
+		addr &= 0xFFFFFFF8;
+	else if (blockAlign == 6)	{
+		t = addr / 6UL;
+		addr = t * 6UL;
+	}
+	else
+		return 0;
+
+	return addr;
+}
+
 inline uint32_t offset_addr(uint32_t addr, uint8_t channel, int32_t offset)
 {
 	uint32_t t_addr;
@@ -28,7 +48,6 @@ inline uint32_t offset_addr(uint32_t addr, uint8_t channel, int32_t offset)
 }
 
 
-
 uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction)
 {
 
@@ -45,7 +64,7 @@ uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction)
 			addr = AUDIO_MEM_BASE[channel] + MEM_SIZE - SAMPLINGBYTES;
 	}
 
-	return(addr & 0xFFFFFFFE);
+	return(addr/* & 0xFFFFFFFE*/);
 
 	//return (offset_samples(channel, addr, 1, mode[channel][REV]));
 }
@@ -67,7 +86,7 @@ uint32_t inc_addr_within_limits(uint32_t addr, uint32_t low_limit, uint32_t high
 			addr = high_limit - SAMPLINGBYTES;
 	}
 
-	return(addr & 0xFFFFFFFE);
+	return(addr /*& 0xFFFFFFFE*/);
 }
 
 //uint32_t diff_circular(uint32_t leader, uint32_t follower, uint32_t wrap_size)

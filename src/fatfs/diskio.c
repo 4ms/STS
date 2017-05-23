@@ -211,12 +211,12 @@ DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void) {
 	// Configure the NVIC Preemption Priority Bits
 	NVIC_InitStructure.NVIC_IRQChannel = SDIO_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init (&NVIC_InitStructure);
 
 	NVIC_InitStructure.NVIC_IRQChannel = SD_SDIO_DMA_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_Init (&NVIC_InitStructure);
 
 	SD_LowLevel_DeInit();
@@ -255,84 +255,84 @@ DSTATUS TM_FATFS_SD_SDIO_disk_status(void) {
 DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
 {
 	SD_Error err=0;
+	//uint16_t i;
+	//int16_t a, b,c;
+	SDTransferState State;
+
 
 	err = SD_ReadMultiBlocksFIXED(data, addr, 512, count);
 
-	//err=SD_ReadBlock(data, addr*512, 512);
 	if (err==SD_OK)
 	{
 		err = SD_WaitReadOperation();
-		if (err)
-			return(err);
 
-		while(SD_GetStatus() != SD_TRANSFER_OK);
+		//while(SD_GetStatus() != SD_TRANSFER_OK);
+		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY);
+
+		if ((State == SD_TRANSFER_ERROR) || (err != SD_OK))
+		{
+			return RES_ERROR;
+
+		} else {
+
+			return RES_OK;
+		}
+
+
 	}
 	else
 	{
 		return(err);
 	}
 
-//	while (--count)
-//	{
-//		data += 512;
-//		addr++;
-//
-//		err=SD_ReadBlock(data, addr*512, 512);
-//		if (err==SD_OK){
-//			err = SD_WaitReadOperation();
-//			while(SD_GetStatus() != SD_TRANSFER_OK);
-//		}
-//
-//	}
-
 	return(err);
 }
 
-DRESULT TM_FATFS_SD_SDIO_disk_read(BYTE *buff, DWORD sector, UINT count) {
-	SD_Error Status = SD_OK;
+// DRESULT TM_FATFS_SD_SDIO_disk_read(BYTE *buff, DWORD sector, UINT count) {
+// 	SD_Error Status = SD_OK;
 
-	if ((TM_FATFS_SD_SDIO_Stat & STA_NOINIT)) {
-		return RES_NOTRDY;
-	}
+// 	if ((TM_FATFS_SD_SDIO_Stat & STA_NOINIT)) {
+// 		return RES_NOTRDY;
+// 	}
 
-	if ((DWORD)buff & 3) {
-		DRESULT res = RES_OK;
-		DWORD scratch[BLOCK_SIZE / 4];
+// 	if ((DWORD)buff & 3) {
+// 		DRESULT res = RES_OK;
+// 		DWORD scratch[BLOCK_SIZE / 4];
 
-		while (count--) {
-			res = TM_FATFS_SD_SDIO_disk_read((void *)scratch, sector++, 1);
+// 		while (count--) {
+// 			res = TM_FATFS_SD_SDIO_disk_read((void *)scratch, sector++, 1);
 
-			if (res != RES_OK) {
-				break;
-			}
+// 			if (res != RES_OK) {
+// 				break;
+// 			}
 
-			memcpy(buff, scratch, BLOCK_SIZE);
+// 			memcpy(buff, scratch, BLOCK_SIZE);
 
-			buff += BLOCK_SIZE;
-		}
+// 			buff += BLOCK_SIZE;
+// 		}
 
-		return res;
-	}
+// 		return res;
+// 	}
 
-//	Status = SD_ReadMultiBlocks(buff, sector << 9, BLOCK_SIZE, count);
-	Status = SD_ReadMultiBlocksFIXED(buff, sector << 9, BLOCK_SIZE, count);
+// //	Status = SD_ReadMultiBlocks(buff, sector << 9, BLOCK_SIZE, count);
+// 	Status = SD_ReadMultiBlocksFIXED(buff, sector << 9, BLOCK_SIZE, count);
 
-	if (Status == SD_OK) {
-		SDTransferState State;
+// 	if (Status == SD_OK) {
+// 		SDTransferState State;
 
-		Status = SD_WaitReadOperation();
+// 		Status = SD_WaitReadOperation();
 
-		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY);
+// 		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY);
 
-		if ((State == SD_TRANSFER_ERROR) || (Status != SD_OK)) {
-			return RES_ERROR;
-		} else {
-			return RES_OK;
-		}
-	} else {
-		return RES_ERROR;
-	}
-}
+// 		if ((State == SD_TRANSFER_ERROR) || (Status != SD_OK)) {
+// 			return RES_ERROR;
+// 		} else {
+// 			return RES_OK;
+// 		}
+// 	} else {
+// 		return RES_ERROR;
+// 	}
+// }
 
 DRESULT TM_FATFS_SD_SDIO_disk_write(const BYTE *buff, DWORD sector, UINT count) {
 	SD_Error Status = SD_OK;

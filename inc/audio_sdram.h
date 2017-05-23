@@ -23,33 +23,29 @@
 //#define MEM_RECORD_BUFFER_2			0xD1800000
 //#define MEM_RECORD_BUFFER_SIZE 		0x007FFFFF
 
-#define MEM_SIZE (SDRAM_SIZE>>2) /* 0x02000000 / 4 = 0x00800000 */
+//#define MEM_SIZE (SDRAM_SIZE>>2) /* 0x02000000 / 4 = 0x00800000 */
+#define MEM_SIZE 0x600000
+
+//Play buffer 1: 0xD0000000 - 0xD05FFFFF
+//Play buffer 2: 0xD0600000 - 0xD0BFFFFF
+//Record buffer: 0xD0C00000 - 0xD11FFFFF
+//unused.......: 0xD1200000 - 0xD1FFFFFF (0x00E00000 space = 14MB of the 32MB chip)
+//Todo: maximum buffer sizes!
 
 
 //#define PRE_BUFF_SIZE (64*256)
 
 #define REC_CHAN 2
 
+void memory_clear(uint8_t channel);
 uint32_t memory_read_32bword(uint32_t addr);
-
-uint32_t memory_read_channel(uint32_t *addr, uint8_t channel, int32_t *rd_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement);
-uint32_t memory_write_channel(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint8_t decrement);
-
-uint32_t memory_read(uint32_t *addr, uint8_t channel, int32_t *rd_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement);
-uint32_t memory_read16(uint32_t *addr, uint8_t channel, int16_t *rd_buff, uint32_t num_samples, uint32_t stop_at_addr, uint8_t decrement);
-
-uint32_t memory_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement);
-uint32_t memory_write16(uint32_t *addr, uint8_t channel, int16_t *wr_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement);
-
-uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint8_t decrement, float fade);
-
 
 uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samples, uint8_t decrement);
 
 uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement);
+uint32_t memory_write32_cb(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_samples, uint8_t decrement);
 
 
-void memory_clear(uint8_t channel);
 
 uint32_t RAM_test(void);
 void RAM_startup_test(void);

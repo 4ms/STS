@@ -4,11 +4,17 @@
 #include "globals.h"
 #include "dig_pins.h"
 #include "params.h"
+#include "adc.h"
 #include "rgb_leds.h"
 #include "LED_palette.h"
 #include "pca9685_driver.h"
 #include "sampler.h"
 #include "wav_recording.h"
+
+
+#define BIG_PLAY_BUTTONS
+//#define SETBANK1RGB
+//#define FROSTEDBANK1
 
 uint16_t ButLED_color[NUM_RGBBUTTONS][3];
 uint16_t cached_ButLED_color[NUM_RGBBUTTONS][3];
@@ -24,6 +30,11 @@ extern uint8_t flags[NUM_FLAGS];
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 extern volatile uint32_t sys_tmr;
+
+extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
+
+extern uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN];
+
 
 
 /*
@@ -107,7 +118,20 @@ void display_all_ButtonLEDs(void)
 		//Update each LED that has a different color
 		if ((cached_ButLED_color[i][0] != ButLED_color[i][0]) || (cached_ButLED_color[i][1] != ButLED_color[i][1]) || (cached_ButLED_color[i][2] != ButLED_color[i][2]))
 		{
-			LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+#ifdef BIG_PLAY_BUTTONS
+			if (i ==  Play1ButtonLED || i == Play2ButtonLED)
+				LEDDriver_setRGBLED_12bit(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][2] <<10) | ButLED_color[i][1] ); ///swapped [1] and [2]
+			else
+				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+
+#else
+#ifdef FROSTEDBANK1
+			if (i ==  Bank1ButtonLED){
+				LEDDriver_setRGBLED_RGB(i, ButLED_color[i][0]*4, ButLED_color[i][1]*4, ButLED_color[i][2]*4 );
+ 			}else
+#endif
+				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+#endif
 			cached_ButLED_color[i][0]=ButLED_color[i][0];
 			cached_ButLED_color[i][1]=ButLED_color[i][1];
 			cached_ButLED_color[i][2]=ButLED_color[i][2];
@@ -127,7 +151,6 @@ void test_all_buttonLEDs(void)
 {
 	uint8_t i, j;
 	float t=0.0f;
-	uint32_t r,g,b;
 
 	for (j=0;j<8;j++)
 	{
@@ -161,14 +184,14 @@ void update_ButtonLEDs(void)
 	uint8_t ButLEDnum;
 	uint8_t chan;
 	//uint32_t tm=sys_tmr & 0x3FFF; //14-bit counter
-	uint32_t tm_7 = sys_tmr & 0x7F; //7-bit counter
+	//uint32_t tm_7 = sys_tmr & 0x7F; //7-bit counter
 	uint32_t tm_12 = sys_tmr & 0xFFF; //12-bit counter
 	uint32_t tm_13 = sys_tmr & 0x1FFF; //13-bit counter
 	uint32_t tm_14 = sys_tmr & 0x3FFF; //14-bit counter
-	uint32_t tm_15 = sys_tmr & 0x7FFF; //15-bit counter
-	uint32_t tm_16 = sys_tmr & 0xFFFF; //16-bit counter
-	float tri_16;
-	float tri_15;
+	//uint32_t tm_15 = sys_tmr & 0x7FFF; //15-bit counter
+	//uint32_t tm_16 = sys_tmr & 0xFFFF; //16-bit counter
+	//float tri_16;
+	//float tri_15;
 	float tri_14;
 	float tri_13;
 
@@ -183,15 +206,15 @@ void update_ButtonLEDs(void)
 //		else
 //			tri_15 = ((float)(0x4000 - tm_15)) / 16384.0f;
 
-		if (tm_14>0x2000)
-			tri_14 = ((float)(tm_14 - 0x2000)) / 8192.0f;
-		else
-			tri_14 = ((float)(0x2000 - tm_14)) / 8192.0f;
+	if (tm_14>0x2000)
+		tri_14 = ((float)(tm_14 - 0x2000)) / 8192.0f;
+	else
+		tri_14 = ((float)(0x2000 - tm_14)) / 8192.0f;
 
-		if (tm_13>0x1000)
-			tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
-		else
-			tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
+	if (tm_13>0x1000)
+		tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
+	else
+		tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
 
 	for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 	{
@@ -203,7 +226,15 @@ void update_ButtonLEDs(void)
 			else if (ButLEDnum == Bank2ButtonLED) chan = 1;
 			else chan = 2;
 
-			if (i_param[chan][BANK] < MAX_NUM_REC_BANKS)
+#ifdef SETBANK1RGB
+			if (chan==0) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0], i_smoothed_potadc[1], i_smoothed_potadc[2]);
+			else 
+#endif
+			if (chan==2 && global_mode[EDIT_MODE])
+			{
+				set_ButtonLED_byPalette(ButLEDnum, OFF);
+			}
+			else if (i_param[chan][BANK] < MAX_NUM_REC_BANKS)
 				set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
 
 			else if (i_param[chan][BANK] < (MAX_NUM_REC_BANKS*2))
@@ -219,9 +250,7 @@ void update_ButtonLEDs(void)
 					set_ButtonLED_byPalette(ButLEDnum, OFF );
 				else
 					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 1 - MAX_NUM_REC_BANKS*2 );
-
 			}
-
 		}
 
 		// PLAY lights
@@ -229,7 +258,11 @@ void update_ButtonLEDs(void)
 		{
 			chan = (ButLEDnum == Play1ButtonLED) ? 0 : 1;
 
-			if (flags[PlaySample1Changed_valid + chan])
+			if (chan && global_mode[EDIT_MODE])
+			{
+				set_ButtonLED_byPaletteFade(ButLEDnum, WHITE, VIOLET, tri_14);
+			}
+			else if (flags[PlaySample1Changed_valid + chan])
 			{
 				set_ButtonLED_byPalette(ButLEDnum, WHITE );
 				flags[PlaySample1Changed_valid + chan]--;
@@ -239,28 +272,63 @@ void update_ButtonLEDs(void)
 				set_ButtonLED_byPalette(ButLEDnum, RED );
 				flags[PlaySample1Changed_empty + chan]--;
 			}
-			else if (global_mode[chan? ASSIGN_CH2 : ASSIGN_CH1])
-				set_ButtonLED_byPaletteFade(ButLEDnum, GREEN, VIOLET, tri_14);
-
-			else if (flags[AssignModeRefused1+chan])
+			else if (flags[AssignModeRefused+chan])
 			{
-				if (tm_12 <100) flags[AssignModeRefused1+chan]--;
+				if (tm_12 <100) flags[AssignModeRefused+chan]--;
 
 				if (tm_12 < 0x800)	set_ButtonLED_byPalette(ButLEDnum, RED);
 				else				set_ButtonLED_byPalette(ButLEDnum, YELLOW);
+			}
+			else if (flags[StereoModeTurningOn])
+			{
+				if (tm_14 <100) flags[StereoModeTurningOn]--;
+				if (flags[StereoModeTurningOn] < 4)
+					set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, tri_14);
+
+				//if (tm_13 < 0x1000)	set_ButtonLED_byPalette(ButLEDnum, GREENER);
+				//else				set_ButtonLED_byPalette(ButLEDnum, OFF);
+			}
+			else if (flags[StereoModeTurningOff])
+			{
+				if (tm_14 <100) flags[StereoModeTurningOff]--;
+
+				if (flags[StereoModeTurningOn] == 4){
+					set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+					set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+				}
+				else if (flags[StereoModeTurningOff] > 2){
+					if (tm_13 < 0x1000)	set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+					else				set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
+
+					set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+
+				} else {
+					if (tm_13 < 0x1000)	set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+					else				set_ButtonLED_byPalette(Play2ButtonLED, GREEN);
+
+					set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+				}
 			}
 			else
 			{
 				if (play_state[chan]==SILENT
 				|| play_state[chan]==RETRIG_FADEDOWN
-				|| play_state[chan]==PLAY_FADEDOWN)
-					if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, YELLOW );
+				|| play_state[chan]==PLAY_FADEDOWN
+				|| play_led_flicker_ctr[chan]
+				)
+					if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, RED );
 					else							set_ButtonLED_byPalette(ButLEDnum, OFF );
 
 				//Playing
-				else
-					if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, CYAN );
-					else							set_ButtonLED_byPalette(ButLEDnum, GREEN );
+				else {
+					if (global_mode[STEREO_LINK]){
+						if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, CYAN );
+						else							set_ButtonLED_byPalette(ButLEDnum, GREENER );
+					} else {
+						if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, BLUE );
+						else							set_ButtonLED_byPalette(ButLEDnum, GREEN );
+					}
+				}
 
 			}
 
@@ -268,6 +336,10 @@ void update_ButtonLEDs(void)
 		}
 		else if (ButLEDnum == RecButtonLED)
 		{
+			if (global_mode[EDIT_MODE])
+			{
+				set_ButtonLED_byPalette(RecButtonLED, OFF);
+			}
 			if (flags[RecSampleChanged_light])
 			{
 				set_ButtonLED_byPalette(RecButtonLED, WHITE);
@@ -303,13 +375,18 @@ void update_ButtonLEDs(void)
 		{
 			chan = (ButLEDnum == Reverse1ButtonLED) ? 0 : 1;
 
-			if (global_mode[chan? ASSIGN_CH2 : ASSIGN_CH1])
-				if (flags[AssigningEmptySample1 + chan])
-					set_ButtonLED_byPalette(ButLEDnum, tm_13>0x1000 ? RED : OFF);//set_ButtonLED_byPaletteFade(ButLEDnum, RED, OFF, tri_13);
+			if (global_mode[EDIT_MODE])
+			{
+				if (chan==0)
+					if (flags[AssigningEmptySample])
+						set_ButtonLED_byPalette(ButLEDnum, tm_13>0x1000 ? RED : OFF);//set_ButtonLED_byPaletteFade(ButLEDnum, RED, OFF, tri_13);
+					else
+						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, GREEN, tri_14);
 				else
-					set_ButtonLED_byPaletteFade(ButLEDnum, VIOLET, GREEN, tri_14);
+						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, RED, tri_14);
 
-			else if (flags[AssignModeRefused1+chan])
+			}
+			else if (flags[AssignModeRefused+chan])
 			{
 				if (tm_12 < 0x800)	set_ButtonLED_byPalette(ButLEDnum, RED);
 				else 				set_ButtonLED_byPalette(ButLEDnum, YELLOW);

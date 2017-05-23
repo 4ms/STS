@@ -18,7 +18,9 @@
 #define HT16_BUFF_LEN (codec_BUFF_LEN>>2)
 #define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1)
 
-#define FW_VERSION 0
+#define BASE_SAMPLE_RATE 44100
+
+#define FW_VERSION 1
 
 enum Flags {
 	PlaySample1Changed,
@@ -26,15 +28,15 @@ enum Flags {
 	PlaySample2Changed,
 	PlayBank2Changed,
 	RecSampleChanged,
-	RecBankChanged,
-	Play1Trig,
-	Play2Trig,
+	RecBankChanged, //5
+	Play1But,
+	Play2But,
 	RecTrig,
 	Rev1Trig,
-	Rev2Trig,
+	Rev2Trig, //10
 	PlayBuff1_Discontinuity,
 	PlayBuff2_Discontinuity,
-	ToggleMonitor,
+	ToggleMonitor, //13
 	ToggleLooping1,
 	ToggleLooping2,
 	PlaySample1Changed_valid,
@@ -44,10 +46,13 @@ enum Flags {
 	RecSampleChanged_light,
 	ForceFileReload1,
 	ForceFileReload2,
-	AssignModeRefused1,
-	AssignModeRefused2,
-	AssigningEmptySample1,
-	AssigningEmptySample2,
+	AssignModeRefused,
+	AssigningEmptySample,
+	TimeToReadStorage,
+	Play1Trig,
+	Play2Trig,
+	StereoModeTurningOn,
+	StereoModeTurningOff,
 
 	NUM_FLAGS
 };
@@ -69,17 +74,20 @@ enum g_Errors{
 	WRITE_BUFF_UNDERRUN=2048,
 
 	FILE_OPEN_FAIL=(1<<12),
-	FILE_READ_FAIL=(1<<13),
-	FILE_WAVEFORMATERR=(1<<14),
-	FILE_UNEXPECTEDEOF=(1<<15),
-	FILE_SEEK_FAIL=(1<<16),
-	READ_BUFF_OVERRUN_RESAMPLE=(1<<17),
-	FILE_CANNOT_CREATE_CLTBL=(1<<18),
-	CANNOT_OPEN_ROOT_DIR=(1<<19),
-	FILE_REC_OPEN_FAIL=(1<<20),
-	FILE_WRITE_FAIL=(1<<21),
-	FILE_UNEXPECTEDEOF_WRITE=(1<<22),
-	CANNOT_WRITE_INDEX=(1<<23)
+	FILE_READ_FAIL_1=(1<<13),
+	FILE_READ_FAIL_2=(1<<14),
+	FILE_WAVEFORMATERR=(1<<15),
+	FILE_UNEXPECTEDEOF=(1<<16),
+	FILE_SEEK_FAIL=(1<<17),
+	READ_BUFF_OVERRUN_RESAMPLE=(1<<18),
+	FILE_CANNOT_CREATE_CLTBL=(1<<19),
+	CANNOT_OPEN_ROOT_DIR=(1<<20),
+	FILE_REC_OPEN_FAIL=(1<<21),
+	FILE_WRITE_FAIL=(1<<22),
+	FILE_UNEXPECTEDEOF_WRITE=(1<<23),
+	CANNOT_WRITE_INDEX=(1<<24),
+	LSEEK_FPTR_MISMATCH=(1<<25),
+	HEADER_READ_FAIL=(1<<26)
 
 
 };
@@ -111,7 +119,8 @@ enum g_Errors{
 
 #define TRIG_TIME 400
 
-#define READ_BLOCK_SIZE 8192
+//#define READ_BLOCK_SIZE 8192
+#define READ_BLOCK_SIZE 9216
 
 
 //About 45ms delay

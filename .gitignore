@@ -1,4 +1,6 @@
 *.ods
+*.sublime-project
+*.sublime-workspace
 firmwares/
 .DS_Store
 .cproject

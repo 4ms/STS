@@ -9,10 +9,12 @@
 #define ITM_H_
 
 
-void ITM_Init(uint32_t SWOSpeed);
+//void ITM_Init(uint32_t SWOSpeed);
 void ITM_SendValue (int port, uint32_t value);
 void ITM_Print(int port, const char *p);
 void ITM_Disable(void);
+
+void TRACE_init(void);
 
 
 

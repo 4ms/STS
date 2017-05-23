@@ -24,7 +24,12 @@
 #include "wav_recording.h"
 #include "rgb_leds.h"
 #include "ff.h"
+#include "sampler.h"
 
+uint32_t WATCH0;
+uint32_t WATCH1;
+uint32_t WATCH2;
+uint32_t WATCH3;
 
 enum g_Errors g_error=0;
 
@@ -32,56 +37,27 @@ __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
+extern uint8_t 	flags[NUM_FLAGS];
 
 //extern uint8_t ButLED_state[NUM_RGBBUTTONS];
 //extern uint8_t play_led_state[NUM_PLAY_CHAN];
 //extern uint8_t clip_led_state[NUM_PLAY_CHAN];
 
-extern uint32_t flash_firmware_version;
+extern SystemSettings *SRAM_user_params;
+
 
 void check_errors(void);
 
 void check_errors(void){
 	if (g_error>0)
 	{
-		CLIPLED1_ON;
-		CLIPLED2_ON;
+		//CLIPLED1_ON;
+		//CLIPLED2_ON;
 
 	//while(1){
- 		CLIPLED1_OFF;
-		CLIPLED2_OFF;
- /*
-			if (g_error & 1) ButLED_state[0]=1;
-			if (g_error & 2) ButLED_state[1]=1;
-			if (g_error & 4) ButLED_state[2]=1;
-			if (g_error & 8) ButLED_state[3]=1;
-			if (g_error & 16) ButLED_state[4]=1;
-			if (g_error & 32) ButLED_state[5]=1;
-			if (g_error & 64) ButLED_state[6]=1;
-			if (g_error & 128) ButLED_state[7]=1;
-			if (g_error & 256) play_led_state[0]=1;
-			if (g_error & 512) clip_led_state[0]=1;
-			if (g_error & 1024) clip_led_state[1]=1;
-			if (g_error & 2048) play_led_state[1]=1;
-
-			delay_ms(100);
-
-			ButLED_state[0]=0;
-			ButLED_state[1]=0;
-			ButLED_state[2]=0;
-			ButLED_state[3]=0;
-			ButLED_state[4]=0;
-			ButLED_state[5]=0;
-			ButLED_state[6]=0;
-			ButLED_state[7]=0;
-			play_led_state[0]=0;
-			clip_led_state[0]=0;
-			clip_led_state[1]=0;
-			play_led_state[1]=0;
-
-			delay_ms(100);
-			*/
-
+ 		//CLIPLED1_OFF;
+		//CLIPLED2_OFF;
+ 
 		//}
 
 	}
@@ -118,6 +94,7 @@ int main(void)
 	uint8_t i;
 	uint8_t err=0;
 	uint32_t do_factory_reset=0;
+	uint32_t timeout_boot;
 
 	FATFS FatFs;
 	FIL fil;
@@ -141,7 +118,8 @@ int main(void)
 	//
 	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
 
-	ITM_Init(6000000);
+	TRACE_init();
+	//ITM_Init(6000000);
 //	ITM_Print_int(0,1243);
 
 	//Codec and I2S/DMA should be disabled before they can properly start up
@@ -152,7 +130,7 @@ int main(void)
 
     //Initialize digital in/out pins
     init_dig_inouts();
-    test_dig_inouts();
+ //   test_dig_inouts();
 	init_timekeeper();
 
 
@@ -163,8 +141,9 @@ int main(void)
 	delay();
 
 
+	timeout_boot = 0x00800000;
 	PLAYLED1_OFF;
-	while(!REV1BUT && !REV2BUT  && !PLAY1BUT  && !PLAY2BUT && !BANK1BUT && !BANK2BUT){;}
+	while(timeout_boot--){;}
 	PLAYLED1_OFF;
 
 	//Initialize SD Card
@@ -189,31 +168,14 @@ int main(void)
 		CLIPLED1_ON;
 		CLIPLED2_ON;
 		res = f_mount(&FatFs, "", 0);
-
-		//while(1){;}
 	}
-
-
-//	res = f_open(&fil, "hello.txt", FA_CREATE_NEW | FA_WRITE);
-//	if (res==FR_OK)
-//	{
-//		res = f_write(&fil, "Hello, World!\r\n", 15, &bw);
-//		if (bw==15)
-//		{
-//			f_close(&fil);
-//			f_mount(0,"",0);
-//		}
-//		else CLIPLED1_ON; //write failed
-//	}
-//	else CLIPLED2_ON; //file open failed
-
 
 
 
 	//Turn on the lights
 	LEDDriver_Init(2);
 	LEDDRIVER_OUTPUTENABLE_ON;
-	if (PLAY1BUT && BANK1BUT) test_all_buttonLEDs();
+	if (PLAY2BUT && BANK2BUT) test_all_buttonLEDs();
 
 	init_buttonLEDs();
 	init_ButtonLED_IRQ();
@@ -227,8 +189,6 @@ int main(void)
 	Init_CV_ADC((uint16_t *)cvadc_buffer, NUM_CV_ADCS);
 
 
-
-
 	//Initialize Codec
 	Codec_GPIO_Init();
 	Codec_AudioInterface_Init(I2S_AudioFreq_44k);
@@ -240,14 +200,15 @@ int main(void)
 	init_adc_param_update_IRQ();
 	init_params();
 	init_modes();
-	flash_firmware_version = load_flash_params();
+	
+	SRAM_user_params->firmware_version = load_flash_params();
 
 	//Check for boot modes (calibration, first boot after upgrade)
     if (ENTER_CALIBRATE_BUTTONS)
     {
     	global_mode[CALIBRATE] = 1;
     }
-    else if (flash_firmware_version < FW_VERSION ) //If we detect a recently upgraded firmware version
+    else if (SRAM_user_params->firmware_version < FW_VERSION ) //If we detect a recently upgraded firmware version
     {
     	set_firmware_version();
     	store_params_into_sram();
@@ -268,6 +229,11 @@ int main(void)
 
 
 
+	//test_noise();
+
+
+	init_SDIO_read_IRQ();
+
 	//Main loop
 	while(1){
 
@@ -278,7 +244,11 @@ int main(void)
 
 		//DEBUG0_OFF;
 
-		read_storage_to_buffer();
+		if (flags[TimeToReadStorage])
+		{
+			flags[TimeToReadStorage]=0;
+			read_storage_to_buffer();
+		}
 
 		process_mode_flags();
 

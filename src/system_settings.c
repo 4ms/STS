@@ -1,15 +1,5 @@
 /*
  * System Settings
- *
- * ????Time A/B knob:
- * -Quantized normally, unquantized when turned with Reverse held down (default)
- * -Unquantized normally, quantized when turned with Reverse held down
- *
- * ????Time A/B CV jack:
- * -Quantized (default)
- * -Always unquantized (...try this?)
- * -Follows mode of knob (quantized until Time knob is wiggled with Reverse held down)
- *
  */
 
 #include "globals.h"
@@ -20,15 +10,9 @@
 #include "buttons.h"
 #include "dig_pins.h"
 
-
+extern SystemSettings *user_params;
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
-//extern uint8_t 	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-//extern uint8_t 	settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
-
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
-extern float global_param[NUM_GLOBAL_PARAMS];
-extern uint32_t global_i_param[NUM_GLOBAL_PARAMS];
-
 
 //extern uint32_t flash_firmware_version;
 
@@ -37,11 +21,10 @@ uint8_t disable_mode_changes=0;
 
 void set_default_system_settings(void)
 {
-	f_param[0][TRACKING_COMP]=1.0;
-	f_param[1][TRACKING_COMP]=1.0;
+	user_params->tracking_comp[0]=1.0;
+	user_params->tracking_comp[1]=1.0;
 
-	global_param[SLOW_FADE_INCREMENT] = 0.001;
-	global_i_param[LED_BRIGHTNESS] = 4;
+	user_params->led_brightness = 4;
 
 }
 

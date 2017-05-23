@@ -37,9 +37,11 @@ HEX = $(BUILDDIR)/$(BINARYNAME).hex
 BIN = $(BUILDDIR)/$(BINARYNAME).bin
 
 ARCH = arm-none-eabi
+#CC = colorgcc
+#CC = gccfilter -a -c $(ARCH)-gcc
 CC = $(ARCH)-gcc
 ##Use -gcc instead of -ld
-LD = $(ARCH)-gcc
+LD = $(ARCH)-gcc -Wl,-Map,build/main.map
 #LD = $(ARCH)-ld -v -Map main.map
 AS = $(ARCH)-as
 OBJCPY = $(ARCH)-objcopy
@@ -80,6 +82,7 @@ CFLAGS = -g2 -O1 \
 # Causes Freeze on run: -fschedule-insns  -fschedule-insns2 
 # CFLAGS = -O3 -fno-tree-loop-distribute-patterns 
 
+
 CFLAGS += -mlittle-endian -mthumb 
 CFLAGS +=  -I. -DARM_MATH_CM4 -D'__FPU_PRESENT=1'  $(INCLUDES)  -DUSE_STDPERIPH_DRIVER
 CFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard
@@ -99,10 +102,18 @@ LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT)
 
 #vpath %.c src
 
+#build/src/params.o: CFLAGS = $(C0FLAGS)
+#build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
 #build/src/resample.o: CFLAGS = $(C0FLAGS)
 build/src/sampler.o: CFLAGS = $(C0FLAGS)
-build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
-build/src/wav_recoding.o: CFLAGS = $(C0FLAGS)
+build/src/flash_user.o: CFLAGS = $(C0FLAGS)
+#build/src/dig_pins.o: CFLAGS = $(C0FLAGS)
+#build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
+#build/src/rgb_leds.o: CFLAGS = $(C0FLAGS)
+#build/src/circular_buffer.o: CFLAGS = $(C0FLAGS)
+#build/src/audio_util.o: CFLAGS = $(C0FLAGS)
+#build/src/wavefmt.o: CFLAGS = $(C0FLAGS)
+#build/src/wav_recoding.o: CFLAGS = $(C0FLAGS)
 #build/src/buttons.o: CFLAGS = $(C0FLAGS)
 #build/src/file_util.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)

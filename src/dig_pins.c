@@ -11,8 +11,59 @@
 #include "dig_pins.h"
 #include "buttons.h"
 
+extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 
+void test_noise(void)
+{
+	uint32_t i,j;
 
+	GPIO_InitTypeDef gpio;
+
+	GPIO_StructInit(&gpio);
+
+	/* Configure PC.08, PC.09, PC.10, PC.11 pins: D0, D1, D2, D3 pins */
+	gpio.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11;
+	gpio.GPIO_Speed = GPIO_Speed_50MHz;
+	gpio.GPIO_Mode = GPIO_Mode_OUT;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_Init(GPIOC, &gpio);
+
+	/* Configure PD.02 CMD line */
+	gpio.GPIO_Pin = GPIO_Pin_2;
+	GPIO_Init(GPIOD, &gpio);
+
+	/* Configure PC.12 pin: CLK pin */
+	gpio.GPIO_Pin = GPIO_Pin_12;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOC, &gpio);
+
+	j=0;
+	while (1)
+	{
+		i=potadc_buffer[0]*100;while(i--){;}
+		GPIOC->BSRRL = GPIO_Pin_8;
+		GPIOC->BSRRL = GPIO_Pin_9;
+		GPIOC->BSRRL = GPIO_Pin_10;
+		GPIOC->BSRRL = GPIO_Pin_11;
+		GPIOC->BSRRL = GPIO_Pin_12;
+		GPIOD->BSRRL = GPIO_Pin_2;
+
+		i=potadc_buffer[0]*100;while(i--){;}
+		GPIOC->BSRRH = GPIO_Pin_8;
+		GPIOC->BSRRH = GPIO_Pin_9;
+		GPIOC->BSRRH = GPIO_Pin_10;
+		GPIOC->BSRRH = GPIO_Pin_11;
+		GPIOC->BSRRH = GPIO_Pin_12;
+		GPIOD->BSRRH = GPIO_Pin_2;
+
+		j++;if (j==1000){
+			j=0;
+			i=2000000;while(i--){;}
+		}
+	}
+
+}
 
 void init_dig_inouts(void){
 	GPIO_InitTypeDef gpio;
@@ -36,6 +87,7 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = BANK1BUT_pin;	GPIO_Init(BANK1BUT_GPIO, &gpio);
 	gpio.GPIO_Pin = BANK2BUT_pin;	GPIO_Init(BANK2BUT_GPIO, &gpio);
 	gpio.GPIO_Pin = BANKRECBUT_pin;	GPIO_Init(BANKRECBUT_GPIO, &gpio);
+	gpio.GPIO_Pin = EDIT_BUTTON_pin;	GPIO_Init(EDIT_BUTTON_GPIO, &gpio);
 
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
@@ -47,8 +99,8 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = REV2JACK_pin;	GPIO_Init(REV2JACK_GPIO, &gpio);
 
 	//Switch
-	gpio.GPIO_Pin = STEREOSW_T1_pin;	GPIO_Init(STEREOSW_T1_GPIO, &gpio);
-	gpio.GPIO_Pin = STEREOSW_T2_pin;	GPIO_Init(STEREOSW_T2_GPIO, &gpio);
+	// gpio.GPIO_Pin = STEREOSW_T1_pin;	GPIO_Init(STEREOSW_T1_GPIO, &gpio);
+	// gpio.GPIO_Pin = STEREOSW_T2_pin;	GPIO_Init(STEREOSW_T2_GPIO, &gpio);
 
 
 
@@ -61,12 +113,19 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = ENDOUT1_pin;	GPIO_Init(ENDOUT1_GPIO, &gpio);
 	gpio.GPIO_Pin = ENDOUT2_pin;	GPIO_Init(ENDOUT2_GPIO, &gpio);
 
+	gpio.GPIO_Pin = EDIT_BUTTONREF_pin;	GPIO_Init(EDIT_BUTTONREF_GPIO, &gpio);
+	EDIT_BUTTONREF_OFF;
+
 	//LEDs
 	gpio.GPIO_Pin = PLAYLED1_pin;	GPIO_Init(PLAYLED1_GPIO, &gpio);
 	gpio.GPIO_Pin = PLAYLED2_pin;	GPIO_Init(PLAYLED2_GPIO, &gpio);
 	gpio.GPIO_Pin = CLIPLED1_pin;	GPIO_Init(CLIPLED1_GPIO, &gpio);
 	gpio.GPIO_Pin = CLIPLED2_pin;	GPIO_Init(CLIPLED2_GPIO, &gpio);
 
+	//Line Switch
+	gpio.GPIO_Pin = LINESWITCH_pin;	GPIO_Init(LINESWITCH_GPIO, &gpio);
+	LINESWITCH_OFF;
+	
 	PLAYLED1_OFF;
 	PLAYLED2_OFF;
 	CLIPLED1_OFF;
@@ -183,10 +242,10 @@ void test_dig_inouts(void)
 	PLAYLED1_OFF;
 
 	while (0){
-		t=STEREOSW;
-		if (t==SW_MONO) {PLAYLED1_ON;PLAYLED2_OFF;CLIPLED1_OFF;}
-		else if (t==SW_LR) {PLAYLED1_OFF;PLAYLED2_ON;CLIPLED1_OFF;}
-		else if (t==SW_LINK) {CLIPLED1_ON;PLAYLED1_OFF;PLAYLED2_OFF;}
+		// t=STEREOSW;
+		// if (t==SW_MONO) {PLAYLED1_ON;PLAYLED2_OFF;CLIPLED1_OFF;}
+		// else if (t==SW_LR) {PLAYLED1_OFF;PLAYLED2_ON;CLIPLED1_OFF;}
+		// else if (t==SW_LINK) {CLIPLED1_ON;PLAYLED1_OFF;PLAYLED2_OFF;}
 
 	}
 

@@ -47,6 +47,7 @@ enum Buttons {
 	RecBank,
 	Rev1,
 	Rev2,
+	Edit,
 	NUM_BUTTONS
 };
 

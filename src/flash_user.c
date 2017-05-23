@@ -14,128 +14,30 @@
 #include "adc.h"
 #include "leds.h"
 #include "dig_pins.h"
+#include <string.h>
 
-extern int16_t CV_CALIBRATION_OFFSET[6];
-extern int16_t CODEC_DAC_CALIBRATION_DCOFFSET[4];
-extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
+SystemSettings s_SRAM_user_params;
+SystemSettings s_user_params;
+SystemSettings *SRAM_user_params = &s_SRAM_user_params;
+SystemSettings *user_params = &s_user_params;
 
 
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
-//extern uint8_t 	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-//extern uint8_t 	settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
 
 extern int16_t i_smoothed_cvadc[NUM_POT_ADCS];
 
 
+
 #define FLASH_ADDR_userparams 0x08004000
-//Globals:
-#define FLASH_ADDR_firmware_version			FLASH_ADDR_userparams									/* 0  ..3	*/
-#define SZ_FV 4
-
-#define FLASH_ADDR_cv_calibration_offset	(FLASH_ADDR_firmware_version			+ SZ_FV)		/* 4  ..27	*/
-#define SZ_CVCAL 24
-
-#define FLASH_ADDR_adc_calibration_dcoffset	(FLASH_ADDR_cv_calibration_offset 		+ SZ_CVCAL)		/* 28  ..43	*/
-#define SZ_ADCCAL 16
-
-#define FLASH_ADDR_dac_calibration_dcoffset	(FLASH_ADDR_adc_calibration_dcoffset 	+ SZ_ADCCAL)	/* 44  ..59	*/
-#define SZ_DACCAL 16
-
-#define FLASH_ADDR_TRACKING_COMP_0			(FLASH_ADDR_dac_calibration_dcoffset 	+ SZ_DACCAL)	/* 60  ..63	*/
-#define SZ_TC0 4
-
-#define FLASH_ADDR_TRACKING_COMP_1			(FLASH_ADDR_TRACKING_COMP_0 			+ SZ_TC0)		/* 64  ..67	*/
-#define SZ_TC1 4
-
-#define FLASH_ADDR_loop_led_brightness		(FLASH_ADDR_TRACKING_COMP_1 			+ SZ_TC1)		/* 68  ..	*/
-#define SZ_LLB 1
-
-#define FLASH_ADDR_LOOP_CLOCK_GATETRIG_0	(FLASH_ADDR_loop_led_brightness 		+ SZ_LLB)		/* 69  ..	*/
-#define SZ_LC0 1
-
-#define FLASH_ADDR_LOOP_CLOCK_GATETRIG_1	(FLASH_ADDR_LOOP_CLOCK_GATETRIG_0 		+ SZ_LC0)		/* 70  ..	*/
-#define SZ_LC1 1
-
-#define FLASH_ADDR_MAIN_CLOCK_GATETRIG		(FLASH_ADDR_LOOP_CLOCK_GATETRIG_1 		+ SZ_LC1)		/* 71  ..	*/
-#define SZ_MC  1
-
-#define FLASH_ADDR_AUTO_MUTE				(FLASH_ADDR_MAIN_CLOCK_GATETRIG 		+ SZ_MC)		/* 72  ..	*/
-#define SZ_AM 1
-
-#define FLASH_ADDR_SOFTCLIP					(FLASH_ADDR_AUTO_MUTE			 		+ SZ_AM)		/* 73  ..	*/
-#define SZ_SC 1
-
-#define FLASH_ADDR_LEVELCV_IS_MIX_0			(FLASH_ADDR_SOFTCLIP			 		+ SZ_SC)		/* 74  ..	*/
-#define SZ_LM0 1
-
-#define FLASH_ADDR_LEVELCV_IS_MIX_1			(FLASH_ADDR_LEVELCV_IS_MIX_0	 		+ SZ_LM0)		/* 75  ..	*/
-#define SZ_LM1 1
-
-#define FLASH_ADDR_FAST_FADE_SAMPLES		(FLASH_ADDR_LEVELCV_IS_MIX_1	 		+ SZ_LM1)		/* 76  ..79	*/
-#define SZ_FFS 4
-
-#define FLASH_ADDR_SLOW_FADE_SAMPLES		(FLASH_ADDR_FAST_FADE_SAMPLES	 		+ SZ_FFS)		/* 80  ..83	*/
-#define SZ_SFS 4
-
-#define FLASH_ADDR_REV_GATETRIG				(FLASH_ADDR_SLOW_FADE_SAMPLES			+ SZ_SFS)		/* 84 ..	*/
-#define SZ_RGT 1
-
-#define FLASH_ADDR_INF_GATETRIG				(FLASH_ADDR_REV_GATETRIG				+ SZ_RGT)		/* 85 ..	*/
-#define SZ_IGT 1
-
-#define FLASH_ADDR_PING_METHOD				(FLASH_ADDR_INF_GATETRIG				+ SZ_IGT)		/* 86 ..	*/
-#define SZ_PM 1
-
-#define FLASH_ADDR_LOG_DELAY_FEED				(FLASH_ADDR_PING_METHOD				+ SZ_PM)		/* 87 ..	*/
-#define SZ_LDF 1
-
-#define FLASH_ADDR_RUNAWAYDC_BLOCK				(FLASH_ADDR_LOG_DELAY_FEED			+ SZ_LDF)		/* 88 ..	*/
-#define SZ_RDCB 1
-
-#define FLASH_ADDR_QUANTIZE_MODE_CHANGES				(FLASH_ADDR_RUNAWAYDC_BLOCK		+ SZ_RDCB)		/* 89 ..	*/
-#define SZ_QCM 1
-
 
 #define FLASH_SYMBOL_bankfilled 0x01
 #define FLASH_SYMBOL_startupoffset 0xAA
 #define FLASH_SYMBOL_firmwareoffset 0xAA550000
 
-uint32_t flash_firmware_version=0;
-
-int32_t flash_CV_CALIBRATION_OFFSET[6];
-int32_t flash_CODEC_DAC_CALIBRATION_DCOFFSET[4];
-int32_t flash_CODEC_ADC_CALIBRATION_DCOFFSET[4];
-
-float flash_param_TRACKING_COMP_0;
-float flash_param_TRACKING_COMP_1;
-
-uint32_t flash_global_param_FAST_FADE_SAMPLES;
-uint32_t flash_global_param_SLOW_FADE_SAMPLES;
-
-uint8_t flash_loop_led_brightness;
-
-uint8_t flash_mode_LOOP_CLOCK_GATETRIG_0;
-uint8_t flash_mode_LOOP_CLOCK_GATETRIG_1;
-uint8_t flash_mode_MAIN_CLOCK_GATETRIG;
-
-uint8_t flash_global_mode_AUTO_MUTE;
-uint8_t flash_global_mode_SOFTCLIP;
-
-uint8_t flash_global_mode_REV_GATETRIG;
-uint8_t flash_global_mode_INF_GATETRIG;
-
-uint8_t flash_mode_LEVELCV_IS_MIX_0;
-uint8_t flash_mode_LEVELCV_IS_MIX_1;
-
-uint8_t flash_global_mode_PING_METHOD;
-uint8_t flash_global_mode_LOG_DELAY_FEED;
-uint8_t flash_global_mode_RUNAWAYDC_BLOCK;
-uint8_t flash_global_mode_QUANTIZE_MODE_CHANGES;
-
 
 void set_firmware_version(void)
 {
-	flash_firmware_version = FW_VERSION;
+	SRAM_user_params->firmware_version = FW_VERSION;
 }
 
 
@@ -147,19 +49,16 @@ void factory_reset(uint8_t loop_afterwards)
 	set_firmware_version();
 	set_default_system_settings();
 
-//	LED_PINGBUT_OFF;
-
 	store_params_into_sram();
 	write_all_params_to_FLASH();
 
-//	LED_PINGBUT_OFF;
 
 	if (loop_afterwards)
 	{
 		fail=0;
 		for (i=0;i<6;i++)
 		{
-			if (CV_CALIBRATION_OFFSET[i]>100 || CV_CALIBRATION_OFFSET[i]<-100 )
+			if (user_params->cv_calibration_offset[i]>100 || user_params->cv_calibration_offset[i]<-100 )
 				fail=1;
 		}
 
@@ -178,58 +77,25 @@ void factory_reset(uint8_t loop_afterwards)
 
 uint32_t load_flash_params(void)
 {
+	uint8_t i;
+	uint8_t *src;
+	uint8_t *dst;
 
 	read_all_params_from_FLASH();
 
-	if (flash_firmware_version > 0 && flash_firmware_version < 500){
+	if (SRAM_user_params->firmware_version > 0 && SRAM_user_params->firmware_version < 500){
 
-		CODEC_ADC_CALIBRATION_DCOFFSET[0] = flash_CODEC_ADC_CALIBRATION_DCOFFSET[0];
-		CODEC_ADC_CALIBRATION_DCOFFSET[1] = flash_CODEC_ADC_CALIBRATION_DCOFFSET[1];
-		CODEC_ADC_CALIBRATION_DCOFFSET[2] = flash_CODEC_ADC_CALIBRATION_DCOFFSET[2];
-		CODEC_ADC_CALIBRATION_DCOFFSET[3] = flash_CODEC_ADC_CALIBRATION_DCOFFSET[3];
+		//memcpy((uint8_t *)(user_params), (const uint8_t *)(SRAM_user_params), sizeof(SystemSettings));
 
-		CODEC_DAC_CALIBRATION_DCOFFSET[0] = flash_CODEC_DAC_CALIBRATION_DCOFFSET[0];
-		CODEC_DAC_CALIBRATION_DCOFFSET[1] = flash_CODEC_DAC_CALIBRATION_DCOFFSET[1];
-		CODEC_DAC_CALIBRATION_DCOFFSET[2] = flash_CODEC_DAC_CALIBRATION_DCOFFSET[2];
-		CODEC_DAC_CALIBRATION_DCOFFSET[3] = flash_CODEC_DAC_CALIBRATION_DCOFFSET[3];
+		src = (uint8_t *)SRAM_user_params;
+		dst = (uint8_t *)user_params;
 
-		CV_CALIBRATION_OFFSET[0] = flash_CV_CALIBRATION_OFFSET[0];
-		CV_CALIBRATION_OFFSET[1] = flash_CV_CALIBRATION_OFFSET[1];
-		CV_CALIBRATION_OFFSET[2] = flash_CV_CALIBRATION_OFFSET[2];
-		CV_CALIBRATION_OFFSET[3] = flash_CV_CALIBRATION_OFFSET[3];
-		CV_CALIBRATION_OFFSET[4] = flash_CV_CALIBRATION_OFFSET[4];
-		CV_CALIBRATION_OFFSET[5] = flash_CV_CALIBRATION_OFFSET[5];
+		for (i=0;i<sizeof(SystemSettings);i++)
+		{
+			*src++ = *dst++;
+		}
 
-		f_param[0][TRACKING_COMP] = flash_param_TRACKING_COMP_0;
-		f_param[1][TRACKING_COMP] = flash_param_TRACKING_COMP_1;
-/*
-		global_i_param[LED_BRIGHTNESS] = flash_loop_led_brightness;
-
-		mode[0][LOOP_CLOCK_GATETRIG] = flash_mode_LOOP_CLOCK_GATETRIG_0;
-		mode[1][LOOP_CLOCK_GATETRIG] = flash_mode_LOOP_CLOCK_GATETRIG_1;
-		mode[0][MAIN_CLOCK_GATETRIG] = flash_mode_MAIN_CLOCK_GATETRIG;
-
-		global_mode[AUTO_MUTE] = flash_global_mode_AUTO_MUTE;
-		global_mode[SOFTCLIP] = flash_global_mode_SOFTCLIP;
-
-		global_mode[REV_GATETRIG] = flash_global_mode_REV_GATETRIG;
-		global_mode[INF_GATETRIG] = flash_global_mode_INF_GATETRIG;
-
-		global_mode[PING_METHOD] = flash_global_mode_PING_METHOD;
-		global_mode[LOG_DELAY_FEED] = flash_global_mode_LOG_DELAY_FEED;
-		global_mode[RUNAWAYDC_BLOCK] = flash_global_mode_RUNAWAYDC_BLOCK;
-		global_mode[QUANTIZE_MODE_CHANGES] = flash_global_mode_QUANTIZE_MODE_CHANGES;
-
-
-		mode[0][LEVELCV_IS_MIX] = (flash_mode_LEVELCV_IS_MIX_0==1) ? 1:0;
-		mode[1][LEVELCV_IS_MIX] = (flash_mode_LEVELCV_IS_MIX_1==1) ? 1:0;
-
-		global_param[FAST_FADE_SAMPLES] = (float)flash_global_param_FAST_FADE_SAMPLES;
-		global_param[SLOW_FADE_SAMPLES] = (float)flash_global_param_SLOW_FADE_SAMPLES;
-		global_param[FAST_FADE_INCREMENT] = set_fade_increment(flash_global_param_FAST_FADE_SAMPLES);
-		global_param[SLOW_FADE_INCREMENT] = set_fade_increment(flash_global_param_SLOW_FADE_SAMPLES);
-*/
-		return (flash_firmware_version);
+		return (SRAM_user_params->firmware_version);
 
 	} else
 	{
@@ -244,19 +110,19 @@ void save_flash_params(void)
 {
 	uint32_t i;
 
-//	LED_REV1_ON;
-
-	//copy global variables to flash_* variables (SRAM staging area)
+	//copy global variables to SRAM staging area
 	store_params_into_sram();
 
 	//copy SRAM variables to FLASH
 	write_all_params_to_FLASH();
 
 	for (i=0;i<10;i++){
-//		LED_PINGBUT_OFF;
+		CLIPLED1_ON;
+		CLIPLED2_OFF;
 		delay_ms(10);
 
-//		LED_PINGBUT_ON;
+		CLIPLED1_OFF;
+		CLIPLED2_ON;
 		delay_ms(10);
 	}
 }
@@ -264,170 +130,107 @@ void save_flash_params(void)
 
 void store_params_into_sram(void)
 {
-	flash_CV_CALIBRATION_OFFSET[0]=CV_CALIBRATION_OFFSET[0];
-	flash_CV_CALIBRATION_OFFSET[1]=CV_CALIBRATION_OFFSET[1];
-	flash_CV_CALIBRATION_OFFSET[2]=CV_CALIBRATION_OFFSET[2];
-	flash_CV_CALIBRATION_OFFSET[3]=CV_CALIBRATION_OFFSET[3];
-	flash_CV_CALIBRATION_OFFSET[4]=CV_CALIBRATION_OFFSET[4];
-	flash_CV_CALIBRATION_OFFSET[5]=CV_CALIBRATION_OFFSET[5];
+	//memcpy((uint8_t *)(SRAM_user_params), (const uint8_t *)(user_params), sizeof(SystemSettings));
+	uint8_t i;
+	uint8_t *src;
+	uint8_t *dst;
 
-	flash_CODEC_DAC_CALIBRATION_DCOFFSET[0]=CODEC_DAC_CALIBRATION_DCOFFSET[0];
-	flash_CODEC_DAC_CALIBRATION_DCOFFSET[1]=CODEC_DAC_CALIBRATION_DCOFFSET[1];
-	flash_CODEC_DAC_CALIBRATION_DCOFFSET[2]=CODEC_DAC_CALIBRATION_DCOFFSET[2];
-	flash_CODEC_DAC_CALIBRATION_DCOFFSET[3]=CODEC_DAC_CALIBRATION_DCOFFSET[3];
+	src = (uint8_t *)user_params;
+	dst = (uint8_t *)SRAM_user_params;
 
-
-	flash_CODEC_ADC_CALIBRATION_DCOFFSET[0]=CODEC_ADC_CALIBRATION_DCOFFSET[0];
-	flash_CODEC_ADC_CALIBRATION_DCOFFSET[1]=CODEC_ADC_CALIBRATION_DCOFFSET[1];
-	flash_CODEC_ADC_CALIBRATION_DCOFFSET[2]=CODEC_ADC_CALIBRATION_DCOFFSET[2];
-	flash_CODEC_ADC_CALIBRATION_DCOFFSET[3]=CODEC_ADC_CALIBRATION_DCOFFSET[3];
-
-	flash_param_TRACKING_COMP_0 = f_param[0][TRACKING_COMP];
-	flash_param_TRACKING_COMP_1 = f_param[1][TRACKING_COMP];
-
-	/*
-	flash_global_param_FAST_FADE_SAMPLES = global_param[FAST_FADE_SAMPLES];
-	flash_global_param_SLOW_FADE_SAMPLES = global_param[SLOW_FADE_SAMPLES];
-
-	flash_loop_led_brightness = global_i_param[LOOP_LED_BRIGHTNESS];
-
-	flash_mode_LOOP_CLOCK_GATETRIG_0 = mode[0][LOOP_CLOCK_GATETRIG];
-	flash_mode_LOOP_CLOCK_GATETRIG_1 = mode[1][LOOP_CLOCK_GATETRIG];
-	flash_mode_MAIN_CLOCK_GATETRIG = mode[0][MAIN_CLOCK_GATETRIG];
-
-	flash_global_mode_AUTO_MUTE = global_mode[AUTO_MUTE];
-	flash_global_mode_SOFTCLIP = global_mode[SOFTCLIP];
-
-	flash_global_mode_REV_GATETRIG = global_mode[REV_GATETRIG];
-	flash_global_mode_INF_GATETRIG = global_mode[INF_GATETRIG];
-
-	flash_global_mode_PING_METHOD = global_mode[PING_METHOD];
-	flash_global_mode_LOG_DELAY_FEED = global_mode[LOG_DELAY_FEED];
-
-	flash_global_mode_RUNAWAYDC_BLOCK = global_mode[RUNAWAYDC_BLOCK];
-	flash_global_mode_QUANTIZE_MODE_CHANGES = global_mode[QUANTIZE_MODE_CHANGES];
-
-	flash_mode_LEVELCV_IS_MIX_0 = mode[0][LEVELCV_IS_MIX];
-	flash_mode_LEVELCV_IS_MIX_1 = mode[1][LEVELCV_IS_MIX];
-
-	*/
+	for (i=0;i<sizeof(SystemSettings);i++)
+	{
+		*src++ = *dst++;
+	}
 }
 
 
 void write_all_params_to_FLASH(void)
 {
 	uint8_t i;
+	uint8_t *addr;
 
-	flash_begin_open_program();
+	//flash_begin_open_program();
 
-	flash_open_erase_sector(FLASH_ADDR_userparams);
+	//flash_open_erase_sector(FLASH_ADDR_userparams);
 
-	flash_open_program_word(flash_firmware_version + FLASH_SYMBOL_firmwareoffset, FLASH_ADDR_firmware_version);
+	SRAM_user_params->firmware_version += FLASH_SYMBOL_firmwareoffset;
 
+	addr = (uint8_t *)SRAM_user_params;
 
-	for (i=0;i<6;i++)
+	for(i=0;i<sizeof(SystemSettings);i++)
 	{
-		flash_open_program_word(*(uint32_t *)&(flash_CV_CALIBRATION_OFFSET[i]), FLASH_ADDR_cv_calibration_offset+(i*4));
-	}
-	for (i=0;i<4;i++)
-	{
-		flash_open_program_word(*(uint32_t *)&(flash_CODEC_DAC_CALIBRATION_DCOFFSET[i]), FLASH_ADDR_dac_calibration_dcoffset+(i*4));
-		flash_open_program_word(*(uint32_t *)&(flash_CODEC_ADC_CALIBRATION_DCOFFSET[i]), FLASH_ADDR_adc_calibration_dcoffset+(i*4));
+	//	flash_open_program_byte(*addr++, FLASH_ADDR_userparams + i);
 	}
 
-
-
-	flash_open_program_word(*(uint32_t *)&flash_param_TRACKING_COMP_0, FLASH_ADDR_TRACKING_COMP_0);
-	flash_open_program_word(*(uint32_t *)&flash_param_TRACKING_COMP_1, FLASH_ADDR_TRACKING_COMP_1);
-
-	flash_open_program_byte(flash_loop_led_brightness, FLASH_ADDR_loop_led_brightness);
-
-	flash_open_program_byte(flash_mode_LOOP_CLOCK_GATETRIG_0, FLASH_ADDR_LOOP_CLOCK_GATETRIG_0);
-	flash_open_program_byte(flash_mode_LOOP_CLOCK_GATETRIG_1, FLASH_ADDR_LOOP_CLOCK_GATETRIG_1);
-	flash_open_program_byte(flash_mode_MAIN_CLOCK_GATETRIG, FLASH_ADDR_MAIN_CLOCK_GATETRIG);
-
-	flash_open_program_byte(flash_global_mode_AUTO_MUTE, FLASH_ADDR_AUTO_MUTE);
-	flash_open_program_byte(flash_global_mode_SOFTCLIP, FLASH_ADDR_SOFTCLIP);
-
-	flash_open_program_byte(flash_mode_LEVELCV_IS_MIX_0, FLASH_ADDR_LEVELCV_IS_MIX_0);
-	flash_open_program_byte(flash_mode_LEVELCV_IS_MIX_1, FLASH_ADDR_LEVELCV_IS_MIX_1);
-
-	flash_open_program_word(flash_global_param_FAST_FADE_SAMPLES, FLASH_ADDR_FAST_FADE_SAMPLES);
-	flash_open_program_word(flash_global_param_SLOW_FADE_SAMPLES, FLASH_ADDR_SLOW_FADE_SAMPLES);
-
-	flash_open_program_byte(flash_global_mode_REV_GATETRIG, FLASH_ADDR_REV_GATETRIG);
-	flash_open_program_byte(flash_global_mode_INF_GATETRIG, FLASH_ADDR_INF_GATETRIG);
-
-	flash_open_program_byte(flash_global_mode_PING_METHOD, FLASH_ADDR_PING_METHOD);
-	flash_open_program_byte(flash_global_mode_LOG_DELAY_FEED, FLASH_ADDR_LOG_DELAY_FEED);
-	flash_open_program_byte(flash_global_mode_RUNAWAYDC_BLOCK, FLASH_ADDR_RUNAWAYDC_BLOCK);
-	flash_open_program_byte(flash_global_mode_QUANTIZE_MODE_CHANGES, FLASH_ADDR_QUANTIZE_MODE_CHANGES);
-
-
-	flash_end_open_program();
+	//flash_end_open_program();
 }
 
 
 void read_all_params_from_FLASH(void)
 {
 	uint8_t i;
+	//uint32_t addr;
+	uint8_t *ptr;
 
-	flash_firmware_version = flash_read_word(FLASH_ADDR_firmware_version) - FLASH_SYMBOL_firmwareoffset;
+	ptr = (uint8_t *)SRAM_user_params;
 
-	for (i=0;i<6;i++)
+	for(i=0;i<sizeof(SystemSettings);i++)
 	{
-		flash_CV_CALIBRATION_OFFSET[i] = flash_read_word(FLASH_ADDR_cv_calibration_offset+(i*4));
-	}
-	for (i=0;i<4;i++)
-	{
-		flash_CODEC_DAC_CALIBRATION_DCOFFSET[i] = flash_read_word(FLASH_ADDR_dac_calibration_dcoffset+(i*4));
-		flash_CODEC_ADC_CALIBRATION_DCOFFSET[i] = flash_read_word(FLASH_ADDR_adc_calibration_dcoffset+(i*4));
+		*ptr++ = flash_read_byte(FLASH_ADDR_userparams + i);
 	}
 
-	flash_param_TRACKING_COMP_0 = flash_read_word(FLASH_ADDR_TRACKING_COMP_0);
-	if (flash_param_TRACKING_COMP_0 > 1.25 || flash_param_TRACKING_COMP_0 < 0.75)
-		flash_param_TRACKING_COMP_0 = 1.0;
+	SRAM_user_params->firmware_version -= FLASH_SYMBOL_firmwareoffset;
 
-	flash_param_TRACKING_COMP_1 = flash_read_word(FLASH_ADDR_TRACKING_COMP_1);
-	if (flash_param_TRACKING_COMP_1 > 1.25 || flash_param_TRACKING_COMP_1 < 0.75)
-		flash_param_TRACKING_COMP_1 = 1.0;
+/*
+	addr = FLASH_ADDR_userparams;
+
+	SRAM_user_params->firmware_version = flash_read_word(addr) - FLASH_SYMBOL_firmwareoffset;
+	addr += 4;
+
+	for (i=0;i<8;i++)
+	{
+		SRAM_user_params->cv_calibration_offset[i] = (int32_t)flash_read_word(addr);
+		addr+=4;
+	}
+	for (i=0;i<2;i++)
+	{
+		SRAM_user_params->codec_adc_calibration_dcoffset[i] = (int32_t)flash_read_word(addr);
+		addr+=4;
+	}
+	for (i=0;i<2;i++)
+	{
+		SRAM_user_params->codec_dac_calibration_dcoffset[i] = (int32_t)flash_read_word(addr);
+		addr+=4;
+	}
+	for (i=0;i<2;i++)
+	{
+		SRAM_user_params->tracking_comp[i] = (float)flash_read_word(addr);
+		addr+=4;
+	}
+*/
 
 
-	flash_global_param_FAST_FADE_SAMPLES = flash_read_word(FLASH_ADDR_FAST_FADE_SAMPLES);
-	if (flash_global_param_FAST_FADE_SAMPLES < 1 || flash_global_param_FAST_FADE_SAMPLES > 48000)
-		flash_global_param_FAST_FADE_SAMPLES = 196;
-
-	flash_global_param_SLOW_FADE_SAMPLES = flash_read_word(FLASH_ADDR_SLOW_FADE_SAMPLES);
-	if (flash_global_param_SLOW_FADE_SAMPLES < 1 || flash_global_param_SLOW_FADE_SAMPLES > 48000)
-		flash_global_param_SLOW_FADE_SAMPLES = 196;
-
-	flash_loop_led_brightness = flash_read_byte(FLASH_ADDR_loop_led_brightness);
-	if (flash_loop_led_brightness > 31 || flash_loop_led_brightness < 2)
-		flash_loop_led_brightness = 4;
-
-	flash_mode_LOOP_CLOCK_GATETRIG_0 = flash_read_byte(FLASH_ADDR_LOOP_CLOCK_GATETRIG_0) ? 1 : 0; //default trig
-	flash_mode_LOOP_CLOCK_GATETRIG_1 = flash_read_byte(FLASH_ADDR_LOOP_CLOCK_GATETRIG_1) ? 1 : 0; //default trig
-	flash_mode_MAIN_CLOCK_GATETRIG = flash_read_byte(FLASH_ADDR_MAIN_CLOCK_GATETRIG) ? 1 : 0; //default trig
-
-	flash_global_mode_AUTO_MUTE = flash_read_byte(FLASH_ADDR_AUTO_MUTE) ? 1 : 0;  //default ON
-	flash_global_mode_SOFTCLIP = flash_read_byte(FLASH_ADDR_SOFTCLIP) ? 1 : 0; //default ON
-
-
-	flash_mode_LEVELCV_IS_MIX_0 = (flash_read_byte(FLASH_ADDR_LEVELCV_IS_MIX_0)==1) ? 1 : 0; //default OFF
-	flash_mode_LEVELCV_IS_MIX_1 = (flash_read_byte(FLASH_ADDR_LEVELCV_IS_MIX_1)==1) ? 1 : 0; //default OFF
-
-	flash_global_mode_PING_METHOD = flash_read_byte(FLASH_ADDR_PING_METHOD);
-//	if (flash_global_mode_PING_METHOD > NUM_PING_METHODS || flash_global_mode_PING_METHOD < 0)
-//		flash_global_mode_PING_METHOD = IGNORE_FLAT_DEVIATION_10;
-
-	flash_global_mode_LOG_DELAY_FEED = (flash_read_byte(FLASH_ADDR_LOG_DELAY_FEED)==1) ? 1 : 0; //default OFF
-
-	flash_global_mode_RUNAWAYDC_BLOCK = (flash_read_byte(FLASH_ADDR_RUNAWAYDC_BLOCK)==0) ? 0 : 1; //default ON
-
-	flash_global_mode_QUANTIZE_MODE_CHANGES = (flash_read_byte(FLASH_ADDR_QUANTIZE_MODE_CHANGES)==1) ? 1 : 0; //default OFF
-
-	flash_global_mode_REV_GATETRIG = flash_read_byte(FLASH_ADDR_REV_GATETRIG) ? 1 : 0; //default trig
-	flash_global_mode_INF_GATETRIG = flash_read_byte(FLASH_ADDR_INF_GATETRIG) ? 1 : 0; //default trig
+	for (i=0;i<8;i++)
+	{
+		if (SRAM_user_params->cv_calibration_offset[i] > 100 || SRAM_user_params->cv_calibration_offset[i] < -100)
+			SRAM_user_params->cv_calibration_offset[i] = 0;
+	}
+	for (i=0;i<8;i++)
+	{
+		if (SRAM_user_params->codec_adc_calibration_dcoffset[i] > 4000 || SRAM_user_params->codec_adc_calibration_dcoffset[i] < -100)
+			SRAM_user_params->codec_adc_calibration_dcoffset[i] = 0;
+	}
+	for (i=0;i<8;i++)
+	{
+		if (SRAM_user_params->codec_dac_calibration_dcoffset[i] > 4000 || SRAM_user_params->codec_dac_calibration_dcoffset[i] < -4000)
+			SRAM_user_params->codec_dac_calibration_dcoffset[i] = 0;
+	}
+	for (i=0;i<2;i++)
+	{
+		if (SRAM_user_params->tracking_comp[i] > 1.25 || SRAM_user_params->tracking_comp[i] < 0.75)
+			SRAM_user_params->tracking_comp[i] = 1.0;
+	}
 
 }
 

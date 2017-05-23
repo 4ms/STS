@@ -11,6 +11,7 @@
 #include "audio_util.h"
 #include "wav_recording.h"
 #include "sts_filesystem.h"
+#include "dig_pins.h"
 
 
 
@@ -29,6 +30,7 @@ extern enum PlayLoadTriage play_load_triage;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
+//#define WRITE_BLOCK_SIZE 8192
 #define WRITE_BLOCK_SIZE 8192
 
 //
@@ -110,10 +112,10 @@ void record_audio_to_buffer(int16_t *src)
 			//
 			if (SAMPLINGBYTES==2)
 			{
-				t_buff16[i*2] = (*src++) /*+ CODEC_ADC_CALIBRATION_DCOFFSET[channel+0]*/;
+				t_buff16[i*2] = (*src++) /*+ user_params->codec_adc_calibration_dcoffset[channel+0]*/;
 				dummy=*src++;
 
-				t_buff16[i*2+1] = (*src++) /*+ CODEC_ADC_CALIBRATION_DCOFFSET[channel+2]*/;
+				t_buff16[i*2+1] = (*src++) /*+ user_params->codec_adc_calibration_dcoffset[channel+2]*/;
 				dummy=*src++;
 			}
 			else
@@ -242,7 +244,7 @@ void write_buffer_to_storage(void)
 				//buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
 				buffer_lead = CB_distance(rec_buff, 0);
 
-				if (buffer_lead > WRITE_BLOCK_SIZE)
+				if (buffer_lead > WRITE_BLOCK_SIZE) //Error: comparing # samples to # bytes. Should be buffer_lead*SAMPLINGBYTES
 				{
 
 					addr_exceeded = memory_read16_cb(rec_buff, t_buff16, WRITE_BLOCK_SIZE>>1, 0);
@@ -252,6 +254,7 @@ void write_buffer_to_storage(void)
 						sz = WRITE_BLOCK_SIZE;
 						res = f_write(&recfil, t_buff16, sz, &written);
 						f_sync(&recfil);
+						
 						if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
 						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
 						samplebytes_recorded += written;
@@ -319,6 +322,13 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].numChannels = 2;
 				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign = 4;
 				samples[sample_bank_now_recording][sample_num_now_recording].startOfData = 44;
+				samples[sample_bank_now_recording][sample_num_now_recording].PCM = 1;
+
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_start = 0;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded & 0xFFFFFFF8;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded & 0xFFFFFFF8;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
+
 				res = write_sampleindex_file();
 				if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
 

@@ -93,6 +93,7 @@
  void SD_LowLevel_Init(void);
  void SD_LowLevel_DMA_TxConfig(uint32_t *BufferSRC, uint32_t BufferSize);
  void SD_LowLevel_DMA_RxConfig(uint32_t *BufferDST, uint32_t BufferSize);
+void SD_LowLevel_DMA_RxConfigFIXED(uint8_t *BufferDST, uint32_t BufferSize);
 
  /*end from stm32f4xx_discovery.h*/
 
@@ -377,8 +378,8 @@ typedef struct
 
 /* Uncomment the following line to select the SDIO Data transfer mode */
 #if !defined (SD_DMA_MODE) && !defined (SD_POLLING_MODE)
-//#define SD_DMA_MODE                                ((uint32_t)0x00000000)
-#define SD_POLLING_MODE                            ((uint32_t)0x00000002)
+#define SD_DMA_MODE                                ((uint32_t)0x00000000)
+//#define SD_POLLING_MODE                            ((uint32_t)0x00000002)
 #endif
 
 /**

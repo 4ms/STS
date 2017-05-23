@@ -8,11 +8,6 @@
 
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-#define MAX_ASSIGNED 32
-uint8_t cur_assigned_sample_i		[NUM_PLAY_CHAN];
-uint8_t end_assigned_sample_i		[NUM_PLAY_CHAN];
-uint8_t original_assigned_sample_i	[NUM_PLAY_CHAN];
-Sample t_assign_samples[NUM_PLAY_CHAN][32];
 
 
 uint8_t bank_status[MAX_NUM_BANKS];
@@ -127,17 +122,7 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		color[0]=0;
 		return(0);
 	}
-//
-//	if (bank > MAX_NUM_REC_BANKS)
-//	{
-//		//Append "-SAVE" to directory name
-//		path[i++] = '-';
-//		path[i++] = 'S';
-//		path[i++] = 'A';
-//		path[i++] = 'V';
-//		path[i++] = 'E';
-//		path[i] = 0;
-//	}
+
 
 }
 
@@ -222,7 +207,12 @@ void clear_sample_header(Sample *s_sample)
 	s_sample->numChannels = 0;
 	s_sample->blockAlign = 0;
 	s_sample->startOfData = 0;
+	s_sample->PCM = 0;
 
+	s_sample->inst_start = 0;
+	s_sample->inst_end = 0;
+	s_sample->inst_size = 0;
+	s_sample->inst_gain = 1.0;
 }
 
 
@@ -239,12 +229,12 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 	uint32_t br;
 	uint32_t rd;
 	WaveChunk chunk;
-
+	uint32_t next_chunk_start;
 
 	rd = sizeof(WaveHeader);
 	res = f_read(sample_file, &sample_header, rd, &br);
 
-	if (res != FR_OK)	{g_error |= FILE_READ_FAIL; return(res);}//file not opened
+	if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; return(res);}//file not opened
 	else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading first header
 	else if ( !is_valid_wav_header(sample_header) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//first header error (not a valid wav file)
 
@@ -258,29 +248,33 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 		{
 			res = f_read(sample_file, &chunk, rd, &br);
 
-			if (res != FR_OK)	{g_error |= FILE_READ_FAIL; f_close(sample_file); break;}
+			if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
 			if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
+			next_chunk_start = f_tell(sample_file) + chunk.chunkSize;
 			//fast-forward to the next chunk
 			if (chunk.chunkId != ccFMT)
-				f_lseek(sample_file, f_tell(sample_file) + chunk.chunkSize);
+				f_lseek(sample_file, next_chunk_start);
 
 		}
 
 		if (chunk.chunkId == ccFMT)
 		{
 			//Go back to beginning of chunk --probably could do this more elegantly by removing fmtID and fmtSize from WaveFmtChunk and just reading the next bit of data
-			f_lseek(sample_file, f_tell(sample_file) - sizeof(WaveChunk));
+			f_lseek(sample_file, f_tell(sample_file) - br);
 
-			//Re-read whole chunk, since it's a WaveFmtChunk
+			//Re-read the whole chunk (or at least the fields we need) since it's a WaveFmtChunk
 			rd = sizeof(WaveFmtChunk);
 			res = f_read(sample_file, &fmt_chunk, rd, &br);
 
-			if (res != FR_OK)	{g_error |= FILE_READ_FAIL; return(res);}//file not read
+			if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; return(res);}//file not read
 			else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading format header
 			else if ( !is_valid_format_chunk(fmt_chunk) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//format header error (not a valid wav file)
 			else
 			{
+				//We found the 'fmt ' chunk, now skip to the next chunk
+				//Note: this is necessary in case the 'fmt ' chunk is not exactly sizeof(WaveFmtChunk) bytes, even though that's how many we care about
+				f_lseek(sample_file, next_chunk_start);
 
 				//Look for the DATA chunk
 				chunk.chunkId = 0;
@@ -290,7 +284,7 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 				{
 					res = f_read(sample_file, &chunk, rd, &br);
 
-					if (res != FR_OK)	{g_error |= FILE_READ_FAIL; f_close(sample_file); break;}
+					if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
 					if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
 					//fast-forward to the next chunk
@@ -304,12 +298,25 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 						{
 							f_close(sample_file);break;
 						}
+
+						//Check the file is really as long as the data chunkSize says it is
+						if (f_size(sample_file) < (f_tell(sample_file) + chunk.chunkSize))
+						{
+							chunk.chunkSize = f_size(sample_file) - f_tell(sample_file);
+						}
+
 						s_sample->sampleSize = chunk.chunkSize;
 						s_sample->sampleByteSize = fmt_chunk.bitsPerSample>>3;
 						s_sample->sampleRate = fmt_chunk.sampleRate;
 						s_sample->numChannels = fmt_chunk.numChannels;
 						s_sample->blockAlign = fmt_chunk.numChannels * fmt_chunk.bitsPerSample>>3;
 						s_sample->startOfData = f_tell(sample_file);
+						s_sample->PCM = fmt_chunk.audioFormat;
+
+						s_sample->inst_end = s_sample->sampleSize ;//& 0xFFFFFFF8;
+						s_sample->inst_size = s_sample->sampleSize ;//& 0xFFFFFFF8;
+						s_sample->inst_start = 0;
+						s_sample->inst_gain = 1.0;
 
 						return(FR_OK);
 
@@ -418,7 +425,7 @@ uint8_t load_bank_from_disk(uint8_t bank)
 	{
 		tname[0]=0;
 
-		while (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)
+		while (sample_num < NUM_SAMPLES_PER_BANK)
 		{
 			res = find_next_ext_in_dir(&dir, ".wav", tname);
 			if (res!=FR_OK) break;
@@ -446,7 +453,7 @@ uint8_t load_bank_from_disk(uint8_t bank)
 		f_closedir(&dir);
 
 
-		//Special try again using root directory for first bank
+		//Special try again using root directory for first bank (WHITE)
 		if (bank==0 && sample_num < NUM_SAMPLES_PER_BANK)
 		{
 			res = f_opendir(&dir, "/");
@@ -531,218 +538,6 @@ uint8_t load_sampleindex_file(void)
 	f_close(&temp_file);
 	return(0);	//OK
 
-}
-
-/* sts_fs_assignment.c */
-
-uint8_t load_samples_to_assign(uint8_t bank, uint8_t chan)
-{
-	uint32_t i;
-	uint32_t sample_num;
-	FIL temp_file;
-	FRESULT res;
-	DIR dir;
-	char path[10];
-	char tname[_MAX_LFN+1];
-	char path_tname[_MAX_LFN+1];
-
-	if (bank >= MAX_NUM_REC_BANKS)	bank -= MAX_NUM_REC_BANKS;
-
-	sample_num=0;
-	i = bank_to_color(bank, path);
-
-	res = f_opendir(&dir, path);
-	if (res==FR_NO_PATH)	return(0);
-	//ToDo: check for variations of capital letters (or can we just check the short fname?)
-
-	if (res==FR_OK)
-	{
-		tname[0]=0;
-
-		while (sample_num < MAX_ASSIGNED)
-		{
-			res = find_next_ext_in_dir(&dir, ".wav", tname);
-			if (res!=FR_OK) break;
-
-			i = str_len(path);
-			str_cpy(path_tname, path);
-			path_tname[i]='/';
-			str_cpy(&(path_tname[i+1]), tname);
-
-			res = f_open(&temp_file, path_tname, FA_READ);
-			f_sync(&temp_file);
-
-			if (res==FR_OK)
-			{
-				res = load_sample_header(&t_assign_samples[chan][sample_num], &temp_file);
-
-				if (res==FR_OK)
-				{
-					str_cpy(t_assign_samples[chan][sample_num++].filename, path_tname);
-				}
-
-			}
-			f_close(&temp_file);
-		}
-		f_closedir(&dir);
-
-		//Special try again using root directory for first bank
-		if (bank==0 && sample_num < MAX_ASSIGNED)
-		{
-			res = f_opendir(&dir, "/");
-			if (res==FR_OK)
-			{
-				tname[0]=0;
-				while (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)
-				{
-					res = find_next_ext_in_dir(&dir, ".wav", tname);
-					if (res!=FR_OK) break;
-
-					res = f_open(&temp_file, tname, FA_READ);
-					f_sync(&temp_file);
-
-					if (res==FR_OK)
-					{
-						res = load_sample_header(&t_assign_samples[chan][sample_num], &temp_file);
-
-						if (res==FR_OK)
-						{
-							str_cpy(t_assign_samples[chan][sample_num++].filename, tname);
-						}
-					}
-					f_close(&temp_file);
-				}
-				f_closedir(&dir);
-			}
-		}
-
-
-	}
-	else
-	{
-		g_error=CANNOT_OPEN_ROOT_DIR;
-		return(0);
-	}
-
-	return(sample_num);
-}
-
-uint8_t find_current_sample_in_assign(Sample *s, uint8_t chan)
-{
-	uint8_t i;
-
-	original_assigned_sample_i[chan] = 0xFF;//error, not found
-
-	for (i=0; i<end_assigned_sample_i[chan]; i++)
-	{
-		if (str_cmp(t_assign_samples[chan][i].filename, s->filename))
-		{
-			original_assigned_sample_i[chan] = i;
-			break;
-		}
-	}
-
-	if (original_assigned_sample_i[chan] == 0xFF)
-		return(1); //fail
-
-	cur_assigned_sample_i[chan] = original_assigned_sample_i[chan];
-	return(0);
-
-}
-
-
-void enter_assignment_mode(uint8_t chan)
-{
-	uint8_t i;
-
-	//force us to be on a non -SAVE bank
-	if (i_param[chan][BANK] >= MAX_NUM_REC_BANKS)
-	{
-		do i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
-		while (i_param[chan][BANK] >= MAX_NUM_REC_BANKS);
-
-		flags[PlayBank1Changed + chan*2] = 1;
-	}
-
-	end_assigned_sample_i[chan] = load_samples_to_assign(i_param[chan][BANK], chan);
-
-	if (end_assigned_sample_i[chan])
-	{
-		//find the current sample in the t_assigned_samples array
-		i = find_current_sample_in_assign(&(samples[ i_param[chan][BANK] ][ i_param[chan][SAMPLE] ]), chan);
-		if (i)	{flags[AssigningEmptySample1+chan] = 1;}
-
-		//Add a blank/erase sample at the end
-		t_assign_samples[chan][end_assigned_sample_i[chan]].filename[0] = 0;
-		t_assign_samples[chan][end_assigned_sample_i[chan]].sampleSize = 0;
-		end_assigned_sample_i[chan] ++;
-
-		cur_assigned_sample_i[chan] = original_assigned_sample_i[chan];
-		global_mode[ASSIGN_CH1 + chan] = 1;
-
-	} else
-	{
-		flags[AssignModeRefused1+chan] = 4;
-	}
-}
-
-void assign_sample(uint8_t chan, uint8_t assigned_sample_i)
-{
-	uint8_t sample, bank;
-
-	bank = i_param[chan][BANK];
-	sample = i_param[chan][SAMPLE];
-
-	str_cpy(samples[bank][sample].filename,   t_assign_samples[chan][ assigned_sample_i ].filename);
-	samples[bank][sample].blockAlign 		= t_assign_samples[chan][ assigned_sample_i ].blockAlign;
-	samples[bank][sample].numChannels 		= t_assign_samples[chan][ assigned_sample_i ].numChannels;
-	samples[bank][sample].sampleByteSize 	= t_assign_samples[chan][ assigned_sample_i ].sampleByteSize;
-	samples[bank][sample].sampleRate 		= t_assign_samples[chan][ assigned_sample_i ].sampleRate;
-	samples[bank][sample].sampleSize 		= t_assign_samples[chan][ assigned_sample_i ].sampleSize;
-	samples[bank][sample].startOfData 		= t_assign_samples[chan][ assigned_sample_i ].startOfData;
-
-	flags[ForceFileReload1+chan] = 1;
-
-	if (samples[bank][sample].filename[0] == 0)
-		flags[AssigningEmptySample1 + chan] = 1;
-	else
-		flags[AssigningEmptySample1 + chan] = 0;
-
-}
-
-
-void save_exit_assignment_mode(uint8_t chan)
-{
-	FRESULT res;
-
-	global_mode[ASSIGN_CH1 + chan] = 0;
-
-	check_enabled_banks(); //disables a bank if we cleared it out
-
-	res = write_sampleindex_file();
-	if (res!=FR_OK) {g_error|=CANNOT_WRITE_INDEX; check_errors();}
-
-}
-
-void cancel_exit_assignment_mode(uint8_t chan)
-{
-	assign_sample(chan, original_assigned_sample_i[chan]);
-	global_mode[ASSIGN_CH1 + chan] = 0;
-}
-
-
-void next_unassigned_sample(uint8_t chan)
-{
-
-	play_state[chan]=SILENT;
-
-	cur_assigned_sample_i[chan] ++;
-	if (cur_assigned_sample_i[chan] >= end_assigned_sample_i[chan] || cur_assigned_sample_i[chan] >= MAX_ASSIGNED)
-		cur_assigned_sample_i[chan] = 0;
-
-	assign_sample(chan, cur_assigned_sample_i[chan]);
-
-	flags[Play1Trig + chan]=1;
 }
 
 

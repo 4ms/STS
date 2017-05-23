@@ -3483,8 +3483,12 @@ FRESULT f_read (
 
 	for ( ;  btr;								/* Repeat until all data read */
 		rbuff += rcnt, fp->fptr += rcnt, *br += rcnt, btr -= rcnt) {
-		if (fp->fptr % SS(fs) == 0) {			/* On the sector boundary? */
-			csect = (UINT)(fp->fptr / SS(fs) & (fs->csize - 1));	/* Sector offset in the cluster */
+//		if (fp->fptr % SS(fs) == 0) {			/* On the sector boundary? */
+//			csect = (UINT)(fp->fptr / SS(fs) & (fs->csize - 1));	/* Sector offset in the cluster */
+		//replaced by DG:
+		if ((fp->fptr & 0x000001FF) == 0) {			/* On the sector boundary? */
+			csect = (UINT)((fp->fptr >> 9) & (fs->csize - 1));	/* Sector offset in the cluster */
+		
 			if (csect == 0) {					/* On the cluster boundary? */
 				if (fp->fptr == 0) {			/* On the top of the file? */
 					clst = fp->obj.sclust;		/* Follow cluster chain from the origin */
@@ -3499,14 +3503,14 @@ FRESULT f_read (
 					}
 				}
 				if (clst < 2) ABORT(fs, FR_INT_ERR);
-				if (clst == 0xFFFFFFFF)
-					ABORT(fs, FR_DISK_ERR);
+				if (clst == 0xFFFFFFFF) ABORT(fs, FR_DISK_ERR);
 				fp->clust = clst;				/* Update current cluster */
 			}
 			sect = clust2sect(fs, fp->clust);	/* Get current sector */
 			if (!sect) ABORT(fs, FR_INT_ERR);
 			sect += csect;
-			cc = btr / SS(fs);					/* When remaining bytes >= sector size, */
+			cc = btr >> 9; //Edit by DG
+//			cc = btr / SS(fs);					/* When remaining bytes >= sector size, */
 			if (cc) {							/* Read maximum contiguous sectors directly */
 				if (csect + cc > fs->csize) {	/* Clip at cluster boundary */
 					cc = fs->csize - csect;
@@ -3543,13 +3547,15 @@ FRESULT f_read (
 #endif
 			fp->sect = sect;
 		}
-		rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
+		rcnt = SS(fs) - ((UINT)fp->fptr & 0x000001FF);	//edit by DG /* Number of bytes left in the sector */
+//		rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
 		if (rcnt > btr) rcnt = btr;					/* Clip it by btr if needed */
 #if _FS_TINY
 		if (move_window(fs, fp->sect) != FR_OK)	ABORT(fs, FR_DISK_ERR);	/* Move sector window */
 		mem_cpy(rbuff, fs->win + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
 #else
-		mem_cpy(rbuff, fp->buf + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
+//		mem_cpy(rbuff, fp->buf + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
+		mem_cpy(rbuff, fp->buf + (fp->fptr & 0x000001FF), rcnt);	/* Extract partial sector */
 #endif
 	}
 
