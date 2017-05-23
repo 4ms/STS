@@ -178,7 +178,7 @@ void Button_Debounce_IRQHandler(void)
 						case Play2:
 							if (!global_mode[EDIT_MODE])
 							{
-								if (i_param[1][LOOPING] && button_state[Play1] == DOWN) 
+								if (i_param[1][LOOPING] && button_state[Play2] == DOWN) 
 									flags[Play2But] = 1;
 							}
 							break;
@@ -307,7 +307,6 @@ void Button_Debounce_IRQHandler(void)
 			button_state[Bank1] = UP;
 			button_state[Bank2] = UP;
 		}
-
 
 
 		// Clear TIM update interrupt
