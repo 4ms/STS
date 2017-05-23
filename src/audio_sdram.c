@@ -261,6 +261,41 @@ uint32_t memory_write16(uint32_t *addr, uint8_t channel, int16_t *wr_buff, uint3
 }
 */
 
+uint32_t memory_write32_cb(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_samples, uint8_t decrement)
+{
+	uint32_t i;
+	uint8_t heads_crossed=0;
+	uint8_t start_polarity, end_polarity, start_wrap, end_wrap;
+
+	//b->in = (b->in & 0xFFFFFFFE);
+
+	//better way of detecting head-crossing:
+	start_polarity = (b->in < b->out) ? 0 : 1;
+	start_wrap = b->wrapping;
+
+	for (i=0;i<num_samples;i++)
+	{
+		*((uint32_t *)b->in) = wr_buff[i];
+
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		CB_offset_in_address(b, 4, decrement);
+	}
+
+	end_polarity = (b->in < b->out) ? 0 : 1;
+	end_wrap = b->wrapping; //0 or 1
+
+	//start_polarity + end_polarity  is (0/2 if no change, 1 if change)
+	//start_wrap + end_wrap is (0/2 if no change, 1 if change)
+	//Thus the sum of all four is even unless just polarity or just wrap changes (but not both)
+
+	if ((end_wrap + start_wrap + start_polarity + end_polarity) & 0b01) //if (sum is odd)
+		return(1); //warning: in pointer and out pointer crossed
+	else
+		return(0); //pointers did not cross
+
+}
+
 uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement)
 {
 	uint32_t i;

@@ -18,8 +18,8 @@ uint32_t align_addr(uint32_t addr, uint32_t blockAlign)
 	else if (blockAlign == 8)
 		addr &= 0xFFFFFFF8;
 	else if (blockAlign == 6)	{
-		t = addr / 6;
-		addr = t * 6;
+		t = addr / 6UL;
+		addr = t * 6UL;
 	}
 	else
 		return 0;

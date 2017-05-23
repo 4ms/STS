@@ -89,7 +89,6 @@ inline int16_t get_24b_sample(uint32_t addr, uint8_t stereomode)
 //Optimize further by having a different routine for STEREO_SUM, LEFT, and RIGHT (will save the if branch for each sample read)
 //Then we also need a different memory_read_sample function and safe_inc_num_play_addr function
 //This will save the "if" for every memory read, and the "while" in every safe_inc_num_play_addr
-//Also optmize/cleanup a bit by making fractional_pos a static, instead of an argument
 
 void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Stereo_Modes stereomode, uint8_t block_align, uint8_t chan, float *fractional_pos, int32_t *out)
 {
@@ -217,8 +216,9 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 
 
 
-void resample_read24(float rs, CircularBuffer* buf, uint32_t buff_len, enum Stereo_Modes stereomode, uint8_t block_align, uint8_t chan, float *fractional_pos, int32_t *out)
+void resample_read24(float rs, CircularBuffer* buf, uint32_t buff_len, enum Stereo_Modes stereomode, uint8_t block_align, uint8_t chan, int32_t *out)
 {
+	static float fractional_pos[4] = {0,0,0,0};
 	static float xm1[4], x0[4], x1[4], x2[4];
 	float a,b,c;
 	uint32_t outpos;
