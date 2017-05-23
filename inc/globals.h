@@ -20,7 +20,7 @@
 
 #define BASE_SAMPLE_RATE 44100
 
-#define FW_VERSION 0
+#define FW_VERSION 1
 
 enum Flags {
 	PlaySample1Changed,

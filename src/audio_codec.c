@@ -2,9 +2,9 @@
 #include "sampler.h"
 #include "wav_recording.h"
 #include "params.h"
+#include "flash_user.h"
 
-extern int16_t CODEC_DAC_CALIBRATION_DCOFFSET[4];
-//extern int16_t CODEC_ADC_CALIBRATION_DCOFFSET[4];
+extern SystemSettings *user_params;
 
 extern uint8_t SAMPLINGBYTES;
 
@@ -43,9 +43,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	{
 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 		{
-			*dst++ = CODEC_DAC_CALIBRATION_DCOFFSET[0];
+			*dst++ = user_params->codec_dac_calibration_dcoffset[0];
 			*dst++ = 0;
-			*dst++ = CODEC_DAC_CALIBRATION_DCOFFSET[1];
+			*dst++ = user_params->codec_dac_calibration_dcoffset[1];
 			*dst++ = 0;
 		}
 	}
@@ -53,9 +53,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	{
 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 		{
-			*dst++ = (*src++) + CODEC_DAC_CALIBRATION_DCOFFSET[0];
+			*dst++ = (*src++) + user_params->codec_dac_calibration_dcoffset[0];
 			*dst++ = *src++;
-			*dst++ = (*src++) + CODEC_DAC_CALIBRATION_DCOFFSET[1];
+			*dst++ = (*src++) + user_params->codec_dac_calibration_dcoffset[1];
 			*dst++ = *src++;
 		}
 	}
@@ -65,9 +65,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		{
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 			{
-				*dst++ = ((outL[0][i] + outL[1][i]) /2) + CODEC_DAC_CALIBRATION_DCOFFSET[0];
+				*dst++ = ((outL[0][i] + outL[1][i]) /2) + user_params->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
-				*dst++ = ((outR[0][i] + outR[1][i]) /2) + CODEC_DAC_CALIBRATION_DCOFFSET[1];
+				*dst++ = ((outR[0][i] + outR[1][i]) /2) + user_params->codec_dac_calibration_dcoffset[1];
 				*dst++ = 0;
 			}
 		}
@@ -75,11 +75,11 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		{
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 			{
-				*dst++ = ((outL[0][i] + outR[0][i]) /2) + CODEC_DAC_CALIBRATION_DCOFFSET[0];
-			//	*dst++ = outL[0][i]  + CODEC_DAC_CALIBRATION_DCOFFSET[0];
+				*dst++ = ((outL[0][i] + outR[0][i]) /2) + user_params->codec_dac_calibration_dcoffset[0];
+			//	*dst++ = outL[0][i]  + user_params->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
-				*dst++ = ((outL[1][i] + outR[1][i]) /2) + CODEC_DAC_CALIBRATION_DCOFFSET[0];
-			//	*dst++ = outL[1][i] + CODEC_DAC_CALIBRATION_DCOFFSET[0];
+				*dst++ = ((outL[1][i] + outR[1][i]) /2) + user_params->codec_dac_calibration_dcoffset[0];
+			//	*dst++ = outL[1][i] + user_params->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
 			}
 		}
@@ -93,12 +93,12 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			{
 				//L out
 				t = ((outL[0][i] + outL[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)CODEC_DAC_CALIBRATION_DCOFFSET[0];
+				*dst++ = (int16_t)(t>>16) + (int16_t)user_params->codec_dac_calibration_dcoffset[0];
 				*dst++ = (int16_t)(t & 0x0000FF00);
 
 				//R out
 				t = ((outR[0][i] + outR[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)CODEC_DAC_CALIBRATION_DCOFFSET[1];
+				*dst++ = (int16_t)(t>>16) + (int16_t)user_params->codec_dac_calibration_dcoffset[1];
 				*dst++ = (int16_t)(t & 0x0000FF00);
 			}
 		}
@@ -108,12 +108,12 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			{
 				//L out
 				t = ((outL[0][i] + outR[0][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)CODEC_DAC_CALIBRATION_DCOFFSET[0];
+				*dst++ = (int16_t)(t>>16) + (int16_t)user_params->codec_dac_calibration_dcoffset[0];
 				*dst++ = (int16_t)(t & 0x0000FF00);
 
 				//R out
 				t = ((outL[1][i] + outR[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)CODEC_DAC_CALIBRATION_DCOFFSET[1];
+				*dst++ = (int16_t)(t>>16) + (int16_t)user_params->codec_dac_calibration_dcoffset[1];
 				*dst++ = (int16_t)(t & 0x0000FF00);
 			}
 		}

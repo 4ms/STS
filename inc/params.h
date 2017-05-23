@@ -30,7 +30,6 @@ enum f_ChannelParams{
 	PITCH,
 	START,
 	LENGTH,
-	TRACKING_COMP,	//TRACKING_COMP: compensation for 1V/oct tracking
 	NUM_F_PARAMS
 };
 
@@ -89,22 +88,6 @@ enum GlobalModes
 	NUM_GLOBAL_MODES
 };
 
-enum GlobalSettings
-{
-	NUM_GLOBAL_SETTINGS
-};
-
-enum GlobalParams
-{
-	SLOW_FADE_INCREMENT,
-	NUM_GLOBAL_PARAMS
-};
-
-enum GlobaliParams
-{
-	LED_BRIGHTNESS,
-	NUM_GLOBAL_I_PARAMS
-};
 
 
 static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef)

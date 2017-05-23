@@ -112,10 +112,10 @@ void record_audio_to_buffer(int16_t *src)
 			//
 			if (SAMPLINGBYTES==2)
 			{
-				t_buff16[i*2] = (*src++) /*+ CODEC_ADC_CALIBRATION_DCOFFSET[channel+0]*/;
+				t_buff16[i*2] = (*src++) /*+ user_params->codec_adc_calibration_dcoffset[channel+0]*/;
 				dummy=*src++;
 
-				t_buff16[i*2+1] = (*src++) /*+ CODEC_ADC_CALIBRATION_DCOFFSET[channel+2]*/;
+				t_buff16[i*2+1] = (*src++) /*+ user_params->codec_adc_calibration_dcoffset[channel+2]*/;
 				dummy=*src++;
 			}
 			else
@@ -251,11 +251,10 @@ void write_buffer_to_storage(void)
 
 					if (!addr_exceeded)
 					{
-						DEBUG1_ON;
 						sz = WRITE_BLOCK_SIZE;
 						res = f_write(&recfil, t_buff16, sz, &written);
 						f_sync(&recfil);
-						DEBUG1_OFF;
+						
 						if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
 						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
 						samplebytes_recorded += written;

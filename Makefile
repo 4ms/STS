@@ -37,6 +37,8 @@ HEX = $(BUILDDIR)/$(BINARYNAME).hex
 BIN = $(BUILDDIR)/$(BINARYNAME).bin
 
 ARCH = arm-none-eabi
+#CC = colorgcc
+#CC = gccfilter -a -c $(ARCH)-gcc
 CC = $(ARCH)-gcc
 ##Use -gcc instead of -ld
 LD = $(ARCH)-gcc -Wl,-Map,build/main.map
@@ -103,7 +105,8 @@ LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT)
 #build/src/params.o: CFLAGS = $(C0FLAGS)
 #build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
 #build/src/resample.o: CFLAGS = $(C0FLAGS)
-#build/src/sampler.o: CFLAGS = $(C0FLAGS)
+build/src/sampler.o: CFLAGS = $(C0FLAGS)
+build/src/flash_user.o: CFLAGS = $(C0FLAGS)
 #build/src/dig_pins.o: CFLAGS = $(C0FLAGS)
 #build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
 #build/src/rgb_leds.o: CFLAGS = $(C0FLAGS)

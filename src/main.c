@@ -43,7 +43,8 @@ extern uint8_t 	flags[NUM_FLAGS];
 //extern uint8_t play_led_state[NUM_PLAY_CHAN];
 //extern uint8_t clip_led_state[NUM_PLAY_CHAN];
 
-extern uint32_t flash_firmware_version;
+extern SystemSettings *SRAM_user_params;
+
 
 void check_errors(void);
 
@@ -199,14 +200,15 @@ int main(void)
 	init_adc_param_update_IRQ();
 	init_params();
 	init_modes();
-	flash_firmware_version = load_flash_params();
+	
+	SRAM_user_params->firmware_version = load_flash_params();
 
 	//Check for boot modes (calibration, first boot after upgrade)
     if (ENTER_CALIBRATE_BUTTONS)
     {
     	global_mode[CALIBRATE] = 1;
     }
-    else if (flash_firmware_version < FW_VERSION ) //If we detect a recently upgraded firmware version
+    else if (SRAM_user_params->firmware_version < FW_VERSION ) //If we detect a recently upgraded firmware version
     {
     	set_firmware_version();
     	store_params_into_sram();

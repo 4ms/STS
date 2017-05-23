@@ -14,7 +14,6 @@
 #include "sampler.h"
 #include "wav_recording.h"
 #include "rgb_leds.h"
-
 #include "equal_pow_pan_padded.h"
 #include "voltoct.h"
 #include "log_taper_padded.h"
@@ -22,6 +21,7 @@
 #include "buttons.h"
 #include "edit_mode.h"
 #include "calibration.h"
+#include "flash_user.h"
 
 extern float pitch_pot_cv[4096];
 const float voltoct[4096];
@@ -32,6 +32,8 @@ extern enum PlayStates play_state[NUM_PLAY_CHAN];
 extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
+extern SystemSettings *user_params;
+
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 extern uint8_t disable_mode_changes;
@@ -40,8 +42,6 @@ volatile float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 uint8_t settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
 
-float	global_param[NUM_GLOBAL_PARAMS];
-uint32_t global_i_param[NUM_GLOBAL_I_PARAMS];
 uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 uint8_t flags[NUM_FLAGS];
@@ -54,7 +54,6 @@ extern uint8_t recording_enabled;
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
 
-extern int16_t CV_CALIBRATION_OFFSET[NUM_CV_ADCS];
 
 float POT_LPF_COEF[NUM_POT_ADCS];
 float CV_LPF_COEF[NUM_CV_ADCS];
@@ -91,8 +90,6 @@ void init_params(void)
 		f_param[chan][START] 	= 0.0;
 		f_param[chan][LENGTH] 	= 1.0;
 
-		f_param[chan][TRACKING_COMP] = 1.00;
-
 		i_param[chan][BANK] 		= 0;
 		i_param[chan][SAMPLE] 	= 0;
 		i_param[chan][REV] 		= 0;
@@ -102,9 +99,6 @@ void init_params(void)
 
 	i_param[REC][BANK] = 0;
 	i_param[REC][SAMPLE] = 0;
-
-	global_param[SLOW_FADE_INCREMENT] = 0.001;
-	global_i_param[LED_BRIGHTNESS] = 2;
 
 	for (i=0;i<NUM_FLAGS;i++)
 	{
@@ -177,8 +171,8 @@ void init_LowPassCoefs(void)
 
 
 
-	MIN_POT_ADC_CHANGE[PITCH_POT*2] = 40;
-	MIN_POT_ADC_CHANGE[PITCH_POT*2+1] = 40;
+	MIN_POT_ADC_CHANGE[PITCH_POT*2] = 12;
+	MIN_POT_ADC_CHANGE[PITCH_POT*2+1] = 12;
 
 	MIN_POT_ADC_CHANGE[START_POT*2] = 10;
 	MIN_POT_ADC_CHANGE[START_POT*2+1] = 10;
@@ -244,7 +238,7 @@ void process_adc(void)
 
 	for (i=0;i<NUM_CV_ADCS;i++)
 	{
-		smoothed_cvadc[i] = LowPassSmoothingFilter(smoothed_cvadc[i], (float)(cvadc_buffer[i]+CV_CALIBRATION_OFFSET[i]), CV_LPF_COEF[i]);
+		smoothed_cvadc[i] = LowPassSmoothingFilter(smoothed_cvadc[i], (float)(cvadc_buffer[i]+user_params->cv_calibration_offset[i]), CV_LPF_COEF[i]);
 		i_smoothed_cvadc[i] = (int16_t)smoothed_cvadc[i];
 		if (i_smoothed_cvadc[i] < 0) i_smoothed_cvadc[i] = 0;
 		if (i_smoothed_cvadc[i] > 4095) i_smoothed_cvadc[i] = 4095;
