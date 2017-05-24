@@ -1081,19 +1081,21 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
 				
 			}
-			// else if (s_sample->PCM == 1) //32-bit int
-			// {
-			// 	t_u32 = play_buff[chan]->out;
-			// 	resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, resampling_fpos, outL);
+			else if (s_sample->PCM == 1) //32-bit int
+			{
+				t_u32 = play_buff[chan]->out;
+				t_flag = flags[PlayBuff1_Discontinuity+chan];
+				resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, resampling_fpos, outL);
 
-			// 	if (s_sample->numChannels == 2)
-			// 	{
-			// 		play_buff[chan]->out = t_u32;
-			// 		resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, resampling_fpos, outR);
-			// 	}
-			// 	else //MONO: read left channel and copy to right
-			// 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
-			// }
+				if (s_sample->numChannels == 2)
+				{
+					play_buff[chan]->out = t_u32;
+					flags[PlayBuff1_Discontinuity+chan] = t_flag;
+					resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, resampling_fpos, outR);
+				}
+				else //MONO: read left channel and copy to right
+					for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+			}
 		} 
 
 
