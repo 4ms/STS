@@ -14,22 +14,51 @@ uint8_t is_valid_wav_header(WaveHeader sample_header)
 
 uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 {
-	if (	fmt_chunk.fmtId 			!= ccFMT		//'fmt '
-			|| fmt_chunk.fmtSize 		 < 16			//Format Chunk size
-			|| (fmt_chunk.audioFormat	!= 0x0001		//PCM format
-			&& fmt_chunk.audioFormat 	!= 0x0003)		//Float format
-			|| fmt_chunk.numChannels 	 > 0x0002		//Stereo or mono allowed
-			|| fmt_chunk.sampleRate 	 > 96000		//Between 8k and 96k sampling rate allowed
-			|| fmt_chunk.sampleRate		 < 8000
-			|| (fmt_chunk.bitsPerSample		!= 16 		//Only 16 bit samplerate allowed (for now)
-				&& fmt_chunk.bitsPerSample	!= 24
-				&& fmt_chunk.bitsPerSample	!= 32
-				//&& fmt_chunk.bitsPerSample	!= 8
+	if (	fmt_chunk.fmtId 			== ccFMT				//'fmt '
+			&& fmt_chunk.fmtSize 		>= 16					//Format Chunk size is valid
+
+			&&	(
+					(		fmt_chunk.audioFormat	== 0x0001	//PCM format and 16/24-bit
+					&& (	fmt_chunk.bitsPerSample	!= 16 	
+						||	fmt_chunk.bitsPerSample	!= 24
+						||	fmt_chunk.bitsPerSample	!= 32
+						)
+					)
+				||
+					(	fmt_chunk.audioFormat	== 0x0003		//Float format and 32-bit
+					&&	fmt_chunk.bitsPerSample	!= 32
+					)
 				)
+
+			&&	(	fmt_chunk.numChannels 	 == 0x0002
+				||	fmt_chunk.numChannels 	 == 0x0001)
+
+			&&	fmt_chunk.sampleRate 	<= 96000				//Between 8k and 96k sampling rate allowed
+			&&	fmt_chunk.sampleRate	>= 8000
+
 		)
-		return 0;
+		return (1);
 	else
-		return 1;
+		return (0);
+
+
+
+	// if (	fmt_chunk.fmtId 			!= ccFMT		//'fmt '
+	// 		|| fmt_chunk.fmtSize 		 < 16			//Format Chunk size
+	// 		|| (fmt_chunk.audioFormat	!= 0x0001		//PCM format
+	// 		&& fmt_chunk.audioFormat 	!= 0x0003)		//Float format
+	// 		|| fmt_chunk.numChannels 	 > 0x0002		//Stereo or mono allowed
+	// 		|| fmt_chunk.sampleRate 	 > 96000		//Between 8k and 96k sampling rate allowed
+	// 		|| fmt_chunk.sampleRate		 < 8000
+	// 		|| (fmt_chunk.bitsPerSample		!= 16 		//Only 16 bit samplerate allowed (for now)
+	// 			&& fmt_chunk.bitsPerSample	!= 24
+	// 			&& fmt_chunk.bitsPerSample	!= 32
+	// 			//&& fmt_chunk.bitsPerSample	!= 8
+	// 			)
+	// 	)
+	// 	return 0;
+	// else
+	// 	return 1;
 
 }
 

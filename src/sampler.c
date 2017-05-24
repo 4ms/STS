@@ -991,7 +991,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	uint8_t t_flag;
 
 	//Resampling:
-	static float resampling_fpos[NUM_PLAY_CHAN*2]={0.0f, 0.0f, 0.0f, 0.0f};
 	float rs;
 	uint32_t resampled_buffer_size;
 
@@ -1034,13 +1033,13 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		{
 			t_u32 = play_buff[chan]->out;
 			t_flag = flags[PlayBuff1_Discontinuity+chan];
-			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, resampling_fpos, outL);
+			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, outL);
 
 			if (s_sample->numChannels == 2)
 			{
 				play_buff[chan]->out = t_u32;
 				flags[PlayBuff1_Discontinuity+chan] = t_flag;
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, resampling_fpos, outR);
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, outR);
 			}
 			else	//MONO: read left channel and copy to right
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
