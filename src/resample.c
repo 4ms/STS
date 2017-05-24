@@ -43,7 +43,7 @@ inline int16_t get_16b_sample(uint32_t addr, uint8_t stereomode)
 	//and calculate the resampled data only once (on the sum instead of once on each channel).
 	//However, it's more versatile/portable to take two outputs from the SDRAM,
 	//resample them independently, and then combine them later when we feed the codec
-	//Perhaps an improvement would be to change methods depending on global_mode[STEREO_LINK]
+	//Perhaps an improvement would be to change methods depending on global_mode[STEREO_MODE]
 	// if (stereomode==STEREO_SUM)
 	// {
 	// 	a = (int16_t)(rd >> 16);

@@ -26,7 +26,13 @@
 		REV1BUT &&\
 		REV2BUT &&\
 		BANK1BUT &&\
-		BANK2BUT)
+		BANK2BUT &&\
+		PLAY1BUT &&\
+		PLAY2BUT &&\
+		!EDIT_BUTTON &&\
+		!RECBUT &&\
+		!BANKRECBUT \
+		)
 
 #define RAMTEST_BUTTONS (\
 		REV1BUT &&\
@@ -40,8 +46,21 @@
 		PLAY1BUT &&\
 		PLAY2BUT &&\
 		RECBUT &&\
-		BANKRECBUT)
+		BANKRECBUT &&\
+		!EDIT_BUTTON &&\
+		!BANK1BUT &&\
+		!BANK2BUT \
+		)
 
+#define SAVE_CALIBRATE_BUTTONS (\
+		PLAY1BUT &&\
+		PLAY2BUT &&\
+		BANK1BUT &&\
+		BANK2BUT &&\
+		!RECBUT &&\
+		!BANKRECBUT &&\
+		!EDIT_BUTTON \
+		)
 
 enum Buttons {
 	Play1,

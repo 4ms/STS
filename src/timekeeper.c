@@ -9,7 +9,6 @@
 #include "timekeeper.h"
 #include "params.h"
 #include "calibration.h"
-#include "system_settings.h"
 #include "leds.h"
 #include "dig_pins.h"
 

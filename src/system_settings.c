@@ -3,14 +3,15 @@
  */
 
 #include "globals.h"
-#include "system_settings.h"
+#include "calibration.h"
+#include "flash_user.h"
 #include "adc.h"
 #include "params.h"
-#include "flash_user.h"
 #include "buttons.h"
 #include "dig_pins.h"
 
-extern SystemSettings *user_params;
+extern SystemCalibrations *system_calibrations;
+
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
@@ -21,11 +22,6 @@ uint8_t disable_mode_changes=0;
 
 void set_default_system_settings(void)
 {
-	user_params->tracking_comp[0]=1.0;
-	user_params->tracking_comp[1]=1.0;
-
-	user_params->led_brightness = 4;
-
 }
 
 
@@ -52,7 +48,7 @@ void check_entering_system_mode(void)
 			}
 			else
 			{
-				save_flash_params();
+				save_flash_params(10); //flash lights 10 times
 				global_mode[SYSTEM_SETTINGS] = 0;
 				ctr=-1;
 				disable_mode_changes=0;
@@ -85,11 +81,6 @@ void update_system_settings_button_leds(void)
 
 
 }
-
-//100 * 0.2ms = 20ms
-#define TRIG_CNTS 200
-//1665 * 0.2ms = 333ms
-#define GATE_CNTS 1665
 
 void update_system_settings_leds(void)
 {

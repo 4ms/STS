@@ -10,23 +10,13 @@
 #include <stm32f4xx.h>
 
 
-typedef struct SystemSettings
-{
-	uint32_t	firmware_version;
-	int32_t		cv_calibration_offset[8];
-	int32_t		codec_adc_calibration_dcoffset[2];
-	int32_t		codec_dac_calibration_dcoffset[2];
-	uint32_t	led_brightness;
-	float 		tracking_comp[NUM_PLAY_CHAN];
-
-} SystemSettings;
 
 void set_firmware_version(void);
 void factory_reset(uint8_t loop_afterwards);
 uint32_t load_flash_params(void);
-void save_flash_params(void);
-void store_params_into_sram(void);
-void write_all_params_to_FLASH(void);
-void read_all_params_from_FLASH(void);
+void save_flash_params(uint8_t num_led_blinks);
+void copy_system_calibrations_into_staging(void);
+void write_all_system_calibrations_to_FLASH(void);
+void read_all_system_calibrations_from_FLASH(void);
 
 #endif /* FLASH_USER_H_ */

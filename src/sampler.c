@@ -1,29 +1,7 @@
 /*
  * sampler.c
 
-//Is checking polarity and wrapping changes necessary? Line 940
 //Is reversing while PREBUFFERING working? Line 341
-//Still kind of weird when running the same trigger into REV and PLAY
-
-
-		//improvement idea #1: load all 19 samples in the current bank, opening their files. So we have:
-		//FIL sample_files[19];
-		//Then we when play, set the channel's file to the sample file (somehow jump around to play the same file in two channels)
-
-		//#2:
-		//On change bank, load all 19 sample headers and store info into samples[].
-		//On play, open the file and jump right to startOfData.
-
-		//#3:
-		//On change bank, load all 19 sample headers into samples[]
-		//Load the first 100ms or so of data into SDRAM.
-		//We'd want to divide SDRAM into halves for Play and Rec,
-		//and then divide Play into 19 slots = max 9.1s@48k/16b or 441k samples or 1724 blocks of 512-bytes. So we could pre-load up to 1724 blocks per sample
-		//Set it up to load blocks in the background as we have time (e.g. if no sample is playing), filling the SDRAM space for the sample
-		//Don't let a sample start playing until it has a minimum number of blocks pre-loaded
-		//???? This doesn't allow us to play from a different start position!!!
-		//
-
  */
 
 /* Improvements:
@@ -150,12 +128,6 @@ enum PlayLoadTriage play_load_triage;
 #define goto_filepos(p)	f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + (p));\
 						if(fil[chan].fptr != samples[banknum][samplenum].startOfData + (p)) g_error|=LSEEK_FPTR_MISMATCH;
 
-// static FRESULT goto_filepos(FIL *sfil, Sample *sample, uint32_t pos)
-// {
-// 	f_lseek(sfil, pos + sample->startOfData);
-
-// }
-// FRESULT goto_filepos(FIL *sfil, Sample *sample, uint32_t pos);
 
 
 // #define DBG_SIZE 64
@@ -197,13 +169,7 @@ void audio_buffer_init(void)
 	FRESULT res;
 
 
-//	uint32_t sample_num, bank;
-//	FIL temp_file;
-//	FRESULT res;
-//	DIR dir;
-//	char path[10];
-//	char tname[_MAX_LFN+1];
-//	char path_tname[_MAX_LFN+1];
+
 
 
 //	if (MODE_24BIT_JUMPER)
@@ -285,6 +251,7 @@ void audio_buffer_init(void)
 		res = write_sampleindex_file();
 		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
 	}
+
 
 	i = next_enabled_bank(2); //find the first enabled bank
 	i_param[0][BANK] = i;

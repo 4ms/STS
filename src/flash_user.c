@@ -1,25 +1,17 @@
-//ToDo:
-//separate mode[][] into two arrays: one for modes stored in flash, and one for modes that the user changes "on the fly"
-//mode[][] (On the fly): REV INF TIMEMODE_POT TIMEMODE_JACK
-//global_modes[]: DC_INPUT, CALIBRATE, SYSTEM_SETTING
-//flash_setting[]: CV_CAL ADC_CAL, DAC_CAL, TRACKING_COMP, LED_DIM, LOOP_CLOCK, etc...
-//Store and recall the entire flash_setting array in one read/write operation (so we don't have to spell out the address of each element etc)
-
 #include "globals.h"
 #include "flash.h"
 #include "flash_user.h"
 #include "calibration.h"
-#include "system_settings.h"
 #include "params.h"
 #include "adc.h"
 #include "leds.h"
 #include "dig_pins.h"
 #include <string.h>
 
-SystemSettings s_SRAM_user_params;
-SystemSettings s_user_params;
-SystemSettings *SRAM_user_params = &s_SRAM_user_params;
-SystemSettings *user_params = &s_user_params;
+SystemCalibrations s_staging_user_params;
+SystemCalibrations *staging_system_calibrations = &s_staging_user_params;
+
+extern SystemCalibrations *system_calibrations;
 
 
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
@@ -37,7 +29,8 @@ extern int16_t i_smoothed_cvadc[NUM_POT_ADCS];
 
 void set_firmware_version(void)
 {
-	SRAM_user_params->firmware_version = FW_VERSION;
+	staging_system_calibrations->firmware_version = FW_VERSION;
+	system_calibrations->firmware_version = FW_VERSION;
 }
 
 
@@ -47,10 +40,10 @@ void factory_reset(uint8_t loop_afterwards)
 
 	auto_calibrate();
 	set_firmware_version();
-	set_default_system_settings();
+//	set_default_system_settings();
 
-	store_params_into_sram();
-	write_all_params_to_FLASH();
+	copy_system_calibrations_into_staging();
+	write_all_system_calibrations_to_FLASH();
 
 
 	if (loop_afterwards)
@@ -58,7 +51,7 @@ void factory_reset(uint8_t loop_afterwards)
 		fail=0;
 		for (i=0;i<6;i++)
 		{
-			if (user_params->cv_calibration_offset[i]>100 || user_params->cv_calibration_offset[i]<-100 )
+			if (system_calibrations->cv_calibration_offset[i]>100 || system_calibrations->cv_calibration_offset[i]<-100 )
 				fail=1;
 		}
 
@@ -81,21 +74,18 @@ uint32_t load_flash_params(void)
 	uint8_t *src;
 	uint8_t *dst;
 
-	read_all_params_from_FLASH();
+	read_all_system_calibrations_from_FLASH(); //into staging area
 
-	if (SRAM_user_params->firmware_version > 0 && SRAM_user_params->firmware_version < 500){
+	if (staging_system_calibrations->firmware_version > 0 && staging_system_calibrations->firmware_version < 500) //valid firmware version
+	{
 
-		//memcpy((uint8_t *)(user_params), (const uint8_t *)(SRAM_user_params), sizeof(SystemSettings));
-
-		src = (uint8_t *)SRAM_user_params;
-		dst = (uint8_t *)user_params;
-
-		for (i=0;i<sizeof(SystemSettings);i++)
-		{
-			*src++ = *dst++;
-		}
-
-		return (SRAM_user_params->firmware_version);
+		//memcopy: system_calibrations = staging_system_calibrations;
+		dst = (uint8_t *)system_calibrations;
+		src = (uint8_t *)staging_system_calibrations;
+		for (i=0;i<sizeof(SystemCalibrations);i++)
+			*dst++ = *src++;
+		
+		return (staging_system_calibrations->firmware_version);
 
 	} else
 	{
@@ -106,131 +96,104 @@ uint32_t load_flash_params(void)
 }
 
 
-void save_flash_params(void)
+void save_flash_params(uint8_t num_led_blinks)
 {
 	uint32_t i;
 
-	//copy global variables to SRAM staging area
-	store_params_into_sram();
+	copy_system_calibrations_into_staging();
 
-	//copy SRAM variables to FLASH
-	write_all_params_to_FLASH();
+	write_all_system_calibrations_to_FLASH();
 
-	for (i=0;i<10;i++){
+	for (i=0;i<num_led_blinks;i++){
 		CLIPLED1_ON;
-		CLIPLED2_OFF;
+		CLIPLED2_ON;
+		PLAYLED1_ON;
+		PLAYLED2_ON;
 		delay_ms(10);
 
 		CLIPLED1_OFF;
-		CLIPLED2_ON;
+		CLIPLED2_OFF;
+		PLAYLED1_OFF;
+		PLAYLED2_OFF;
+
 		delay_ms(10);
 	}
 }
 
 
-void store_params_into_sram(void)
+void copy_system_calibrations_into_staging(void)
 {
-	//memcpy((uint8_t *)(SRAM_user_params), (const uint8_t *)(user_params), sizeof(SystemSettings));
 	uint8_t i;
 	uint8_t *src;
 	uint8_t *dst;
 
-	src = (uint8_t *)user_params;
-	dst = (uint8_t *)SRAM_user_params;
-
-	for (i=0;i<sizeof(SystemSettings);i++)
-	{
-		*src++ = *dst++;
-	}
+	//copy: staging_system_calibrations = system_calibrations;
+	dst = (uint8_t *)staging_system_calibrations;
+	src = (uint8_t *)system_calibrations;
+	for (i=0;i<sizeof(SystemCalibrations);i++)
+		*dst++ = *src++;
 }
 
 
-void write_all_params_to_FLASH(void)
+void write_all_system_calibrations_to_FLASH(void)
 {
 	uint8_t i;
 	uint8_t *addr;
 
-	//flash_begin_open_program();
+	flash_begin_open_program();
 
-	//flash_open_erase_sector(FLASH_ADDR_userparams);
+	flash_open_erase_sector(FLASH_ADDR_userparams);
 
-	SRAM_user_params->firmware_version += FLASH_SYMBOL_firmwareoffset;
+	staging_system_calibrations->firmware_version += FLASH_SYMBOL_firmwareoffset;
 
-	addr = (uint8_t *)SRAM_user_params;
+	addr = (uint8_t *)staging_system_calibrations;
 
-	for(i=0;i<sizeof(SystemSettings);i++)
+	for(i=0;i<sizeof(SystemCalibrations);i++)
 	{
-	//	flash_open_program_byte(*addr++, FLASH_ADDR_userparams + i);
+		flash_open_program_byte(*addr++, FLASH_ADDR_userparams + i);
 	}
 
-	//flash_end_open_program();
+	flash_end_open_program();
 }
 
 
-void read_all_params_from_FLASH(void)
+void read_all_system_calibrations_from_FLASH(void)
 {
 	uint8_t i;
-	//uint32_t addr;
 	uint8_t *ptr;
+	uint8_t invalid_fw_version;
 
-	ptr = (uint8_t *)SRAM_user_params;
+	ptr = (uint8_t *)staging_system_calibrations;
 
-	for(i=0;i<sizeof(SystemSettings);i++)
+	for(i=0;i<sizeof(SystemCalibrations);i++)
 	{
 		*ptr++ = flash_read_byte(FLASH_ADDR_userparams + i);
 	}
 
-	SRAM_user_params->firmware_version -= FLASH_SYMBOL_firmwareoffset;
+	staging_system_calibrations->firmware_version -= FLASH_SYMBOL_firmwareoffset;
 
-/*
-	addr = FLASH_ADDR_userparams;
-
-	SRAM_user_params->firmware_version = flash_read_word(addr) - FLASH_SYMBOL_firmwareoffset;
-	addr += 4;
+	if (staging_system_calibrations->firmware_version < 1 || staging_system_calibrations->firmware_version > 500)
+		invalid_fw_version = 1;
 
 	for (i=0;i<8;i++)
 	{
-		SRAM_user_params->cv_calibration_offset[i] = (int32_t)flash_read_word(addr);
-		addr+=4;
+		if (invalid_fw_version || staging_system_calibrations->cv_calibration_offset[i] > 100 || staging_system_calibrations->cv_calibration_offset[i] < -100)
+			staging_system_calibrations->cv_calibration_offset[i] = 0;
 	}
 	for (i=0;i<2;i++)
 	{
-		SRAM_user_params->codec_adc_calibration_dcoffset[i] = (int32_t)flash_read_word(addr);
-		addr+=4;
-	}
-	for (i=0;i<2;i++)
-	{
-		SRAM_user_params->codec_dac_calibration_dcoffset[i] = (int32_t)flash_read_word(addr);
-		addr+=4;
-	}
-	for (i=0;i<2;i++)
-	{
-		SRAM_user_params->tracking_comp[i] = (float)flash_read_word(addr);
-		addr+=4;
-	}
-*/
+		if (invalid_fw_version || staging_system_calibrations->codec_adc_calibration_dcoffset[i] > 4000 || staging_system_calibrations->codec_adc_calibration_dcoffset[i] < -4000)
+			staging_system_calibrations->codec_adc_calibration_dcoffset[i] = 0;
 
+		if (invalid_fw_version || staging_system_calibrations->codec_dac_calibration_dcoffset[i] > 4000 || staging_system_calibrations->codec_dac_calibration_dcoffset[i] < -4000)
+			staging_system_calibrations->codec_dac_calibration_dcoffset[i] = 0;
+	
+		if (invalid_fw_version || staging_system_calibrations->tracking_comp[i] > 1.25 || staging_system_calibrations->tracking_comp[i] < 0.75 || (*(uint32_t *)(&staging_system_calibrations->tracking_comp[i])==0xFFFFFFFF))
+			staging_system_calibrations->tracking_comp[i] = 1.0;
+	}
 
-	for (i=0;i<8;i++)
-	{
-		if (SRAM_user_params->cv_calibration_offset[i] > 100 || SRAM_user_params->cv_calibration_offset[i] < -100)
-			SRAM_user_params->cv_calibration_offset[i] = 0;
-	}
-	for (i=0;i<8;i++)
-	{
-		if (SRAM_user_params->codec_adc_calibration_dcoffset[i] > 4000 || SRAM_user_params->codec_adc_calibration_dcoffset[i] < -100)
-			SRAM_user_params->codec_adc_calibration_dcoffset[i] = 0;
-	}
-	for (i=0;i<8;i++)
-	{
-		if (SRAM_user_params->codec_dac_calibration_dcoffset[i] > 4000 || SRAM_user_params->codec_dac_calibration_dcoffset[i] < -4000)
-			SRAM_user_params->codec_dac_calibration_dcoffset[i] = 0;
-	}
-	for (i=0;i<2;i++)
-	{
-		if (SRAM_user_params->tracking_comp[i] > 1.25 || SRAM_user_params->tracking_comp[i] < 0.75)
-			SRAM_user_params->tracking_comp[i] = 1.0;
-	}
+	if (invalid_fw_version || staging_system_calibrations->led_brightness > 15 || staging_system_calibrations->led_brightness < 1)
+		staging_system_calibrations->led_brightness = 4;
 
 }
 

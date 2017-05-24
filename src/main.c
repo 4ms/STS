@@ -16,7 +16,6 @@
 #include "calibration.h"
 #include "flash_user.h"
 #include "leds.h"
-#include "system_settings.h"
 #include "buttons.h"
 #include "dig_pins.h"
 #include "pca9685_driver.h"
@@ -42,9 +41,6 @@ extern uint8_t 	flags[NUM_FLAGS];
 //extern uint8_t ButLED_state[NUM_RGBBUTTONS];
 //extern uint8_t play_led_state[NUM_PLAY_CHAN];
 //extern uint8_t clip_led_state[NUM_PLAY_CHAN];
-
-extern SystemSettings *SRAM_user_params;
-
 
 void check_errors(void);
 
@@ -95,7 +91,8 @@ int main(void)
 	uint8_t err=0;
 	uint32_t do_factory_reset=0;
 	uint32_t timeout_boot;
-
+	uint32_t firmware_version;
+	
 	FATFS FatFs;
 	FIL fil;
 	FRESULT res;
@@ -201,18 +198,19 @@ int main(void)
 	init_params();
 	init_modes();
 	
-	SRAM_user_params->firmware_version = load_flash_params();
+	firmware_version = load_flash_params();
 
 	//Check for boot modes (calibration, first boot after upgrade)
     if (ENTER_CALIBRATE_BUTTONS)
     {
+    	flags[skip_process_buttons] = 1;
     	global_mode[CALIBRATE] = 1;
     }
-    else if (SRAM_user_params->firmware_version < FW_VERSION ) //If we detect a recently upgraded firmware version
+    else if (firmware_version < FW_VERSION ) //If we detect a recently upgraded firmware version
     {
+    	copy_system_calibrations_into_staging();
     	set_firmware_version();
-    	store_params_into_sram();
-    	write_all_params_to_FLASH();
+    	write_all_system_calibrations_to_FLASH();
     }
 
 

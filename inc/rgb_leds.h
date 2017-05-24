@@ -12,6 +12,9 @@
 
 #define ButtonLED_IRQHandler TIM1_UP_TIM10_IRQHandler
 
+
+
+
 enum Buttons_LEDs {
 	RecBankButtonLED,
 	RecButtonLED,

@@ -7,10 +7,10 @@
 #include "leds.h"
 #include "timekeeper.h"
 #include "params.h"
-#include "flash_user.h"
+#include "calibration.h"
 
 
-extern SystemSettings *user_params;
+extern SystemCalibrations *system_calibrations;
 
 extern uint32_t end_out_ctr[NUM_PLAY_CHAN];
 extern uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN];
@@ -69,25 +69,25 @@ void LED_PWM_IRQHandler(void)
 		}
 		else
 		{
-			if ((play_led_state[1] && global_mode[STEREO_LINK] || play_led_state[0]) && (loop_led_PWM_ctr<user_params->led_brightness) && !play_led_flicker_ctr[0])
+			if ((play_led_state[1] && global_mode[STEREO_MODE] || play_led_state[0]) && (loop_led_PWM_ctr<system_calibrations->led_brightness) && !play_led_flicker_ctr[0])
 				PLAYLED1_ON;
 			else
 				PLAYLED1_OFF;
 
-			if ((play_led_state[0] && global_mode[STEREO_LINK] || play_led_state[1]) && (loop_led_PWM_ctr<user_params->led_brightness) && !play_led_flicker_ctr[1])
+			if ((play_led_state[0] && global_mode[STEREO_MODE] || play_led_state[1]) && (loop_led_PWM_ctr<system_calibrations->led_brightness) && !play_led_flicker_ctr[1])
 				PLAYLED2_ON;
 			else
 				PLAYLED2_OFF;
-	//
-	//		if (clip_led_state[0] && (loop_led_PWM_ctr<user_params->led_brightness))
-	//			CLIPLED1_ON;
-	//		else
-	//			CLIPLED1_OFF;
-	//
-	//		if (clip_led_state[1] && (loop_led_PWM_ctr<user_params->led_brightness))
-	//			CLIPLED2_ON;
-	//		else
-	//			CLIPLED2_OFF;
+	
+			if (clip_led_state[0] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
+				CLIPLED1_ON;
+			else
+				CLIPLED1_OFF;
+	
+			if (clip_led_state[1] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
+				CLIPLED2_ON;
+			else
+				CLIPLED2_OFF;
 		}
 
 		loop_led_PWM_ctr++;

@@ -53,6 +53,7 @@ enum Flags {
 	Play2Trig,
 	StereoModeTurningOn,
 	StereoModeTurningOff,
+	skip_process_buttons,
 
 	NUM_FLAGS
 };

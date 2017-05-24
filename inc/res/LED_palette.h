@@ -1,5 +1,7 @@
-enum Palette {
+#ifndef LED_PALETTE_H
+#define LED_PALETTE_H
 
+enum Palette {
 	OFF,
 	WHITE,
 	RED,
@@ -34,3 +36,4 @@ const uint32_t LED_PALETTE[NUM_LED_PALETTE][3]=
 		{200, 800, 1000} //CYANER
 };
 
+#endif

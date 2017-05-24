@@ -21,7 +21,7 @@
 #include "buttons.h"
 #include "edit_mode.h"
 #include "calibration.h"
-#include "flash_user.h"
+//#include "system_settings.h"
 
 extern float pitch_pot_cv[4096];
 const float voltoct[4096];
@@ -32,7 +32,7 @@ extern enum PlayStates play_state[NUM_PLAY_CHAN];
 extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
-extern SystemSettings *user_params;
+extern SystemCalibrations *system_calibrations;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
@@ -57,6 +57,7 @@ int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
 
 float POT_LPF_COEF[NUM_POT_ADCS];
 float CV_LPF_COEF[NUM_CV_ADCS];
+float RAWCV_LPF_COEF[NUM_CV_ADCS];
 
 //Low Pass filtered adc values:
 float smoothed_potadc[NUM_POT_ADCS];
@@ -83,7 +84,7 @@ void init_params(void)
 {
 	uint8_t chan,i;
 
-	set_default_calibration_values();
+	//set_default_calibration_values();
 
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++){
 		f_param[chan][PITCH] 	= 1.0;
@@ -113,7 +114,6 @@ void init_modes(void)
 	global_mode[SYSTEM_SETTINGS] = 0;
 	global_mode[MONITOR_RECORDING] = 0;
 	global_mode[ENABLE_RECORDING] = 0;
-	global_mode[STEREO_LINK] = 1;
 	global_mode[EDIT_MODE] = 0;
 
 }
@@ -140,6 +140,21 @@ void init_LowPassCoefs(void)
 
 	CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
+
+	t=300.0;
+
+	RAWCV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
+	RAWCV_LPF_COEF[PITCH_CV*2+1] = 1.0-(1.0/t);
+
+	RAWCV_LPF_COEF[START_CV*2] = 1.0-(1.0/t);
+	RAWCV_LPF_COEF[START_CV*2+1] = 1.0-(1.0/t);
+
+	RAWCV_LPF_COEF[LENGTH_CV*2] = 1.0-(1.0/t);
+	RAWCV_LPF_COEF[LENGTH_CV*2+1] = 1.0-(1.0/t);
+
+	RAWCV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
+	RAWCV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
+
 
 	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 15;
 	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 15;
@@ -238,14 +253,14 @@ void process_adc(void)
 
 	for (i=0;i<NUM_CV_ADCS;i++)
 	{
-		smoothed_cvadc[i] = LowPassSmoothingFilter(smoothed_cvadc[i], (float)(cvadc_buffer[i]+user_params->cv_calibration_offset[i]), CV_LPF_COEF[i]);
+		smoothed_cvadc[i] = LowPassSmoothingFilter(smoothed_cvadc[i], (float)(cvadc_buffer[i]+system_calibrations->cv_calibration_offset[i]), CV_LPF_COEF[i]);
 		i_smoothed_cvadc[i] = (int16_t)smoothed_cvadc[i];
 		if (i_smoothed_cvadc[i] < 0) i_smoothed_cvadc[i] = 0;
 		if (i_smoothed_cvadc[i] > 4095) i_smoothed_cvadc[i] = 4095;
 
 		if (global_mode[CALIBRATE])
 		{
-			smoothed_rawcvadc[i] = LowPassSmoothingFilter(smoothed_rawcvadc[i], (float)(cvadc_buffer[i]), CV_LPF_COEF[i]);
+			smoothed_rawcvadc[i] = LowPassSmoothingFilter(smoothed_rawcvadc[i], (float)(cvadc_buffer[i]), RAWCV_LPF_COEF[i]);
 			i_smoothed_rawcvadc[i] = (int16_t)smoothed_rawcvadc[i];
 			if (i_smoothed_rawcvadc[i] < 0) i_smoothed_rawcvadc[i] = 0;
 			if (i_smoothed_rawcvadc[i] > 4095) i_smoothed_rawcvadc[i] = 4095;
@@ -483,81 +498,28 @@ void update_params(void)
 //
 void process_mode_flags(void)
 {
-	DEBUG0_ON;
-
 	if (!disable_mode_changes)
 	{
-
-
 		if (flags[Rev1Trig])
 		{
 			flags[Rev1Trig]=0;
-
-			// if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
-			// 	i_param[1][REV] = i_param[0][REV];
-
 			toggle_reverse(0);
-
-			// if (global_mode[STEREO_LINK])
-			// 	toggle_reverse(1);
-
 		}
 		if (flags[Rev2Trig])
 		{
-
 			flags[Rev2Trig]=0;
-
-			// if (global_mode[STEREO_LINK] && i_param[0][REV]!=i_param[1][REV])
-			// 	i_param[0][REV] = i_param[1][REV];
-
 			toggle_reverse(1);
-
-			// if (global_mode[STEREO_LINK])
-			// 	toggle_reverse(0);
-
 		}
-
-
 
 		if (flags[Play1But])
 		{
 			flags[Play1But]=0;
-
-			// if (global_mode[STEREO_LINK])
-			// {
-			// 	play_state[1] = play_state[0];
-			// 	//if (play_state[0]==SILENT && (play_state[1]== PLAYING || play_state[1] == PLAYING_PERC)) play_state[1]=SILENT;
-			// 	if (i_param[0][REV]!=i_param[1][REV])
-			// 		toggle_reverse(0);
-
-			// 	i_param[1][LOOPING] = i_param[0][LOOPING];
-
-			// 	toggle_playing(0);
-			// 	toggle_playing(1);
-			// }
-			// else
-				toggle_playing(0);
+			toggle_playing(0);
 		}
-
 		if (flags[Play2But])
 		{
 			flags[Play2But]=0;
-
-			// if (global_mode[STEREO_LINK])
-			// {
-			// 	play_state[0] = play_state[1];
-			// 	if (i_param[0][REV]!=i_param[1][REV])
-			// 		toggle_reverse(1);
-
-			// 	toggle_playing(0);
-			// 	toggle_playing(1);
-
-			// 	i_param[0][LOOPING] = i_param[1][LOOPING];
-			// }
-			// else
-				toggle_playing(1);
-
-			//if (play_state[1]==SILENT && (play_state[0]== PLAYING || play_state[0] == PLAYING_PERC)) play_state[1]=SILENT;
+			toggle_playing(1);
 		}
 
 		if (flags[Play1Trig])
@@ -565,13 +527,11 @@ void process_mode_flags(void)
 			flags[Play1Trig] = 0;
 			start_playing(0);
 		}
-		
 		if (flags[Play2Trig])
 		{
 			flags[Play2Trig] = 0;
 			start_playing(1);
 		}
-
 
 		if (flags[RecTrig]==1)
 		{
@@ -606,22 +566,12 @@ void process_mode_flags(void)
 			if (i_param[0][LOOPING])
 			{
 				i_param[0][LOOPING] = 0;
-
-				// if (global_mode[STEREO_LINK])
-				// 	i_param[1][LOOPING] = 0;
 			}
 			else
 			{
 				i_param[0][LOOPING] = 1;
 				if (play_state[0] == SILENT) 
 					flags[Play1But] = 1;
-
-				// if (global_mode[STEREO_LINK])
-				// {
-				// 	i_param[1][LOOPING] = 1;
-				// 	flags[Play2But] = 1;
-				// }
-
 			}
 
 
@@ -631,22 +581,18 @@ void process_mode_flags(void)
 		{
 			flags[ToggleLooping2] = 0;
 
-			// if (!global_mode[STEREO_LINK])
-			// {
-				if (i_param[1][LOOPING])
-				{
-					i_param[1][LOOPING] = 0;
-				}
-				else
-				{
-					i_param[1][LOOPING] = 1;
-					if (play_state[1] == SILENT) 
-						flags[Play2But] = 1;
-				}
-			// }
+			if (i_param[1][LOOPING])
+			{
+				i_param[1][LOOPING] = 0;
+			}
+			else
+			{
+				i_param[1][LOOPING] = 1;
+				if (play_state[1] == SILENT) 
+					flags[Play2But] = 1;
+			}
 		}
 	}
-	DEBUG0_OFF;
 }
 
 uint8_t detent_num(uint16_t adc_val)
@@ -674,51 +620,6 @@ uint8_t detent_num(uint16_t adc_val)
 }
 
 
-//uint8_t detent_num(uint16_t adc_val)
-//{
-//	if (adc_val<=91)
-//		return(0);
-//	else if (adc_val<=310)
-//		return(1);
-//	else if (adc_val<=565)
-//		return(2);
-//	else if (adc_val<=816)
-//		return(3);
-//	else if (adc_val<=1062)
-//		return(4);
-//	else if (adc_val<=1304)
-//		return(5);
-//	else if (adc_val<=1529)
-//		return(6);
-//	else if (adc_val<=1742)
-//		return(7);
-//	else if (adc_val<=1950)
-//		return(8);
-//	else if (adc_val<=2157) // Center
-//		return(9);
-//	else if (adc_val<=2365)
-//		return(10);
-//	else if (adc_val<=2580)
-//		return(11);
-//	else if (adc_val<=2806)
-//		return(12);
-//	else if (adc_val<=3044)
-//		return(13);
-//	else if (adc_val<=3289)
-//		return(14);
-//	else if (adc_val<=3537)
-//		return(15);
-//	else if (adc_val<=3790)
-//		return(16);
-//	else if (adc_val<=4003)
-//		return(17);
-//	else
-//		return(18);
-//
-//}
-
-
-
 void adc_param_update_IRQHandler(void)
 {
 
@@ -729,8 +630,8 @@ void adc_param_update_IRQHandler(void)
 
 		if (global_mode[CALIBRATE])
 		{
-			//update_calibration();
-			//update_calibrate_leds();
+			update_calibration();
+			update_calibrate_leds();
 		}
 		else
 			update_params();

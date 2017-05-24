@@ -6,11 +6,11 @@
 #include "params.h"
 #include "adc.h"
 #include "rgb_leds.h"
-#include "LED_palette.h"
 #include "pca9685_driver.h"
 #include "sampler.h"
 #include "wav_recording.h"
-
+#include "res/LED_palette.h"
+#include "calibration.h"
 
 #define BIG_PLAY_BUTTONS
 //#define SETBANK1RGB
@@ -28,6 +28,7 @@ extern enum RecStates	rec_state;
 extern uint8_t flags[NUM_FLAGS];
 
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
+extern SystemCalibrations *system_calibrations;
 
 extern volatile uint32_t sys_tmr;
 
@@ -321,7 +322,7 @@ void update_ButtonLEDs(void)
 
 				//Playing
 				else {
-					if (global_mode[STEREO_LINK]){
+					if (global_mode[STEREO_MODE]){
 						if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, CYAN );
 						else							set_ButtonLED_byPalette(ButLEDnum, GREENER );
 					} else {
@@ -402,7 +403,6 @@ void update_ButtonLEDs(void)
 
 
 
-	display_all_ButtonLEDs();
 }
 
 
@@ -412,7 +412,12 @@ void ButtonLED_IRQHandler(void)
 {
 	if (TIM_GetITStatus(TIM10, TIM_IT_Update) != RESET)
 	{
-		update_ButtonLEDs();
+		if (global_mode[CALIBRATE])
+			update_calibration_button_leds();
+		else
+			update_ButtonLEDs();
+
+		display_all_ButtonLEDs();
 
 		TIM_ClearITPendingBit(TIM10, TIM_IT_Update);
 	}

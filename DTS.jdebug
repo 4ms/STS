@@ -31,12 +31,6 @@ void OnProjectLoad (void) {
   Window.Add ("Watched Data", "play_buff_bufferedamt[0]");
   Window.Add ("Watched Data", "play_length");
   Window.Add ("Watched Data", "resampled_buffer_size");
-  Window.Add ("Watched Data", "DBG_buffadd");
-Window.Add ("Watched Data", "DBG_sdadd");
-Window.Add ("Watched Data", "DBG_i");
-Window.Add ("Watched Data", "DBG_buffi");
-Window.Add ("Watched Data", "DBG_last_buffi");
-Window.Add ("Watched Data", "DBG_last_i");
 Window.Add ("Watched Data", "is_buffered_to_file_end[0]");
 
 }

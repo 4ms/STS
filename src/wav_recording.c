@@ -112,10 +112,10 @@ void record_audio_to_buffer(int16_t *src)
 			//
 			if (SAMPLINGBYTES==2)
 			{
-				t_buff16[i*2] = (*src++) /*+ user_params->codec_adc_calibration_dcoffset[channel+0]*/;
+				t_buff16[i*2] = (*src++) /*+ system_calibrations->codec_adc_calibration_dcoffset[channel+0]*/;
 				dummy=*src++;
 
-				t_buff16[i*2+1] = (*src++) /*+ user_params->codec_adc_calibration_dcoffset[channel+2]*/;
+				t_buff16[i*2+1] = (*src++) /*+ system_calibrations->codec_adc_calibration_dcoffset[channel+2]*/;
 				dummy=*src++;
 			}
 			else

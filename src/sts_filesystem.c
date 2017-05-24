@@ -502,6 +502,7 @@ uint8_t write_sampleindex_file(void)
 	FIL temp_file;
 	FRESULT res;
 	uint32_t sz, bw;
+	uint32_t data[1];
 
 	res = f_open(&temp_file,"sample.index", FA_WRITE | FA_CREATE_ALWAYS); //overwrite existing file
 
@@ -510,9 +511,19 @@ uint8_t write_sampleindex_file(void)
 
 	sz = sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
 	res = f_write(&temp_file, samples, sz, &bw);
+	f_sync(&temp_file);
 
 	if (res != FR_OK)	{f_close(&temp_file); return(2);}//file write failed
 	else if (bw < sz)	{f_close(&temp_file); return(3);}//not all data written
+
+	data[0]=global_mode[STEREO_MODE];
+	sz = 4;
+	res = f_write(&temp_file, data, sz, &bw);
+	f_sync(&temp_file);
+
+	if (res != FR_OK)	{f_close(&temp_file); return(2);}//file write failed
+	else if (bw < sz)	{f_close(&temp_file); return(3);}//not all data written
+
 
 	f_close(&temp_file);
 	return(0);
@@ -523,6 +534,7 @@ uint8_t load_sampleindex_file(void)
 	FIL temp_file;
 	FRESULT res;
 	uint32_t rd, br;
+	uint32_t data[1];
 
 	res = f_open(&temp_file,"sample.index", FA_READ);
 	if (res != FR_OK) return(1); //file not found
@@ -534,6 +546,16 @@ uint8_t load_sampleindex_file(void)
 	if (res != FR_OK)	{return(2);}//file not read
 	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
 //	else if ( !is_valid_Sample_format(samples) )	{f_close(&temp_file); return(3);	}
+
+	rd = 4;
+	res = f_read(&temp_file, data, rd, &br);
+	
+	if (data[0] == 0) global_mode[STEREO_MODE] = 0;
+	else global_mode[STEREO_MODE] = 1;
+
+	if (res != FR_OK)	{return(2);}//file not read
+	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
+
 
 	f_close(&temp_file);
 	return(0);	//OK

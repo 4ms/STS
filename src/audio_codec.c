@@ -2,9 +2,9 @@
 #include "sampler.h"
 #include "wav_recording.h"
 #include "params.h"
-#include "flash_user.h"
+#include "calibration.h"
 
-extern SystemSettings *user_params;
+extern SystemCalibrations *system_calibrations;
 
 extern uint8_t SAMPLINGBYTES;
 
@@ -43,9 +43,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	{
 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 		{
-			*dst++ = user_params->codec_dac_calibration_dcoffset[0];
+			*dst++ = system_calibrations->codec_dac_calibration_dcoffset[0];
 			*dst++ = 0;
-			*dst++ = user_params->codec_dac_calibration_dcoffset[1];
+			*dst++ = system_calibrations->codec_dac_calibration_dcoffset[1];
 			*dst++ = 0;
 		}
 	}
@@ -53,21 +53,21 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	{
 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 		{
-			*dst++ = (*src++) + user_params->codec_dac_calibration_dcoffset[0];
+			*dst++ = (*src++) + system_calibrations->codec_dac_calibration_dcoffset[0];
 			*dst++ = *src++;
-			*dst++ = (*src++) + user_params->codec_dac_calibration_dcoffset[1];
+			*dst++ = (*src++) + system_calibrations->codec_dac_calibration_dcoffset[1];
 			*dst++ = *src++;
 		}
 	}
 	else if (SAMPLINGBYTES==2)
 	{
-		if (global_mode[STEREO_LINK])
+		if (global_mode[STEREO_MODE])
 		{
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 			{
-				*dst++ = ((outL[0][i] + outL[1][i]) /2) + user_params->codec_dac_calibration_dcoffset[0];
+				*dst++ = ((outL[0][i] + outL[1][i]) /2) + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
-				*dst++ = ((outR[0][i] + outR[1][i]) /2) + user_params->codec_dac_calibration_dcoffset[1];
+				*dst++ = ((outR[0][i] + outR[1][i]) /2) + system_calibrations->codec_dac_calibration_dcoffset[1];
 				*dst++ = 0;
 			}
 		}
@@ -75,11 +75,11 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		{
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 			{
-				*dst++ = ((outL[0][i] + outR[0][i]) /2) + user_params->codec_dac_calibration_dcoffset[0];
-			//	*dst++ = outL[0][i]  + user_params->codec_dac_calibration_dcoffset[0];
+				*dst++ = ((outL[0][i] + outR[0][i]) /2) + system_calibrations->codec_dac_calibration_dcoffset[0];
+			//	*dst++ = outL[0][i]  + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
-				*dst++ = ((outL[1][i] + outR[1][i]) /2) + user_params->codec_dac_calibration_dcoffset[0];
-			//	*dst++ = outL[1][i] + user_params->codec_dac_calibration_dcoffset[0];
+				*dst++ = ((outL[1][i] + outR[1][i]) /2) + system_calibrations->codec_dac_calibration_dcoffset[0];
+			//	*dst++ = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
 			}
 		}
@@ -87,18 +87,18 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	}
 	else //SAMPLINGBYTES==4
 	{
-		if (global_mode[STEREO_LINK])
+		if (global_mode[STEREO_MODE])
 		{
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 			{
 				//L out
 				t = ((outL[0][i] + outL[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)user_params->codec_dac_calibration_dcoffset[0];
+				*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = (int16_t)(t & 0x0000FF00);
 
 				//R out
 				t = ((outR[0][i] + outR[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)user_params->codec_dac_calibration_dcoffset[1];
+				*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[1];
 				*dst++ = (int16_t)(t & 0x0000FF00);
 			}
 		}
@@ -108,12 +108,12 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			{
 				//L out
 				t = ((outL[0][i] + outR[0][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)user_params->codec_dac_calibration_dcoffset[0];
+				*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = (int16_t)(t & 0x0000FF00);
 
 				//R out
 				t = ((outL[1][i] + outR[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)user_params->codec_dac_calibration_dcoffset[1];
+				*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[1];
 				*dst++ = (int16_t)(t & 0x0000FF00);
 			}
 		}
