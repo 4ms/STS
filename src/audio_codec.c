@@ -20,7 +20,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	int32_t outL[2][HT16_CHAN_BUFF_LEN];
 	int32_t outR[2][HT16_CHAN_BUFF_LEN];
 	uint16_t i;
-	int32_t t;
+	int32_t t_i32;
 
 	//
 	// Incoming audio
@@ -63,63 +63,76 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	{
 		if (global_mode[STEREO_MODE])
 		{
+			//Left Out = Sum of both L channels
+			//Right Out = Sum of both R channels
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 			{
-				*dst++ = ((outL[0][i] + outL[1][i]) /2) + system_calibrations->codec_dac_calibration_dcoffset[0];
+				t_i32 = outL[0][i] + outL[1][i];
+				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+				*dst++ = t_i32 + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
-				*dst++ = ((outR[0][i] + outR[1][i]) /2) + system_calibrations->codec_dac_calibration_dcoffset[1];
+
+				t_i32 = outR[0][i] + outR[1][i];
+				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+				*dst++ = t_i32 + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
 			}
 		}
 		else
 		{
+			//Left Out = Average of L and R for Sampler side A
+			//Right Out = Average of L and R for Sampler side B
+			//Make this a global_mode to select L+R (sum) or L+R/2 (average) 
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 			{
-				*dst++ = ((outL[0][i] + outR[0][i]) /2) + system_calibrations->codec_dac_calibration_dcoffset[0];
-			//	*dst++ = outL[0][i]  + system_calibrations->codec_dac_calibration_dcoffset[0];
+				t_i32 = (outL[0][i] + outR[0][i])/2;
+				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+				*dst++ = t_i32 + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
-				*dst++ = ((outL[1][i] + outR[1][i]) /2) + system_calibrations->codec_dac_calibration_dcoffset[0];
-			//	*dst++ = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+
+				t_i32 = (outL[1][i] + outR[1][i])/2;
+				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+				*dst++ = t_i32 + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
 			}
 		}
 
 	}
-	else //SAMPLINGBYTES==4
-	{
-		if (global_mode[STEREO_MODE])
-		{
-			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-			{
-				//L out
-				t = ((outL[0][i] + outL[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
-				*dst++ = (int16_t)(t & 0x0000FF00);
+	// else //SAMPLINGBYTES==4
+	// {
+	// 	if (global_mode[STEREO_MODE])
+	// 	{
+	// 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+	// 		{
+	// 			//L out
+	// 			t = ((outL[0][i] + outL[1][i]) >> 1);
+	// 			*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
+	// 			*dst++ = (int16_t)(t & 0x0000FF00);
 
-				//R out
-				t = ((outR[0][i] + outR[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[1];
-				*dst++ = (int16_t)(t & 0x0000FF00);
-			}
-		}
-		else
-		{
-			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-			{
-				//L out
-				t = ((outL[0][i] + outR[0][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
-				*dst++ = (int16_t)(t & 0x0000FF00);
+	// 			//R out
+	// 			t = ((outR[0][i] + outR[1][i]) >> 1);
+	// 			*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[1];
+	// 			*dst++ = (int16_t)(t & 0x0000FF00);
+	// 		}
+	// 	}
+	// 	else
+	// 	{
+	// 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+	// 		{
+	// 			//L out
+	// 			t = ((outL[0][i] + outR[0][i]) >> 1);
+	// 			*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
+	// 			*dst++ = (int16_t)(t & 0x0000FF00);
 
-				//R out
-				t = ((outL[1][i] + outR[1][i]) >> 1);
-				*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[1];
-				*dst++ = (int16_t)(t & 0x0000FF00);
-			}
-		}
-	}
+	// 			//R out
+	// 			t = ((outL[1][i] + outR[1][i]) >> 1);
+	// 			*dst++ = (int16_t)(t>>16) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[1];
+	// 			*dst++ = (int16_t)(t & 0x0000FF00);
+	// 		}
+	// 	}
+	// }
 
-#else
+#else //DEBUG_ADC_TO_CODEC
 	for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 	{
 		*dst++ = potadc_buffer[channel+2]*4;
