@@ -225,11 +225,6 @@ int main(void)
 
 	delay();
 
-
-
-	//test_noise();
-
-
 	init_SDIO_read_IRQ();
 
 	//Main loop

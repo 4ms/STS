@@ -311,7 +311,10 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 						s_sample->numChannels = fmt_chunk.numChannels;
 						s_sample->blockAlign = fmt_chunk.numChannels * fmt_chunk.bitsPerSample>>3;
 						s_sample->startOfData = f_tell(sample_file);
-						s_sample->PCM = fmt_chunk.audioFormat;
+						if (fmt_chunk.audioFormat == 0xFFFE)
+							s_sample->PCM = 3;
+						else
+							s_sample->PCM = fmt_chunk.audioFormat;
 
 						s_sample->inst_end = s_sample->sampleSize ;//& 0xFFFFFFF8;
 						s_sample->inst_size = s_sample->sampleSize ;//& 0xFFFFFFF8;

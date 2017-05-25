@@ -28,6 +28,10 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 					(	fmt_chunk.audioFormat	== 0x0003		//Float format and 32-bit
 					&&	fmt_chunk.bitsPerSample	== 32
 					)
+				||
+					(	fmt_chunk.audioFormat	== 0xFFFE		//Extended format (float) format and 32-bit
+					&&	fmt_chunk.bitsPerSample	== 32
+					)
 				)
 
 			&&	(	fmt_chunk.numChannels 	 == 0x0002
@@ -53,8 +57,8 @@ void create_waveheader(WaveHeader *w, WaveFmtChunk *f)
 	f->audioFormat	= 1;
 	f->numChannels	= 2;
 	f->sampleRate	= 44100;
-	f->byteRate		= (44100 * 2 * 2); //sampleRate * numChannels * bitsPerSample
-	f->blockAlign	= 4;
+	f->byteRate		= (44100 * 2 * 2); //sampleRate * blockAlign
+	f->blockAlign	= 4; //numChannels * bitsPerSample/8
 	f->bitsPerSample= 16;
 }
 
