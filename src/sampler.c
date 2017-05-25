@@ -781,8 +781,8 @@ void read_storage_to_buffer(void)
 					is_buffered_to_file_end[chan] = 0;
 			}
 
-			pre_buff_size = BASE_BUFFER_THRESHOLD * s_sample->blockAlign;
-			//pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign) * f_param[chan][PITCH] * (float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE );
+			//pre_buff_size = BASE_BUFFER_THRESHOLD * s_sample->blockAlign;
+			pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign) * f_param[chan][PITCH] * (float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE );
 			active_buff_size = pre_buff_size * 4;
 
 			if (!is_buffered_to_file_end[chan] && 
@@ -1015,7 +1015,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		if (s_sample->sampleRate == BASE_SAMPLE_RATE)
 			rs = f_param[chan][PITCH];
 		else
-			rs = f_param[chan][PITCH] * (s_sample->sampleRate / BASE_SAMPLE_RATE);
+			rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE);
 
 
 		//

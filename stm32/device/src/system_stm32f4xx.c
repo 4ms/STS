@@ -171,7 +171,7 @@
 //#define PLLI2S_N   295
 //#define PLLI2S_R   6
 
-//271/6 actually runs at about 44.1k (45.17k)
+//271/6 actually runs at about 44,106Hz (calculates to 45,167Hz which is off by 2.4% = 24000ppm! --- why?)
 #define PLLI2S_N   271
 #define PLLI2S_R   6
 
