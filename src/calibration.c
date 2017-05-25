@@ -10,6 +10,7 @@
 #include "adc.h"
 #include "params.h"
 #include "rgb_leds.h"
+#include "flash_user.h"
 
 SystemCalibrations s_user_params;
 SystemCalibrations *system_calibrations = &s_user_params;

@@ -38,8 +38,8 @@ enum PlayLoadTriage{
 //#define PRE_BUFF_SIZE (8192*3) /*0x6000*/
 //#define ACTIVE_BUFF_SIZE (8192*64) /* measured gaps of about 32 blocks, so this is twice enough */
 //#define ACTIVE_BUFF_SIZE (8192*16)
-//#define BASE_BUFFER_THRESHOLD (6144) /* 512*12 */
-#define BASE_BUFFER_THRESHOLD (3072) /* 512*6: divided by 2 because we now account for pitch*/
+#define BASE_BUFFER_THRESHOLD (6144) /* 512*12 */
+//#define BASE_BUFFER_THRESHOLD (3072) /* 512*6: divided by 2 because we now account for pitch*/
 
 //96k, blockalign=4 (32-bit float mono), Pitch 1.0 --> ~42ms from trigger to playback
 //96k, blockalign=4 (32-bit float mono), Pitch 4.0 --> ~144ms
@@ -48,7 +48,7 @@ enum PlayLoadTriage{
 
 //44.1k, blockalign=6 (24-bit stereo), Pitch 4.0 --> 100ms (and not enough! we get buffer underrun)
 
-#define MAX_RS 32
+#define MAX_RS 10
 //#define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)
 
 void audio_buffer_init(void);

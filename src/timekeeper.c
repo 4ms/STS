@@ -249,7 +249,7 @@ void init_SDIO_read_IRQ(void)
 	TIM_TimeBaseStructInit(&tim);
 	//30000 --> 1.4kHz
 	tim.TIM_Period = 60000; 
-	tim.TIM_Prescaler = 15; //200Hz
+	tim.TIM_Prescaler = 3; //HW FLow off: 9 fails, 10 fails occasionally, 15 was in use for a while
 	tim.TIM_ClockDivision = 0;
 	tim.TIM_CounterMode = TIM_CounterMode_Up;
 

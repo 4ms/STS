@@ -529,6 +529,7 @@ void start_playing(uint8_t chan)
 		is_buffered_to_file_end[chan] = 0;
 
 		play_state[chan]=PREBUFFERING;
+		DEBUG2_ON;
 	}
 
 	flags[PlayBuff1_Discontinuity+chan] = 1;
@@ -754,6 +755,7 @@ void read_storage_to_buffer(void)
 	FSIZE_t t_fptr;
 	uint32_t pre_buff_size;
 	uint32_t active_buff_size;
+	float pb_adjustment;
 
 	DEBUG3_ON;
 
@@ -781,9 +783,16 @@ void read_storage_to_buffer(void)
 					is_buffered_to_file_end[chan] = 0;
 			}
 
-			//pre_buff_size = BASE_BUFFER_THRESHOLD * s_sample->blockAlign;
-			pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign) * f_param[chan][PITCH] * (float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE );
-			active_buff_size = pre_buff_size * 4;
+			//
+			// Calculate the amount to pre-buffer before we play:
+			//
+			pb_adjustment = f_param[chan][PITCH] * (float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE ;
+
+			//Odd: blockAlign already includes numChannels, so we essentially square this?
+			//Why? ...is it because it plows through the play_buff twice as fast if it's stereo, thus the buffer empties more quickly if it's stereo,
+			//But if it's mono the buffer is not loaded as such
+			pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign * s_sample->numChannels) * pb_adjustment);
+			active_buff_size = pre_buff_size * 8;
 
 			if (!is_buffered_to_file_end[chan] && 
 				(
@@ -960,7 +969,7 @@ void read_storage_to_buffer(void)
 			//Check if we've prebuffered enough to start playing
 			if ((is_buffered_to_file_end[chan] || play_buff_bufferedamt[chan] >= pre_buff_size) && play_state[chan] == PREBUFFERING)
 			{
-
+				DEBUG2_OFF;
 				if (f_param[chan][LENGTH] < 0.5 && i_param[chan][REV])
 					play_state[chan] = PLAYING_PERC;
 				else
@@ -1212,6 +1221,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 								//else//buffer underrun: tried to read too much out. Try to recover!
 								//{
+									DEBUG2_ON;
 									g_error |= READ_BUFF1_OVERRUN<<chan;
 									check_errors();
 

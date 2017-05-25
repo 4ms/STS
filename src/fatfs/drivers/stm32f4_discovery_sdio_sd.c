@@ -432,10 +432,10 @@ SD_Error SD_Init(void)
   /*!< on STM32F4xx devices, SDIOCLK is fixed to 48MHz */
   SDIO_InitStructure.SDIO_ClockDiv = SDIO_TRANSFER_CLK_DIV;
   SDIO_InitStructure.SDIO_ClockEdge = SDIO_ClockEdge_Rising;
-  SDIO_InitStructure.SDIO_ClockBypass = SDIO_ClockBypass_Disable;
+  SDIO_InitStructure.SDIO_ClockBypass = SDIO_ClockBypass_Enable; //was disabled
   SDIO_InitStructure.SDIO_ClockPowerSave = SDIO_ClockPowerSave_Disable;
   SDIO_InitStructure.SDIO_BusWide = SDIO_BusWide_1b;
-  SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HardwareFlowControl_Disable;
+  SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HardwareFlowControl_Enable; //was disabled
   SDIO_Init(&SDIO_InitStructure);
   /*----------------- Read CSD/CID MSD registers ------------------*/
   errorstatus = SD_GetCardInfo(&SDCardInfo);
@@ -1105,10 +1105,10 @@ SD_Error SD_EnableWideBusOperation(uint32_t WideMode)
         /*!< Configure the SDIO peripheral */
         SDIO_InitStructure.SDIO_ClockDiv = SDIO_TRANSFER_CLK_DIV;
         SDIO_InitStructure.SDIO_ClockEdge = SDIO_ClockEdge_Rising;
-        SDIO_InitStructure.SDIO_ClockBypass = SDIO_ClockBypass_Disable;
+        SDIO_InitStructure.SDIO_ClockBypass = SDIO_ClockBypass_Enable; //was disabled
         SDIO_InitStructure.SDIO_ClockPowerSave = SDIO_ClockPowerSave_Disable;
         SDIO_InitStructure.SDIO_BusWide = SDIO_BusWide_4b;
-        SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HardwareFlowControl_Disable;
+        SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HardwareFlowControl_Enable; //was disabled
         SDIO_Init(&SDIO_InitStructure);
       }
     }
@@ -1121,10 +1121,10 @@ SD_Error SD_EnableWideBusOperation(uint32_t WideMode)
         /*!< Configure the SDIO peripheral */
         SDIO_InitStructure.SDIO_ClockDiv = SDIO_TRANSFER_CLK_DIV;
         SDIO_InitStructure.SDIO_ClockEdge = SDIO_ClockEdge_Rising;
-        SDIO_InitStructure.SDIO_ClockBypass = SDIO_ClockBypass_Disable;
+        SDIO_InitStructure.SDIO_ClockBypass = SDIO_ClockBypass_Enable; //was disabled
         SDIO_InitStructure.SDIO_ClockPowerSave = SDIO_ClockPowerSave_Disable;
         SDIO_InitStructure.SDIO_BusWide = SDIO_BusWide_1b;
-        SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HardwareFlowControl_Disable;
+        SDIO_InitStructure.SDIO_HardwareFlowControl = SDIO_HardwareFlowControl_Enable; //was disabled
         SDIO_Init(&SDIO_InitStructure);
       }
     }
@@ -1364,7 +1364,7 @@ SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t Block
 }
 
 // FIXED Version where ReadAddr is in BLOCKS NOT BYTES, permits SDHC media >4GB
-// FIX #2: readbuff has to be aligned to 32-bit boundaries in order to use DMA, thus it should be a uint32_t * not uint8_t *
+// FIX #2: readbuff is not interpretted as a uint32_t *, so it doesn't have to be aligned
 SD_Error SD_ReadMultiBlocksFIXED(uint8_t *readbuff, uint32_t ReadAddr, uint32_t BlockSize, uint32_t NumberOfBlocks)
 {
   SD_Error errorstatus = SD_OK;
@@ -2206,7 +2206,7 @@ SD_Error SD_ProcessIRQSrc(void)
   * @param  None.
   * @retval None.
   */
-void SD_ProcessDMAIRQ(void)
+void  SD_ProcessDMAIRQ(void)
 {
   if(DMA2->LISR & SD_SDIO_DMA_FLAG_TCIF)
   {
@@ -3203,6 +3203,8 @@ void SD_LowLevel_DMA_RxConfigFIXED(uint8_t *BufferDST, uint32_t BufferSize)
  {
    SD_ProcessIRQSrc();
  }
+
+ //DMA2_Stream3_IRQHandler
  void SD_SDIO_DMA_IRQHANDLER(void)
  {
    SD_ProcessDMAIRQ();
