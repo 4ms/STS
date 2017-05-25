@@ -120,7 +120,7 @@ inline int16_t get_32i_sample(uint32_t addr, uint8_t stereomode)
 	t_i16 = (t>>16);
 	if (t_i16>32767) return(32767);
 	else if (t_i16<-32767) return(-32767);
-	else return (t);
+	else return (t_i16);
 }
 
 //ToDo: Optimize this by having a different resample_read function for 16/24/32 bit...

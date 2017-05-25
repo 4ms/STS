@@ -772,16 +772,7 @@ void read_storage_to_buffer(void)
 			banknum = sample_bank_now_playing[chan];
 			s_sample = &(samples[banknum][samplenum]);
 
-			//We should buffer more if:
-			//     play_buff[]->out is approaching play_buff[]->in (buffer_lead)
-			//     OR the circular buffer is not full (cache_left > READ_BLOCK_SIZE)
-			// Unless the entire file has been read from startpos to endpos (is_buffered_to_file_end)
-			//don't read more if it will make play_buff[chan]->in wrap past the cache_offset[chan].... unless we have to because buffer_lead < pre_buff_size
-
 			play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
-
-			//cache_left = play_buff[chan]->size - (cache_high[chan] - cache_low[chan]);
-			//if (cache_left>play_buff[chan]->size) cache_left = 0;
 
 			if ( !(g_error & (FILE_READ_FAIL_1 << chan)))
 			{
@@ -790,8 +781,9 @@ void read_storage_to_buffer(void)
 					is_buffered_to_file_end[chan] = 0;
 			}
 
-			pre_buff_size = BASE_BUFFER_THRESHOLD * s_sample->blockAlign;// * (f_param[chan][PITCH]);
-			active_buff_size = pre_buff_size * 4;// * (f_param[chan][PITCH]);
+			pre_buff_size = BASE_BUFFER_THRESHOLD * s_sample->blockAlign;
+			//pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign) * f_param[chan][PITCH] * (float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE );
+			active_buff_size = pre_buff_size * 4;
 
 			if (!is_buffered_to_file_end[chan] && 
 				(
@@ -1085,13 +1077,13 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 			{
 				t_u32 = play_buff[chan]->out;
 				t_flag = flags[PlayBuff1_Discontinuity+chan];
-				resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, resampling_fpos, outL);
+				resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, s_sample->blockAlign, chan, outL);
 
 				if (s_sample->numChannels == 2)
 				{
 					play_buff[chan]->out = t_u32;
 					flags[PlayBuff1_Discontinuity+chan] = t_flag;
-					resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, resampling_fpos, outR);
+					resample_read32i(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, s_sample->blockAlign, chan, outR);
 				}
 				else //MONO: read left channel and copy to right
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
