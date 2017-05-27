@@ -119,8 +119,8 @@ void init_dig_inouts(void){
 	//LEDs
 	gpio.GPIO_Pin = PLAYLED1_pin;	GPIO_Init(PLAYLED1_GPIO, &gpio);
 	gpio.GPIO_Pin = PLAYLED2_pin;	GPIO_Init(PLAYLED2_GPIO, &gpio);
-	gpio.GPIO_Pin = CLIPLED1_pin;	GPIO_Init(CLIPLED1_GPIO, &gpio);
-	gpio.GPIO_Pin = CLIPLED2_pin;	GPIO_Init(CLIPLED2_GPIO, &gpio);
+	gpio.GPIO_Pin = SIGNALLED_pin;	GPIO_Init(SIGNALLED_GPIO, &gpio);
+	gpio.GPIO_Pin = BUSYLED_pin;	GPIO_Init(BUSYLED_GPIO, &gpio);
 
 	//Line Switch
 	gpio.GPIO_Pin = LINESWITCH_pin;	GPIO_Init(LINESWITCH_GPIO, &gpio);
@@ -128,8 +128,8 @@ void init_dig_inouts(void){
 	
 	PLAYLED1_OFF;
 	PLAYLED2_OFF;
-	CLIPLED1_OFF;
-	CLIPLED2_OFF;
+	SIGNALLED_OFF;
+	BUSYLED_OFF;
 
 	//DEBUG pins
 
@@ -176,11 +176,11 @@ void test_dig_inouts(void)
 	PLAYLED2_ON;
 	PLAYLED2_OFF;
 
-	CLIPLED1_ON;
-	CLIPLED1_OFF;
+	SIGNALLED_ON;
+	SIGNALLED_OFF;
 
-	CLIPLED2_ON;
-	CLIPLED2_OFF;
+	BUSYLED_ON;
+	BUSYLED_OFF;
 
 	ENDOUT1_ON;
 	ENDOUT1_OFF;
@@ -243,9 +243,9 @@ void test_dig_inouts(void)
 
 	while (0){
 		// t=STEREOSW;
-		// if (t==SW_MONO) {PLAYLED1_ON;PLAYLED2_OFF;CLIPLED1_OFF;}
-		// else if (t==SW_LR) {PLAYLED1_OFF;PLAYLED2_ON;CLIPLED1_OFF;}
-		// else if (t==SW_LINK) {CLIPLED1_ON;PLAYLED1_OFF;PLAYLED2_OFF;}
+		// if (t==SW_MONO) {PLAYLED1_ON;PLAYLED2_OFF;SIGNALLED_OFF;}
+		// else if (t==SW_LR) {PLAYLED1_OFF;PLAYLED2_ON;SIGNALLED_OFF;}
+		// else if (t==SW_LINK) {SIGNALLED_ON;PLAYLED1_OFF;PLAYLED2_OFF;}
 
 	}
 

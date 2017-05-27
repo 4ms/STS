@@ -125,8 +125,8 @@ void update_calibrate_leds(void)
 	static uint32_t led_flasher=0;
 
 	led_flasher+=UINT32_MAX/1665;
-	if (led_flasher < UINT32_MAX/2)	{CLIPLED1_ON;CLIPLED2_OFF;PLAYLED1_ON;PLAYLED2_OFF;}
-	else 							{CLIPLED1_OFF;CLIPLED2_ON;PLAYLED1_OFF;PLAYLED2_ON;}
+	if (led_flasher < UINT32_MAX/2)	{SIGNALLED_ON;BUSYLED_OFF;PLAYLED1_ON;PLAYLED2_OFF;}
+	else 							{SIGNALLED_OFF;BUSYLED_ON;PLAYLED1_OFF;PLAYLED2_ON;}
 
 }
 

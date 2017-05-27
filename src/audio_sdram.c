@@ -449,8 +449,8 @@ void RAM_startup_test(void)
 
 	PLAYLED1_ON;
 	PLAYLED2_ON;
-	CLIPLED1_ON;
-	CLIPLED2_ON;
+	SIGNALLED_ON;
+	BUSYLED_ON;
 
 
 	//Display the number of bad memory addresses using the seven lights (up to 15 can be shown)
@@ -459,9 +459,9 @@ void RAM_startup_test(void)
 	if (ram_errors & 1)
 		PLAYLED1_OFF;
 	if (ram_errors & 2)
-		CLIPLED1_OFF;
+		SIGNALLED_OFF;
 	if (ram_errors & 4)
-		CLIPLED2_OFF;
+		BUSYLED_OFF;
 	if (ram_errors & 8)
 		PLAYLED2_OFF;
 

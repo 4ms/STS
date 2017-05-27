@@ -529,7 +529,7 @@ void start_playing(uint8_t chan)
 		is_buffered_to_file_end[chan] = 0;
 
 		play_state[chan]=PREBUFFERING;
-		DEBUG2_ON;
+//		DEBUG2_ON;
 	}
 
 	flags[PlayBuff1_Discontinuity+chan] = 1;
@@ -757,7 +757,7 @@ void read_storage_to_buffer(void)
 	uint32_t active_buff_size;
 	float pb_adjustment;
 
-	DEBUG3_ON;
+//	DEBUG3_ON;
 
 	check_change_sample();
 
@@ -969,7 +969,7 @@ void read_storage_to_buffer(void)
 			//Check if we've prebuffered enough to start playing
 			if ((is_buffered_to_file_end[chan] || play_buff_bufferedamt[chan] >= pre_buff_size) && play_state[chan] == PREBUFFERING)
 			{
-				DEBUG2_OFF;
+			//	DEBUG2_OFF;
 				if (f_param[chan][LENGTH] < 0.5 && i_param[chan][REV])
 					play_state[chan] = PLAYING_PERC;
 				else
@@ -979,7 +979,7 @@ void read_storage_to_buffer(void)
 
 		} //play_state != SILENT, FADEDOWN
 	} //for (chan)
-	DEBUG3_OFF;
+//	DEBUG3_OFF;
 
 }
 
@@ -1008,6 +1008,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	banknum = sample_bank_now_playing[chan];
 	s_sample = &(samples[banknum][samplenum]);
 
+
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
 	{
@@ -1026,7 +1027,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		else
 			rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE);
 
-
+DEBUG2_ON;
 		//
 		//Resample data read from the play_buff and store into out[]
 		//
@@ -1099,6 +1100,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 			}
 		} 
 
+DEBUG2_OFF;
 
 		//Calculate length and where to stop playing
 		length = f_param[chan][LENGTH];
@@ -1148,6 +1150,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 			 case (PLAYING):
 			 case (PLAY_FADEUP):
+				 	DEBUG3_ON;
 			 		if (play_state[chan] == PLAY_FADEUP) 
 			 		{
 						for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
@@ -1178,6 +1181,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 
 					}
+					DEBUG3_OFF;
 
 
 					if (length>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
@@ -1221,7 +1225,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 								//else//buffer underrun: tried to read too much out. Try to recover!
 								//{
-									DEBUG2_ON;
+									//DEBUG2_ON;
 									g_error |= READ_BUFF1_OVERRUN<<chan;
 									check_errors();
 
@@ -1309,6 +1313,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		play_load_triage = PRIORITIZE_PLAYING;
 	else
 		play_load_triage = NO_PRIORITY;
+
 
 }
 

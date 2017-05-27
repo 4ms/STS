@@ -47,12 +47,12 @@ void check_errors(void);
 void check_errors(void){
 	if (g_error>0)
 	{
-		//CLIPLED1_ON;
-		//CLIPLED2_ON;
+		//SIGNALLED_ON;
+		//BUSYLED_ON;
 
 	//while(1){
- 		//CLIPLED1_OFF;
-		//CLIPLED2_OFF;
+ 		//SIGNALLED_OFF;
+		//BUSYLED_OFF;
  
 		//}
 
@@ -149,21 +149,21 @@ int main(void)
 	//err=test_sdcard();
 //	if (err){
 //		while(1){
-//			CLIPLED1_ON;
-//			CLIPLED1_OFF;
+//			SIGNALLED_ON;
+//			SIGNALLED_OFF;
 //		}
 //	}
 
-	CLIPLED1_OFF;
-	CLIPLED2_OFF;
+	SIGNALLED_OFF;
+	BUSYLED_OFF;
 
 
 	res = f_mount(&FatFs, "", 1);
 	if (res != FR_OK)
 	{
 		//can't mount
-		CLIPLED1_ON;
-		CLIPLED2_ON;
+		SIGNALLED_ON;
+		BUSYLED_ON;
 		res = f_mount(&FatFs, "", 0);
 	}
 

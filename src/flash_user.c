@@ -105,14 +105,14 @@ void save_flash_params(uint8_t num_led_blinks)
 	write_all_system_calibrations_to_FLASH();
 
 	for (i=0;i<num_led_blinks;i++){
-		CLIPLED1_ON;
-		CLIPLED2_ON;
+		SIGNALLED_ON;
+		BUSYLED_ON;
 		PLAYLED1_ON;
 		PLAYLED2_ON;
 		delay_ms(10);
 
-		CLIPLED1_OFF;
-		CLIPLED2_OFF;
+		SIGNALLED_OFF;
+		BUSYLED_OFF;
 		PLAYLED1_OFF;
 		PLAYLED2_OFF;
 

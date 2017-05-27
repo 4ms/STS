@@ -16,7 +16,7 @@ extern uint32_t end_out_ctr[NUM_PLAY_CHAN];
 extern uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN];
 
 uint8_t play_led_state[NUM_PLAY_CHAN]={0,0};
-uint8_t clip_led_state[NUM_PLAY_CHAN]={0,0};
+//uint8_t clip_led_state[NUM_PLAY_CHAN]={0,0};
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern uint8_t flags[NUM_FLAGS];
@@ -79,15 +79,15 @@ void LED_PWM_IRQHandler(void)
 			else
 				PLAYLED2_OFF;
 	
-			if (clip_led_state[0] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
-				CLIPLED1_ON;
+			if (global_mode[MONITOR_RECORDING] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
+				SIGNALLED_ON;
 			else
-				CLIPLED1_OFF;
+				SIGNALLED_OFF;
 	
-			if (clip_led_state[1] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
-				CLIPLED2_ON;
-			else
-				CLIPLED2_OFF;
+			// if (clip_led_state[1] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
+			// 	BUSYLED_ON;
+			// else
+			// 	BUSYLED_OFF;
 		}
 
 		loop_led_PWM_ctr++;
@@ -120,19 +120,14 @@ void chase_all_lights(uint32_t delaytime)
 		PLAYLED1_OFF;
 		delay_ms(delaytime);
 
-		CLIPLED1_ON;
+		SIGNALLED_ON;
 		delay_ms(delaytime);
-		CLIPLED1_OFF;
-		delay_ms(delaytime);
-
-		CLIPLED2_ON;
-		delay_ms(delaytime);
-		CLIPLED2_OFF;
+		SIGNALLED_OFF;
 		delay_ms(delaytime);
 
-		PLAYLED2_ON;
+		BUSYLED_ON;
 		delay_ms(delaytime);
-		PLAYLED2_OFF;
+		BUSYLED_OFF;
 		delay_ms(delaytime);
 
 		PLAYLED2_ON;
@@ -140,14 +135,19 @@ void chase_all_lights(uint32_t delaytime)
 		PLAYLED2_OFF;
 		delay_ms(delaytime);
 
-		CLIPLED2_ON;
+		PLAYLED2_ON;
 		delay_ms(delaytime);
-		CLIPLED2_OFF;
+		PLAYLED2_OFF;
 		delay_ms(delaytime);
 
-		CLIPLED1_ON;
+		BUSYLED_ON;
 		delay_ms(delaytime);
-		CLIPLED1_OFF;
+		BUSYLED_OFF;
+		delay_ms(delaytime);
+
+		SIGNALLED_ON;
+		delay_ms(delaytime);
+		SIGNALLED_OFF;
 		delay_ms(delaytime);
 
 		PLAYLED1_ON;
@@ -166,14 +166,14 @@ void blink_all_lights(uint32_t delaytime)
 
 		PLAYLED1_ON;
 		PLAYLED2_ON;
-		CLIPLED1_ON;
-		CLIPLED2_ON;
+		SIGNALLED_ON;
+		BUSYLED_ON;
 		delay_ms(delaytime);
 
 		PLAYLED1_OFF;
 		PLAYLED2_OFF;
-		CLIPLED1_OFF;
-		CLIPLED2_OFF;
+		SIGNALLED_OFF;
+		BUSYLED_OFF;
 		delay_ms(delaytime);
 
 }

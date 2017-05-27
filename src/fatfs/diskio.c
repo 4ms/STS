@@ -9,6 +9,7 @@
 #include <string.h>
 #include "diskio.h"		/* FatFs lower layer API */
 #include "ff.h"
+#include "dig_pins.h"
 
 PARTITION VolToPart[] = {
     {0, 1},     /* "0:" ==> Physical drive 0, 1st partition */
@@ -50,9 +51,11 @@ DSTATUS disk_initialize (
 	uint8_t res;
 
 	if (accessing) return 99;
+	BUSYLED_ON;
 	accessing |= (1<<0);
 	res = TM_FATFS_SD_SDIO_disk_initialize();
 	accessing &= ~(1<<0);
+	BUSYLED_OFF;
 
 	return res;
 }
@@ -95,10 +98,11 @@ DRESULT disk_read (
 	
 	if (accessing)
 		return 99;
+	BUSYLED_ON;
 	accessing |= (1<<2);
 	res = DG_disk_read(buff,sector,count);
-	//	res = TM_FATFS_SD_SDIO_disk_read(buff, sector, count);
 	accessing &= ~(1<<2);
+	BUSYLED_OFF;
 
 	return res;
 
@@ -124,10 +128,12 @@ DRESULT disk_write (
 	}
 	
 	if (accessing) return 99;
+	BUSYLED_ON;
 	accessing |= (1<<3);
 	res = TM_FATFS_SD_SDIO_disk_write(buff,sector,count);
 	accessing &= ~(1<<3);
-
+	BUSYLED_OFF;
+	
 	return res;
 
 }

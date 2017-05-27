@@ -18,8 +18,8 @@ extern SystemCalibrations *system_calibrations;
 void clear_errors(void)
 {
 	g_error = 0;
-	CLIPLED1_OFF;
-	CLIPLED2_OFF;
+	SIGNALLED_OFF;
+	BUSYLED_OFF;
 
 }
 void init_buttons(void)
