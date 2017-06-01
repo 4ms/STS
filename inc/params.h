@@ -67,7 +67,7 @@ enum Stereo_Modes{
 	MONO,
 	STEREO_LEFT,
 	STEREO_RIGHT,
-	STEREO_SUM
+	STEREO_AVERAGE
 };
 
 
