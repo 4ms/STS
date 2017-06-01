@@ -1049,36 +1049,45 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	}
 	else
 	{
-	//Read from SDRAM into out[]
+		//Read from SDRAM into out[]
 
 		if (s_sample->sampleRate == BASE_SAMPLE_RATE)
 			rs = f_param[chan][PITCH];
 		else
 			rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE);
-
-		if ((rs*s_sample->numChannels)>16.0)
-			rs = 16.0 / (float)s_sample->numChannels;
-
 		//
 		//Resample data read from the play_buff and store into out[]
 		//
 DEBUG2_ON;
-		if (s_sample->numChannels == 2)
+		
+		if (global_mode[STEREO_MODE])
 		{
-			t_u32 = play_buff[chan]->out;
-			t_flag = flags[PlayBuff1_Discontinuity+chan];
-			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 4, chan, outL);
+			if ((rs*s_sample->numChannels)>16.0)
+				rs = 16.0 / (float)s_sample->numChannels;
 
-			play_buff[chan]->out = t_u32;
-			flags[PlayBuff1_Discontinuity+chan] = t_flag;
-			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, 4, chan, outR);
+			if (s_sample->numChannels == 2)
+			{
+				t_u32 = play_buff[chan]->out;
+				t_flag = flags[PlayBuff1_Discontinuity+chan];
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 4, chan, outL);
+
+				play_buff[chan]->out = t_u32;
+				flags[PlayBuff1_Discontinuity+chan] = t_flag;
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, 4, chan, outR);
+			}
+			else	//MONO: read left channel and copy to right
+			{
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 2, chan, outL);
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
+			}
 		}
-		else	//MONO: read left channel and copy to right
+		else //not STEREO_MODE:
 		{
-			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 2, chan, outL);
-			for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
-		}
+			if (rs>14.5)
+				rs = 14.5;
 
+			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_AVERAGE, 4, chan, outL);
+		}
 DEBUG2_OFF;
 
 		//Calculate length and where to stop playing
