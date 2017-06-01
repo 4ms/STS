@@ -1022,6 +1022,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	//Resampling:
 	float rs;
 	uint32_t resampled_buffer_size;
+	uint32_t resampled_cache_size;
 
 	uint32_t sample_file_playpos;
 	float gain;
@@ -1162,23 +1163,26 @@ DEBUG2_OFF;
 					{
 	 					play_state[chan]=PLAYING;
 
-						resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * s_sample->numChannels * 2) * rs);
-						resampled_buffer_size *= 2;
+	 					//
+						// See if we've played enough samples and should start fading down to stop playback
+						//
 
+	 					//Amount play_buff[]->out changes with each audio block sent to the codec
+	 					resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * s_sample->numChannels * 2) * rs);
 
-						//Stop playback if we've played enough samples
+	 					//Amount an imaginary pointer in the sample file would move forward with each audio block sent to the codec
+						resampled_cache_size = (resampled_buffer_size * s_sample->sampleByteSize) >> 1;
 
 						//Find out how far ahead our output data is from the start of the cache
 						sample_file_playpos = map_buffer_to_cache(play_buff[chan]->out, s_sample->sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]); 
 
 						//See if we are about to surpass the calculated position in the file where we should end our sample
-						//Even if we reversed while playing, the _endpos should be correct
 						if (!i_param[chan][REV])
 						{
-							if ((sample_file_playpos + resampled_buffer_size) >= sample_file_endpos[chan])
+							if ((sample_file_playpos + (resampled_cache_size*2)) >= sample_file_endpos[chan])
 								play_state[chan] = PLAY_FADEDOWN;
 						} else {
-							if (sample_file_playpos <= (resampled_buffer_size + sample_file_endpos[chan]))//  ((sample_file_playpos - resampled_buffer_size) <= sample_file_endpos[chan]))
+							if (sample_file_playpos <= ((resampled_cache_size*2) + sample_file_endpos[chan]))
 								play_state[chan] = PLAY_FADEDOWN;
 						}
 
@@ -1206,7 +1210,7 @@ DEBUG2_OFF;
 
 									//play_buff[chan]->out = play_buff[chan]->in;
 
-									//if (i_param[chan][REV]) resampled_buffer_size *= 2;
+									//if (i_param[chan][REV]) resampled_buffer_size *= 4;
 
 									//CB_offset_out_address(play_buff[chan], resampled_buffer_size, !i_param[chan][REV]);
 									//play_buff[chan]->out = play_buff[chan]->min + align_addr((play_buff[chan]->out - play_buff[chan]->min), s_sample->blockAlign);
