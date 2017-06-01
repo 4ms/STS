@@ -56,7 +56,7 @@ C0FLAGS += -mcpu=cortex-m4 -mfloat-abi=hard
 C0FLAGS +=  -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion 
 
 
-CFLAGS = -g2 -O1 \
+#CFLAGS = -g2 -O1 \
           -fthread-jumps \
           -falign-functions  -falign-jumps \
           -falign-loops  -falign-labels \
@@ -80,7 +80,7 @@ CFLAGS = -g2 -O1 \
           -finline-functions -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-vectorize
           
 # Causes Freeze on run: -fschedule-insns  -fschedule-insns2 
-#CFLAGS = -O3 -g2 -fno-tree-loop-distribute-patterns 
+CFLAGS = -O3 -g2 -fno-tree-loop-distribute-patterns -fno-schedule-insns  -fno-schedule-insns2 
 
 
 CFLAGS += -mlittle-endian -mthumb 
