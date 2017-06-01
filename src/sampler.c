@@ -533,6 +533,9 @@ void start_playing(uint8_t chan)
 	{
 		CB_init(play_buff[chan], i_param[chan][REV]);
 
+		if (i_param[chan][REV])
+			play_buff[chan]->in = play_buff[chan]->max - ((READ_BLOCK_SIZE * 2) / samples[banknum][samplenum].sampleByteSize);
+
 		res = goto_filepos(sample_file_startpos[chan]);
 		if (res != FR_OK) g_error |= FILE_SEEK_FAIL;
 
@@ -917,11 +920,18 @@ void read_storage_to_buffer(void)
 					if (res != FR_OK) 		g_error |= FILE_READ_FAIL_1 << chan;
 					else
 					{
+						//Jump back in play_buff by the amount just read (re-sized from file addresses to buffer address)
+						if (i_param[chan][REV])
+							CB_offset_in_address(play_buff[chan], (rd * 2) / s_sample->sampleByteSize, 1);
+
+						DEBUG3_ON;
 						err=0;
-						//If the sample is not 16-bit stereo, convert the data to such.
-						//Thus, the play_buff will always by 4-byte aligned
+
+						//
+						// Write raw file data into buffer
+						//
 						if (s_sample->sampleByteSize == 2) //16bit
-							err = memory_write32_cb(play_buff[chan], tmp_buff_u32, rd>>2, 0);
+							err = memory_write32_cb(play_buff[chan], tmp_buff_u32, rd>>2, 0); 
 
 						else
 						if (s_sample->sampleByteSize == 3) //24bit
@@ -938,6 +948,7 @@ void read_storage_to_buffer(void)
 						{
 							err = memory_write_32ias16(play_buff[chan], (uint8_t *)tmp_buff_u32, rd, 0); //rd must be a multiple of 4
 						}
+						DEBUG3_OFF;
 
 						//Update the cache addresses
 						if (i_param[chan][REV])
@@ -946,12 +957,12 @@ void read_storage_to_buffer(void)
 							if (err && (play_buff[chan]->in == play_buff[chan]->out)) 
 								err = 0;
 
-							//Jump back two blocks if we're reversing
-							if (br == READ_BLOCK_SIZE) //
-								CB_offset_in_address(play_buff[chan], READ_BLOCK_SIZE * 2, 1); //
-							else //
-								CB_offset_in_address(play_buff[chan], br + READ_BLOCK_SIZE, 1); //breakpoint
-
+							//
+							//Jump back again in play_buff by the amount just read (re-sized from file addresses to buffer address)
+							//This ensures play_buff[]->in points to the buffer seam
+							//
+							if (i_param[chan][REV])
+								CB_offset_in_address(play_buff[chan], (rd * 2) / s_sample->sampleByteSize, 1);
 
 							cache_low[chan] = sample_file_curpos[chan]; 
 							cache_map_pt[chan] = play_buff[chan]->in;
@@ -1115,7 +1126,6 @@ DEBUG2_OFF;
 
 			 case (PLAYING):
 			 case (PLAY_FADEUP):
-				 	DEBUG3_ON;
 			 		if (play_state[chan] == PLAY_FADEUP) 
 			 		{
 						for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
@@ -1146,7 +1156,6 @@ DEBUG2_OFF;
 
 
 					}
-					DEBUG3_OFF;
 
 
 					if (length>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
@@ -1169,7 +1178,7 @@ DEBUG2_OFF;
 							if ((sample_file_playpos + resampled_buffer_size) >= sample_file_endpos[chan])
 								play_state[chan] = PLAY_FADEDOWN;
 						} else {
-							if (sample_file_playpos <= (resampled_buffer_size*2 + sample_file_endpos[chan]))//  ((sample_file_playpos - resampled_buffer_size) <= sample_file_endpos[chan]))
+							if (sample_file_playpos <= (resampled_buffer_size + sample_file_endpos[chan]))//  ((sample_file_playpos - resampled_buffer_size) <= sample_file_endpos[chan]))
 								play_state[chan] = PLAY_FADEDOWN;
 						}
 
