@@ -142,112 +142,125 @@ void resample_read16(float rs, CircularBuffer* buf, uint32_t buff_len, enum Ster
 	else
 		ch = chan * 2; //0 or 2
 
-	//fill the resampling buffer with three points
-	if (flags[PlayBuff1_Discontinuity+chan])
+	if (rs == 1.0)
 	{
-		flags[PlayBuff1_Discontinuity+chan] = 0;
-
-		x0[ch] = get_16b_sample(buf->out, stereomode);
-		safe_inc_play_addr(buf, block_align, chan);
-
-		x1[ch] = get_16b_sample(buf->out, stereomode);
-		safe_inc_play_addr(buf, block_align, chan);
-
-		x2[ch] = get_16b_sample(buf->out, stereomode);
-		safe_inc_play_addr(buf, block_align, chan);
-
-		fractional_pos[ch] = 0.0;
-	}
-
-	outpos=0;
-	while (outpos < buff_len)
-	{
-		//Optimize for resample rates >= 4
-		if (fractional_pos[ch] >= 4.0)
+		for(outpos==0;outpos<buff_len;outpos++)
 		{
-			fractional_pos[ch] = fractional_pos[ch] - 4.0;
-
-			//shift samples back one
-			//and read a new sample
-			xm1[ch] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align, chan);
-
-			x0[ch] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align, chan);
-
-			x1[ch] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align, chan);
-
-			x2[ch] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align, chan);
-
+			out[outpos] = get_16b_sample(buf->out, stereomode);
+			CB_offset_out_address(buf, block_align, i_param[chan][REV]);
 		}
-		//Optimize for resample rates >= 3
-		if (fractional_pos[ch] >= 3.0)
+		flags[PlayBuff1_Discontinuity+chan] = 1;
+
+
+	} else {
+
+		//fill the resampling buffer with three points
+		if (flags[PlayBuff1_Discontinuity+chan])
 		{
-			fractional_pos[ch] = fractional_pos[ch] - 3.0;
+			flags[PlayBuff1_Discontinuity+chan] = 0;
 
-			//shift samples back one
-			//and read a new sample
-			xm1[ch] 	= x2[ch];
-
-			x0[ch] 	= get_16b_sample(buf->out, stereomode);
+			x0[ch] = get_16b_sample(buf->out, stereomode);
 			safe_inc_play_addr(buf, block_align, chan);
 
-			x1[ch] 	= get_16b_sample(buf->out, stereomode);
+			x1[ch] = get_16b_sample(buf->out, stereomode);
 			safe_inc_play_addr(buf, block_align, chan);
 
-			x2[ch] 	= get_16b_sample(buf->out, stereomode);
+			x2[ch] = get_16b_sample(buf->out, stereomode);
 			safe_inc_play_addr(buf, block_align, chan);
 
-		}
-		//Optimize for resample rates >= 2
-		if (fractional_pos[ch] >= 2.0)
-		{
-			fractional_pos[ch] = fractional_pos[ch] - 2.0;
-
-			//shift samples back one
-			//and read a new sample
-			xm1[ch] 	= x1[ch];
-			x0[ch] 	= x2[ch];
-
-			x1[ch] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align, chan);
-
-			x2[ch] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align, chan);
-
-		}
-		//Optimize for resample rates >= 1
-		if (fractional_pos[ch] >= 1.0)
-		{
-			fractional_pos[ch] = fractional_pos[ch] - 1.0;
-
-			//shift samples back one
-			//and read a new sample
-			xm1[ch] 	= x0[ch];
-			x0[ch] 	= x1[ch];
-			x1[ch] 	= x2[ch];
-
-			x2[ch] 	= get_16b_sample(buf->out, stereomode);
-			safe_inc_play_addr(buf, block_align, chan);
-
+			fractional_pos[ch] = 0.0;
 		}
 
-		//calculate coefficients
-		a = (3 * (x0[ch]-x1[ch]) - xm1[ch] + x2[ch]) / 2;
-		b = 2*x1[ch] + xm1[ch] - (5*x0[ch] + x2[ch]) / 2;
-		c = (x1[ch] - xm1[ch]) / 2;
-
-		//calculate as many fractionally placed output points as we need
-		while ( fractional_pos[ch]<1.0 && outpos<buff_len)
+		outpos=0;
+		while (outpos < buff_len)
 		{
-			t_out = (((a * fractional_pos[ch]) + b) * fractional_pos[ch] + c) * fractional_pos[ch] + x0[ch];
-			if (t_out >= 32767.0)		out[outpos++] = 32767;
-			else if (t_out <= -32767.0)	out[outpos++] = -32767;
-			else						out[outpos++] = t_out;
+			//Optimize for resample rates >= 4
+			if (fractional_pos[ch] >= 4.0)
+			{
+				fractional_pos[ch] = fractional_pos[ch] - 4.0;
 
-			fractional_pos[ch] += rs;
+				//shift samples back one
+				//and read a new sample
+				xm1[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+				x0[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+				x1[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+				x2[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+			}
+			//Optimize for resample rates >= 3
+			if (fractional_pos[ch] >= 3.0)
+			{
+				fractional_pos[ch] = fractional_pos[ch] - 3.0;
+
+				//shift samples back one
+				//and read a new sample
+				xm1[ch] 	= x2[ch];
+
+				x0[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+				x1[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+				x2[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+			}
+			//Optimize for resample rates >= 2
+			if (fractional_pos[ch] >= 2.0)
+			{
+				fractional_pos[ch] = fractional_pos[ch] - 2.0;
+
+				//shift samples back one
+				//and read a new sample
+				xm1[ch] 	= x1[ch];
+				x0[ch] 	= x2[ch];
+
+				x1[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+				x2[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+			}
+			//Optimize for resample rates >= 1
+			if (fractional_pos[ch] >= 1.0)
+			{
+				fractional_pos[ch] = fractional_pos[ch] - 1.0;
+
+				//shift samples back one
+				//and read a new sample
+				xm1[ch] 	= x0[ch];
+				x0[ch] 	= x1[ch];
+				x1[ch] 	= x2[ch];
+
+				x2[ch] 	= get_16b_sample(buf->out, stereomode);
+				safe_inc_play_addr(buf, block_align, chan);
+
+			}
+
+			//calculate coefficients
+			a = (3 * (x0[ch]-x1[ch]) - xm1[ch] + x2[ch]) / 2;
+			b = 2*x1[ch] + xm1[ch] - (5*x0[ch] + x2[ch]) / 2;
+			c = (x1[ch] - xm1[ch]) / 2;
+
+			//calculate as many fractionally placed output points as we need
+			while ( fractional_pos[ch]<1.0 && outpos<buff_len)
+			{
+				t_out = (((a * fractional_pos[ch]) + b) * fractional_pos[ch] + c) * fractional_pos[ch] + x0[ch];
+				if (t_out >= 32767.0)		out[outpos++] = 32767;
+				else if (t_out <= -32767.0)	out[outpos++] = -32767;
+				else						out[outpos++] = t_out;
+
+				fractional_pos[ch] += rs;
+			}
 		}
 	}
 }

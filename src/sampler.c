@@ -1056,6 +1056,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		else
 			rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE);
 
+		if ((rs*s_sample->numChannels)>16.0)
+			rs = 16.0 / (float)s_sample->numChannels;
+
 		//
 		//Resample data read from the play_buff and store into out[]
 		//
@@ -1075,7 +1078,6 @@ DEBUG2_ON;
 			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 2, chan, outL);
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
 		}
-
 
 DEBUG2_OFF;
 
