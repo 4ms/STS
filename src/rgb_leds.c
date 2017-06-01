@@ -158,7 +158,7 @@ void test_all_buttonLEDs(void)
 		LEDDriver_setRGBLED(j,0 );
 	}
 
-	for(i=0;i<80;i++)
+	for(i=0;i<(NUM_LED_PALETTE-1);i++)
 	{
 		for (t=0.0;t<=1.0;t+=0.005)
 		{
