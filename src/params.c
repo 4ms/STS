@@ -423,7 +423,7 @@ void update_params(void)
 			//
 			f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
 
-			if (f_param[chan][LENGTH] > 1.0)			f_param[chan][LENGTH] = 1.0;
+			if (f_param[chan][LENGTH] > 0.990)		f_param[chan][LENGTH] = 1.0;
 			if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
 
 
@@ -432,8 +432,8 @@ void update_params(void)
 			//
 			f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
 
-			if (f_param[chan][START] > 1.0)
-				f_param[chan][START] = 1.0;
+			if (f_param[chan][START] > 0.99)		f_param[chan][START] = 1.0;
+			if (f_param[chan][START] <= 0.0003)		f_param[chan][START] = 0.0;
 
 			//
 			// PITCH POT + CV
