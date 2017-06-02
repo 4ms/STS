@@ -1062,8 +1062,8 @@ DEBUG2_ON;
 		
 		if (global_mode[STEREO_MODE])
 		{
-			if ((rs*s_sample->numChannels)>16.0)
-				rs = 16.0 / (float)s_sample->numChannels;
+			if ((rs*s_sample->numChannels)>MAX_RS)
+				rs = MAX_RS / (float)s_sample->numChannels;
 
 			if (s_sample->numChannels == 2)
 			{
@@ -1083,10 +1083,14 @@ DEBUG2_ON;
 		}
 		else //not STEREO_MODE:
 		{
-			if (rs>14.5)
-				rs = 14.5;
+			if (rs>(MAX_RS))
+				rs = (MAX_RS);
 
-			resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_AVERAGE, 4, chan, outL);
+			if (s_sample->numChannels == 2)
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_AVERAGE, 4, chan, outL);
+			else
+				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 2, chan, outL);
+
 		}
 DEBUG2_OFF;
 
