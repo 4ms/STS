@@ -1069,15 +1069,15 @@ DEBUG2_ON;
 			{
 				t_u32 = play_buff[chan]->out;
 				t_flag = flags[PlayBuff1_Discontinuity+chan];
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 4, chan, outL);
+				resample_read16_left(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 4, chan, outL);
 
 				play_buff[chan]->out = t_u32;
 				flags[PlayBuff1_Discontinuity+chan] = t_flag;
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_RIGHT, 4, chan, outR);
+				resample_read16_right(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 4, chan, outR);
 			}
 			else	//MONO: read left channel and copy to right
 			{
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 2, chan, outL);
+				resample_read16_left(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 2, chan, outL);
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
 			}
 		}
@@ -1087,9 +1087,9 @@ DEBUG2_ON;
 				rs = (MAX_RS);
 
 			if (s_sample->numChannels == 2)
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_AVERAGE, 4, chan, outL);
+				resample_read16_avg(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 4, chan, outL);
 			else
-				resample_read16(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, STEREO_LEFT, 2, chan, outL);
+				resample_read16_left(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 2, chan, outL);
 
 		}
 DEBUG2_OFF;
