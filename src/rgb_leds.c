@@ -194,8 +194,12 @@ void update_ButtonLEDs(void)
 	//float tri_16;
 	//float tri_15;
 	float tri_14;
-	float tri_13;
+	//float tri_13;
 
+	static uint32_t phase=0;
+
+	float t_tri;
+	uint32_t t;
 
 //	if (tm_16>0x8000)
 //		tri_16 = ((float)(tm_16 - 0x8000)) / 32768.0f;
@@ -207,15 +211,17 @@ void update_ButtonLEDs(void)
 //		else
 //			tri_15 = ((float)(0x4000 - tm_15)) / 16384.0f;
 
+
+
 	if (tm_14>0x2000)
 		tri_14 = ((float)(tm_14 - 0x2000)) / 8192.0f;
 	else
 		tri_14 = ((float)(0x2000 - tm_14)) / 8192.0f;
 
-	if (tm_13>0x1000)
-		tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
-	else
-		tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
+	// if (tm_13>0x1000)
+	// 	tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
+	// else
+	// 	tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
 
 	for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 	{
@@ -282,33 +288,57 @@ void update_ButtonLEDs(void)
 			}
 			else if (flags[StereoModeTurningOn])
 			{
-				if (tm_14 <100) flags[StereoModeTurningOn]--;
-				if (flags[StereoModeTurningOn] < 4)
-					set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, tri_14);
+				//reset phase
+				if (flags[StereoModeTurningOn] == 1) {
+					phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
+					flags[StereoModeTurningOn]++;
+				}
 
-				//if (tm_13 < 0x1000)	set_ButtonLED_byPalette(ButLEDnum, GREENER);
-				//else				set_ButtonLED_byPalette(ButLEDnum, OFF);
+				//calc fade
+				t = (sys_tmr + phase) & 0x3FFF;
+				if (t >0x2000)			t_tri = ((float)(t - 0x2000)) / 8192.0f;
+				else					t_tri = ((float)(0x2000 - t)) / 8192.0f;
+
+				set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, tri_14);
+
+				if ((t < 0x1000) && (flags[StereoModeTurningOn] & 1)==1) 					flags[StereoModeTurningOn]++;
+				if ((t > 0x2000) && (t < 0x3000) && (flags[StereoModeTurningOn] & 1)==0) 	flags[StereoModeTurningOn]++;
+
+				if (flags[StereoModeTurningOn] > 5) flags[StereoModeTurningOn] = 0;
+
 			}
 			else if (flags[StereoModeTurningOff])
 			{
-				if (tm_14 <100) flags[StereoModeTurningOff]--;
+				//reset phase
+				if (flags[StereoModeTurningOff] == 1) {
+					phase = 0xFFFFFFFF - sys_tmr;
+					flags[StereoModeTurningOff]++;
+				}
 
-				if (flags[StereoModeTurningOn] == 4){
+				t = (sys_tmr + phase) & 0x3FFF;
+
+				if (flags[StereoModeTurningOff] == 2){
 					set_ButtonLED_byPalette(Play1ButtonLED, OFF);
 					set_ButtonLED_byPalette(Play2ButtonLED, OFF);
 				}
-				else if (flags[StereoModeTurningOff] > 2){
-					if (tm_13 < 0x1000)	set_ButtonLED_byPalette(Play1ButtonLED, OFF);
-					else				set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
+				else if (flags[StereoModeTurningOff] < 5){
+					if ((t&0x1FFF) < 0x1000)	set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
+					else						set_ButtonLED_byPalette(Play1ButtonLED, OFF);
 
 					set_ButtonLED_byPalette(Play2ButtonLED, OFF);
-
-				} else {
-					if (tm_13 < 0x1000)	set_ButtonLED_byPalette(Play2ButtonLED, OFF);
-					else				set_ButtonLED_byPalette(Play2ButtonLED, GREEN);
+				}
+				else if (flags[StereoModeTurningOff] < 7){
+					if ((t&0x1FFF) < 0x1000)	set_ButtonLED_byPalette(Play2ButtonLED, GREEN);
+					else						set_ButtonLED_byPalette(Play2ButtonLED, OFF);
 
 					set_ButtonLED_byPalette(Play1ButtonLED, OFF);
 				}
+
+				if ((t < 0x1000) && (flags[StereoModeTurningOff] & 1)==1) 					flags[StereoModeTurningOff]++;
+				if ((t > 0x2000) && (t < 0x3000) && (flags[StereoModeTurningOff] & 1)==0) 	flags[StereoModeTurningOff]++;
+
+				if (flags[StereoModeTurningOff] > 7) flags[StereoModeTurningOff] = 0;
+
 			}
 			else
 			{
