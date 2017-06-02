@@ -48,7 +48,7 @@ enum PlayLoadTriage{
 
 //44.1k, blockalign=6 (24-bit stereo), Pitch 4.0 --> 100ms (and not enough! we get buffer underrun)
 
-#define MAX_RS 10
+#define MAX_RS 20 /* over 4 octaves at 44.1k */
 //#define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)
 
 void audio_buffer_init(void);

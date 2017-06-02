@@ -22,7 +22,26 @@ void safe_inc_play_addr(CircularBuffer* buf, uint8_t blockAlign,  uint8_t chan);
 
 inline void safe_inc_play_addr(CircularBuffer* buf, uint8_t blockAlign, uint8_t chan)
 {
-	CB_offset_out_address(buf, blockAlign, i_param[chan][REV]);
+	if (!i_param[chan][REV])
+	{
+		buf->out +=blockAlign;
+
+		if (buf->out > buf->max) //This will not work if buf->max==0xFFFFFFFF, but luckily this is never the case with the STS!
+		{
+			buf->wrapping=0;
+			buf->out-=buf->size;
+		}
+	}
+	else
+	{
+		if ((buf->out - buf->min) < blockAlign)
+		{
+			buf->out += buf->size - blockAlign;
+			buf->wrapping = 1;
+		}
+		else
+			buf->out -= blockAlign;
+	}
 }
 
 
@@ -32,7 +51,10 @@ inline int16_t get_16b_sample(uint32_t addr, uint8_t stereomode)
 	uint32_t rd;
 	int16_t a,b;
 
-	rd = memory_read_32bword(addr);
+	//rd = memory_read_32bword(addr);
+	//while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+	while((FMC_Bank5_6->SDSR & FMC_FLAG_Busy) == FMC_FLAG_Busy){;}
+	rd = (*((uint32_t *)addr));
 
 	if (stereomode==STEREO_AVERAGE)
 	{
@@ -42,7 +64,7 @@ inline int16_t get_16b_sample(uint32_t addr, uint8_t stereomode)
 	}
 
 	else if (stereomode==STEREO_RIGHT)
-		return((int16_t)((rd & 0xFFFF0000)>>16));
+		return((int16_t)(rd >> 16));
 
 	else
 		return((int16_t)(rd));
