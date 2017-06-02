@@ -502,32 +502,67 @@ uint8_t load_bank_from_disk(uint8_t bank)
 
 uint8_t write_sampleindex_file(void)
 {
+
 	FIL temp_file;
 	FRESULT res;
 	uint32_t sz, bw;
 	uint32_t data[1];
 
-	res = f_open(&temp_file,"sample.index", FA_WRITE | FA_CREATE_ALWAYS); //overwrite existing file
 
-	if (res != FR_OK) return(1); //file cant be opened/created
+	// CREATE INDEX FILE
+	// previous index files are replaced
+	// f_open is a function of the module application interface
+	// for the Generic FAT file system module  (ff.h)
+	
+	// create sample.index file
+	// ... and its pointer &temp_file
+	res = f_open(&temp_file,"sample.index", FA_WRITE | FA_CREATE_ALWAYS); 
+
+	// rise flags if index can't be opened/created
+	if (res != FR_OK) return(1); 
+
+	// write cached information of the file  to the volume
+	// ... using the Generic FAT file system module (ff.h)
+	// ... to preserve the FAT structure on the volume 
+	// ... in case the write operation to the FAT volume is interrupted due to an accidental failure
+	// ... such as sudden blackout, incorrect media removal and unrecoverable disk error
 	f_sync(&temp_file);
 
-	sz = sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
+
+	// WRITE 'SAMPLES' ARRAY TO INDEX FILE
+	// samples is an array of 'Sample' 
+	// Array contains one element per sample
+	// a given array element contains info for a given sample
+	// ... but does not contain sample data
+	sz 	= sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
+	
+	// write samples array into temporary file
 	res = f_write(&temp_file, samples, sz, &bw);
+	
+	// update the volume   
 	f_sync(&temp_file);
 
-	if (res != FR_OK)	{f_close(&temp_file); return(2);}//file write failed
-	else if (bw < sz)	{f_close(&temp_file); return(3);}//not all data written
+	// rise flags as needed
+	if 		(res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
+	else if (bw < sz)		{f_close(&temp_file); return(3);} //not all data written
 
-	data[0]=global_mode[STEREO_MODE];
-	sz = 4;
-	res = f_write(&temp_file, data, sz, &bw);
+
+ 	// WRITE GLOBAL MODE TO TEMPORARY INDEX FILE
+	data[0]	= global_mode[STEREO_MODE];
+	sz 		= 4;
+
+	// write global mode to temporary file
+	res 	= f_write(&temp_file, data, sz, &bw);
+	
+	// update the volume   
 	f_sync(&temp_file);
 
-	if (res != FR_OK)	{f_close(&temp_file); return(2);}//file write failed
-	else if (bw < sz)	{f_close(&temp_file); return(3);}//not all data written
+	// update fail flags as needed
+	if (res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
+	else if (bw < sz)	{f_close(&temp_file); return(3);} //not all data written
 
 
+	// CLOSE INDEX FILE
 	f_close(&temp_file);
 	return(0);
 }
