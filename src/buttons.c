@@ -210,9 +210,11 @@ void Button_Debounce_IRQHandler(void)
 								break;
 
 							case Rev2:
-								if (global_mode[EDIT_MODE])
+								if (global_mode[EDIT_MODE]){
+									t = global_mode[STEREO_MODE];
 									load_sampleindex_file();
-								else
+									global_mode[STEREO_MODE] = t;
+								}else
 									flags[Rev2Trig]=1;
 
 								clear_errors();

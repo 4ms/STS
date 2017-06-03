@@ -189,11 +189,11 @@ void init_LowPassCoefs(void)
 	MIN_POT_ADC_CHANGE[PITCH_POT*2] = 12;
 	MIN_POT_ADC_CHANGE[PITCH_POT*2+1] = 12;
 
-	MIN_POT_ADC_CHANGE[START_POT*2] = 10;
-	MIN_POT_ADC_CHANGE[START_POT*2+1] = 10;
+	MIN_POT_ADC_CHANGE[START_POT*2] = 20;
+	MIN_POT_ADC_CHANGE[START_POT*2+1] = 20;
 
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 10;
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 10;
+	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 20;
+	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 20;
 
 	MIN_POT_ADC_CHANGE[SAMPLE_POT*2] = 60;
 	MIN_POT_ADC_CHANGE[SAMPLE_POT*2+1] = 60;
@@ -373,8 +373,12 @@ void update_params(void)
 		//
 		if (flag_pot_changed[SAMPLE_POT*2+1])
 		{
-		//	t_f 	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] + 204.8f) / 2048.0f;
-			t_f 	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] + 81.92f) / 819.2f;
+			if (old_i_smoothed_potadc[SAMPLE_POT*2+1] < 2020) 
+				t_f = (old_i_smoothed_potadc[SAMPLE_POT*2+1] / 2244.44f) + 0.1; //0.1 to 1.0
+			else if (old_i_smoothed_potadc[SAMPLE_POT*2+1] < 2080)
+				t_f = 1.0;
+			else
+				t_f	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] - 1577.5) / 503.5f; //1.0 to 5.0
 			set_sample_gain(&samples[banknum][samplenum], t_f);
 		}
 
