@@ -138,7 +138,7 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 						case Edit:
-							global_mode[EDIT_MODE] = 1;
+							enter_edit_mode();
 							break;
 
 					}
@@ -221,8 +221,7 @@ void Button_Debounce_IRQHandler(void)
 								break;
 
 							case Edit:
-								global_mode[EDIT_MODE] = 0;
-								flags[Play1But] = 1;
+								exit_edit_mode();
 								break;
 
 							default:

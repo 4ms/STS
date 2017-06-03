@@ -28,5 +28,8 @@ void nudge_trim_size(Sample *s_sample, int32_t fine);
 
 void set_sample_gain(Sample *s_sample, float gain);
 
+void exit_edit_mode(void);
+void enter_edit_mode(void);
+
 
 #endif /* INC_EDIT_MODE_H */

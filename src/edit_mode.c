@@ -20,6 +20,14 @@ uint8_t original_assigned_sample_i;
 Sample t_assign_samples[MAX_ASSIGNED];
 uint8_t cur_assign_bank=0xFF;
 
+uint8_t	cached_looping;
+uint8_t cached_rev;
+uint8_t cached_play_state;
+// uint8_t lock_start;
+// uint8_t lock_length;
+uint8_t scrubbed_in_edit;
+
+
 extern enum g_Errors g_error;
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern uint8_t 	flags[NUM_FLAGS];
@@ -185,6 +193,40 @@ void enter_assignment_mode(void)
 	}
 }
 
+void enter_edit_mode(void)
+{
+	global_mode[EDIT_MODE] = 1;
+	scrubbed_in_edit = 0;
+
+	cached_looping 	= i_param[0][LOOPING];
+	cached_rev 		= i_param[0][REV];
+
+	if (play_state[0] == SILENT || play_state[0] == PLAY_FADEDOWN)
+		cached_play_state = 0;
+	else
+		cached_play_state = 1;
+}
+
+void exit_edit_mode(void)
+{
+	// lock_start = 1;
+	// lock_length = 1;
+
+	global_mode[EDIT_MODE] = 0;
+
+	i_param[0][LOOPING] = cached_looping;
+	i_param[0][REV]		= cached_rev;
+
+	if (scrubbed_in_edit)
+	{
+		if (cached_play_state)	flags[Play1Trig] = 1;
+		else if (play_state[0] == PREBUFFERING) 	play_state[0] = SILENT;
+		else if (play_state[0] != SILENT){
+			/*if (cached_looping)						play_state[0] = RETRIG_FADEDOWN;
+			else 									*/play_state[0] = PLAY_FADEDOWN;
+		}
+	}
+}
 
 void assign_sample(uint8_t assigned_sample_i)
 {
