@@ -56,7 +56,7 @@ C0FLAGS += -mcpu=cortex-m4 -mfloat-abi=hard
 C0FLAGS +=  -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion 
 
 
-CFLAGS = -g2 -O1 \
+#CFLAGS = -g2 -O1 \
           -fthread-jumps \
           -falign-functions  -falign-jumps \
           -falign-loops  -falign-labels \
@@ -80,7 +80,7 @@ CFLAGS = -g2 -O1 \
           -finline-functions -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-vectorize
           
 # Causes Freeze on run: -fschedule-insns  -fschedule-insns2 
-# CFLAGS = -O3 -fno-tree-loop-distribute-patterns 
+CFLAGS = -O3 -g2 -fno-tree-loop-distribute-patterns -fno-schedule-insns  -fno-schedule-insns2 
 
 
 CFLAGS += -mlittle-endian -mthumb 
@@ -93,28 +93,25 @@ AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4
 
 LDSCRIPT = $(DEVICE)/$(LOADFILE)
 
-#Use FPU libraries (standard C)
-LDLIBS = -L"/usr/local/Caskroom/gcc-arm-embedded/5_4-2016q3,20160926/gcc-arm-none-eabi-5_4-2016q3/arm-none-eabi/lib/fpu" -L"/usr/local/Caskroom/gcc-arm-embedded/5_4-2016q3,20160926/gcc-arm-none-eabi-5_4-2016q3/lib/gcc/arm-none-eabi/5.4.1/fpu"
-
-#Use nosys.specs for standard C functions such as malloc(), memcpy()
-LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT) 
+#Use fpu/nosys.specs for standard C functions such as malloc(), memcpy()
+LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIPT) 
 
 
 #vpath %.c src
 
-#build/src/params.o: CFLAGS = $(C0FLAGS)
-#build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
+#build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
+#build/src/wavefmt.o: CFLAGS = $(C0FLAGS)
 #build/src/resample.o: CFLAGS = $(C0FLAGS)
 #build/src/sampler.o: CFLAGS = $(C0FLAGS)
+#build/src/params.o: CFLAGS = $(C0FLAGS)
+#build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
 #build/src/flash_user.o: CFLAGS = $(C0FLAGS)
 #build/src/calibration.o: CFLAGS = $(C0FLAGS)
 #build/src/buttons.o: CFLAGS = $(C0FLAGS)
 #build/src/dig_pins.o: CFLAGS = $(C0FLAGS)
-#build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
 #build/src/rgb_leds.o: CFLAGS = $(C0FLAGS)
 #build/src/circular_buffer.o: CFLAGS = $(C0FLAGS)
 #build/src/audio_util.o: CFLAGS = $(C0FLAGS)
-#build/src/wavefmt.o: CFLAGS = $(C0FLAGS)
 #build/src/wav_recoding.o: CFLAGS = $(C0FLAGS)
 #build/src/buttons.o: CFLAGS = $(C0FLAGS)
 #build/src/file_util.o: CFLAGS = $(C0FLAGS)
@@ -122,6 +119,7 @@ LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT)
 #build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/drivers/fatfs_sd_sdio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
+#build/src/fatfs/drivers/stm32f4_discovery_sdio_sd.o: CFLAGS = $(C0FLAGS)
 
 all: Makefile $(BIN) $(HEX)
 
