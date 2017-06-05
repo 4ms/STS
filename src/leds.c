@@ -48,47 +48,25 @@ void LED_PWM_IRQHandler(void)
 	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
 		 //begin1: 300ns - 450ns
 
-		if (flags[StereoModeTurningOn])
-		{
-			if (tm_14 < 0x2000) {
-				PLAYLED1_ON;
-				PLAYLED2_ON;
-			} else {
-				PLAYLED1_OFF;
-				PLAYLED2_OFF;
-			}
-		}
-		else if (flags[StereoModeTurningOff])
-		{
-			if (tm_13 < 0x1000)	PLAYLED1_ON;
-			else PLAYLED1_OFF;
-		
-			if (tm_14 < 0x2000)	PLAYLED2_ON;
-			else PLAYLED2_OFF;
-	
-		}
+		if ((play_led_state[1] && global_mode[STEREO_MODE] || play_led_state[0]) && (loop_led_PWM_ctr<system_calibrations->led_brightness) && !play_led_flicker_ctr[0])
+			PLAYLED1_ON;
 		else
-		{
-			if ((play_led_state[1] && global_mode[STEREO_MODE] || play_led_state[0]) && (loop_led_PWM_ctr<system_calibrations->led_brightness) && !play_led_flicker_ctr[0])
-				PLAYLED1_ON;
-			else
-				PLAYLED1_OFF;
+			PLAYLED1_OFF;
 
-			if ((play_led_state[0] && global_mode[STEREO_MODE] || play_led_state[1]) && (loop_led_PWM_ctr<system_calibrations->led_brightness) && !play_led_flicker_ctr[1])
-				PLAYLED2_ON;
-			else
-				PLAYLED2_OFF;
-	
-			if (global_mode[MONITOR_RECORDING] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
-				SIGNALLED_ON;
-			else
-				SIGNALLED_OFF;
-	
-			// if (clip_led_state[1] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
-			// 	BUSYLED_ON;
-			// else
-			// 	BUSYLED_OFF;
-		}
+		if ((play_led_state[0] && global_mode[STEREO_MODE] || play_led_state[1]) && (loop_led_PWM_ctr<system_calibrations->led_brightness) && !play_led_flicker_ctr[1])
+			PLAYLED2_ON;
+		else
+			PLAYLED2_OFF;
+
+		if (global_mode[MONITOR_RECORDING] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
+			SIGNALLED_ON;
+		else
+			SIGNALLED_OFF;
+
+		// if (clip_led_state[1] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
+		// 	BUSYLED_ON;
+		// else
+		// 	BUSYLED_OFF;
 
 		loop_led_PWM_ctr++;
 		loop_led_PWM_ctr &= 0xF;

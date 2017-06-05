@@ -199,67 +199,98 @@ uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samp
 //
 // Reads from SDRAM memory starting at address addr[channel], for a length of num_samples words (16 or 32, depending on SAMPLINGBYTES)
 //
-uint32_t memory_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement)
+*/
+
+//Grab 24-bit words and write them into play_buff as 16-bit values
+uint32_t memory_write_24as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement)
 {
 	uint32_t i;
-	uint32_t heads_crossed=0;
+	uint8_t heads_crossed=0;
+	uint8_t start_polarity, end_polarity, start_wrap, end_wrap;
 
-	for (i=0;i<num_samples;i++){
+	start_polarity = (b->in < b->out) ? 0 : 1;
+	start_wrap = b->wrapping;
 
-		//Enforce valid addr range
-		if ((*addr<SDRAM_BASE) || (*addr > (SDRAM_BASE + SDRAM_SIZE)))
-			*addr=SDRAM_BASE;
-
-		//even addresses only
-		*addr &= 0xFFFFFFFE;
+	for (i=0;i<num_bytes;i+=3) //must be a multiple of 3!
+	{
+		*((int16_t *)b->in) = (int16_t)(wr_buff[i+2]<<8 | wr_buff[i+1]);
 
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
-		if (SAMPLINGBYTES==2)
-			*((int16_t *)*addr) = wr_buff[i];
-		else
-			*((int32_t *)*addr) = wr_buff[i];
-
-		*addr = inc_addr_within_limits(*addr, AUDIO_MEM_BASE[channel], AUDIO_MEM_BASE[channel] + MEM_SIZE, decrement);
-
-		if (*addr==detect_crossing_addr) heads_crossed=1;
-
+		CB_offset_in_address(b, 2, decrement);
 	}
 
-	return(heads_crossed);
+	end_polarity = (b->in < b->out) ? 0 : 1;
+	end_wrap = b->wrapping; //0 or 1
+
+	if ((end_wrap + start_wrap + start_polarity + end_polarity) & 0b01) 
+		return(1); //warning: in pointer and out pointer crossed
+	else
+		return(0); //pointers did not cross
 
 }
-*/
-/*
-uint32_t memory_write16(uint32_t *addr, uint8_t channel, int16_t *wr_buff, uint32_t num_samples, uint32_t detect_crossing_addr, uint8_t decrement)
+
+//Grab 32-bit words and write them into play_buff as 16-bit values
+uint32_t memory_write_32ias16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement)
 {
 	uint32_t i;
-	uint32_t heads_crossed=0;
+	uint8_t heads_crossed=0;
+	uint8_t start_polarity, end_polarity, start_wrap, end_wrap;
 
-	for (i=0;i<num_samples;i++){
+	start_polarity = (b->in < b->out) ? 0 : 1;
+	start_wrap = b->wrapping;
 
-		//Enforce valid addr range
-		if ((*addr<SDRAM_BASE) || (*addr > (SDRAM_BASE + SDRAM_SIZE)))
-			*addr=SDRAM_BASE;
-
-		//even addresses only
-		*addr &= 0xFFFFFFFE;
+	for (i=0;i<num_bytes;i+=4)
+	{
+		*((int16_t *)b->in) = (int16_t)(wr_buff[i+3]<<8 | wr_buff[i+2]);
 
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
-		*((int16_t *)*addr) = wr_buff[i];
-
-		*addr = inc_addr_within_limits(*addr, AUDIO_MEM_BASE[channel], AUDIO_MEM_BASE[channel] + MEM_SIZE, decrement);
-
-		if (*addr==detect_crossing_addr)
-			heads_crossed=detect_crossing_addr;
-
+		CB_offset_in_address(b, 2, decrement);
 	}
 
-	return(heads_crossed);
+	end_polarity = (b->in < b->out) ? 0 : 1;
+	end_wrap = b->wrapping; //0 or 1
+
+	if ((end_wrap + start_wrap + start_polarity + end_polarity) & 0b01) 
+		return(1); //warning: in pointer and out pointer crossed
+	else
+		return(0); //pointers did not cross
 
 }
-*/
+
+//Grab 32-bit floats and write them into play_buff as 16-bit values
+uint32_t memory_write_32fas16(CircularBuffer* b, float *wr_buff, uint32_t num_floats, uint8_t decrement)
+{
+	uint32_t i;
+	uint8_t heads_crossed=0;
+	uint8_t start_polarity, end_polarity, start_wrap, end_wrap;
+
+	start_polarity = (b->in < b->out) ? 0 : 1;
+	start_wrap = b->wrapping;
+
+	for (i=0;i<num_floats;i++)
+	{
+		if (wr_buff[i] >= 1.0) 			*((int16_t *)b->in) = 32767;
+		else if (wr_buff[i] <= -1.0) 	*((int16_t *)b->in) = -32768;
+		else 							*((int16_t *)b->in) = (int16_t)(wr_buff[i]*32767.0);
+
+		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		CB_offset_in_address(b, 2, decrement);
+	}
+
+	end_polarity = (b->in < b->out) ? 0 : 1;
+	end_wrap = b->wrapping; //0 or 1
+
+	if ((end_wrap + start_wrap + start_polarity + end_polarity) & 0b01) 
+		return(1); //warning: in pointer and out pointer crossed
+	else
+		return(0); //pointers did not cross
+
+}
+
+
 
 uint32_t memory_write32_cb(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_samples, uint8_t decrement)
 {

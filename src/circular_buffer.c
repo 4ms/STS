@@ -146,7 +146,7 @@ void CB_init(CircularBuffer *b, uint8_t rev)
 
 	if (rev)
 	{
-		b->in 	= b->max - READ_BLOCK_SIZE;
+		b->in 	= b->max;
 		b->out 	= b->max;
 	}
 	else

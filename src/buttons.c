@@ -15,6 +15,8 @@ extern enum g_Errors g_error;
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 extern SystemCalibrations *system_calibrations;
 
+extern volatile uint32_t sys_tmr;
+
 void clear_errors(void)
 {
 	g_error = 0;
@@ -40,9 +42,17 @@ void Button_Debounce_IRQHandler(void)
 	uint8_t i;
 	uint32_t but_read;
 	static uint32_t long_press[NUM_BUTTONS] = {0};
+	static uint32_t last_sys_tmr=0;
+	uint32_t elapsed_time;
 
 
 	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET) {
+
+		if (sys_tmr < last_sys_tmr) //then sys_tmr wrapped from 0xFFFFFFFF to 0x00000000
+			elapsed_time = (0xFFFFFFFF - last_sys_tmr) + sys_tmr;
+		else
+			elapsed_time = (sys_tmr - last_sys_tmr);
+		last_sys_tmr = sys_tmr;
 
 		for (i=0;i<NUM_BUTTONS;i++)
 		{
@@ -128,7 +138,7 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 						case Edit:
-							global_mode[EDIT_MODE] = 1;
+							enter_edit_mode();
 							break;
 
 					}
@@ -200,17 +210,18 @@ void Button_Debounce_IRQHandler(void)
 								break;
 
 							case Rev2:
-								if (global_mode[EDIT_MODE])
+								if (global_mode[EDIT_MODE]){
+									t = global_mode[STEREO_MODE];
 									load_sampleindex_file();
-								else
+									global_mode[STEREO_MODE] = t;
+								}else
 									flags[Rev2Trig]=1;
 
 								clear_errors();
 								break;
 
 							case Edit:
-								global_mode[EDIT_MODE] = 0;
-								flags[Play1But] = 1;
+								exit_edit_mode();
 								break;
 
 							default:
@@ -229,7 +240,7 @@ void Button_Debounce_IRQHandler(void)
 				if (long_press[i] != 0xFFFFFFFF) //already detected, ignore
 				{
 					if (long_press[i] != 0xFFFFFFFE) //prevent roll-over if holding down for a REALLY long time
-						long_press[i]++;
+						long_press[i]+=elapsed_time;
 
 
 					if (long_press[i] > LONG_PRESSED) {
@@ -306,10 +317,10 @@ void Button_Debounce_IRQHandler(void)
 				if (global_mode[STEREO_MODE] == 1)
 				{
 					global_mode[STEREO_MODE] = 0;
-					flags[StereoModeTurningOff] = 4;
+					flags[StereoModeTurningOff] = 1;
 				} else {
 					global_mode[STEREO_MODE] = 1;
-					flags[StereoModeTurningOn] = 4;
+					flags[StereoModeTurningOn] = 1;
 				}
 
 				long_press[Bank1] = 0xFFFFFFFF;
@@ -317,6 +328,7 @@ void Button_Debounce_IRQHandler(void)
 				button_state[Bank1] = UP;
 				button_state[Bank2] = UP;
 			}
+
 		}
 
 		// Clear TIM update interrupt

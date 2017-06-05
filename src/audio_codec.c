@@ -80,19 +80,13 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 		}
 		else
 		{
-			//Left Out = Average of L and R for Sampler side A
-			//Right Out = Average of L and R for Sampler side B
-			//Make this a global_mode to select L+R (sum) or L+R/2 (average) 
+			//in mono mode, outL is the average of L+R
 			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 			{
-				t_i32 = (outL[0][i] + outR[0][i])/2;
-				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-				*dst++ = t_i32 + system_calibrations->codec_dac_calibration_dcoffset[0];
+				*dst++ = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
 
-				t_i32 = (outL[1][i] + outR[1][i])/2;
-				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-				*dst++ = t_i32 + system_calibrations->codec_dac_calibration_dcoffset[0];
+				*dst++ = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
 			}
 		}

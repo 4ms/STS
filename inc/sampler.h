@@ -48,7 +48,7 @@ enum PlayLoadTriage{
 
 //44.1k, blockalign=6 (24-bit stereo), Pitch 4.0 --> 100ms (and not enough! we get buffer underrun)
 
-#define MAX_RS 10
+#define MAX_RS 20 /* over 4 octaves at 44.1k */
 //#define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)
 
 void audio_buffer_init(void);
@@ -69,8 +69,8 @@ uint32_t calc_start_point(float start_param, Sample *sample);
 uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos);
 uint32_t calc_play_length(float length, Sample *sample);
 
-uint32_t map_cache_to_buffer(uint32_t cache_point, uint32_t ref_cachepos, uint32_t ref_bufferpos, CircularBuffer *b);
-uint32_t map_buffer_to_cache(uint32_t buffer_point, uint32_t ref_cachepos, uint32_t ref_bufferpos, CircularBuffer *b);
+uint32_t map_cache_to_buffer(uint32_t cache_point,  uint8_t sampleByteSize, uint32_t ref_cachepos, uint32_t ref_bufferpos, CircularBuffer *b);
+uint32_t map_buffer_to_cache(uint32_t buffer_point, uint8_t sampleByteSize, uint32_t cache_start, uint32_t buffer_start, CircularBuffer *b);
 
 void clear_is_buffered_to_file_end(uint8_t chan);
 //void check_trim_bounds(void);

@@ -49,8 +49,11 @@ uint8_t flag_pot_changed[NUM_POT_ADCS];
 
 extern uint8_t recording_enabled;
 
+// extern uint8_t lock_start;
+// extern uint8_t lock_length;
+extern uint8_t scrubbed_in_edit;
 
- /*** Move to adc.c interrupts ***/
+
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
 
@@ -189,11 +192,11 @@ void init_LowPassCoefs(void)
 	MIN_POT_ADC_CHANGE[PITCH_POT*2] = 12;
 	MIN_POT_ADC_CHANGE[PITCH_POT*2+1] = 12;
 
-	MIN_POT_ADC_CHANGE[START_POT*2] = 10;
-	MIN_POT_ADC_CHANGE[START_POT*2+1] = 10;
+	MIN_POT_ADC_CHANGE[START_POT*2] = 20;
+	MIN_POT_ADC_CHANGE[START_POT*2+1] = 20;
 
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 10;
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 10;
+	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 20;
+	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 20;
 
 	MIN_POT_ADC_CHANGE[SAMPLE_POT*2] = 60;
 	MIN_POT_ADC_CHANGE[SAMPLE_POT*2+1] = 60;
@@ -310,6 +313,7 @@ void update_params(void)
 
 			flag_pot_changed[LENGTH_POT*2+0] = 0;
 
+			scrubbed_in_edit = 1;
 			f_param[0][START] = 0.999f;
 			f_param[0][LENGTH] = 0.501f;
 			i_param[0][LOOPING] = 1;
@@ -325,6 +329,7 @@ void update_params(void)
 			flag_pot_changed[LENGTH_POT*2+1] = 0;
 			//pot_delta[LENGTH_POT*2+1] = 0;
 
+			scrubbed_in_edit = 1;
 			f_param[0][START] = 0.999f;
 			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
@@ -343,6 +348,7 @@ void update_params(void)
 			set_sample_trim_start(&samples[banknum][samplenum], t_coarse, 0);
 			flag_pot_changed[START_POT*2+0] = 0;
 
+			scrubbed_in_edit = 1;
 			f_param[0][START] = 0.000f;
 			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
@@ -356,6 +362,7 @@ void update_params(void)
 			flag_pot_changed[START_POT*2+0] = 0;
 			//pot_delta[START_POT*2+1] = 0;
 
+			scrubbed_in_edit = 1;
 			f_param[0][START] = 0.000f;
 			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
@@ -373,8 +380,12 @@ void update_params(void)
 		//
 		if (flag_pot_changed[SAMPLE_POT*2+1])
 		{
-		//	t_f 	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] + 204.8f) / 2048.0f;
-			t_f 	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] + 81.92f) / 819.2f;
+			if (old_i_smoothed_potadc[SAMPLE_POT*2+1] < 2020) 
+				t_f = (old_i_smoothed_potadc[SAMPLE_POT*2+1] / 2244.44f) + 0.1; //0.1 to 1.0
+			else if (old_i_smoothed_potadc[SAMPLE_POT*2+1] < 2080)
+				t_f = 1.0;
+			else
+				t_f	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] - 1577.5) / 503.5f; //1.0 to 5.0
 			set_sample_gain(&samples[banknum][samplenum], t_f);
 		}
 
@@ -421,19 +432,25 @@ void update_params(void)
 			//
 			// LENGTH POT + CV
 			//
-			f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
+			// if (chan==0 && lock_length){
+			// 	if (flag_pot_changed[LENGTH*2]) lock_length=0;
+			// } else
+				f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
 
-			if (f_param[chan][LENGTH] > 1.0)			f_param[chan][LENGTH] = 1.0;
+			if (f_param[chan][LENGTH] > 0.990)		f_param[chan][LENGTH] = 1.0;
 			if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
 
 
 			//
 			// START POT + CV
 			//
-			f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
+			// if (chan==0 && lock_start){
+			// 	if (flag_pot_changed[START*2]) lock_start=0;
+			// } else
+				f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
 
-			if (f_param[chan][START] > 1.0)
-				f_param[chan][START] = 1.0;
+			if (f_param[chan][START] > 0.99)		f_param[chan][START] = 1.0;
+			if (f_param[chan][START] <= 0.0003)		f_param[chan][START] = 0.0;
 
 			//
 			// PITCH POT + CV
