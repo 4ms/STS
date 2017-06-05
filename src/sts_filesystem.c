@@ -200,19 +200,19 @@ void disable_bank(uint8_t bank)
 
 void clear_sample_header(Sample *s_sample)
 {
-	s_sample->filename[0] = 0;
-	s_sample->sampleSize = 0;
-	s_sample->sampleByteSize = 0;
-	s_sample->sampleRate = 0;
-	s_sample->numChannels = 0;
-	s_sample->blockAlign = 0;
-	s_sample->startOfData = 0;
-	s_sample->PCM = 0;
+	s_sample->filename[0] 		= 0;
+	s_sample->sampleSize 		= 0;
+	s_sample->sampleByteSize 	= 0;
+	s_sample->sampleRate 		= 0;
+	s_sample->numChannels 		= 0;
+	s_sample->blockAlign 		= 0;
+	s_sample->startOfData 		= 0;
+	s_sample->PCM 				= 0;
 
-	s_sample->inst_start = 0;
-	s_sample->inst_end = 0;
-	s_sample->inst_size = 0;
-	s_sample->inst_gain = 1.0;
+	s_sample->inst_start 		= 0;
+	s_sample->inst_end 			= 0;
+	s_sample->inst_size 		= 0;
+	s_sample->inst_gain 		= 1.0;
 }
 
 
@@ -305,21 +305,21 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 							chunk.chunkSize = f_size(sample_file) - f_tell(sample_file);
 						}
 
-						s_sample->sampleSize = chunk.chunkSize;
-						s_sample->sampleByteSize = fmt_chunk.bitsPerSample>>3;
-						s_sample->sampleRate = fmt_chunk.sampleRate;
-						s_sample->numChannels = fmt_chunk.numChannels;
-						s_sample->blockAlign = fmt_chunk.numChannels * fmt_chunk.bitsPerSample>>3;
-						s_sample->startOfData = f_tell(sample_file);
+						s_sample->sampleSize 		= chunk.chunkSize;
+						s_sample->sampleByteSize 	= fmt_chunk.bitsPerSample>>3;
+						s_sample->sampleRate 		= fmt_chunk.sampleRate;
+						s_sample->numChannels 		= fmt_chunk.numChannels;
+						s_sample->blockAlign 		= fmt_chunk.numChannels * fmt_chunk.bitsPerSample>>3;
+						s_sample->startOfData 		= f_tell(sample_file);
+						s_sample->inst_end 			= s_sample->sampleSize ;//& 0xFFFFFFF8;
+						s_sample->inst_size 		= s_sample->sampleSize ;//& 0xFFFFFFF8;
+						s_sample->inst_start 		= 0;
+						s_sample->inst_gain 		= 1.0;
+							
 						if (fmt_chunk.audioFormat == 0xFFFE)
 							s_sample->PCM = 3;
 						else
 							s_sample->PCM = fmt_chunk.audioFormat;
-
-						s_sample->inst_end = s_sample->sampleSize ;//& 0xFFFFFFF8;
-						s_sample->inst_size = s_sample->sampleSize ;//& 0xFFFFFFF8;
-						s_sample->inst_start = 0;
-						s_sample->inst_gain = 1.0;
 
 						return(FR_OK);
 
@@ -509,14 +509,14 @@ uint8_t write_sampleindex_file(void)
 	uint32_t data[1];
 
 
-	// CREATE INDEX FILE
+	// CREATE INDEX FILE - TXT
 	// previous index files are replaced
 	// f_open is a function of the module application interface
 	// for the Generic FAT file system module  (ff.h)
 	
 	// create sample.index file
 	// ... and its pointer &temp_file
-	res = f_open(&temp_file,"sample.index", FA_WRITE | FA_CREATE_ALWAYS); 
+	res = f_open(&temp_file,"sample_index.txt", FA_WRITE | FA_CREATE_ALWAYS); 
 
 	// rise flags if index can't be opened/created
 	if (res != FR_OK) return(1); 
@@ -537,7 +537,7 @@ uint8_t write_sampleindex_file(void)
 	sz 	= sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
 	
 	// write samples array into temporary file
-	res = f_write(&temp_file, samples, sz, &bw);
+ 	res = f_write(&temp_file, samples, sz, &bw);
 	
 	// update the volume   
 	f_sync(&temp_file);
@@ -547,24 +547,72 @@ uint8_t write_sampleindex_file(void)
 	else if (bw < sz)		{f_close(&temp_file); return(3);} //not all data written
 
 
- 	// WRITE GLOBAL MODE TO TEMPORARY INDEX FILE
-	data[0]	= global_mode[STEREO_MODE];
-	sz 		= 4;
-
-	// write global mode to temporary file
-	res 	= f_write(&temp_file, data, sz, &bw);
-	
-	// update the volume   
-	f_sync(&temp_file);
-
-	// update fail flags as needed
-	if (res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
-	else if (bw < sz)	{f_close(&temp_file); return(3);} //not all data written
-
-
 	// CLOSE INDEX FILE
 	f_close(&temp_file);
 	return(0);
+
+
+
+	// // CREATE INDEX FILE
+	// // previous index files are replaced
+	// // f_open is a function of the module application interface
+	// // for the Generic FAT file system module  (ff.h)
+	
+	// // create sample.index file
+	// // ... and its pointer &temp_file
+	// res = f_open(&temp_file,"sample.index", FA_WRITE | FA_CREATE_ALWAYS); 
+
+	// // rise flags if index can't be opened/created
+	// if (res != FR_OK) return(1); 
+
+	// // write cached information of the file  to the volume
+	// // ... using the Generic FAT file system module (ff.h)
+	// // ... to preserve the FAT structure on the volume 
+	// // ... in case the write operation to the FAT volume is interrupted due to an accidental failure
+	// // ... such as sudden blackout, incorrect media removal and unrecoverable disk error
+	// f_sync(&temp_file);
+
+
+	// // WRITE 'SAMPLES' ARRAY TO INDEX FILE
+	// // samples is an array of 'Sample' 
+	// // Array contains one element per sample
+	// // a given array element contains info for a given sample
+	// // ... but does not contain sample data
+	// sz 	= sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
+	
+	// // write samples array into temporary file
+	// // samples is filled up by 
+	// // 		- load_sample_header
+	// // 		- onboard file recording
+	// //		- ...
+	// res = f_write(&temp_file, samples, sz, &bw);
+	
+	// // update the volume   
+	// f_sync(&temp_file);
+
+	// // rise flags as needed
+	// if 		(res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
+	// else if (bw < sz)		{f_close(&temp_file); return(3);} //not all data written
+
+
+ // 	// WRITE GLOBAL MODE TO TEMPORARY INDEX FILE
+	// data[0]	= global_mode[STEREO_MODE];
+	// sz 		= 4;
+
+	// // write global mode to temporary file
+	// res  = f_write(&temp_file, data, sz, &bw);
+	
+	// // update the volume   
+	// f_sync(&temp_file);
+
+	// // update fail flags as needed
+	// if (res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
+	// else if (bw < sz)	{f_close(&temp_file); return(3);} //not all data written
+
+
+	// // CLOSE INDEX FILE
+	// f_close(&temp_file);
+	// return(0);
 }
 
 uint8_t load_sampleindex_file(void)
