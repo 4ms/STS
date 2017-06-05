@@ -1,8 +1,6 @@
 #Based on https://github.com/nitsky/stm32-example 
 #Modified by Dan Green http://github.com/4ms
 
-include fpu_lib.mk
-
 BINARYNAME = main
 
 STARTUP = startup_stm32f427_437xx.s
@@ -95,11 +93,8 @@ AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4
 
 LDSCRIPT = $(DEVICE)/$(LOADFILE)
 
-#Use FPU libraries (standard C)
-# LDLIBS = -L"/usr/local/Caskroom/gcc-arm-embedded/5_4-2016q3,20160926/gcc-arm-none-eabi-5_4-2016q3/arm-none-eabi/lib/fpu" -L"/usr/local/Caskroom/gcc-arm-embedded/5_4-2016q3,20160926/gcc-arm-none-eabi-5_4-2016q3/lib/gcc/arm-none-eabi/5.4.1/fpu"
-
-#Use nosys.specs for standard C functions such as malloc(), memcpy()
-LFLAGS  =  $(LDLIBS) --specs=nosys.specs -nostartfiles -T $(LDSCRIPT) 
+#Use fpu/nosys.specs for standard C functions such as malloc(), memcpy()
+LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIPT) 
 
 
 #vpath %.c src
