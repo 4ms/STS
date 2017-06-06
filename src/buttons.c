@@ -176,8 +176,8 @@ void Button_Debounce_IRQHandler(void)
 
 							case RecBank:
 								flags[RecBankChanged] = 1;
-								if (i_param[2][BANK] >= (MAX_NUM_REC_BANKS-1))	i_param[2][BANK]=0;
-								else											i_param[2][BANK]++;
+								if (i_param[2][BANK] >= (MAX_NUM_BANKS-1))	i_param[2][BANK]=0;
+								else										i_param[2][BANK]++;
 								break;
 
 							case Play1:

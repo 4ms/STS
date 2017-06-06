@@ -234,30 +234,30 @@ void update_ButtonLEDs(void)
 			else chan = 2;
 
 #ifdef SETBANK1RGB
-			if (chan==0) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0], i_smoothed_potadc[1], i_smoothed_potadc[2]);
+			if (chan==0 && global_mode[EDIT_MODE]) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0], i_smoothed_potadc[1], i_smoothed_potadc[2]);
 			else 
 #endif
 			if (chan==2 && global_mode[EDIT_MODE])
 			{
 				set_ButtonLED_byPalette(ButLEDnum, OFF);
 			}
-			else if (i_param[chan][BANK] < MAX_NUM_REC_BANKS)
+			else //if (i_param[chan][BANK] < MAX_NUM_REC_BANKS)
 				set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
 
-			else if (i_param[chan][BANK] < (MAX_NUM_REC_BANKS*2))
-			{
-				if (tm_14 < 0x1000)
-					set_ButtonLED_byPalette(ButLEDnum, OFF );
-				else
-					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 1 - MAX_NUM_REC_BANKS );
-			}
-			else
-			{
-				if ((tm_14 < 0x0400) || (tm_14 < 0x0C00 && tm_14 > 0x0800))
-					set_ButtonLED_byPalette(ButLEDnum, OFF );
-				else
-					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 1 - MAX_NUM_REC_BANKS*2 );
-			}
+			// else if (i_param[chan][BANK] < (MAX_NUM_REC_BANKS*2))
+			// {
+			// 	if (tm_14 < 0x1000)
+			// 		set_ButtonLED_byPalette(ButLEDnum, OFF );
+			// 	else
+			// 		set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 1 - MAX_NUM_REC_BANKS );
+			// }
+			// else
+			// {
+			// 	if ((tm_14 < 0x0400) || (tm_14 < 0x0C00 && tm_14 > 0x0800))
+			// 		set_ButtonLED_byPalette(ButLEDnum, OFF );
+			// 	else
+			// 		set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 1 - MAX_NUM_REC_BANKS*2 );
+			// }
 		}
 
 		// PLAY lights

@@ -238,6 +238,7 @@ void audio_buffer_init(void)
 	if (res == 0) //file was found
 	{
 		check_enabled_banks();
+//		check_sample_headers(); //TODO: Checks that all files in samples[][] exist, and their header info matches
 	}
 	else
 	{

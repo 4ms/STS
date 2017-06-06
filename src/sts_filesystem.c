@@ -36,94 +36,93 @@ uint8_t next_enabled_bank(uint8_t bank) //if bank==0xFF, we find the first enabl
 
 uint8_t bank_to_color(uint8_t bank, char *color)
 {
-	switch(bank)
+	uint8_t bank1, bank2, len;
+
+
+	if (bank>9 && bank<100)
 	{
-	case 0:
-		str_cpy(color, "White");
-		return(5);
-		break;
+		//convert a 2-digit bank number to two single digit banks
 
-	case 1:
-		str_cpy(color, "Red");
-		return(3);
-		break;
+		//First digit:
+		bank1 = bank / 10;
 
-	case 2:
-		str_cpy(color, "Green");
-		return(5);
-		break;
+		//Second digit:
+		bank2 = bank - (bank1*10);
 
-	case 3:
-		str_cpy(color, "Blue");
-		return(4);
-		break;
+		//First color string:
+		len = bank_to_color(bank1, color);
 
-	case 4:
-		str_cpy(color, "Yellow");
-		return(6);
-		break;
+		//Move pointer to the end of the string (on the /0)
+		color+=len;
 
-	case 5:
-		str_cpy(color, "Cyan");
-		return(4);
-		break;
+		//Add a dash
+		*color++ = '-';
+		len++;
 
-	case 6:
-		str_cpy(color, "Orange");
-		return(6);
-		break;
+		//Second color string:
+		len +=bank_to_color(bank2, color);
 
-	case 7:
-		str_cpy(color, "Violet");
-		return(6);
-		break;
-
-	case 8:
-		str_cpy(color, "White-SAVE");
-		return(10);
-		break;
-
-	case 9:
-		str_cpy(color, "Red-SAVE");
-		return(8);
-		break;
-
-	case 10:
-		str_cpy(color, "Green-SAVE");
-		return(10);
-		break;
-
-	case 11:
-		str_cpy(color, "Blue-SAVE");
-		return(9);
-		break;
-
-	case 12:
-		str_cpy(color, "Yellow-SAVE");
-		return(11);
-		break;
-
-	case 13:
-		str_cpy(color, "Cyan-SAVE");
-		return(9);
-		break;
-
-	case 14:
-		str_cpy(color, "Orange-SAVE");
-		return(11);
-		break;
-
-	case 15:
-		str_cpy(color, "Violet-SAVE");
-		return(11);
-		break;
-
-	default:
-		color[0]=0;
-		return(0);
+		return (len);
 	}
+	else 
+	{
+		switch(bank)
+		{
+		case 0:
+			str_cpy(color, "White");
+			return(5);
+			break;
 
+		case 1:
+			str_cpy(color, "Red");
+			return(3);
+			break;
 
+		case 2:
+			str_cpy(color, "Green");
+			return(5);
+			break;
+
+		case 3:
+			str_cpy(color, "Blue");
+			return(4);
+			break;
+
+		case 4:
+			str_cpy(color, "Yellow");
+			return(6);
+			break;
+
+		case 5:
+			str_cpy(color, "Cyan");
+			return(4);
+			break;
+
+		case 6:
+			str_cpy(color, "Orange");
+			return(6);
+			break;
+
+		case 7:
+			str_cpy(color, "Magenta");
+			return(6);
+			break;
+
+		case 8:
+			str_cpy(color, "Pink"); 
+			return(4);
+			break;
+
+		case 9:
+			str_cpy(color, "Purple");
+			return(4);
+			break;
+
+		default:
+			color[0]=0;
+			return(0);
+		}
+	}
 }
 
 void check_enabled_banks(void)

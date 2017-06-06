@@ -48,7 +48,7 @@ uint8_t load_samples_to_assign(uint8_t bank)
 	char tname[_MAX_LFN+1];
 	char path_tname[_MAX_LFN+1];
 
-	if (bank >= MAX_NUM_REC_BANKS)	bank -= MAX_NUM_REC_BANKS;
+	//if (bank >= MAX_NUM_REC_BANKS)	bank -= MAX_NUM_REC_BANKS;
 
 	sample_num=0;
 	i = bank_to_color(bank, path);
@@ -162,13 +162,13 @@ void enter_assignment_mode(void)
 	if (cur_assign_bank != i_param[0][BANK])
 	{
 		//force us to be on a non -SAVE bank
-		if (i_param[0][BANK] >= MAX_NUM_REC_BANKS)
-		{
-			do i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
-			while (i_param[0][BANK] >= MAX_NUM_REC_BANKS);
+		// if (i_param[0][BANK] >= MAX_NUM_BANKS)
+		// {
+		// 	do i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
+		// 	while (i_param[0][BANK] >= MAX_NUM_BANKS);
 
-			flags[PlayBank1Changed] = 1;
-		}
+		// 	flags[PlayBank1Changed] = 1;
+		// }
 
 		end_assigned_sample_i = load_samples_to_assign(i_param[0][BANK]);
 
