@@ -53,6 +53,27 @@ uint32_t str_len(char* str)
 	return(i);
 }
 
+
+char *str_rstr(char *string, char find, char *path)
+{
+
+  char *cp;
+  char *rp;
+  rp = 0;
+  str_cpy(path, string);
+
+  for (cp = string; *cp!=0; cp++)
+  {
+    if (*cp == find) rp = cp+1;
+  }
+  if (rp==0) return 0; //or maybe string?
+  else {
+    path[str_len(path)-str_len(rp)]=0;
+    return (rp);
+  }
+}
+
+
 void str_cpy(char *dest, char *src)
 {
 	while(*src!=0)

@@ -5,6 +5,9 @@
 #include "file_util.h"
 #include "sampler.h"
 #include "wavefmt.h"
+#include "file_util.h"
+// #include <string.h>
+// #include <stdio.h>
 
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
@@ -503,11 +506,14 @@ uint8_t load_bank_from_disk(uint8_t bank)
 uint8_t write_sampleindex_file(void)
 {
 
-	FIL temp_file;
-	FRESULT res;
-	uint32_t sz, bw;
-	uint32_t data[1];
-
+	FIL 		temp_file;
+	FRESULT 	res;
+	uint32_t 	sz, bw;
+	uint8_t 	i, j;
+	char 		b_color[10];
+	char 		path[_MAX_LFN+1];
+	char 		*ptr;
+	char 		t_ptr[_MAX_LFN+1];
 
 	// CREATE INDEX FILE - TXT
 	// previous index files are replaced
@@ -529,19 +535,58 @@ uint8_t write_sampleindex_file(void)
 	f_sync(&temp_file);
 
 
-	// WRITE 'SAMPLES' ARRAY TO INDEX FILE
-	// samples is an array of 'Sample' 
-	// Array contains one element per sample
-	// a given array element contains info for a given sample
-	// ... but does not contain sample data
-	sz 	= sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
+	// WRITE 'SAMPLES' INFO TO INDEX FILE
+
+
+	// For each bank
+	for (i=0; i<MAX_NUM_BANKS; i++){
+
+		// Write bank Color to file
+		bank_to_color(i, b_color);
+ 		f_printf(&temp_file, "--------------------\n%s\n--------------------\n\n", b_color);
+
+		// For each sample in bank
+		for (j=0; j<NUM_SAMPLES_PER_BANK; j++){
+ 		
+			// write path/name to index file
+			// - split path and filename
+			// - save path and filename to file
+ 			// f_printf(&temp_file, "%d - %s\n",j+1 ,samples[i][j].filename);
+			
+			ptr = t_ptr;
+			ptr = str_rstr(samples[i][j].filename, '/', path);
+			f_printf(&temp_file, "filename: %s\n",ptr);
+			f_printf(&temp_file, "path: %s\n",path);
+
+			// samples[i][j].filename[str_len(samples[i][j].filename)-str_len(ptr)];
+
+			// write unedditable sample info to index file
+			f_printf(&temp_file, "sample info: %dHz, %d-bit, %d channel(s), %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].numChannels, samples[i][j].sampleSize);
+ 			
+			// write edditable sample info to index file
+	 		// s_gain = (int)(100 * samples[i][j].inst_gain); // f_printf doesn't handle float. We use % instead.
+	 		f_printf(&temp_file, "- play start: %d\n- play size: %d\n- play gain(%%): %d\n\n", samples[i][j].inst_start, samples[i][j].inst_size, (int)(100 * samples[i][j].inst_gain));
+
+
+		}
+ 		f_printf(&temp_file, "\n");
+	}
+
+	// Write global info to file
+	f_printf(&temp_file, "\n------------------------------------------------------------\nGlobal stereo mode: %d\n", global_mode[STEREO_MODE]);
+	f_printf(&temp_file, "Timestamp: %d\n", get_fattime());
 	
-	// write samples array into temporary file
- 	res = f_write(&temp_file, samples, sz, &bw);
-	
+		// timestamp  ((uint32_t)(2016 - 1980) 	<< 25)
+				// 	| ((uint32_t)month 			<< 21)
+				// 	| ((uint32_t)days 			<< 16)
+				// 	| ((uint32_t)hours 			<< 11)
+				// 	| ((uint32_t)mins 			<< 5)
+				// 	| ((uint32_t)secs 			>> 1);
+
 	// update the volume   
 	f_sync(&temp_file);
 
+	// FIXME: update flags
 	// rise flags as needed
 	if 		(res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
 	else if (bw < sz)		{f_close(&temp_file); return(3);} //not all data written

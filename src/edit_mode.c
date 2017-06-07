@@ -63,6 +63,8 @@ uint8_t load_samples_to_assign(uint8_t bank)
 			path_tname[i]='/';
 			str_cpy(&(path_tname[i+1]), tname);
 
+			// ToDo: save all sample paths to variable
+			
 			res = f_open(&temp_file, path_tname, FA_READ);
 			f_sync(&temp_file);
 

@@ -95,6 +95,10 @@ int main(void)
 	
 	FATFS FatFs;
 	FIL fil;
+
+	// Load samples to fill out MAX_ASSIGNED banks
+	load_samples_to_assign();
+	
 	FRESULT res;
 	uint32_t total, free;
 	uint32_t bw;

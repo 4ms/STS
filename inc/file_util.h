@@ -13,6 +13,7 @@
 
 void str_cpy(char *dest, char *src);
 uint32_t str_len(char* str);
+char * str_rstr(char *string, char find, char *path);
 uint32_t intToStr(uint32_t x, char *str, uint32_t d);
 uint8_t str_cmp(char *a, char *b);
 
