@@ -73,6 +73,39 @@ char *str_rstr(char *string, char find, char *path)
   }
 }
 
+void *str_tok(char *string, char find)
+{
+
+  char *cp;
+  char *rp;
+  rp = 0;
+  char *path
+  
+  for (cp = string; *cp!=0; cp++)
+  {
+    if (*cp == find) rp = cp+1;
+  }
+  if (rp==0) return 0; //or maybe string?
+  else {
+    path[str_len(path)-str_len(rp)]=0;
+    return (path);
+  }
+}
+
+uint32_t str_xt_int(char *string)
+{
+
+  char *cp;
+  int n=4294967295; //max value of uin32_t
+
+  for (cp = string; *cp!=0; cp++)
+  {
+    if ((*cp >= '0') && (*cp <= '9')){
+      n = n*10 + cp-'0';
+    }
+  }
+  return(n);
+}
 
 void str_cpy(char *dest, char *src)
 {

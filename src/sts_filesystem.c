@@ -125,8 +125,76 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		color[0]=0;
 		return(0);
 	}
+}
 
+uint8_t color_to_bank(char *color)
+{
+	switch(color)
+	{
+	case "White":
+		return(0);
+		break;
 
+	case "Red":
+		return(1);
+		break;
+
+	case "Green":
+		return(2);
+		break;
+
+	case "Blue":
+		return(3);
+		break;
+
+	case "Yellow":
+		return(4);
+		break;
+
+	case "Cyan":
+		return(5);
+		break;
+
+	case "Orange":
+		return(6);
+		break;
+
+	case "Violet":
+		return(7);
+		break;
+
+	case "White-SAVE":
+		return(8);
+		break;
+
+	case "Red-SAVE":
+		return(9);
+		break;
+
+	case "Green-SAVE":
+		return(10);
+		break;
+
+	case "Blue-SAVE":
+		return(11);
+		break;
+
+	case "Yellow-SAVE":
+		return(12);
+		break;
+
+	case "Cyan-SAVE":
+		return(13);
+		break;
+
+	case "Orange-SAVE":
+		return(14);
+		break;
+
+	case "Violet-SAVE":
+		return(15);
+		break;
+	}
 }
 
 void check_enabled_banks(void)
@@ -607,14 +675,86 @@ uint8_t write_sampleindex_file(void)
 
 uint8_t load_sampleindex_file(void)
 {
-// 	FIL temp_file;
-// 	FRESULT res;
-// 	uint32_t rd, br;
-// 	uint32_t data[1];
 
-// 	res = f_open(&temp_file,"sample.index", FA_READ);
-// 	if (res != FR_OK) return(1); //file not found
-// 	f_sync(&temp_file);
+	// // Variables to load from file
+	// // ... and to initialize if missing 
+	// // ... or out of bounds
+	// samples[i][j].inst_start
+	// samples[i][j].inst_size
+	// (int)(100 * samples[i][j].inst_gain
+	// global_mode[STEREO_MODE]
+
+	// // Varialbles to check and update if incorrect
+	// samples[i][j].filename
+
+	// // Variables to systematically update
+	// samples[i][j].sampleRate
+	// samples[i][j].sampleByteSize*8
+	// samples[i][j].sampleSize
+
+
+	FIL 		temp_file;
+	FRESULT 	res;
+	char 		read_buffer[_MAX_LFN+1], sample_path[_MAX_LFN+1], sample_name[_MAX_LFN+1];
+	uint8_t		cur_bank, cur_sample, arm_bank=0, arm_path=0, arm_name=0, arm_data=0;;
+	uint32_t	num_buff;
+
+	// Open sample index file
+	res = f_open(&temp_file,"sample_index.txt", FA_READ);
+
+	// rise flags if index can't be opened/created
+	if (res != FR_OK) return(1); //file not found
+
+	// ToDo: Check is f_sync is necessary here
+	// write cached information of the file  to the volume	
+	f_sync(&temp_file);
+
+	// until we reach the eof
+	while (!f_eof){
+	
+		// Read next line
+		f_get(read_buffer, _MAX_LFN+1, &temp_file)
+
+		// FIXME: not tokenizing yet. Just splitting at character
+		// tokenize (spaces)
+		str_tok(read_buffer,' ');
+
+		// tokenize (coma)
+		str_tok(read_buffer,',');
+
+		// tokenize (column)
+		str_tok(read_buffer,':');
+
+		// ToDo: see if computing repeated str_cmp upstream helps saving time
+
+		// read bank number
+		if 		( str_cmp(read_buffer,"--------------------") && !arm_bank) arm_bank++; 					 continue;
+		else if	(!str_cmp(read_buffer,"--------------------") &&  arm_bank) cur_bank=color_to_bank(read_buffer); continue;
+		else if ( str_cmp(read_buffer,"--------------------") &&  arm_bank) arm_bank=0; 					 continue;
+
+		// read sample_path
+		else if ( (str_cmp(read_buffer, "path")) && !arm_path) arm_path++; 									 			  continue;
+		else if (!(str_cmp(read_buffer, "path")) &&  arm_path) str_cpy(sample_path, read_buffer); arm_path=0; arm_name++; continue;
+
+		// add sample_name to sample path
+		else if (arm_name) str_cpy(&(sample_path[str_len(sample_path)]), read_buffer); arm_name=0; continue;
+
+		// load data
+		num_buff = str_xt_int(read_buffer);
+		// ToDo: consider nesting if statements here
+		else if ((num_buff< 4294967295) && arm_data<3) arm_data++; 											continue;
+		else if ((num_buff< 4294967295) && arm_data<4) cur_sample=num_buff; 					arm_data++; continue;
+		else if ((num_buff< 4294967295) && arm_data<5) samples[i][j].inst_start=num_buff; 		arm_data++; continue;
+		else if ((num_buff< 4294967295) && arm_data<6) samples[i][j].inst_size=num_buff; 		arm_data++; continue;
+		else if ((num_buff< 4294967295) && arm_data<7) samples[i][j].inst_gain=num_buff/100; 	arm_data++; continue;
+		else arm_data=0;
+	}
+
+
+	// if ((arm_bank ==1) && !(str_cmp(read_buffer,"--------------------")) bank=color_to_bank(read_buffer);
+	// else arm_bank++;
+	// if (arm_bank>=2)
+
 
 // 	rd = sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
 // 	res = f_read(&temp_file, samples, rd, &br);
@@ -632,10 +772,11 @@ uint8_t load_sampleindex_file(void)
 // 	if (res != FR_OK)	{return(2);}//file not read
 // 	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
 
+	// close sample index file
+	f_close(&temp_file);
 
-// 	f_close(&temp_file);
-// 	return(0);	//OK
-
+	//
+	return(0);	//OK
 }
 
 

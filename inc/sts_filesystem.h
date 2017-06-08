@@ -51,18 +51,19 @@ typedef struct Sample {
 
 
 uint8_t bank_to_color(uint8_t bank, char *color);
+uint8_t color_to_bank(char *color);
 
 uint8_t load_sample_header(Sample *s_sample, FIL *sample_file);
-void clear_sample_header(Sample *s_sample);
+void 	clear_sample_header(Sample *s_sample);
 
 FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
 uint8_t load_bank_from_disk(uint8_t bank);
 
-void check_enabled_banks(void);
+void 	check_enabled_banks(void);
 uint8_t next_enabled_bank(uint8_t bank);
 
-void enable_bank(uint8_t bank);
-void disable_bank(uint8_t bank);
+void 	enable_bank(uint8_t bank);
+void 	disable_bank(uint8_t bank);
 
 uint8_t load_sampleindex_file(void);
 uint8_t write_sampleindex_file(void);
