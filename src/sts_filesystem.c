@@ -518,8 +518,9 @@ uint8_t write_sampleindex_file(void)
 
 	// CREATE INDEX FILE - TXT
 	// previous index files are replaced
-	// f_open is a function of the module application interface
-	// for the Generic FAT file system module  (ff.h)
+	// f_open, f_sync and f_rpintf are functions from 
+	// ...the module application interface
+	// ...for the Generic FAT file system module  (ff.h)
 	
 	// create sample.index file
 	// ... and its pointer &temp_file
@@ -572,9 +573,7 @@ uint8_t write_sampleindex_file(void)
 			}
  			
 			// write edditable sample info to index file
-	 		// s_gain = (int)(100 * samples[i][j].inst_gain); // f_printf doesn't handle float. We use % instead.
 	 		f_printf(&temp_file, "- Sample slot: %d\n- play start: %d\n- play size: %d\n- play gain(%%): %d\n\n", j+1, samples[i][j].inst_start, samples[i][j].inst_size, (int)(100 * samples[i][j].inst_gain));
-
 
 		}
  		f_printf(&temp_file, "\n");
@@ -608,34 +607,34 @@ uint8_t write_sampleindex_file(void)
 
 uint8_t load_sampleindex_file(void)
 {
-	FIL temp_file;
-	FRESULT res;
-	uint32_t rd, br;
-	uint32_t data[1];
+// 	FIL temp_file;
+// 	FRESULT res;
+// 	uint32_t rd, br;
+// 	uint32_t data[1];
 
-	res = f_open(&temp_file,"sample.index", FA_READ);
-	if (res != FR_OK) return(1); //file not found
-	f_sync(&temp_file);
+// 	res = f_open(&temp_file,"sample.index", FA_READ);
+// 	if (res != FR_OK) return(1); //file not found
+// 	f_sync(&temp_file);
 
-	rd = sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
-	res = f_read(&temp_file, samples, rd, &br);
+// 	rd = sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
+// 	res = f_read(&temp_file, samples, rd, &br);
 
-	if (res != FR_OK)	{return(2);}//file not read
-	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
-//	else if ( !is_valid_Sample_format(samples) )	{f_close(&temp_file); return(3);	}
+// 	if (res != FR_OK)	{return(2);}//file not read
+// 	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
+// //	else if ( !is_valid_Sample_format(samples) )	{f_close(&temp_file); return(3);	}
 
-	rd = 4;
-	res = f_read(&temp_file, data, rd, &br);
+// 	rd = 4;
+// 	res = f_read(&temp_file, data, rd, &br);
 	
-	if (data[0] == 0) global_mode[STEREO_MODE] = 0;
-	else global_mode[STEREO_MODE] = 1;
+// 	if (data[0] == 0) global_mode[STEREO_MODE] = 0;
+// 	else global_mode[STEREO_MODE] = 1;
 
-	if (res != FR_OK)	{return(2);}//file not read
-	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
+// 	if (res != FR_OK)	{return(2);}//file not read
+// 	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
 
 
-	f_close(&temp_file);
-	return(0);	//OK
+// 	f_close(&temp_file);
+// 	return(0);	//OK
 
 }
 
