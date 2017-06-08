@@ -129,72 +129,23 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 
 uint8_t color_to_bank(char *color)
 {
-	switch(color)
-	{
-	case "White":
-		return(0);
-		break;
-
-	case "Red":
-		return(1);
-		break;
-
-	case "Green":
-		return(2);
-		break;
-
-	case "Blue":
-		return(3);
-		break;
-
-	case "Yellow":
-		return(4);
-		break;
-
-	case "Cyan":
-		return(5);
-		break;
-
-	case "Orange":
-		return(6);
-		break;
-
-	case "Violet":
-		return(7);
-		break;
-
-	case "White-SAVE":
-		return(8);
-		break;
-
-	case "Red-SAVE":
-		return(9);
-		break;
-
-	case "Green-SAVE":
-		return(10);
-		break;
-
-	case "Blue-SAVE":
-		return(11);
-		break;
-
-	case "Yellow-SAVE":
-		return(12);
-		break;
-
-	case "Cyan-SAVE":
-		return(13);
-		break;
-
-	case "Orange-SAVE":
-		return(14);
-		break;
-
-	case "Violet-SAVE":
-		return(15);
-		break;
-	}
+	if 		(str_cmp(color, "White")) 		return(0);
+	else if (str_cmp(color, "Red")) 		return(1);
+	else if (str_cmp(color, "Green")) 		return(2);
+	else if (str_cmp(color, "Blue")) 		return(3);
+	else if (str_cmp(color, "Yellow"))		return(4);
+	else if (str_cmp(color, "Cyan")) 		return(5);
+	else if (str_cmp(color, "Orange")) 		return(6);
+	else if (str_cmp(color, "Violet")) 		return(7);
+	else if (str_cmp(color, "White-SAVE")) 	return(8);
+	else if (str_cmp(color, "Red-SAVE"))	return(9);
+	else if (str_cmp(color, "Green-SAVE"))	return(10);
+	else if (str_cmp(color, "Blue-SAVE")) 	return(11);
+	else if (str_cmp(color, "Yellow-SAVE")) return(12);
+	else if (str_cmp(color, "Cyan-SAVE")) 	return(13);
+	else if (str_cmp(color, "Orange-SAVE")) return(14);
+	else if (str_cmp(color, "Violet-SAVE")) return(15);
+	return(200);
 }
 
 void check_enabled_banks(void)
@@ -581,8 +532,8 @@ uint8_t write_sampleindex_file(void)
 	char 		b_color[10];
 	char 		path[_MAX_LFN+1];
 	char 		bank_path[_MAX_LFN+1];
-	char 		*ptr;
-	char 		t_ptr[_MAX_LFN+1];
+	char 		*filename_ptr;
+	char 		t_filename_ptr[_MAX_LFN+1];
 
 	// CREATE INDEX FILE - TXT
 	// previous index files are replaced
@@ -618,8 +569,8 @@ uint8_t write_sampleindex_file(void)
 		for (j=0; j<NUM_SAMPLES_PER_BANK; j++){
  		
 			// - split path and filename			
-			ptr = t_ptr;
-			ptr = str_rstr(samples[i][j].filename, '/', path);
+			filename_ptr = t_filename_ptr;
+			filename_ptr = str_rstr(samples[i][j].filename, '/', path);
 			
 			// Print bank path to index file
 			if(j==0){
@@ -628,7 +579,7 @@ uint8_t write_sampleindex_file(void)
 			}
 			
 			// Print sample name to index file
-			if (str_cmp(path, bank_path)) f_printf(&temp_file, "%s\n",ptr);
+			if (str_cmp(path, bank_path)) f_printf(&temp_file, "%s\n",filename_ptr);
 			else f_printf(&temp_file, "%s\n", samples[i][j].filename);
 
 			// write unedditable sample info to index file
@@ -698,6 +649,8 @@ uint8_t load_sampleindex_file(void)
 	char 		read_buffer[_MAX_LFN+1], sample_path[_MAX_LFN+1], sample_name[_MAX_LFN+1];
 	uint8_t		cur_bank, cur_sample, arm_bank=0, arm_path=0, arm_name=0, arm_data=0;;
 	uint32_t	num_buff;
+	char 		*token;
+	char 		t_token[_MAX_LFN+1];
 
 	// Open sample index file
 	res = f_open(&temp_file,"sample_index.txt", FA_READ);
@@ -709,45 +662,51 @@ uint8_t load_sampleindex_file(void)
 	// write cached information of the file  to the volume	
 	f_sync(&temp_file);
 
+	//
+	token = t_token;
+
 	// until we reach the eof
-	while (!f_eof){
+	while (!f_eof(&temp_file)){
 	
 		// Read next line
-		f_get(read_buffer, _MAX_LFN+1, &temp_file)
+		f_gets(read_buffer, _MAX_LFN+1, &temp_file);
 
-		// FIXME: not tokenizing yet. Just splitting at character
-		// tokenize (spaces)
-		str_tok(read_buffer,' ');
+		// tokenize at spaces
+		token = str_tok(read_buffer,' ');
 
-		// tokenize (coma)
-		str_tok(read_buffer,',');
+		// FIXME: For every token
+		while(token){
 
-		// tokenize (column)
-		str_tok(read_buffer,':');
+			// read bank number
+			// ToDo: see if computing repeated str_cmp upstream helps saving time
+			if 		( str_cmp(token,"--------------------") && !arm_bank) {arm_bank++; 					 	continue;}
+			else if	(!str_cmp(token,"--------------------") &&  arm_bank) {cur_bank=color_to_bank(token); 	continue;}
+			else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; 					 	continue;}
 
-		// ToDo: see if computing repeated str_cmp upstream helps saving time
+			// read sample_path
+			else if ( (str_cmp(token, "path")) && !arm_path) {arm_path++; 									 	   continue;}
+			else if (!(str_cmp(token, "path")) &&  arm_path) {str_cpy(sample_path, token); arm_path=0; arm_name++; continue;}
 
-		// read bank number
-		if 		( str_cmp(read_buffer,"--------------------") && !arm_bank) arm_bank++; 					 continue;
-		else if	(!str_cmp(read_buffer,"--------------------") &&  arm_bank) cur_bank=color_to_bank(read_buffer); continue;
-		else if ( str_cmp(read_buffer,"--------------------") &&  arm_bank) arm_bank=0; 					 continue;
+			// add sample_name to sample path
+			else if (arm_name) {str_cpy(&(sample_path[str_len(sample_path)]), token); arm_name=0; continue;}
 
-		// read sample_path
-		else if ( (str_cmp(read_buffer, "path")) && !arm_path) arm_path++; 									 			  continue;
-		else if (!(str_cmp(read_buffer, "path")) &&  arm_path) str_cpy(sample_path, read_buffer); arm_path=0; arm_name++; continue;
+			// load data
+			else{
+				num_buff = str_xt_int(token);
+				if 		((num_buff< 4294967295) && arm_data<3) {arm_data++; 														continue;}
+				else if ((num_buff< 4294967295) && arm_data<4) {cur_sample=num_buff; 								 	arm_data++; continue;}
+				else if ((num_buff< 4294967295) && arm_data<5) {samples[cur_bank][cur_sample].inst_start=num_buff; 		arm_data++; continue;}
+				else if ((num_buff< 4294967295) && arm_data<6) {samples[cur_bank][cur_sample].inst_size=num_buff; 		arm_data++; continue;}
+				else if ((num_buff< 4294967295) && arm_data<7) {samples[cur_bank][cur_sample].inst_gain=num_buff/100; 	arm_data++; continue;}
+				else {arm_data=0;}
+			}
+			
+			// Save sample name to variable:
+			str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
 
-		// add sample_name to sample path
-		else if (arm_name) str_cpy(&(sample_path[str_len(sample_path)]), read_buffer); arm_name=0; continue;
-
-		// load data
-		num_buff = str_xt_int(read_buffer);
-		// ToDo: consider nesting if statements here
-		else if ((num_buff< 4294967295) && arm_data<3) arm_data++; 											continue;
-		else if ((num_buff< 4294967295) && arm_data<4) cur_sample=num_buff; 					arm_data++; continue;
-		else if ((num_buff< 4294967295) && arm_data<5) samples[i][j].inst_start=num_buff; 		arm_data++; continue;
-		else if ((num_buff< 4294967295) && arm_data<6) samples[i][j].inst_size=num_buff; 		arm_data++; continue;
-		else if ((num_buff< 4294967295) && arm_data<7) samples[i][j].inst_gain=num_buff/100; 	arm_data++; continue;
-		else arm_data=0;
+			// tokenize at spaces
+			token = str_tok(read_buffer,' ');
+		}
 	}
 
 

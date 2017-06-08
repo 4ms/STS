@@ -73,13 +73,13 @@ char *str_rstr(char *string, char find, char *path)
   }
 }
 
-void *str_tok(char *string, char find)
+char *str_tok(char *string, char find)
 {
 
   char *cp;
   char *rp;
   rp = 0;
-  char *path
+  char *token;
   
   for (cp = string; *cp!=0; cp++)
   {
@@ -87,8 +87,9 @@ void *str_tok(char *string, char find)
   }
   if (rp==0) return 0; //or maybe string?
   else {
-    path[str_len(path)-str_len(rp)]=0;
-    return (path);
+    token[str_len(token)-str_len(rp)]=0;
+    return (token);
+    str_cpy(string, rp);
   }
 }
 
