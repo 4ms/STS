@@ -16,7 +16,6 @@ Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 //move find_next_ext_in_dir() to file_util.c
 
 uint8_t bank_status[MAX_NUM_BANKS];
-char bank_status[MAX_NUM_BANKS][MAX_BANK_NAME_STRING];
 
 
 extern enum g_Errors g_error;
@@ -102,27 +101,28 @@ uint8_t bank_to_color_string(uint8_t bank, char *color)
 
 }
 
-uint8_t bank_to_color_blinks(uint8_t bank, char *color)
+uint8_t bank_to_color(uint8_t bank, char *color)
 {
 	uint8_t digit1, digit2, len;
-
 
 	if (bank>9 && bank<100)
 	{
 		//convert a 2-digit bank number to a color and number
 
-		//First digit: 49 ---> 7
+		//First digit: 49 ---> 4
 		digit1 = bank / 10;
 
-		//Second digit: 49 ---> (49 - 7*10) = 9
+		//Second digit: 49 ---> (49 - 4*10) = 9
 		digit2 = bank - (digit1*10); 
 
-		//Second digit as a color string: "White\0"
+		//Second digit as a color string: "White"
 		len = bank_to_color(digit2, color);
 
-		//Number the banks starting with 2 not 1 ("Red", "Red-2", "Red-3"... not "Red" , "Red-1", "Red-2"...)
+		//Number the banks starting with 1, not 0
 		digit1++;
 
+		//Omit the "1" for the first bank of a color, so "Red-1" is just "Red"
+		//Otherwise append a dash and number to the color name
 		if (digit1 > 1)
 		{
 			//Move pointer to the end of the string (overwrite the \0)
@@ -132,7 +132,7 @@ uint8_t bank_to_color_blinks(uint8_t bank, char *color)
 			*color++ = '-';
 			len++;
 
-			//Append first digit as a string: "White-5\0"
+			//Append first digit as a string: "White-5"
 			intToStr(digit1, color, 1);
 			len += 2;
 		}
@@ -144,46 +144,40 @@ uint8_t bank_to_color_blinks(uint8_t bank, char *color)
 }
 
 
+// uint8_t bank_to_dual_color(uint8_t bank, char *color)
+// {
+// 	uint8_t bank1, bank2, len;
 
-uint8_t bank_to_dual_color(uint8_t bank, char *color)
-{
-	uint8_t bank1, bank2, len;
 
+// 	if (bank>9 && bank<100)
+// 	{
+// 		//convert a 2-digit bank number to two single digit banks
 
-	if (bank>9 && bank<100)
-	{
-		//convert a 2-digit bank number to two single digit banks
+// 		//First digit:
+// 		bank1 = bank / 10;
 
-		//First digit:
-		bank1 = bank / 10;
+// 		//Second digit:
+// 		bank2 = bank - (bank1*10);
 
-		//Second digit:
-		bank2 = bank - (bank1*10);
+// 		//First color string:
+// 		len = bank_to_color(bank1, color);
 
-		//First color string:
-		len = bank_to_color(bank1, color);
+// 		//Move pointer to the end of the string (on the /0)
+// 		color+=len;
 
-		//Move pointer to the end of the string (on the /0)
-		color+=len;
+// 		//Add a dash
+// 		*color++ = '-';
+// 		len++;
 
-		//Add a dash
-		*color++ = '-';
-		len++;
+// 		//Second color string:
+// 		len +=bank_to_color(bank2, color);
 
-		//Second color string:
-		len +=bank_to_color(bank2, color);
+// 		return (len);
+// 	}
+// 	else 
+// 		return bank_to_color_string(bank, color);
 
-		return (len);
-	}
-	else 
-		return bank_to_color_string(bank, color);
-
-}
-
-uint8_t bank_to_color(uint8_t bank, char *color)
-{
-	return bank_to_color_blinks(bank, color);
-}
+// }
 
 
 void check_enabled_banks(void)
@@ -416,6 +410,11 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 	return (3); ///error
 }
 
+//
+//Go through all default bank folder names,
+//and see if each one is an actual folder
+//If so, open it up.
+//
 uint8_t load_banks_by_default_colors(void)
 {
 	uint8_t bank;
@@ -425,7 +424,7 @@ uint8_t load_banks_by_default_colors(void)
 	banks_loaded=0;
 	for (bank=0;bank<MAX_NUM_BANKS;bank++)
 	{
-		bank_to_color_blinks(bank, bankname);
+		bank_to_color(bank, bankname);
 
 		if (load_bank_from_disk(bank, bankname))
 		{
@@ -442,8 +441,8 @@ uint8_t load_banks_by_default_colors(void)
 uint8_t load_banks_by_color_prefix(void)
 {
 	uint8_t bank;
-	char bankname[_MAX_LFN];
-	char test_color_path[_MAX_LFN];
+	char foldername[_MAX_LFN];
+	char default_bankname[_MAX_LFN];
 	uint8_t banks_loaded;
 
 	FRESULT res;
@@ -459,45 +458,47 @@ uint8_t load_banks_by_color_prefix(void)
 	while (1)
 	{
 		//Find the next directory in the root folder
-		res = get_next_dir(&rootdir, "", bankname);
+		res = get_next_dir(&rootdir, "", foldername);
 
 		if (res != FR_OK) break; //no more directories, exit the while loop
 
 		test_path_loaded = 0;
 
 		//Check if folder contains any .wav files
-		res = f_opendir(&testdir, bankname);
+		res = f_opendir(&testdir, foldername);
 		if (res!=FR_OK) continue;
-		if (find_next_ext_in_dir(&testdir, ".wav", test_color_path) != FR_OK) continue;
+		if (find_next_ext_in_dir(&testdir, ".wav", default_bankname) != FR_OK) continue;
 
 		//Go through all the default bank names and
-		//See if the folder we found matches a bank name exactly
+		//see if the folder we found matches one exactly.
+		//If it does, try another folder (we already should have loaded this bank in load_banks_by_default_colors())
+		//This could be replaced with:
+		//bank = color_to_bank(foldername);
+		//if (bank!=NOT_FOUND)...
 		for (bank=0;(!test_path_loaded && bank<MAX_NUM_BANKS);bank++)
 		{
-			bank_to_color(bank, test_color_path);
-
-			//If the folder we found matches a bank exactly, try another folder
-			//This is because we already loaded this bank in load_banks_by_default_colors()
-			if (str_cmp(bankname, test_color_path))
+			bank_to_color(bank, default_bankname);
+			if (str_cmp(foldername, default_bankname))
 			{
 				test_path_loaded=1;
 				break;
 			}
 		}
 
-		//Go through all the default bank names and
-		//See if the folder we found has a bank name as a prefix (like "Red - LIGO clips")
-		for (bank=0;(!test_path_loaded && bank<MAX_NUM_BANKS);bank++)
+		//Go through all the default bank names with numbers (>10)
+		//see if the folder we found has a bank name as a prefix
+		//This finds things like "Red-3 - TV Clips" (but not yet "Red - Movie Clips")
+		for (bank=10;(!test_path_loaded && bank<MAX_NUM_BANKS);bank++)
 		{
-			bank_to_color(bank, test_color_path);
+			bank_to_color(bank, default_bankname);
 
-			if (str_startswith(bankname, test_color_path))
+			if (str_startswith(foldername, default_bankname))
 			{
 				//Make sure the bank is not already being used
 				if (!is_bank_enabled(bank))
 				{
 					//...and if not, then try to load it as a bank
-					if (load_bank_from_disk(bank, bankname))
+					if (load_bank_from_disk(bank, foldername))
 					{
 						enable_bank(bank);
 						banks_loaded++;
@@ -505,26 +506,48 @@ uint8_t load_banks_by_color_prefix(void)
 						break; //continue with the next folder
 					}
 				}
-				//...but if it is being used, don't give up!
-				//If the bank is a non-numbered bank name (that is, bank< 9. Example: "Red" or "Blue", but not "Red-9" or "Blue-4")
-				//Then check to see if subsequent numbered banks are disabled (so check for Red 2, Red 3, Red 4)
-				//This allows us to have "Red - Synth Pads/" become Red bank, and "Red - Drum Loops/" become Red-2 bank
-				else if(bank<10)
+			}
+		}
+
+		//Go through all the non-numbered default bank names (Red, White, Pink, etc...)
+		//and see if this bank has one of them as a prefix
+		//If the bank is a non-numbered bank name (that is, bank< 9. Example: "Red" or "Blue", but not "Red-9" or "Blue-4")
+		//Then check to see if subsequent numbered banks are disabled (so check for Red 2, Red 3, Red 4)
+		//This allows us to have "Red - Synth Pads/" become Red bank, and "Red - Drum Loops/" become Red-2 bank
+		for (bank=0;(!test_path_loaded && bank<10);bank++)
+		{
+			bank_to_color(bank, default_bankname);
+
+			if (str_startswith(foldername, default_bankname))
+			{
+				//We found a prefix for this folder
+				//If the base color name bank is still empty, load it there...
+				if (!is_bank_enabled(bank))
+				{
+					if (load_bank_from_disk(bank, foldername))
+					{
+						enable_bank(bank);
+						banks_loaded++;
+						test_path_loaded = 1;
+						break; //continue with the next folder
+					}
+				}
+				//...Otherwise try loading it into the next higher-numbered bank (Red-2, Red-3...)
+				else
 				{
 					bank+=10;
 					while (bank<MAX_NUM_BANKS)
 					{
 						if (!is_bank_enabled(bank))
 						{
-							//Try to load it as a bank
-							if (load_bank_from_disk(bank, bankname))
+							if (load_bank_from_disk(bank, foldername))
 							{
 								enable_bank(bank);
 								banks_loaded++;
 								test_path_loaded = 1;
 								break; //exit while loop and continue with the next folder
 							}
-						}  
+						} 
 						bank+=10;
 					}
 				}
@@ -540,9 +563,10 @@ uint8_t load_banks_with_noncolors(void)
 {
 	uint8_t bank;
 	uint8_t len;
-	char bankname[_MAX_LFN];
-	char test_color_path[_MAX_LFN];
+	char foldername[_MAX_LFN];
+	char default_bankname[_MAX_LFN];
 	uint8_t banks_loaded;
+	uint8_t test_path_loaded;
 
 	FRESULT res;
 	DIR rootdir;
@@ -555,43 +579,56 @@ uint8_t load_banks_with_noncolors(void)
 	while (1)
 	{
 		//Find the next directory in the root folder
-		res = get_next_dir(&rootdir, "", bankname);
+		res = get_next_dir(&rootdir, "", foldername);
 
 		if (res != FR_OK) break; //no more directories, exit the while loop
 
+		test_path_loaded = 0;
+
 		//Open the folder
-		res = f_opendir(&testdir, bankname);
+		res = f_opendir(&testdir, foldername);
 		if (res!=FR_OK) continue;
 
 		//Check if folder contains any .wav files
-		if (find_next_ext_in_dir(&testdir, ".wav", test_color_path) != FR_OK) continue;
+		if (find_next_ext_in_dir(&testdir, ".wav", default_bankname) != FR_OK) continue;
+
+		//See if it starts with a default bank color string
+		for (bank=0;bank<10;bank++)
+		{
+			bank_to_color(bank, default_bankname);
+			if (str_startswith(foldername, default_bankname))
+			{
+				test_path_loaded = 1;
+				break;
+			}
+		}
 
 		//Since we didn't find a bank for this folder yet, just put it in the first available bank
 
-		for (bank=0;bank<MAX_NUM_BANKS;bank++)
+		for (bank=0;(!test_path_loaded && bank<MAX_NUM_BANKS);bank++)
 		{
 			if (!is_bank_enabled(bank))
 			{
-				if (load_bank_from_disk(bank, bankname))
+				if (load_bank_from_disk(bank, foldername))
 				{
 					enable_bank(bank);
 					banks_loaded++;
 
 					//Rename the folder with the bank name as a prefix
-					len=bank_to_color_blinks(bank, test_color_path);
-					test_color_path[len++] = '-';
-					str_cpy(&(test_color_path[len]), bankname);
-					// f_rename(bankname, test_color_path);
+					len=bank_to_color(bank, default_bankname);
+					default_bankname[len++] = '-';
+					str_cpy(&(default_bankname[len]), foldername);
+					// f_rename(foldername, default_bankname);
 
-					// load_bank_from_disk(bank, test_color_path);
+					// load_bank_from_disk(bank, default_bankname);
 
 					break; //continue with the next folder
 				}
 			}
 		}
 	}
-	return(banks_loaded);
 
+	return(banks_loaded);
 }
 
 

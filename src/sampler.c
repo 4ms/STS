@@ -130,18 +130,6 @@ enum PlayLoadTriage play_load_triage;
 #define goto_filepos(p)	f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + (p));\
 						if(fil[chan].fptr != samples[banknum][samplenum].startOfData + (p)) g_error|=LSEEK_FPTR_MISMATCH;
 
-
-
-// #define DBG_SIZE 64
-// uint32_t DBG_i=0;
-// uint32_t DBG_buffi=0;
-// uint32_t DBG_last_i = DBG_SIZE-1;
-// uint32_t DBG_last_buffi = DBG_SIZE-1;
-// uint32_t DBG_buffadd[DBG_SIZE];
-// uint32_t DBG_sdadd[DBG_SIZE];
-// uint32_t DBG_err[16];
-// uint8_t DBG_err_i;
-
 //
 // Cross-fading:
 //
@@ -253,7 +241,6 @@ void audio_buffer_init(void)
 		//First pass: load all the banks that have default folder names
 		load_banks_by_default_colors();
 
-
 		//Second pass: look for folders that start with a bank name, example "Red - My Samples/"
 		load_banks_by_color_prefix();
 
@@ -265,11 +252,9 @@ void audio_buffer_init(void)
 	}
 
 
-	i = next_enabled_bank(2); //find the first enabled bank starting with blue
+	i = next_enabled_bank(0xFF); //find the first enabled bank
 	i_param[0][BANK] = i;
 	i_param[1][BANK] = i;
-
-
 
 }
 
