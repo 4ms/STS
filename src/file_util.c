@@ -82,23 +82,26 @@ char *str_tok(char *string, char find)
   char    *token;
   char    t_token[_MAX_LFN+1];
   
-  token = t_token;
-  str_cpy(token, string);
+  if (string[0]=='\0'){token[0]=='\0';}
+  else{
+    token = t_token;
+    str_cpy(token, string);
 
-  for (cp = string; *cp!=0; cp++)
-  {
-    if (*cp == find) {
-      flag=1;
-      break;
+    for (cp = string; *cp!=0; cp++)
+    {
+      if (*cp == find) {
+        flag=1;
+        break;
+      }
     }
+
+    if(!flag){string[0]=0; return (token);}
+    else {
+      token[str_len(string)-str_len(cp)]=0;
+      str_cpy(string, cp+1);
+      return (token);
+      }
   }
-
-  if(!flag){string[0]=0; return (token);}
-  else {
-    token[str_len(string)-str_len(cp)]=0;
-    str_cpy(string, cp+1);
-    return (token);
-    }
 }
 
 uint32_t str_xt_int(char *string)
