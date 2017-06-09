@@ -189,14 +189,15 @@ void update_ButtonLEDs(void)
 	uint32_t tm_12 = sys_tmr & 0xFFF; //12-bit counter
 	uint32_t tm_13 = sys_tmr & 0x1FFF; //13-bit counter
 	uint32_t tm_14 = sys_tmr & 0x3FFF; //14-bit counter
-	//uint32_t tm_15 = sys_tmr & 0x7FFF; //15-bit counter
-	//uint32_t tm_16 = sys_tmr & 0xFFFF; //16-bit counter
+//	uint32_t tm_15 = sys_tmr & 0x7FFF; //15-bit counter
+	uint32_t tm_16 = sys_tmr & 0xFFFF; //16-bit counter
 	//float tri_16;
 	//float tri_15;
 	float tri_14;
 	//float tri_13;
 
-	static uint32_t phase=0;
+	static uint32_t st_phase=0;
+	// static uint8_t bank_blink_ctr[3]={0,0,0};
 
 	float t_tri;
 	uint32_t t;
@@ -242,33 +243,89 @@ void update_ButtonLEDs(void)
 				set_ButtonLED_byPalette(ButLEDnum, OFF);
 			}
 			else
-			if (flags[ViewBlinkBank1 + chan])
-			{
+			// if (flags[ViewBlinkBank1 + chan])
+			// {
+				t = tm_16;
+
+				// if ((t < 0x0A00) && (flags[ViewBlinkBank1 + chan] & 1)) 					flags[ViewBlinkBank1 + chan]++;
+				// if ((t > 0xA000) && (t < 0xB000) && !(flags[ViewBlinkBank1 + chan] & 1)) 	flags[ViewBlinkBank1 + chan]++;
+				// if (t < 0x0A00) bank_blink_ctr[chan]=0;
+
 				if (i_param[chan][BANK] <= 9)
 				{
 					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
-				} else 
+					// flags[ViewBlinkBank1 + chan] = 0;
+				}
+				else 
 				if (i_param[chan][BANK] <= 19) //one blink
 				{
-					if (tm_13 < 0x400) 
-						set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else
-						set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
-				} else
+					if (	t < 0x1000) set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else 				set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-10 );
+
+					// if (flags[ViewBlinkBank1 + chan] >= 3) flags[ViewBlinkBank1 + chan] = 0;
+				}
+				else
 				if (i_param[chan][BANK] <= 29) //two blinks
 				{
-					if (tm_13 < 0x400 || (tm_13 > 0x800 && tm_13 < 0x1000)) 
-						set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else
-						set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
+					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-20 );
+					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else 				  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-20 );
+
+
+					// if (flags[ViewBlinkBank1 + chan] >= 5) flags[ViewBlinkBank1 + chan] = 0;
+
 				}
-			}
-			else //Display (unblinking) color for Bank buttons
-			{
-				t = i_param[chan][BANK];
-				while(t > 9) t-=10;
-				set_ButtonLED_byPalette(ButLEDnum, t );
-			}
+				else
+				if (i_param[chan][BANK] <= 39) //three blinks
+				{
+					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-30 );
+					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-30 );
+					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else 				  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-30 );
+
+					// if (flags[ViewBlinkBank1 + chan] >= 7) flags[ViewBlinkBank1 + chan] = 0;
+				}
+				else
+				if (i_param[chan][BANK] <= 49) //four blinks
+				{
+					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-40 );
+					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-40 );
+					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-40 );
+					else if (t < 0xA000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else 				  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-40 );
+
+					// if (flags[ViewBlinkBank1 + chan] >= 9) flags[ViewBlinkBank1 + chan] = 0;
+
+				}
+				else
+				if (i_param[chan][BANK] <= 59) //five blinks
+				{
+					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else if (t < 0xA000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else if (t < 0xC000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else if (t < 0xD000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else 				  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+
+					// if (flags[ViewBlinkBank1 + chan] >= 11) flags[ViewBlinkBank1 + chan] = 0;
+				}
+			// }
+			// else //Display (unblinking) color for Bank buttons
+			// {
+			// 	t = i_param[chan][BANK];
+			// 	while(t > 9) t-=10;
+			// 	set_ButtonLED_byPalette(ButLEDnum, t+1 );
+			// }
 		}
 
 		// PLAY lights
@@ -299,18 +356,18 @@ void update_ButtonLEDs(void)
 			}
 			else if (flags[StereoModeTurningOn])
 			{
-				//reset phase
+				//reset st_phase
 				if (flags[StereoModeTurningOn] == 1) {
-					phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
+					st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
 					flags[StereoModeTurningOn]++;
 				}
 
 				//calc fade
-				t = (sys_tmr + phase) & 0x3FFF;
+				t = (sys_tmr + st_phase) & 0x3FFF;
 				if (t >0x2000)			t_tri = ((float)(t - 0x2000)) / 8192.0f;
 				else					t_tri = ((float)(0x2000 - t)) / 8192.0f;
 
-				set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, tri_14);
+				set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, t_tri);
 
 				if ((t < 0x1000) && (flags[StereoModeTurningOn] & 1)==1) 					flags[StereoModeTurningOn]++;
 				if ((t > 0x2000) && (t < 0x3000) && (flags[StereoModeTurningOn] & 1)==0) 	flags[StereoModeTurningOn]++;
@@ -320,13 +377,13 @@ void update_ButtonLEDs(void)
 			}
 			else if (flags[StereoModeTurningOff])
 			{
-				//reset phase
+				//reset st_phase
 				if (flags[StereoModeTurningOff] == 1) {
-					phase = 0xFFFFFFFF - sys_tmr;
+					st_phase = 0xFFFFFFFF - sys_tmr;
 					flags[StereoModeTurningOff]++;
 				}
 
-				t = (sys_tmr + phase) & 0x3FFF;
+				t = (sys_tmr + st_phase) & 0x3FFF;
 
 				if (flags[StereoModeTurningOff] == 2){
 					set_ButtonLED_byPalette(Play1ButtonLED, OFF);
