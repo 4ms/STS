@@ -306,21 +306,21 @@ void update_params(void)
 		//
 		// Trim Size 
 		// 
-		if (flag_pot_changed[LENGTH_POT*2+0])
-		{
-			t_coarse 	 = old_i_smoothed_potadc[LENGTH_POT*2+0] / 4096.0;
-			set_sample_trim_size(&samples[banknum][samplenum], t_coarse);
+		// if (flag_pot_changed[LENGTH_POT*2+0])
+		// {
+		// 	t_coarse 	 = old_i_smoothed_potadc[LENGTH_POT*2+0] / 4096.0;
+		// 	set_sample_trim_size(&samples[banknum][samplenum], t_coarse);
 
-			flag_pot_changed[LENGTH_POT*2+0] = 0;
+		// 	flag_pot_changed[LENGTH_POT*2+0] = 0;
 
-			scrubbed_in_edit = 1;
-			f_param[0][START] = 0.999f;
-			f_param[0][LENGTH] = 0.501f;
-			i_param[0][LOOPING] = 1;
-			i_param[0][REV] = 0;
-			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
+		// 	scrubbed_in_edit = 1;
+		// 	f_param[0][START] = 0.999f;
+		// 	f_param[0][LENGTH] = 0.501f;
+		// 	i_param[0][LOOPING] = 1;
+		// 	i_param[0][REV] = 0;
+		// 	if (play_state[0] == SILENT) flags[Play1Trig] = 1;
 
-		}
+		// }
 
 		if (flag_pot_changed[LENGTH_POT*2+1])
 		{
@@ -342,19 +342,19 @@ void update_params(void)
 		//
 		// Trim Start
 		// 
-		if (flag_pot_changed[START_POT*2+0])
-		{
-			t_coarse 	 = old_i_smoothed_potadc[START_POT*2+0] / 4096.0;
-			set_sample_trim_start(&samples[banknum][samplenum], t_coarse, 0);
-			flag_pot_changed[START_POT*2+0] = 0;
+		// if (flag_pot_changed[START_POT*2+0])
+		// {
+		// 	t_coarse 	 = old_i_smoothed_potadc[START_POT*2+0] / 4096.0;
+		// 	set_sample_trim_start(&samples[banknum][samplenum], t_coarse, 0);
+		// 	flag_pot_changed[START_POT*2+0] = 0;
 
-			scrubbed_in_edit = 1;
-			f_param[0][START] = 0.000f;
-			f_param[0][LENGTH] = 0.201f;
-			i_param[0][LOOPING] = 1;
-			i_param[0][REV] = 0;
-			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
-		}
+		// 	scrubbed_in_edit = 1;
+		// 	f_param[0][START] = 0.000f;
+		// 	f_param[0][LENGTH] = 0.201f;
+		// 	i_param[0][LOOPING] = 1;
+		// 	i_param[0][REV] = 0;
+		// 	if (play_state[0] == SILENT) flags[Play1Trig] = 1;
+		// }
 
 		if (flag_pot_changed[START_POT*2+1])
 		{

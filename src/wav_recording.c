@@ -45,7 +45,7 @@ enum RecStates	rec_state;
 uint32_t		samplebytes_recorded;
 uint8_t			sample_num_now_recording;
 uint8_t			sample_bank_now_recording;
-char 			sample_fname_now_recording[255];
+char 			sample_fname_now_recording[_MAX_LFN];
 
 uint8_t 		recording_enabled;
 

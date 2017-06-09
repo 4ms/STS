@@ -1,6 +1,50 @@
 #include <string.h>
 #include "globals.h"
 #include "file_util.h"
+#include "ff.h"
+
+//Returns the next directory in the parent_dir
+//
+//To reset to the first directory, pass dir->obj.fs=0
+//Following that, pass the same dir argument each time it's called, and
+//the string path of the next directory in the parent_dir will be returned.
+//If no more directories exist, it will return 0
+//
+FRESULT get_next_dir(DIR *dir, char *parent_path, char *next_dir_path)
+{
+    FRESULT res=FR_OK;
+    FILINFO fno;
+    uint8_t i;
+
+    if (dir->obj.fs==0){
+        // Open the directory
+        res = f_opendir(dir, parent_path);
+    }
+    if (res == FR_OK) {
+        for (;;) {
+            // Read a directory item
+            res = f_readdir(dir, &fno);
+            if (res != FR_OK || fno.fname[0] == 0) break;
+
+            //It's a directory that doesn't start with a dot
+            if ((fno.fattrib & AM_DIR) && (fno.fname[0] != '.')) {
+
+                str_cpy(next_dir_path, parent_path);
+
+                //Add a slash to the end of parent_path if it doesn't have one
+                i = str_len(next_dir_path);
+                // if (next_dir_path[i-1] != '/')
+                //     next_dir_path[i++] = '/';
+
+                //Append the directory name to the end of parent_path
+                str_cpy(&(next_dir_path[i]), fno.fname);
+                return (FR_OK);
+            }
+        }
+        return FR_NO_FILE;
+    }
+    return FR_NO_PATH;
+}
 
 //FRESULT scan_files (
 //    char* path        /* Start node to be scanned (***also used as work area***) */
@@ -39,6 +83,18 @@
 //    }
 //    return res;
 //}
+
+uint8_t str_startswith(const char *string, const char *prefix)
+{
+   // if (str_len(string) < str_len(prefix)) return 0;
+
+    while (*prefix)
+    {
+        if (*prefix++ != *string++)
+            return 0;
+    }
+    return 1;
+}
 
 uint32_t str_len(char* str)
 {

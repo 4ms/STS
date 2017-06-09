@@ -167,11 +167,14 @@ extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 void audio_buffer_init(void)
 {
 	uint32_t i;
+	uint8_t len;
 	uint32_t bank;
 	FRESULT res;
-
-
-
+	DIR dir;
+	char t_path[255];
+	char *test_path=t_path;
+	char t_color_path[255];
+	char *test_color_path=t_color_path;
 
 
 //	if (MODE_24BIT_JUMPER)
@@ -242,14 +245,20 @@ void audio_buffer_init(void)
 	}
 	else
 	{
-		//load all the banks
-		for (bank=0;bank<MAX_NUM_BANKS;bank++)
-		{
-			i = load_bank_from_disk(bank);
+		//
+		//Sample Index file was not found, or we forced a re-load.
+		//-->> Inteligently place wav files into banks
+		//
 
-			if (i) enable_bank(bank);
-			else disable_bank(bank);
-		}
+		//First pass: load all the banks that have default folder names
+		load_banks_by_default_colors();
+
+
+		//Second pass: look for folders that start with a bank name, example "Red - My Samples/"
+		load_banks_by_color_prefix();
+
+		//Third pass: go through all remaining folders and try to assign them to banks
+		load_banks_with_noncolors();
 
 		res = write_sampleindex_file();
 		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
