@@ -10,7 +10,7 @@
 #include <stm32f4xx.h>
 #include "ff.h"
 
-//ToDo: split up SampleFile and Sample so that we aren't repeating data if a sample file is loaded into multiple slots
+//???ToDo: split up SampleFile and Sample so that we aren't repeating data if a sample file is loaded into multiple slots
 
 // typedef struct SampleFile {
 // 	char		filename[_MAX_LFN];
@@ -51,18 +51,28 @@ typedef struct Sample {
 
 
 uint8_t bank_to_color(uint8_t bank, char *color);
+uint8_t bank_to_color_string(uint8_t bank, char *color);
+uint8_t bank_to_color_blinks(uint8_t bank, char *color);
+uint8_t bank_to_dual_color(uint8_t bank, char *color);
+
+uint8_t load_banks_by_color_prefix(void);
+uint8_t load_banks_by_default_colors(void);
+uint8_t load_banks_with_noncolors(void);
+
+
 
 uint8_t load_sample_header(Sample *s_sample, FIL *sample_file);
 void clear_sample_header(Sample *s_sample);
 
 FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
-uint8_t load_bank_from_disk(uint8_t bank);
+uint8_t load_bank_from_disk(uint8_t bank, char *bankpath);
 
 void check_enabled_banks(void);
 uint8_t next_enabled_bank(uint8_t bank);
 
 void enable_bank(uint8_t bank);
 void disable_bank(uint8_t bank);
+uint8_t is_bank_enabled(uint8_t bank);
 
 uint8_t load_sampleindex_file(void);
 uint8_t write_sampleindex_file(void);

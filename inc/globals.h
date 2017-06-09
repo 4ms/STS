@@ -54,6 +54,8 @@ enum Flags {
 	StereoModeTurningOn,
 	StereoModeTurningOff,
 	skip_process_buttons,
+	ViewBlinkBank1,
+	ViewBlinkBank2,
 
 	NUM_FLAGS
 };
@@ -113,8 +115,7 @@ enum g_Errors{
 #define NUM_ALL_CHAN 3
 
 #define NUM_SAMPLES_PER_BANK 10
-#define MAX_NUM_BANKS 16
-#define MAX_NUM_REC_BANKS 8
+#define MAX_NUM_BANKS 60
 
 #define REC (NUM_ALL_CHAN-1) /* =2 a shortcut to the REC channel */
 

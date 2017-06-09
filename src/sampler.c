@@ -130,18 +130,6 @@ enum PlayLoadTriage play_load_triage;
 #define goto_filepos(p)	f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + (p));\
 						if(fil[chan].fptr != samples[banknum][samplenum].startOfData + (p)) g_error|=LSEEK_FPTR_MISMATCH;
 
-
-
-// #define DBG_SIZE 64
-// uint32_t DBG_i=0;
-// uint32_t DBG_buffi=0;
-// uint32_t DBG_last_i = DBG_SIZE-1;
-// uint32_t DBG_last_buffi = DBG_SIZE-1;
-// uint32_t DBG_buffadd[DBG_SIZE];
-// uint32_t DBG_sdadd[DBG_SIZE];
-// uint32_t DBG_err[16];
-// uint8_t DBG_err_i;
-
 //
 // Cross-fading:
 //
@@ -167,11 +155,14 @@ extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 void audio_buffer_init(void)
 {
 	uint32_t i;
+	uint8_t len;
 	uint32_t bank;
 	FRESULT res;
-
-
-
+	DIR dir;
+	char t_path[255];
+	char *test_path=t_path;
+	char t_color_path[255];
+	char *test_color_path=t_color_path;
 
 
 //	if (MODE_24BIT_JUMPER)
@@ -238,28 +229,32 @@ void audio_buffer_init(void)
 	if (res == 0) //file was found
 	{
 		check_enabled_banks();
+//		check_sample_headers(); //TODO: Checks that all files in samples[][] exist, and their header info matches
 	}
 	else
 	{
-		//load all the banks
-		for (bank=0;bank<MAX_NUM_BANKS;bank++)
-		{
-			i = load_bank_from_disk(bank);
+		//
+		//Sample Index file was not found, or we forced a re-load.
+		//-->> Inteligently place wav files into banks
+		//
 
-			if (i) enable_bank(bank);
-			else disable_bank(bank);
-		}
+		//First pass: load all the banks that have default folder names
+		load_banks_by_default_colors();
+
+		//Second pass: look for folders that start with a bank name, example "Red - My Samples/"
+		load_banks_by_color_prefix();
+
+		//Third pass: go through all remaining folders and try to assign them to banks
+		load_banks_with_noncolors();
 
 		res = write_sampleindex_file();
 		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
 	}
 
 
-	i = next_enabled_bank(2); //find the first enabled bank starting with blue
+	i = next_enabled_bank(0xFF); //find the first enabled bank
 	i_param[0][BANK] = i;
 	i_param[1][BANK] = i;
-
-
 
 }
 

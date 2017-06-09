@@ -231,32 +231,43 @@ void update_ButtonLEDs(void)
 		{
 			if (ButLEDnum == Bank1ButtonLED) chan = 0;
 			else if (ButLEDnum == Bank2ButtonLED) chan = 1;
-			else chan = 2;
+			else chan = 2; //REC channel
 
 #ifdef SETBANK1RGB
-			if (chan==0) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0], i_smoothed_potadc[1], i_smoothed_potadc[2]);
+			if (chan==0 && global_mode[EDIT_MODE]) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0], i_smoothed_potadc[1], i_smoothed_potadc[2]);
 			else 
 #endif
-			if (chan==2 && global_mode[EDIT_MODE])
+			if (chan==2 && global_mode[EDIT_MODE]) //REC button LED off when in Edit Mode
 			{
 				set_ButtonLED_byPalette(ButLEDnum, OFF);
 			}
-			else if (i_param[chan][BANK] < MAX_NUM_REC_BANKS)
-				set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
-
-			else if (i_param[chan][BANK] < (MAX_NUM_REC_BANKS*2))
-			{
-				if (tm_14 < 0x1000)
-					set_ButtonLED_byPalette(ButLEDnum, OFF );
-				else
-					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 1 - MAX_NUM_REC_BANKS );
-			}
 			else
+			if (flags[ViewBlinkBank1 + chan])
 			{
-				if ((tm_14 < 0x0400) || (tm_14 < 0x0C00 && tm_14 > 0x0800))
-					set_ButtonLED_byPalette(ButLEDnum, OFF );
-				else
-					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK] + 1 - MAX_NUM_REC_BANKS*2 );
+				if (i_param[chan][BANK] <= 9)
+				{
+					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
+				} else 
+				if (i_param[chan][BANK] <= 19) //one blink
+				{
+					if (tm_13 < 0x400) 
+						set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else
+						set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
+				} else
+				if (i_param[chan][BANK] <= 29) //two blinks
+				{
+					if (tm_13 < 0x400 || (tm_13 > 0x800 && tm_13 < 0x1000)) 
+						set_ButtonLED_byPalette(ButLEDnum, OFF);
+					else
+						set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
+				}
+			}
+			else //Display (unblinking) color for Bank buttons
+			{
+				t = i_param[chan][BANK];
+				while(t > 9) t-=10;
+				set_ButtonLED_byPalette(ButLEDnum, t );
 			}
 		}
 
