@@ -1,6 +1,7 @@
 #include <string.h>
 #include "globals.h"
 #include "file_util.h"
+#include "ffconf.h"
 
 //FRESULT scan_files (
 //    char* path        /* Start node to be scanned (***also used as work area***) */
@@ -76,21 +77,28 @@ char *str_rstr(char *string, char find, char *path)
 char *str_tok(char *string, char find)
 {
 
-  char *cp;
-  char *rp;
-  rp = 0;
-  char *token;
+  char    *cp;
+  uint8_t flag=0;
+  char    *token;
+  char    t_token[_MAX_LFN+1];
   
+  token = t_token;
+  str_cpy(token, string);
+
   for (cp = string; *cp!=0; cp++)
   {
-    if (*cp == find) rp = cp+1;
+    if (*cp == find) {
+      flag=1;
+      break;
+    }
   }
-  if (rp==0) return 0; //or maybe string?
+
+  if(!flag){string[0]=0; return (token);}
   else {
-    token[str_len(token)-str_len(rp)]=0;
+    token[str_len(string)-str_len(cp)]=0;
+    str_cpy(string, cp+1);
     return (token);
-    str_cpy(string, rp);
-  }
+    }
 }
 
 uint32_t str_xt_int(char *string)
