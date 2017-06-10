@@ -6,14 +6,14 @@
 #include "sampler.h"
 #include "wavefmt.h"
 
-#define MAX_BANK_NAME_STRING 9
-
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-//TODO: rename this file "bank.c/h"
+//TODO:
 //Put the sampleindex functions into a separate file (sample_index.c/h)
 //put sample_header functions into separate file (sample_header.c/h)
 //move find_next_ext_in_dir() to file_util.c
+//Keep reload_banks_from_disk and load_banks_*() in sts_filesystem
+//Move all the bank functions to "bank.c/h"
 
 uint8_t bank_status[MAX_NUM_BANKS];
 
@@ -22,19 +22,21 @@ extern enum g_Errors g_error;
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern uint8_t 	flags[NUM_FLAGS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
+extern FATFS FatFs;
+
 enum PlayStates play_state				[NUM_PLAY_CHAN];
 
 
 
 uint8_t next_enabled_bank(uint8_t bank) //if bank==0xFF, we find the first enabled bank
 {
-	uint8_t esc=0;
+	uint8_t orig_bank=bank;
 
 	do{
 		bank++;
 		if (bank >= MAX_NUM_BANKS)	bank = 0;
 
-	} while(!bank_status[bank] && (esc++<MAX_NUM_BANKS));
+	} while(!bank_status[bank] && (bank!=orig_bank));
 
 	return (bank);
 }
@@ -346,7 +348,56 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 	return(FR_INT_ERR);
 }
 
+FRESULT reload_sdcard(void)
+{
+	FRESULT res;
 
+	res = f_mount(&FatFs, "", 1);
+	if (res != FR_OK)
+	{
+		//can't mount
+		g_error |= SDCARD_CANT_MOUNT;
+		res = f_mount(&FatFs, "", 0);
+		return(FR_DISK_ERR);
+	}
+	return (FR_OK);
+}
+
+uint8_t reload_banks_from_disk(uint8_t force_reload)
+{
+	FRESULT res;
+
+	if (!force_reload)
+		force_reload = load_sampleindex_file();
+
+	if (!force_reload) //sampleindex file was ok
+	{
+		check_enabled_banks();
+//		check_sample_headers(); //TODO: Checks that all files in samples[][] exist, and their header info matches
+	}
+	else //sampleindex file was not ok, or we requested to force a reload from disk
+	{
+		//First pass: load all the banks that have default folder names
+		load_banks_by_default_colors();
+
+		//Second pass: look for folders that start with a bank name, example "Red - My Samples/"
+		load_banks_by_color_prefix();
+
+		//Third pass: go through all remaining folders and try to assign them to banks
+		load_banks_with_noncolors();
+
+		res = write_sampleindex_file();
+		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
+	}
+
+	//Verify the channels are set to enabled banks, and correct if necessary
+	if (!is_bank_enabled(i_param[0][BANK])) 
+		i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
+
+	if (!is_bank_enabled(i_param[1][BANK])) 
+		i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
+
+}
 
 FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 {
@@ -616,11 +667,14 @@ uint8_t load_banks_with_noncolors(void)
 
 					//Rename the folder with the bank name as a prefix
 					len=bank_to_color(bank, default_bankname);
+					default_bankname[len++] = ' ';
 					default_bankname[len++] = '-';
+					default_bankname[len++] = ' ';
 					str_cpy(&(default_bankname[len]), foldername);
-					// f_rename(foldername, default_bankname);
+					
+					f_rename(foldername, default_bankname);
 
-					// load_bank_from_disk(bank, default_bankname);
+					load_bank_from_disk(bank, default_bankname);
 
 					break; //continue with the next folder
 				}
