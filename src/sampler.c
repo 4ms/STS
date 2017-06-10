@@ -65,20 +65,19 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 //extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 //extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
 //extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
-//volatile uint32_t*  SDIOSTA;
 
 extern uint32_t WATCH0;
 extern uint32_t WATCH1;
 extern uint32_t WATCH2;
 extern uint32_t WATCH3;
 
+extern FATFS FatFs;
 
 //
 // System-wide parameters, flags, modes, states
 //
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-//extern uint8_t 	settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
@@ -94,6 +93,7 @@ uint8_t SAMPLINGBYTES=2;
 uint32_t end_out_ctr[NUM_PLAY_CHAN]={0,0};
 uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
 
+Sample dbg_sample;
 
 //
 // Memory
@@ -157,7 +157,7 @@ void audio_buffer_init(void)
 	uint32_t i;
 	uint8_t len;
 	uint32_t bank;
-	FRESULT res;
+	uint8_t force_reload;
 	DIR dir;
 	char t_path[255];
 	char *test_path=t_path;
@@ -176,7 +176,6 @@ void audio_buffer_init(void)
 	memory_clear(3);
 
 	init_rec_buff();
-
 
 	play_buff[0] = &(splay_buff[0]);
 	play_buff[1] = &(splay_buff[1]);
@@ -208,53 +207,22 @@ void audio_buffer_init(void)
 		init_compressor(1<<31, 0.75);
 	}
 
-
-	//Force loading of sample header on first play after boot
-	sample_num_now_playing[0] = 0xFF;
-	sample_num_now_playing[1] = 0xFF;
-	sample_bank_now_playing[0] = 0xFF;
-	sample_bank_now_playing[1] = 0xFF;
-
-
-	//look for a sample.index file
-	//if not found, or holding down both REV buttons, load all banks from disk
-	//if found, read it into sample[]
-	//  do some basic checks to verify integrity
-
-	if (REV1BUT && REV2BUT)
-		res = 1;
+	//Force reloading of banks from disk with button press on boot
+	if (REV1BUT && REV2BUT) 
+		force_reload = 1;
 	else
-		res = load_sampleindex_file();
+		force_reload=0;
 
-	if (res == 0) //file was found
-	{
-		check_enabled_banks();
-//		check_sample_headers(); //TODO: Checks that all files in samples[][] exist, and their header info matches
-	}
-	else
-	{
-		//
-		//Sample Index file was not found, or we forced a re-load.
-		//-->> Inteligently place wav files into banks
-		//
+	reload_banks_from_disk(force_reload);
 
-		//First pass: load all the banks that have default folder names
-		load_banks_by_default_colors();
-
-		//Second pass: look for folders that start with a bank name, example "Red - My Samples/"
-		load_banks_by_color_prefix();
-
-		//Third pass: go through all remaining folders and try to assign them to banks
-		load_banks_with_noncolors();
-
-		res = write_sampleindex_file();
-		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
-	}
-
-
-	i = next_enabled_bank(0xFF); //find the first enabled bank
+	i = next_enabled_bank(0xFF); //Find the first enabled bank
 	i_param[0][BANK] = i;
 	i_param[1][BANK] = i;
+
+	sample_num_now_playing[0] = 0;
+	sample_num_now_playing[1] = 0;
+	sample_bank_now_playing[0] = i_param[0][BANK];
+	sample_bank_now_playing[1] = i_param[1][BANK];
 
 }
 
@@ -392,8 +360,6 @@ void toggle_reverse(uint8_t chan)
 		play_buff[chan]->in = cache_map_pt[chan]; //cache_map_pt is the map of cache_low
 	}
 
-
-
 	//swap the endpos with the startpos
 	t							= sample_file_endpos[chan];
 	sample_file_endpos[chan]	= sample_file_startpos[chan];
@@ -422,12 +388,14 @@ DWORD chan_clmt[NUM_PLAY_CHAN][SZ_TBL];
 void start_playing(uint8_t chan)
 {
 	uint8_t samplenum, banknum;
+	Sample *s_sample;
 	FRESULT res;
 
 	samplenum = i_param[chan][SAMPLE];
 	banknum = i_param[chan][BANK];
+	s_sample = &(samples[banknum][samplenum]);
 
-	if (samples[banknum][samplenum].filename[0] == 0)
+	if (s_sample->filename[0] == 0)
 		return;
 
 
@@ -435,29 +403,33 @@ void start_playing(uint8_t chan)
 
 	//Check if sample/bank changed, or file is flagged for reload
 	//if so, close the current file and open the new sample file
-
-	//debug:
-//flags[ForceFileReload1+chan] = 1;
-
 	if (flags[ForceFileReload1+chan] || (sample_num_now_playing[chan] != samplenum) || (sample_bank_now_playing[chan] != banknum) || fil[chan].obj.fs==0)
 	{
 		flags[ForceFileReload1+chan] = 0;
 
 		f_close(&fil[chan]);
 
-		 // 384us up to 1.86ms or more? at -Ofast
-		res = f_open(&fil[chan], samples[banknum][samplenum].filename, FA_READ);
-		f_sync(&fil[chan]);
+		//Try to open the sample file
+		res = f_open(&fil[chan], s_sample->filename, FA_READ);
 
+		//If it fails, try re-mounting the sd card and opening again
 		if (res != FR_OK)
 		{
-			g_error |= FILE_OPEN_FAIL;
-			sample_num_now_playing[chan] = 0xFF;
-			sample_bank_now_playing[chan] = 0xFF;
-
 			f_close(&fil[chan]);
-			return;
+
+			res = reload_sdcard();
+			if (res == FR_OK)
+				res = f_open(&fil[chan], s_sample->filename, FA_READ);
+
+			if (res != FR_OK)
+			{
+				g_error |= FILE_OPEN_FAIL;
+				play_state[chan] = SILENT;
+				return;
+			}
 		}
+
+		f_sync(&fil[chan]);
 
 		//takes over 3.3ms for a big file
 		//Could save time by pre-loading all the clmt when we load the bank
@@ -470,22 +442,20 @@ void start_playing(uint8_t chan)
 		if (res != FR_OK)
 		{
 			g_error |= FILE_CANNOT_CREATE_CLTBL;
-		//	sample_num_now_playing[chan] = 0xFF;
-		//	sample_bank_now_playing[chan] = 0xFF;
 		//	f_close(&fil[chan]);
 		//	return;
 		}
 
 		//Check the file is really as long as the sampleSize says it is
-		if (f_size(&fil[chan]) < (samples[banknum][samplenum].startOfData + samples[banknum][samplenum].sampleSize))
+		if (f_size(&fil[chan]) < (s_sample->startOfData + s_sample->sampleSize))
 		{
-			samples[banknum][samplenum].sampleSize = f_size(&fil[chan]) - samples[banknum][samplenum].startOfData;
+			s_sample->sampleSize = f_size(&fil[chan]) - s_sample->startOfData;
 
-			if (samples[banknum][samplenum].inst_end > samples[banknum][samplenum].sampleSize)
-				samples[banknum][samplenum].inst_end = samples[banknum][samplenum].sampleSize;
+			if (s_sample->inst_end > s_sample->sampleSize)
+				s_sample->inst_end = s_sample->sampleSize;
 
-			if ((samples[banknum][samplenum].inst_start + samples[banknum][samplenum].inst_size) > samples[banknum][samplenum].sampleSize)
-				samples[banknum][samplenum].inst_size = samples[banknum][samplenum].sampleSize - samples[banknum][samplenum].inst_start;
+			if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
+				s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
 		}
 
 		sample_num_now_playing[chan] = samplenum;
@@ -499,13 +469,13 @@ void start_playing(uint8_t chan)
 	//Determine starting and ending addresses
 	if (i_param[chan][REV])
 	{
-		sample_file_endpos[chan] = calc_start_point(f_param[chan][START], &samples[banknum][samplenum]);
-		sample_file_startpos[chan] = calc_stop_points(f_param[chan][LENGTH], &samples[banknum][samplenum], sample_file_endpos[chan]);
+		sample_file_endpos[chan] = calc_start_point(f_param[chan][START], s_sample);
+		sample_file_startpos[chan] = calc_stop_points(f_param[chan][LENGTH], s_sample, sample_file_endpos[chan]);
 	}
 	else
 	{
-		sample_file_startpos[chan] = calc_start_point(f_param[chan][START], &samples[banknum][samplenum]);
-		sample_file_endpos[chan] = calc_stop_points(f_param[chan][LENGTH], &samples[banknum][samplenum], sample_file_startpos[chan]);
+		sample_file_startpos[chan] = calc_start_point(f_param[chan][START], s_sample);
+		sample_file_endpos[chan] = calc_stop_points(f_param[chan][LENGTH], s_sample, sample_file_startpos[chan]);
 	}
 
 	// Set up parameters to begin playing
@@ -514,7 +484,7 @@ void start_playing(uint8_t chan)
 	//see if starting position is already cached
 	if ((cache_high[chan]>cache_low[chan]) && (cache_low[chan] <= sample_file_startpos[chan]) && (sample_file_startpos[chan] <= cache_high[chan]))
 	{
-		play_buff[chan]->out = map_cache_to_buffer(sample_file_startpos[chan], samples[banknum][samplenum].sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
+		play_buff[chan]->out = map_cache_to_buffer(sample_file_startpos[chan], s_sample->sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
 
 		if (play_buff[chan]->out < play_buff[chan]->in)	play_buff[chan]->wrapping = 0;
 		else											play_buff[chan]->wrapping = 1;
@@ -529,14 +499,14 @@ void start_playing(uint8_t chan)
 		CB_init(play_buff[chan], i_param[chan][REV]);
 
 		if (i_param[chan][REV])
-			play_buff[chan]->in = play_buff[chan]->max - ((READ_BLOCK_SIZE * 2) / samples[banknum][samplenum].sampleByteSize);
+			play_buff[chan]->in = play_buff[chan]->max - ((READ_BLOCK_SIZE * 2) / s_sample->sampleByteSize);
 
 		res = goto_filepos(sample_file_startpos[chan]);
 		if (res != FR_OK) g_error |= FILE_SEEK_FAIL;
 
 		if (g_error & LSEEK_FPTR_MISMATCH)
 		{
-			sample_file_startpos[chan] = align_addr(f_tell(&fil[chan]) - samples[banknum][samplenum].startOfData, samples[banknum][samplenum].blockAlign);
+			sample_file_startpos[chan] = align_addr(f_tell(&fil[chan]) - s_sample->startOfData, s_sample->blockAlign);
 		}
 
 		sample_file_curpos[chan] 		= sample_file_startpos[chan];
@@ -544,7 +514,7 @@ void start_playing(uint8_t chan)
 		cache_low[chan] 				= sample_file_startpos[chan];
 		cache_high[chan] 				= sample_file_startpos[chan];
 		cache_map_pt[chan] 				= play_buff[chan]->min;
-		cache_size[chan]				= (play_buff[chan]->size>>1) * samples[banknum][samplenum].sampleByteSize;
+		cache_size[chan]				= (play_buff[chan]->size>>1) * s_sample->sampleByteSize;
 		is_buffered_to_file_end[chan] = 0;
 
 		play_state[chan]=PREBUFFERING;
@@ -561,6 +531,18 @@ void start_playing(uint8_t chan)
 
 	if (global_mode[MONITOR_RECORDING])	global_mode[MONITOR_RECORDING] = 0;
 
+	//DEBUG
+	str_cpy(dbg_sample.filename , s_sample->filename);
+	dbg_sample.sampleSize 		= s_sample->sampleSize;
+	dbg_sample.sampleByteSize	= s_sample->sampleByteSize;
+	dbg_sample.sampleRate 		= s_sample->sampleRate;
+	dbg_sample.numChannels 		= s_sample->numChannels;
+	dbg_sample.blockAlign 		= s_sample->blockAlign;
+	dbg_sample.PCM 				= s_sample->PCM;
+	dbg_sample.inst_start 		= s_sample->inst_start;
+	dbg_sample.inst_end 		= s_sample->inst_end;
+	dbg_sample.inst_size 		= s_sample->inst_size;
+	dbg_sample.inst_gain 		= s_sample->inst_gain;
 }
 
 
@@ -764,7 +746,10 @@ void read_storage_to_buffer(void)
 		if (play_state[chan] == SILENT)
 		{
 			check_change_bank(chan);
-		}
+		}	
+
+
+
 
 		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN && play_state[chan] != RETRIG_FADEDOWN)
 		{
@@ -779,6 +764,21 @@ void read_storage_to_buffer(void)
 				if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < s_sample->inst_end))
 				 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > s_sample->inst_start)) )
 					is_buffered_to_file_end[chan] = 0;
+			}
+			else
+			{
+				//Try to recover
+				res = reload_sdcard();
+
+				if (res == FR_OK)
+					res = f_open(&fil[chan], s_sample->filename, FA_READ);
+
+				if (res != FR_OK)
+				{
+					g_error |= FILE_OPEN_FAIL;
+					play_state[chan] = SILENT;
+					return;
+				}
 			}
 
 			//

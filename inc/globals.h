@@ -64,7 +64,7 @@ enum Flags {
 //Error codes for g_error
 enum g_Errors{
 	OUT_OF_MEM=1,
-	OUT_OF_SAMPLES=2,
+	SDCARD_CANT_MOUNT=2,
 	SPIERROR_1=4,
 	WRITE_SDRAM_ERROR=8,
 	DMA_OVR_ERROR=16,

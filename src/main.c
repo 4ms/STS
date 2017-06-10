@@ -30,6 +30,8 @@ uint32_t WATCH1;
 uint32_t WATCH2;
 uint32_t WATCH3;
 
+FATFS FatFs;
+
 enum g_Errors g_error=0;
 
 __IO uint16_t potadc_buffer[NUM_POT_ADCS];
@@ -47,15 +49,7 @@ void check_errors(void);
 void check_errors(void){
 	if (g_error>0)
 	{
-		//SIGNALLED_ON;
-		//BUSYLED_ON;
-
-	//while(1){
- 		//SIGNALLED_OFF;
-		//BUSYLED_OFF;
- 
-		//}
-
+		
 	}
 }
 
@@ -87,21 +81,11 @@ void JumpTo(uint32_t address) {
 
 int main(void)
 {
-	uint8_t i;
-	uint8_t err=0;
 	uint32_t do_factory_reset=0;
 	uint32_t timeout_boot;
 	uint32_t firmware_version;
 	
-	FATFS FatFs;
-	FIL fil;
 	FRESULT res;
-	uint32_t total, free;
-	uint32_t bw;
-	BYTE work[_MAX_SS];
-    DWORD plist[] = {100, 0, 0, 0};
-
-
 
 	//
 	// Bootloader:
@@ -117,7 +101,6 @@ int main(void)
 
 	TRACE_init();
 	//ITM_Init(6000000);
-//	ITM_Print_int(0,1243);
 
 	//Codec and I2S/DMA should be disabled before they can properly start up
     Codec_Deinit();
@@ -127,7 +110,7 @@ int main(void)
 
     //Initialize digital in/out pins
     init_dig_inouts();
- //   test_dig_inouts();
+ // test_dig_inouts();
 	init_timekeeper();
 
 
@@ -139,35 +122,15 @@ int main(void)
 
 
 	timeout_boot = 0x00800000;
-	PLAYLED1_OFF;
+	PLAYLED1_ON;
 	while(timeout_boot--){;}
 	PLAYLED1_OFF;
 
-	//Initialize SD Card
-	//err=init_sdcard();
-	//if (!err)
-	//err=test_sdcard();
-//	if (err){
-//		while(1){
-//			SIGNALLED_ON;
-//			SIGNALLED_OFF;
-//		}
-//	}
 
 	SIGNALLED_OFF;
 	BUSYLED_OFF;
 
-
-	res = f_mount(&FatFs, "", 1);
-	if (res != FR_OK)
-	{
-		//can't mount
-		SIGNALLED_ON;
-		BUSYLED_ON;
-		res = f_mount(&FatFs, "", 0);
-	}
-
-
+	reload_sdcard();
 
 	//Turn on the lights
 	LEDDriver_Init(2);

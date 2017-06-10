@@ -214,7 +214,7 @@ void Button_Debounce_IRQHandler(void)
 							case Rev2:
 								if (global_mode[EDIT_MODE]){
 									t = global_mode[STEREO_MODE];
-									load_sampleindex_file();
+									reload_banks_from_disk(0);
 									global_mode[STEREO_MODE] = t;
 								}else
 									flags[Rev2Trig]=1;
@@ -263,6 +263,15 @@ void Button_Debounce_IRQHandler(void)
 							button_state[i] = MED_PRESSED;
 							switch (i)
 							{
+								case Rev2:
+									if (global_mode[EDIT_MODE])
+									{
+										t = global_mode[STEREO_MODE];
+										reload_banks_from_disk(1); //Med-press: Force a reload from disk
+										global_mode[STEREO_MODE] = t;
+									}
+									break;
+
 								default:
 									break;
 							}

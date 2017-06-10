@@ -52,12 +52,12 @@ typedef struct Sample {
 
 uint8_t bank_to_color(uint8_t bank, char *color);
 uint8_t bank_to_color_string(uint8_t bank, char *color);
-uint8_t bank_to_color_blinks(uint8_t bank, char *color);
 uint8_t bank_to_dual_color(uint8_t bank, char *color);
 
 uint8_t load_banks_by_color_prefix(void);
 uint8_t load_banks_by_default_colors(void);
 uint8_t load_banks_with_noncolors(void);
+FRESULT reload_banks_from_disk(uint8_t force_reload);
 
 
 
@@ -77,6 +77,6 @@ uint8_t is_bank_enabled(uint8_t bank);
 uint8_t load_sampleindex_file(void);
 uint8_t write_sampleindex_file(void);
 
-
+FRESULT reload_sdcard(void);
 
 #endif /* INC_STS_FILESYSTEM_H_ */

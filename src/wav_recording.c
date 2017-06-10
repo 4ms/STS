@@ -200,7 +200,15 @@ void write_buffer_to_storage(void)
 			//If that's not found, create it
 			if (res==FR_NO_PATH)
 				res = f_mkdir(path);
+			else if (res!=FR_OK)
+				res = reload_sdcard();	
 
+			if (res!=FR_OK)
+			{
+				rec_state=REC_OFF;
+				g_error |= SDCARD_CANT_MOUNT;
+				break;
+			}
 
 			sz = bank_to_color(sample_bank_now_recording, sample_fname_now_recording);
 			sample_fname_now_recording[sz++] = '/';
