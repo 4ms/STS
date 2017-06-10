@@ -647,10 +647,11 @@ uint8_t load_sampleindex_file(void)
 	FIL 		temp_file;
 	FRESULT 	res;
 	char 		read_buffer[_MAX_LFN+1], sample_path[_MAX_LFN+1], sample_name[_MAX_LFN+1];
-	uint8_t		cur_bank, cur_sample, arm_bank=0, arm_path=0, arm_name=0, arm_data=0;;
+	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_path=0, arm_name=0, arm_data=0;;
 	uint32_t	num_buff;
 	char 		*token;
 	char 		t_token[_MAX_LFN+1];
+	uint32_t rd, br;
 
 	// Open sample index file
 	res = f_open(&temp_file,"sample_index.txt", FA_READ);
@@ -662,74 +663,63 @@ uint8_t load_sampleindex_file(void)
 	// write cached information of the file  to the volume	
 	f_sync(&temp_file);
 
+	// Todo: check if this is necessary: Read sample index file
+	// rd = f_size(&temp_file);
+	// res = f_read(&temp_file, samples, rd, &br);
+	
 	//
 	token = t_token;
 
-	// until we reach the eof
+	// // until we reach the eof
 	while (!f_eof(&temp_file)){
 	
 		// Read next line
 		f_gets(read_buffer, _MAX_LFN+1, &temp_file);
 
+		// Remove /n from buffer
+		read_buffer[str_len(read_buffer)-1]=0;
+
 		// tokenize at spaces
 		token = str_tok(read_buffer,' ');
 
-		// FIXME: For every token
-		while(token){
+		// For every token
+		while(token!=0){
+
+			// ToDo: consider re-calculating Token here to reduce amount of code
 
 			// read bank number
 			// ToDo: see if computing repeated str_cmp upstream helps saving time
-			if 		( str_cmp(token,"--------------------") && !arm_bank) {arm_bank++; 					 	continue;}
-			else if	(!str_cmp(token,"--------------------") &&  arm_bank) {cur_bank=color_to_bank(token); 	continue;}
-			else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; 					 	continue;}
+			if 		( str_cmp(token,"--------------------") && !arm_bank) {arm_bank++; 					 			token = str_tok(read_buffer,' '); continue;}
+			else if	(!str_cmp(token,"--------------------") &&  arm_bank) {cur_bank=color_to_bank(token); 			token = str_tok(read_buffer,' '); continue;}
+			else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; 					 			token = str_tok(read_buffer,' '); continue;}
 
 			// read sample_path
-			else if ( (str_cmp(token, "path")) && !arm_path) {arm_path++; 									 	   continue;}
-			else if (!(str_cmp(token, "path")) &&  arm_path) {str_cpy(sample_path, token); arm_path=0; arm_name++; continue;}
+			else if ( (str_cmp(token, "path:")) && !arm_path) {arm_path++; 									 	   	token = str_tok(read_buffer,' '); continue;}
+			else if (arm_path) 								  {str_cpy(sample_path, token); arm_path=0; arm_name++; token = str_tok(read_buffer,' '); continue;}
 
 			// add sample_name to sample path
-			else if (arm_name) {str_cpy(&(sample_path[str_len(sample_path)]), token); arm_name=0; continue;}
+			else if (arm_name) {str_cpy(&(sample_path[str_len(sample_path)]), token); arm_name=0; 					token = str_tok(read_buffer,' '); continue;}
 
 			// load data
 			else{
 				num_buff = str_xt_int(token);
-				if 		((num_buff< 4294967295) && arm_data<3) {arm_data++; 														continue;}
-				else if ((num_buff< 4294967295) && arm_data<4) {cur_sample=num_buff; 								 	arm_data++; continue;}
-				else if ((num_buff< 4294967295) && arm_data<5) {samples[cur_bank][cur_sample].inst_start=num_buff; 		arm_data++; continue;}
-				else if ((num_buff< 4294967295) && arm_data<6) {samples[cur_bank][cur_sample].inst_size=num_buff; 		arm_data++; continue;}
-				else if ((num_buff< 4294967295) && arm_data<7) {samples[cur_bank][cur_sample].inst_gain=num_buff/100; 	arm_data++; continue;}
-				else {arm_data=0;}
+				if 		((num_buff< 4294967295) && arm_data<3) {arm_data++; 																					token = str_tok(read_buffer,' ');}
+				else if ((num_buff< 4294967295) && arm_data<4) {cur_sample=num_buff; str_cpy(samples[cur_bank][cur_sample].filename, sample_path); arm_data++; 	token = str_tok(read_buffer,' ');}
+				else if ((num_buff< 4294967295) && arm_data<5) {samples[cur_bank][cur_sample].inst_start=num_buff; 		arm_data++; 							token = str_tok(read_buffer,' ');}
+				else if ((num_buff< 4294967295) && arm_data<6) {samples[cur_bank][cur_sample].inst_size=num_buff; 		arm_data++; 							token = str_tok(read_buffer,' ');}
+				else if ((num_buff< 4294967295) && arm_data<7) {samples[cur_bank][cur_sample].inst_gain=num_buff/100; 	arm_data++; 							token = str_tok(read_buffer,' ');}
+				else {arm_data=0;																																token = str_tok(read_buffer,' ');}
+				 
+				continue;
 			}
 			
-			// Save sample name to variable:
-			str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
+			// // Save sample name to variable:
+			// str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
 
-			// tokenize at spaces
-			token = str_tok(read_buffer,' ');
+			// // tokenize at spaces
+			// token = str_tok(read_buffer,' ');
 		}
 	}
-
-
-	// if ((arm_bank ==1) && !(str_cmp(read_buffer,"--------------------")) bank=color_to_bank(read_buffer);
-	// else arm_bank++;
-	// if (arm_bank>=2)
-
-
-// 	rd = sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
-// 	res = f_read(&temp_file, samples, rd, &br);
-
-// 	if (res != FR_OK)	{return(2);}//file not read
-// 	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
-// //	else if ( !is_valid_Sample_format(samples) )	{f_close(&temp_file); return(3);	}
-
-// 	rd = 4;
-// 	res = f_read(&temp_file, data, rd, &br);
-	
-// 	if (data[0] == 0) global_mode[STEREO_MODE] = 0;
-// 	else global_mode[STEREO_MODE] = 1;
-
-// 	if (res != FR_OK)	{return(2);}//file not read
-// 	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
 
 	// close sample index file
 	f_close(&temp_file);
