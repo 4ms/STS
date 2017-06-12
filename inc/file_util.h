@@ -19,6 +19,9 @@ uint8_t str_startswith(const char *string, const char *prefix);
 
 FRESULT get_next_dir(DIR *dir, char *parent_path, char *next_dir_path);
 FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
+char * 		str_rstr(char *string, char find, char *path);
+char *		str_tok(char *string, char find);
+uint32_t 	str_xt_int(char *string);
 
 
 #endif /* INC_FILE_UTIL_H_ */
