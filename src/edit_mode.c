@@ -10,6 +10,7 @@
 #include "audio_util.h"
 
 #include "edit_mode.h"
+#include "sample_file.h"
 
 
 

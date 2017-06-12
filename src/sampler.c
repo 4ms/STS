@@ -52,6 +52,8 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 #include "wav_recording.h"
 #include "sts_filesystem.h"
 #include "edit_mode.h"
+#include "sample_file.h"
+#include "circular_buffer_cache.h"
 
 //
 // DEBUG
@@ -154,15 +156,8 @@ extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 void audio_buffer_init(void)
 {
-	uint32_t i;
-	uint8_t len;
 	uint32_t bank;
 	uint8_t force_reload;
-	DIR dir;
-	char t_path[255];
-	char *test_path=t_path;
-	char t_color_path[255];
-	char *test_color_path=t_color_path;
 
 
 //	if (MODE_24BIT_JUMPER)
@@ -198,14 +193,14 @@ void audio_buffer_init(void)
 	flags[PlayBuff1_Discontinuity] = 1;
 	flags[PlayBuff2_Discontinuity] = 1;
 
-	if (SAMPLINGBYTES==2){
-		//min_vol = 10;
-		init_compressor(1<<15, 0.75);
-	}
-	else{
-		//min_vol = 10 << 16;
-		init_compressor(1<<31, 0.75);
-	}
+	// if (SAMPLINGBYTES==2){
+	// 	//min_vol = 10;
+	// 	init_compressor(1<<15, 0.75);
+	// }
+	// else{
+	// 	//min_vol = 10 << 16;
+	// 	init_compressor(1<<31, 0.75);
+	// }
 
 	//Force reloading of banks from disk with button press on boot
 	if (REV1BUT && REV2BUT) 
@@ -215,9 +210,9 @@ void audio_buffer_init(void)
 
 	reload_banks_from_disk(force_reload);
 
-	i = next_enabled_bank(0xFF); //Find the first enabled bank
-	i_param[0][BANK] = i;
-	i_param[1][BANK] = i;
+	bank = next_enabled_bank(0xFF); //Find the first enabled bank
+	i_param[0][BANK] = bank;
+	i_param[1][BANK] = bank;
 
 	sample_num_now_playing[0] = 0;
 	sample_num_now_playing[1] = 0;
@@ -227,63 +222,12 @@ void audio_buffer_init(void)
 }
 
 //
-void clear_is_buffered_to_file_end(uint8_t chan)
-{
-	is_buffered_to_file_end[chan] = 0;
-	flags[ForceFileReload1+chan] = 1;
-}
+// void clear_is_buffered_to_file_end(uint8_t chan)
+// {
+// 	is_buffered_to_file_end[chan] = 0;
+// 	flags[ForceFileReload1+chan] = 1;
+// }
 
-//
-//Given: the starting address of the cache, and the address in the buffer to which it refers.
-//Returns: a cache address equivalent to the buffer_point
-//Assumes cache_start is the lowest value of the cache 
-//
-uint32_t map_buffer_to_cache(uint32_t buffer_point, uint8_t sampleByteSize, uint32_t cache_start, uint32_t buffer_start, CircularBuffer *b)
-{
-	uint32_t p;
-
-	//Find out how far ahead the buffer_point is from the buffer reference
-	p = CB_distance_points(buffer_point, buffer_start, b->size, 0);
-
-	//Divide that by 2 to get the number of samples
-	//and multiply by the sampleByteSize to get the position in the cache
-	p = (p * sampleByteSize) >> 1;
-
-	//add that to the cache reference
-	p += cache_start;
-
-	return(p);
-}
-
-//
-//Given: the starting address of the cache, and the address in the buffer to which it refers.
-//Returns: a buffer address equivalent to cache_point
-//Assumes cache_start is the lowest value of the cache (to overcome this, we would have to use int32_t or compare cache_point>cache_start)
-//
-uint32_t map_cache_to_buffer(uint32_t cache_point, uint8_t sampleByteSize, uint32_t cache_start, uint32_t buffer_start, CircularBuffer *b)
-{
-	uint32_t p;
-
-	//Find how far ahead the cache_point is from the start of the cache
-	p = cache_point - cache_start;
-
-	//Find how many samples that is
-	p = p/sampleByteSize;
-
-	//Multiply that by 2 to get the address offset in play_buff
-	p *= 2;
-
-	//Add the offset to the start of the buffer
-	p += buffer_start;
-
-	//p = buffer_start + (((cache_point - cache_start) * 2) / sampleByteSize);
-
-	//Wrap the circular buffer
-	while (p > b->max)
-		p -= b->size;
-
-	return(p);
-}
 
 
 void toggle_reverse(uint8_t chan)
@@ -376,20 +320,18 @@ void toggle_reverse(uint8_t chan)
 
 
 
-
 //
 // start_playing()
 // Starts playing on a channel at the current param positions
 //
 
-#define SZ_TBL 32
-DWORD chan_clmt[NUM_PLAY_CHAN][SZ_TBL];
 
 void start_playing(uint8_t chan)
 {
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
 	FRESULT res;
+	uint8_t file_loaded;
 
 	samplenum = i_param[chan][SAMPLE];
 	banknum = i_param[chan][BANK];
@@ -399,6 +341,7 @@ void start_playing(uint8_t chan)
 		return;
 
 
+	file_loaded = 0;
 	check_change_bank(chan);
 
 	//Check if sample/bank changed, or file is flagged for reload
@@ -407,44 +350,13 @@ void start_playing(uint8_t chan)
 	{
 		flags[ForceFileReload1+chan] = 0;
 
-		f_close(&fil[chan]);
+		res = reload_sample_file(&fil[chan], s_sample);
+		if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
 
-		//Try to open the sample file
-		res = f_open(&fil[chan], s_sample->filename, FA_READ);
-
-		//If it fails, try re-mounting the sd card and opening again
-		if (res != FR_OK)
-		{
-			f_close(&fil[chan]);
-
-			res = reload_sdcard();
-			if (res == FR_OK)
-				res = f_open(&fil[chan], s_sample->filename, FA_READ);
-
-			if (res != FR_OK)
-			{
-				g_error |= FILE_OPEN_FAIL;
-				play_state[chan] = SILENT;
-				return;
-			}
-		}
-
-		f_sync(&fil[chan]);
-
-		//takes over 3.3ms for a big file
-		//Could save time by pre-loading all the clmt when we load the bank
-		//Then just do fil[chan].cltbl = preloaded_clmt[samplenum];
-		//instead of clmt[0]=SZ_TBL and f_lseek(...CREATE_LINKMAP)
-		fil[chan].cltbl = chan_clmt[chan];
-		chan_clmt[chan][0] = SZ_TBL;
-		res = f_lseek(&fil[chan], CREATE_LINKMAP);
-
-		if (res != FR_OK)
-		{
-			g_error |= FILE_CANNOT_CREATE_CLTBL;
-		//	f_close(&fil[chan]);
-		//	return;
-		}
+		res = create_linkmap(&fil[chan], chan);
+		if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+		
+		file_loaded = 1;
 
 		//Check the file is really as long as the sampleSize says it is
 		if (f_size(&fil[chan]) < (s_sample->startOfData + s_sample->sampleSize))
@@ -500,6 +412,16 @@ void start_playing(uint8_t chan)
 
 		if (i_param[chan][REV])
 			play_buff[chan]->in = play_buff[chan]->max - ((READ_BLOCK_SIZE * 2) / s_sample->sampleByteSize);
+
+		//Reload the sample file (important to do, in case card has been removed)
+		if (!file_loaded)
+		{
+			res = reload_sample_file(&fil[chan], s_sample);
+			if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
+
+			res = create_linkmap(&fil[chan], chan);
+			if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+		}
 
 		res = goto_filepos(sample_file_startpos[chan]);
 		if (res != FR_OK) g_error |= FILE_SEEK_FAIL;
@@ -748,9 +670,6 @@ void read_storage_to_buffer(void)
 			check_change_bank(chan);
 		}	
 
-
-
-
 		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN && play_state[chan] != RETRIG_FADEDOWN)
 		{
 			samplenum = sample_num_now_playing[chan];
@@ -759,26 +678,26 @@ void read_storage_to_buffer(void)
 
 			play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
 
-			if ( !(g_error & (FILE_READ_FAIL_1 << chan)))
+			//
+			//Try to recover from a file read error
+			//
+			if (g_error & (FILE_READ_FAIL_1 << chan))
 			{
+				res = reload_sample_file(&fil[chan], s_sample);
+				if (res != FR_OK) {g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
+
+				res = create_linkmap(&fil[chan], chan);
+				if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL;f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+
+				//clear the error flag
+				g_error &= ~(FILE_READ_FAIL_1 << chan);
+			}
+			else //If no file read error... [?? what are we doing here???]
+			{
+
 				if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < s_sample->inst_end))
 				 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > s_sample->inst_start)) )
 					is_buffered_to_file_end[chan] = 0;
-			}
-			else
-			{
-				//Try to recover
-				res = reload_sdcard();
-
-				if (res == FR_OK)
-					res = f_open(&fil[chan], s_sample->filename, FA_READ);
-
-				if (res != FR_OK)
-				{
-					g_error |= FILE_OPEN_FAIL;
-					play_state[chan] = SILENT;
-					return;
-				}
 			}
 
 			//
@@ -786,8 +705,13 @@ void read_storage_to_buffer(void)
 			//
 			pb_adjustment = f_param[chan][PITCH] * (float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE ;
 
-			//Odd: blockAlign already includes numChannels, so we essentially square this?
-			//Why? ...is it because it plows through the play_buff twice as fast if it's stereo, thus the buffer empties more quickly if it's stereo
+			//Calculate how many bytes we need to pre-load in our buffer
+			//
+			//Note of interest: blockAlign already includes numChannels, so we essentially square it in the calc below.
+			//Why? ...because we plow through the bytes in play_buff twice as fast if it's stereo,
+			//and since it takes twice as long to load stereo data,
+			//we have to preload four times as much data (2^2) vs (1^1)
+			//
 			pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign * s_sample->numChannels) * pb_adjustment);
 			active_buff_size = pre_buff_size * 8;
 

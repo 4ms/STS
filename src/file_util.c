@@ -46,6 +46,70 @@ FRESULT get_next_dir(DIR *dir, char *parent_path, char *next_dir_path)
     return FR_NO_PATH;
 }
 
+
+FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
+{
+    FRESULT res;
+    FILINFO fno;
+    uint32_t i;
+    char EXT[4];
+
+    fname[0] = 0; //null string
+
+    //make upper if all lower-case, or lower if all upper-case
+    if (   (ext[1]>='a' && ext[1]<='z')
+        && (ext[2]>='a' && ext[2]<='z')
+        && (ext[3]>='a' && ext[3]<='z'))
+    {
+        EXT[1] = ext[1] - 0x20;
+        EXT[2] = ext[2] - 0x20;
+        EXT[3] = ext[3] - 0x20;
+    }
+
+    else if (  (ext[1]>='A' && ext[1]<='Z')
+            && (ext[2]>='A' && ext[2]<='Z')
+            && (ext[3]>='A' && ext[3]<='Z'))
+    {
+        EXT[1] = ext[1] + 0x20;
+        EXT[2] = ext[2] + 0x20;
+        EXT[3] = ext[3] + 0x20;
+    }
+    else
+    {
+        EXT[1] = ext[1];
+        EXT[2] = ext[2];
+        EXT[3] = ext[3];
+    }
+    EXT[0] = ext[0]; //dot
+
+
+
+    //loop through dir until we find a file ending in ext
+    for (;;) {
+
+        res = f_readdir(dir, &fno);
+
+        if (res != FR_OK || fno.fname[0] == 0)  return(1); //no more files found
+
+        if (fno.fname[0] == '.') continue;                  //ignore files starting with a .
+
+        i = str_len(fno.fname);
+        if (i==0xFFFFFFFF)                      return (2); //file name invalid
+
+        if (fno.fname[i-4] == ext[0] &&
+              (  (fno.fname[i-3] == ext[1] && fno.fname[i-2] == ext[2] && fno.fname[i-1] == ext[3])
+              || (fno.fname[i-3] == EXT[1] && fno.fname[i-2] == EXT[2] && fno.fname[i-1] == EXT[3])  )
+            )
+        {
+            str_cpy(fname, fno.fname);
+            return(FR_OK);
+        }
+    }
+
+    return (3); ///error
+}
+
+
 //FRESULT scan_files (
 //    char* path        /* Start node to be scanned (***also used as work area***) */
 //)

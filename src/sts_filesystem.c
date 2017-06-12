@@ -5,15 +5,22 @@
 #include "file_util.h"
 #include "sampler.h"
 #include "wavefmt.h"
+#include "sample_file.h"
 
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 //TODO:
-//Put the sampleindex functions into a separate file (sample_index.c/h)
-//put sample_header functions into separate file (sample_header.c/h)
-//move find_next_ext_in_dir() to file_util.c
-//Keep reload_banks_from_disk and load_banks_*() in sts_filesystem
-//Move all the bank functions to "bank.c/h"
+//Move all the bank util functions to "bank.c/h":
+//next_enabled_bank
+//bank_to_color*
+//*enable* *disable*
+
+//Move *index* functions to sample_index.c
+
+//Keep in sts_filesystem.c:
+//reload_sdcard
+//reload_banks_from_disk
+//load_bank*
 
 uint8_t bank_status[MAX_NUM_BANKS];
 
@@ -120,12 +127,9 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		//Second digit as a color string: "White"
 		len = bank_to_color(digit2, color);
 
-		//Number the banks starting with 1, not 0
-		digit1++;
-
-		//Omit the "1" for the first bank of a color, so "Red-1" is just "Red"
+		//Omit the "0" for the first bank of a color, so "Red-0" is just "Red"
 		//Otherwise append a dash and number to the color name
-		if (digit1 > 1)
+		if (digit1 > 0)
 		{
 			//Move pointer to the end of the string (overwrite the \0)
 			color += len;
@@ -144,43 +148,6 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 	else 
 		return bank_to_color_string(bank, color);
 }
-
-
-// uint8_t bank_to_dual_color(uint8_t bank, char *color)
-// {
-// 	uint8_t bank1, bank2, len;
-
-
-// 	if (bank>9 && bank<100)
-// 	{
-// 		//convert a 2-digit bank number to two single digit banks
-
-// 		//First digit:
-// 		bank1 = bank / 10;
-
-// 		//Second digit:
-// 		bank2 = bank - (bank1*10);
-
-// 		//First color string:
-// 		len = bank_to_color(bank1, color);
-
-// 		//Move pointer to the end of the string (on the /0)
-// 		color+=len;
-
-// 		//Add a dash
-// 		*color++ = '-';
-// 		len++;
-
-// 		//Second color string:
-// 		len +=bank_to_color(bank2, color);
-
-// 		return (len);
-// 	}
-// 	else 
-// 		return bank_to_color_string(bank, color);
-
-// }
-
 
 void check_enabled_banks(void)
 {
@@ -212,140 +179,6 @@ void enable_bank(uint8_t bank)
 void disable_bank(uint8_t bank)
 {
 	bank_status[bank] = 0;
-}
-
-void clear_sample_header(Sample *s_sample)
-{
-	s_sample->filename[0] = 0;
-	s_sample->sampleSize = 0;
-	s_sample->sampleByteSize = 0;
-	s_sample->sampleRate = 0;
-	s_sample->numChannels = 0;
-	s_sample->blockAlign = 0;
-	s_sample->startOfData = 0;
-	s_sample->PCM = 0;
-
-	s_sample->inst_start = 0;
-	s_sample->inst_end = 0;
-	s_sample->inst_size = 0;
-	s_sample->inst_gain = 1.0;
-}
-
-
-
-
-//
-// Load the sample header from the provided file
-//
-uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
-{
-	WaveHeader sample_header;
-	WaveFmtChunk fmt_chunk;
-	FRESULT res;
-	uint32_t br;
-	uint32_t rd;
-	WaveChunk chunk;
-	uint32_t next_chunk_start;
-
-	rd = sizeof(WaveHeader);
-	res = f_read(sample_file, &sample_header, rd, &br);
-
-	if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; return(res);}//file not opened
-	else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading first header
-	else if ( !is_valid_wav_header(sample_header) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//first header error (not a valid wav file)
-
-	else
-	{
-		//Look for a WaveFmtChunk (which starts off as a chunk)
-		chunk.chunkId = 0;
-		rd = sizeof(WaveChunk);
-
-		while (chunk.chunkId != ccFMT)
-		{
-			res = f_read(sample_file, &chunk, rd, &br);
-
-			if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
-			if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
-
-			next_chunk_start = f_tell(sample_file) + chunk.chunkSize;
-			//fast-forward to the next chunk
-			if (chunk.chunkId != ccFMT)
-				f_lseek(sample_file, next_chunk_start);
-
-		}
-
-		if (chunk.chunkId == ccFMT)
-		{
-			//Go back to beginning of chunk --probably could do this more elegantly by removing fmtID and fmtSize from WaveFmtChunk and just reading the next bit of data
-			f_lseek(sample_file, f_tell(sample_file) - br);
-
-			//Re-read the whole chunk (or at least the fields we need) since it's a WaveFmtChunk
-			rd = sizeof(WaveFmtChunk);
-			res = f_read(sample_file, &fmt_chunk, rd, &br);
-
-			if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; return(res);}//file not read
-			else if (br < rd)	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);}//file ended unexpectedly when reading format header
-			else if ( !is_valid_format_chunk(fmt_chunk) )	{g_error |= FILE_WAVEFORMATERR; f_close(sample_file); return(FR_INT_ERR);	}//format header error (not a valid wav file)
-			else
-			{
-				//We found the 'fmt ' chunk, now skip to the next chunk
-				//Note: this is necessary in case the 'fmt ' chunk is not exactly sizeof(WaveFmtChunk) bytes, even though that's how many we care about
-				f_lseek(sample_file, next_chunk_start);
-
-				//Look for the DATA chunk
-				chunk.chunkId = 0;
-				rd = sizeof(WaveChunk);
-
-				while (chunk.chunkId != ccDATA)
-				{
-					res = f_read(sample_file, &chunk, rd, &br);
-
-					if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
-					if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
-
-					//fast-forward to the next chunk
-					if (chunk.chunkId != ccDATA)
-						f_lseek(sample_file, f_tell(sample_file) + chunk.chunkSize);
-
-					//Set the sampleSize as defined in the chunk
-					else
-					{
-						if(chunk.chunkSize == 0)
-						{
-							f_close(sample_file);break;
-						}
-
-						//Check the file is really as long as the data chunkSize says it is
-						if (f_size(sample_file) < (f_tell(sample_file) + chunk.chunkSize))
-						{
-							chunk.chunkSize = f_size(sample_file) - f_tell(sample_file);
-						}
-
-						s_sample->sampleSize = chunk.chunkSize;
-						s_sample->sampleByteSize = fmt_chunk.bitsPerSample>>3;
-						s_sample->sampleRate = fmt_chunk.sampleRate;
-						s_sample->numChannels = fmt_chunk.numChannels;
-						s_sample->blockAlign = fmt_chunk.numChannels * fmt_chunk.bitsPerSample>>3;
-						s_sample->startOfData = f_tell(sample_file);
-						if (fmt_chunk.audioFormat == 0xFFFE)
-							s_sample->PCM = 3;
-						else
-							s_sample->PCM = fmt_chunk.audioFormat;
-
-						s_sample->inst_end = s_sample->sampleSize ;//& 0xFFFFFFF8;
-						s_sample->inst_size = s_sample->sampleSize ;//& 0xFFFFFFF8;
-						s_sample->inst_start = 0;
-						s_sample->inst_gain = 1.0;
-
-						return(FR_OK);
-
-					} //else chunk
-				} //while chunk
-			} //is_valid_format_chunk
-		}//if ccFMT
-	}//no file error
-
-	return(FR_INT_ERR);
 }
 
 FRESULT reload_sdcard(void)
@@ -387,7 +220,7 @@ uint8_t reload_banks_from_disk(uint8_t force_reload)
 		load_banks_with_noncolors();
 
 		res = write_sampleindex_file();
-		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
+		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors(); return 0;}
 	}
 
 	//Verify the channels are set to enabled banks, and correct if necessary
@@ -397,68 +230,7 @@ uint8_t reload_banks_from_disk(uint8_t force_reload)
 	if (!is_bank_enabled(i_param[1][BANK])) 
 		i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
 
-}
-
-FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
-{
-    FRESULT res;
-	FILINFO fno;
-	uint32_t i;
-	char EXT[4];
-
-	fname[0] = 0; //null string
-
-	//make upper if all lower-case, or lower if all upper-case
-	if (   (ext[1]>='a' && ext[1]<='z')
-		&& (ext[2]>='a' && ext[2]<='z')
-		&& (ext[3]>='a' && ext[3]<='z'))
-	{
-		EXT[1] = ext[1] - 0x20;
-		EXT[2] = ext[2] - 0x20;
-		EXT[3] = ext[3] - 0x20;
-	}
-
-	else if (  (ext[1]>='A' && ext[1]<='Z')
-			&& (ext[2]>='A' && ext[2]<='Z')
-			&& (ext[3]>='A' && ext[3]<='Z'))
-	{
-		EXT[1] = ext[1] + 0x20;
-		EXT[2] = ext[2] + 0x20;
-		EXT[3] = ext[3] + 0x20;
-	}
-	else
-	{
-		EXT[1] = ext[1];
-		EXT[2] = ext[2];
-		EXT[3] = ext[3];
-	}
-	EXT[0] = ext[0]; //dot
-
-
-
-	//loop through dir until we find a file ending in ext
-	for (;;) {
-
-	    res = f_readdir(dir, &fno);
-
-	    if (res != FR_OK || fno.fname[0] == 0)	return(1); //no more files found
-
-	    if (fno.fname[0] == '.') continue;					//ignore files starting with a .
-
-		i = str_len(fno.fname);
-		if (i==0xFFFFFFFF) 						return (2); //file name invalid
-
-		if (fno.fname[i-4] == ext[0] &&
-			  (  (fno.fname[i-3] == ext[1] && fno.fname[i-2] == ext[2] && fno.fname[i-1] == ext[3])
-			  || (fno.fname[i-3] == EXT[1] && fno.fname[i-2] == EXT[2] && fno.fname[i-1] == EXT[3])	 )
-			)
-		{
-			str_cpy(fname, fno.fname);
-			return(FR_OK);
-		}
-	}
-
-	return (3); ///error
+	return 1;
 }
 
 //
@@ -671,7 +443,7 @@ uint8_t load_banks_with_noncolors(void)
 					default_bankname[len++] = '-';
 					default_bankname[len++] = ' ';
 					str_cpy(&(default_bankname[len]), foldername);
-					
+
 					f_rename(foldername, default_bankname);
 
 					load_bank_from_disk(bank, default_bankname);

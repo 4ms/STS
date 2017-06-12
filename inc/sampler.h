@@ -69,8 +69,6 @@ uint32_t calc_start_point(float start_param, Sample *sample);
 uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos);
 uint32_t calc_play_length(float length, Sample *sample);
 
-uint32_t map_cache_to_buffer(uint32_t cache_point,  uint8_t sampleByteSize, uint32_t ref_cachepos, uint32_t ref_bufferpos, CircularBuffer *b);
-uint32_t map_buffer_to_cache(uint32_t buffer_point, uint8_t sampleByteSize, uint32_t cache_start, uint32_t buffer_start, CircularBuffer *b);
 
 void clear_is_buffered_to_file_end(uint8_t chan);
 //void check_trim_bounds(void);

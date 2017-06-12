@@ -59,12 +59,6 @@ uint8_t load_banks_by_default_colors(void);
 uint8_t load_banks_with_noncolors(void);
 FRESULT reload_banks_from_disk(uint8_t force_reload);
 
-
-
-uint8_t load_sample_header(Sample *s_sample, FIL *sample_file);
-void clear_sample_header(Sample *s_sample);
-
-FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
 uint8_t load_bank_from_disk(uint8_t bank, char *bankpath);
 
 void check_enabled_banks(void);
