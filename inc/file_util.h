@@ -12,6 +12,7 @@
 
 
 void 		str_cpy(char *dest, char *src);
+void 		str_cat(char *dest, char *srca, char *srcb);
 uint32_t 	str_len(char* str);
 char * 		str_rstr(char *string, char find, char *path);
 char *		str_tok(char *string, char find);
