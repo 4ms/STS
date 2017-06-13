@@ -158,7 +158,7 @@ void write_buffer_to_storage(void)
 
 	FRESULT res;
 	DIR dir;
-	char path[10];
+	char path[_MAX_LFN];
 
 
 //	WaveHeader wavh;
@@ -191,36 +191,18 @@ void write_buffer_to_storage(void)
 				//f_sync(&recfil);
 			}
 
-
 			sample_num_now_recording = i_param[REC_CHAN][SAMPLE];
 			sample_bank_now_recording = i_param[REC_CHAN][BANK];
 
-			sz = bank_to_color(sample_bank_now_recording, path);
-			res = f_opendir(&dir, path);
-			//If that's not found, create it
-			if (res==FR_NO_PATH)
-				res = f_mkdir(path);
-			else if (res!=FR_OK)
-				res = reload_sdcard();	
-
-			if (res!=FR_OK)
-			{
-				rec_state=REC_OFF;
-				g_error |= SDCARD_CANT_MOUNT;
-				break;
-			}
-
-			sz = bank_to_color(sample_bank_now_recording, sample_fname_now_recording);
-			sample_fname_now_recording[sz++] = '/';
-			sz += intToStr(sample_num_now_recording, &(sample_fname_now_recording[sz]), 2);
-			sample_fname_now_recording[sz++] = '-';
+			//Make a file with a temp name (tmp-XXXXX.wav)
+			sz=4;
+			str_cpy(sample_fname_now_recording, "tmp-");
 			sz += intToStr(sys_tmr, &(sample_fname_now_recording[sz]), 0);
 			sample_fname_now_recording[sz++] = '.';
 			sample_fname_now_recording[sz++] = 'w';
 			sample_fname_now_recording[sz++] = 'a';
 			sample_fname_now_recording[sz++] = 'v';
 			sample_fname_now_recording[sz++] = 0;
-
 
 			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
 			if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_REC_OPEN_FAIL; check_errors(); break;}
@@ -320,6 +302,19 @@ void write_buffer_to_storage(void)
 				res = f_lseek(&recfil, 40);
 				res = f_write(&recfil, data, 4, &written);
 				f_close(&recfil);
+
+				res = new_filename(sample_bank_now_recording, sample_num_now_recording, path);
+				if (res != FR_OK)
+				{
+					rec_state=REC_OFF;
+					g_error |= SDCARD_CANT_MOUNT;
+				}
+				else
+				{
+					res = f_rename(sample_fname_now_recording, path);
+					if (res==FR_OK)
+						str_cpy(sample_fname_now_recording, path);
+				}
 
 				rec_state=REC_OFF;
 

@@ -46,7 +46,6 @@ FRESULT get_next_dir(DIR *dir, char *parent_path, char *next_dir_path)
     return FR_NO_PATH;
 }
 
-
 FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 {
     FRESULT res;
@@ -148,6 +147,9 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 //    return res;
 //}
 
+
+
+
 uint8_t str_startswith(const char *string, const char *prefix)
 {
    // if (str_len(string) < str_len(prefix)) return 0;
@@ -173,7 +175,8 @@ uint32_t str_len(char* str)
 	return(i);
 }
 
-
+//Returns the tail of a string, following the splitting char
+//Truncates string at the splitting char, and copies that into path
 char *str_rstr(char *string, char find, char *path)
 {
 
@@ -193,6 +196,9 @@ char *str_rstr(char *string, char find, char *path)
   }
 }
 
+//Returns the head of a string up until the first 'find' char
+//Copies the tail following the 'find' char into string
+// str_tok(Path/To/A/File,'/') -->> returns Path, and string becomes "To/A/File"
 char *str_tok(char *string, char find)
 {
 
@@ -224,6 +230,8 @@ char *str_tok(char *string, char find)
 }
 
 
+//Returns a (positive) integer from a string
+//Returns 0xFFFFFFFF if no number found
 uint32_t str_xt_int(char *string)
 {
 
@@ -249,7 +257,7 @@ uint32_t str_xt_int(char *string)
   return(n);
 }
 
-
+//Copy string dest <= src
 void str_cpy(char *dest, char *src)
 {
   while(*src!=0)
@@ -258,6 +266,7 @@ void str_cpy(char *dest, char *src)
   *dest=0;
 }
 
+//Concatenate string dest <= srca + srcb
 void str_cat(char *dest, char *srca, char *srcb)
 { 
   while(*srca!=0)
@@ -267,6 +276,8 @@ void str_cat(char *dest, char *srca, char *srcb)
   *dest=0;
 }
 
+//Comare strings a and b
+//Return 1 if the same, 0 if not
 uint8_t str_cmp(char *a, char *b)
 {
 	while(*a!=0)
@@ -277,6 +288,22 @@ uint8_t str_cmp(char *a, char *b)
 	return(1);
 }
 
+//Returns first position of needle in haystack
+//Returns 0xFFFFFFFF if not found
+//
+uint32_t str_pos(char needle, char *haystack)
+{
+  uint32_t i=0;
+  while (*haystack++)
+  {
+    if (*haystack == needle) return(i);
+    i++;
+  }
+  return (0xFFFFFFFF); //not found
+}
+
+//Convert integer x to a string, padding with 0's to make it d digits
+//Returns the length
 uint32_t intToStr(uint32_t x, char *str, uint32_t d)
 {
 	uint32_t i = 0;
