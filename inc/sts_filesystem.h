@@ -65,9 +65,5 @@ uint8_t next_enabled_bank(uint8_t bank);
 void 	enable_bank(uint8_t bank);
 void 	disable_bank(uint8_t bank);
 
-uint8_t load_sampleindex_file(void);
-uint8_t write_sampleindex_file(void);
-
-
 
 #endif /* INC_STS_FILESYSTEM_H_ */
