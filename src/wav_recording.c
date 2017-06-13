@@ -12,6 +12,7 @@
 #include "wav_recording.h"
 #include "sts_filesystem.h"
 #include "dig_pins.h"
+#include "bank.h"
 
 
 

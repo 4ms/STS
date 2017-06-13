@@ -9,7 +9,24 @@
 #define INC_SAMPLE_FILE_H_
 #include <stm32f4xx.h>
 #include "ff.h"
-#include "sts_filesystem.h"
+
+typedef struct Sample {
+	char		filename[_MAX_LFN];
+	uint32_t 	sampleSize;
+	uint32_t 	startOfData;
+	uint8_t 	sampleByteSize;
+	uint32_t 	sampleRate;
+	uint8_t 	numChannels;
+	uint8_t 	blockAlign;
+
+	uint32_t	inst_start;
+	uint32_t	inst_end;
+	uint32_t	inst_size;
+	float		inst_gain;
+
+	uint16_t	PCM;
+} Sample;
+
 
 
 uint8_t load_sample_header(Sample *s_sample, FIL *sample_file);
