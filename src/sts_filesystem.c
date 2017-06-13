@@ -646,12 +646,12 @@ uint8_t load_sampleindex_file(void)
 
 	FIL 		temp_file;
 	FRESULT 	res;
-	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1], sample_name[_MAX_LFN+1];
-	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_path=0, arm_name=0, arm_data=0;;
+	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1];
+	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_path=0, arm_data=0;;
 	uint32_t	num_buff;
 	char 		*token;
 	char 		t_token[_MAX_LFN+1];
-	uint32_t 	rd, br;
+	// uint32_t 	rd, br;
 	uint8_t		loaded_header=0;
 
 	// Open sample index file
@@ -703,14 +703,27 @@ uint8_t load_sampleindex_file(void)
 					str_cpy(folder_path, token); 
 					arm_path=0; 					
 
-					// Read next line into token (to account for spaces in file name)
+					// Read next non-empty line into token (to account for spaces in file name)
 					f_gets(read_buffer, _MAX_LFN+1, &temp_file);
-					read_buffer[str_len(read_buffer)-1]=0;}
+					read_buffer[str_len(read_buffer)-1]=0;
+					while ((read_buffer[0]=='\0') || (!is_wav(read_buffer)))
+					{
+						f_gets(read_buffer, _MAX_LFN+1, &temp_file);
+						read_buffer[str_len(read_buffer)-1]=0;
+						// or move on to next bank if reach without a wavefile found
+						if(str_cmp(read_buffer,"--------------------")){read_buffer[0]='\0'; arm_bank=1; break;}
+					}
 					str_cpy(token, read_buffer);
 				}
 
 				// add sample_name to sample path
-				else 	{str_cat(sample_path ,folder_path, token);														token = str_tok(read_buffer,' '); loaded_header = 1;}
+				else 	
+				{
+					str_cat(sample_path ,folder_path, token);
+					loaded_header = 1;
+					token[0] = '\0'; 
+					loaded_header = 1;
+				}
 			}
 
 			// Load play data

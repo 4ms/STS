@@ -74,6 +74,24 @@ char *str_rstr(char *string, char find, char *path)
   }
 }
 
+uint8_t is_wav(char *string)
+{
+
+  char *cp;
+  char a, b, c ,d;
+
+  for (cp = string; *cp!=0; cp++)
+  {
+    a=b;
+    b=c;
+    c=d;
+    d=*cp;
+  }
+
+  if ((a=='.')&&(b=='w')&&(c=='a')&&(d=='v')) return 1; //or maybe string?
+  else return 0;
+}
+
 char *str_tok(char *string, char find)
 {
 

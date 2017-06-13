@@ -15,6 +15,7 @@ void 		str_cpy(char *dest, char *src);
 void 		str_cat(char *dest, char *srca, char *srcb);
 uint32_t 	str_len(char* str);
 char * 		str_rstr(char *string, char find, char *path);
+uint8_t 	is_wav(char *string);
 char *		str_tok(char *string, char find);
 uint32_t 	str_xt_int(char *string);
 uint32_t 	intToStr(uint32_t x, char *str, uint32_t d);
