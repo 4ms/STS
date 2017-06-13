@@ -6,8 +6,9 @@
 #include "sampler.h"
 #include "wavefmt.h"
 #include "sample_file.h"
+#include "bank.h"
 
-Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 extern volatile uint32_t sys_tmr;
 
 extern enum g_Errors g_error;
@@ -15,8 +16,6 @@ extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern uint8_t 	flags[NUM_FLAGS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern FATFS FatFs;
-
-enum PlayStates play_state				[NUM_PLAY_CHAN];
 
 
 FRESULT reload_sdcard(void)

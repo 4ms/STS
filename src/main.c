@@ -24,6 +24,7 @@
 #include "rgb_leds.h"
 #include "ff.h"
 #include "sampler.h"
+#include "sts_filesystem.h"
 
 uint32_t WATCH0;
 uint32_t WATCH1;

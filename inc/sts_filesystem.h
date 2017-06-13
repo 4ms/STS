@@ -10,23 +10,6 @@
 #include <stm32f4xx.h>
 #include "ff.h"
 
-typedef struct Sample {
-	char		filename[_MAX_LFN];
-	uint32_t 	sampleSize;
-	uint32_t 	startOfData;
-	uint8_t 	sampleByteSize;
-	uint32_t 	sampleRate;
-	uint8_t 	numChannels;
-	uint8_t 	blockAlign;
-
-	uint32_t	inst_start;
-	uint32_t	inst_end;
-	uint32_t	inst_size;
-	float		inst_gain;
-
-	uint16_t	PCM;
-} Sample;
-
 
 FRESULT reload_sdcard(void);
 

@@ -54,6 +54,7 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 #include "edit_mode.h"
 #include "sample_file.h"
 #include "circular_buffer_cache.h"
+#include "bank.h"
 
 //
 // DEBUG
@@ -208,7 +209,7 @@ void audio_buffer_init(void)
 	else
 		force_reload=0;
 
-	reload_banks_from_disk(force_reload);
+	load_all_banks(force_reload);
 
 	bank = next_enabled_bank(0xFF); //Find the first enabled bank
 	i_param[0][BANK] = bank;

@@ -15,6 +15,8 @@ extern FATFS FatFs;
 
 extern enum PlayStates play_state				[NUM_PLAY_CHAN];
 
+Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+
 
 FRESULT reload_sample_file(FIL *fil, Sample *s_sample)
 {

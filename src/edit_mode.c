@@ -8,8 +8,8 @@
 #include "sampler.h"
 #include "wavefmt.h"
 #include "audio_util.h"
-
 #include "edit_mode.h"
+#include "bank.h"
 #include "sample_file.h"
 
 

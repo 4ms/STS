@@ -5,6 +5,7 @@
 #include "sts_filesystem.h"
 #include "edit_mode.h"
 #include "calibration.h"
+#include "bank.h"
 
 
 enum ButtonStates button_state[NUM_BUTTONS];

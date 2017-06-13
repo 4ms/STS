@@ -11,6 +11,7 @@ uint8_t bank_status[MAX_NUM_BANKS];
 extern enum g_Errors g_error;
 
 
+extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 
 

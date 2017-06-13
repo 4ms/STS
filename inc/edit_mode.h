@@ -8,6 +8,7 @@
 #ifndef INC_EDIT_MODE_H
 #define INC_EDIT_MODE_H
 #include <stm32f4xx.h>
+#include "sample_file.h"
 
 void enter_assignment_mode(void);
 void save_exit_assignment_mode(void);
