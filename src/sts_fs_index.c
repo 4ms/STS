@@ -7,6 +7,7 @@
 #include "wavefmt.h"
 #include "file_util.h"
 #include "sts_fs_index.h"
+#include "sts_filesystem.h"
 
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
@@ -151,7 +152,7 @@ uint8_t load_sampleindex_file(void)
 	// samples[i][j].sampleSize
 
 
-	FIL 		temp_file;
+	FIL 		temp_file, temp_wav_file;
 	FRESULT 	res;
 	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1];
 	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_path=0, arm_data=0, loaded_header=0, read_name=0;
@@ -214,7 +215,9 @@ uint8_t load_sampleindex_file(void)
 			else if (!str_cmp(token,"--------------------")&&(read_name==1)) 
 			{
 
+				// update file path with file name
 				str_cat(sample_path ,folder_path, token);
+
 				token[0] = '\0'; 
 				read_name++;
 			}
@@ -226,10 +229,27 @@ uint8_t load_sampleindex_file(void)
 				num_buff = str_xt_int(read_buffer);
 				if (num_buff != 4294967295)
 				{
-					// FixMe: temporary modification to circumvent the fact that some 'sample info' lines are duplicated in index file
-					// if 		(arm_data<1) {arm_data++; 																						token[0] = '\0';}
-					if 		(read_buffer[0]!='-') 	{arm_data=1; 																						token[0] = '\0';}
-					else if (arm_data==1) 			{cur_sample=num_buff-1; str_cpy(samples[cur_bank][cur_sample].filename, sample_path); 	arm_data++; token[0] = '\0';}
+					if 		(read_buffer[0]!='-') 	{arm_data=1; token[0] = '\0';}
+					else if (arm_data==1) 			
+					{
+						// Sample bank
+						cur_sample=num_buff-1; 
+						
+						// open sample file
+						f_open(&temp_wav_file, sample_path, FA_READ); //res = 
+						f_sync(&temp_wav_file);
+
+						// load sample information from .wav header	
+						load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); // res=
+
+						// close wav file
+						f_close(&temp_wav_file);
+
+						str_cpy(samples[cur_bank][cur_sample].filename, sample_path); 	
+						arm_data++; token[0] = '\0';
+					}
+
+					// update sample play information
 					else if (arm_data==2) 			{samples[cur_bank][cur_sample].inst_start=num_buff; 									arm_data++; token[0] = '\0';}
 					else if (arm_data==3) 			{samples[cur_bank][cur_sample].inst_size=num_buff; 										arm_data++; token[0] = '\0';}
 					else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100; 									arm_data=0; token[0] = '\0'; read_name = 1; break;}
