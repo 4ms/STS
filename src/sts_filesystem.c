@@ -8,6 +8,7 @@
 #include "sample_file.h"
 
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+extern volatile uint32_t sys_tmr;
 
 //TODO:
 //Move all the bank util functions to "bank.c/h":
@@ -529,6 +530,95 @@ uint8_t load_bank_from_disk(uint8_t bank, char *bankpath)
 	f_closedir(&dir);
 
 	return(sample_num);
+}
+
+uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
+{
+	uint8_t i;
+	FRESULT res;
+	DIR dir;
+	uint32_t sz;
+
+	//
+	//Figure out the folder to put a new recording in:
+	//1st choice: Same folder as the sample already existing in the current REC bank/sample
+	//2nd choice: Same folder as the first existing sample in the current REC bank
+	//3rd choice: default folder name for current REC bank
+	//
+
+	path[0]=0;
+
+	//1st) Check for the current REC sample/bank folder:
+	//If file name is not blank, Split the filename at the last '/'
+	if (samples[bank][sample_num].filename[0])
+	{
+		if (str_rstr(samples[bank][sample_num].filename,'/',path)!=0)
+			path[str_len(path) - 1] = 0; // truncate the last '/'
+		else
+			path[0]=0;
+	}
+	//2nd) Check all the samples in REC bank
+	if (!path[0])
+	{
+		for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
+			if (samples[bank][i].filename[0])
+			{
+				if (str_rstr(samples[bank][i].filename,'/',path)!=0)
+					path[str_len(path) - 1] = 0; // truncate the last '/'
+				else
+					path[0]=0;
+			}
+	}
+
+	//3rd) Use the default bank name if the above methods failed
+	if (!path[0])
+		bank_to_color(bank, path);
+
+	//Open the directory
+	res = f_opendir(&dir, path);
+
+	//If it doesn't exist, create it
+	if (res==FR_NO_PATH)
+		res = f_mkdir(path);
+
+	//If we got an error opening or creating a dir
+	//try reloading the SDCard, then opening the dir (and creating if needed)
+	if (res!=FR_OK)
+	{
+		res = reload_sdcard();
+
+		if (res==FR_OK)
+		{
+			res = f_opendir(&dir, path);
+
+			if (res==FR_NO_PATH) 
+				res = f_mkdir(path);
+		}
+	}
+
+	if (res!=FR_OK)
+	{
+		return (FR_INT_ERR); //fail
+	}
+
+	//
+	//Create the file name
+	//
+	//str_cpy(sample_fname_now_recording, path);
+	sz = str_len(path);
+
+	path[sz++] = '/';
+	sz += intToStr(sample_num, &(path[sz]), 2);
+	path[sz++] = '-';
+	sz += intToStr(sys_tmr, &(path[sz]), 0);
+	path[sz++] = '.';
+	path[sz++] = 'w';
+	path[sz++] = 'a';
+	path[sz++] = 'v';
+	path[sz++] = 0;
+
+	return (FR_OK);
+
 }
 
 /*  sts_fs_index.c */
