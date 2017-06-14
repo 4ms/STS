@@ -252,7 +252,7 @@ uint8_t load_sampleindex_file(void)
 					// update sample play information
 					else if (arm_data==2) 			{samples[cur_bank][cur_sample].inst_start=num_buff; 									arm_data++; token[0] = '\0';}
 					else if (arm_data==3) 			{samples[cur_bank][cur_sample].inst_size=num_buff; 										arm_data++; token[0] = '\0';}
-					else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100; 									arm_data=0; token[0] = '\0'; read_name = 1; break;}
+					else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f; 									arm_data=0; token[0] = '\0'; read_name = 1; break;}
 				}
 			}
 
