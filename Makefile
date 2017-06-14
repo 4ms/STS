@@ -99,7 +99,8 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 
 #vpath %.c src
 
-build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
+#build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
+#build/src/main.o: CFLAGS = $(C0FLAGS)
 #build/src/wavefmt.o: CFLAGS = $(C0FLAGS)
 #build/src/resample.o: CFLAGS = $(C0FLAGS)
 #build/src/sampler.o: CFLAGS = $(C0FLAGS)
@@ -114,7 +115,7 @@ build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS)
 #build/src/audio_util.o: CFLAGS = $(C0FLAGS)
 #build/src/wav_recoding.o: CFLAGS = $(C0FLAGS)
 #build/src/buttons.o: CFLAGS = $(C0FLAGS)
-build/src/file_util.o: CFLAGS = $(C0FLAGS)
+#build/src/file_util.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/drivers/fatfs_sd_sdio.o: CFLAGS = $(C0FLAGS)

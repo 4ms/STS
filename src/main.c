@@ -78,16 +78,12 @@ void JumpTo(uint32_t address) {
 }
 
 
-
-
 int main(void)
 {
 	uint32_t do_factory_reset=0;
 	uint32_t timeout_boot;
 	uint32_t firmware_version;
 	
-	FRESULT res;
-
 	//
 	// Bootloader:
 	//

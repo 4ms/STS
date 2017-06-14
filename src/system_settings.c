@@ -10,8 +10,6 @@
 #include "buttons.h"
 #include "dig_pins.h"
 
-extern SystemCalibrations *system_calibrations;
-
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 

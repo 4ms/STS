@@ -14,7 +14,6 @@ extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
 extern enum g_Errors g_error;
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
-extern SystemCalibrations *system_calibrations;
 
 extern volatile uint32_t sys_tmr;
 
