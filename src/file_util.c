@@ -249,12 +249,11 @@ char *str_tok(char *string, char find)
 
 
 //Returns a (positive) integer from a string
-//Returns 0xFFFFFFFF if no number found
-uint32_t str_xt_int(char *string)
+ uint32_t str_xt_int(char *string)
 {
 
   char      *cp;
-  uint32_t  n = 4294967295; //max value of uin32_t
+  uint32_t  n = UINT32_MAX; //max value of uin32_t
   uint8_t   found_number = 0;
 
   for (cp = string; *cp!=0; cp++)

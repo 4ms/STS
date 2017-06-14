@@ -227,7 +227,7 @@ uint8_t load_sampleindex_file(void)
 			else if ((!str_cmp(token,"--------------------"))&&(read_name>1))
 			{
 				num_buff = str_xt_int(read_buffer);
-				if (num_buff != 4294967295)
+				if (num_buff != UINT32_MAX)
 				{
 					if 		(read_buffer[0]!='-') 	{arm_data=1; token[0] = '\0';}
 					else if (arm_data==1) 			
