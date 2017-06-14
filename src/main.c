@@ -84,6 +84,8 @@ int main(void)
 	uint32_t timeout_boot;
 	uint32_t firmware_version;
 	
+
+	
 	//
 	// Bootloader:
 	//

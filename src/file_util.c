@@ -196,6 +196,24 @@ char *str_rstr(char *string, char find, char *path)
   }
 }
 
+uint8_t is_wav(char *string)
+{
+
+  char *cp;
+  char a, b, c ,d;
+
+  for (cp = string; *cp!=0; cp++)
+  {
+    a=b;
+    b=c;
+    c=d;
+    d=*cp;
+  }
+
+  if ((a=='.')&&(b=='w')&&(c=='a')&&(d=='v')) return 1; //or maybe string?
+  else return 0;
+}
+
 //Returns the head of a string up until the first 'find' char
 //Copies the tail following the 'find' char into string
 // str_tok(Path/To/A/File,'/') -->> returns Path, and string becomes "To/A/File"
@@ -290,7 +308,6 @@ uint8_t str_cmp(char *a, char *b)
 
 //Returns first position of needle in haystack
 //Returns 0xFFFFFFFF if not found
-//
 uint32_t str_pos(char needle, char *haystack)
 {
   uint32_t i=0;

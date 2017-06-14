@@ -19,6 +19,7 @@ void check_enabled_banks(void);
 uint8_t is_bank_enabled(uint8_t bank);
 void enable_bank(uint8_t bank);
 void disable_bank(uint8_t bank);
+uint8_t color_to_bank(char *color);
 
 
 

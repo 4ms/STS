@@ -115,6 +115,29 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		return bank_to_color_string(bank, color);
 }
 
+//FixMe: Update to blink-color system
+uint8_t color_to_bank(char *color)
+{
+	if 		(str_cmp(color, "White")) 		return(0);
+	else if (str_cmp(color, "Red")) 		return(1);
+	else if (str_cmp(color, "Green")) 		return(2);
+	else if (str_cmp(color, "Blue")) 		return(3);
+	else if (str_cmp(color, "Yellow"))		return(4);
+	else if (str_cmp(color, "Cyan")) 		return(5);
+	else if (str_cmp(color, "Orange")) 		return(6);
+	else if (str_cmp(color, "Violet")) 		return(7);
+	else if (str_cmp(color, "White-SAVE")) 	return(8);
+	else if (str_cmp(color, "Red-SAVE"))	return(9);
+	else if (str_cmp(color, "Green-SAVE"))	return(10);
+	else if (str_cmp(color, "Blue-SAVE")) 	return(11);
+	else if (str_cmp(color, "Yellow-SAVE")) return(12);
+	else if (str_cmp(color, "Cyan-SAVE")) 	return(13);
+	else if (str_cmp(color, "Orange-SAVE")) return(14);
+	else if (str_cmp(color, "Violet-SAVE")) return(15);
+	return(200);
+
+}
+
 
 uint8_t next_enabled_bank(uint8_t bank) //if bank==0xFF, we find the first enabled bank
 {

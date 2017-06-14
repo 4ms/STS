@@ -24,10 +24,4 @@ FRESULT load_all_banks(uint8_t force_reload);
 
 uint8_t load_bank_from_disk(uint8_t bank, char *bankpath);
 
-
-
-uint8_t load_sampleindex_file(void);
-uint8_t write_sampleindex_file(void);
-
-
 #endif /* INC_STS_FILESYSTEM_H_ */

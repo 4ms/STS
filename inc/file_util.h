@@ -11,17 +11,20 @@
 #include <stm32f4xx.h>
 #include "ff.h"
 
-void str_cpy(char *dest, char *src);
-uint32_t str_len(char* str);
-uint32_t intToStr(uint32_t x, char *str, uint32_t d);
-uint8_t str_cmp(char *a, char *b);
-uint8_t str_startswith(const char *string, const char *prefix);
 
-FRESULT get_next_dir(DIR *dir, char *parent_path, char *next_dir_path);
-FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
+FRESULT 	get_next_dir(DIR *dir, char *parent_path, char *next_dir_path);
+FRESULT 	find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
+
+uint8_t 	str_startswith(const char *string, const char *prefix);
+void 		str_cpy(char *dest, char *src);
+void 		str_cat(char *dest, char *srca, char *srcb);
+uint32_t 	str_len(char* str);
 char * 		str_rstr(char *string, char find, char *path);
+uint8_t 	is_wav(char *string);
 char *		str_tok(char *string, char find);
 uint32_t 	str_xt_int(char *string);
+uint32_t 	intToStr(uint32_t x, char *str, uint32_t d);
+uint8_t 	str_cmp(char *a, char *b);
 
 
 #endif /* INC_FILE_UTIL_H_ */

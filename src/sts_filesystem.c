@@ -7,6 +7,7 @@
 #include "wavefmt.h"
 #include "sample_file.h"
 #include "bank.h"
+#include "sts_fs_index.h"
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 extern volatile uint32_t sys_tmr;
@@ -32,6 +33,7 @@ FRESULT reload_sdcard(void)
 	}
 	return (FR_OK);
 }
+
 
 
 //
@@ -459,72 +461,3 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 	return (FR_OK);
 
 }
-
-/*  sts_fs_index.c */
-
-uint8_t write_sampleindex_file(void)
-{
-	FIL temp_file;
-	FRESULT res;
-	uint32_t sz, bw;
-	uint32_t data[1];
-
-	res = f_open(&temp_file,"sample.index", FA_WRITE | FA_CREATE_ALWAYS); //overwrite existing file
-
-	if (res != FR_OK) return(1); //file cant be opened/created
-	f_sync(&temp_file);
-
-	sz = sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
-	res = f_write(&temp_file, samples, sz, &bw);
-	f_sync(&temp_file);
-
-	if (res != FR_OK)	{f_close(&temp_file); return(2);}//file write failed
-	else if (bw < sz)	{f_close(&temp_file); return(3);}//not all data written
-
-	data[0]=global_mode[STEREO_MODE];
-	sz = 4;
-	res = f_write(&temp_file, data, sz, &bw);
-	f_sync(&temp_file);
-
-	if (res != FR_OK)	{f_close(&temp_file); return(2);}//file write failed
-	else if (bw < sz)	{f_close(&temp_file); return(3);}//not all data written
-
-
-	f_close(&temp_file);
-	return(0);
-}
-
-uint8_t load_sampleindex_file(void)
-{
-	FIL temp_file;
-	FRESULT res;
-	uint32_t rd, br;
-	uint32_t data[1];
-
-	res = f_open(&temp_file,"sample.index", FA_READ);
-	if (res != FR_OK) return(1); //file not found
-	f_sync(&temp_file);
-
-	rd = sizeof(Sample) * MAX_NUM_BANKS * NUM_SAMPLES_PER_BANK;
-	res = f_read(&temp_file, samples, rd, &br);
-
-	if (res != FR_OK)	{return(2);}//file not read
-	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
-//	else if ( !is_valid_Sample_format(samples) )	{f_close(&temp_file); return(3);	}
-
-	rd = 4;
-	res = f_read(&temp_file, data, rd, &br);
-	
-	if (data[0] == 0) global_mode[STEREO_MODE] = 0;
-	else global_mode[STEREO_MODE] = 1;
-
-	if (res != FR_OK)	{return(2);}//file not read
-	else if (br < rd)	{f_close(&temp_file); return(3);}//file ended unexpectedly
-
-
-	f_close(&temp_file);
-	return(0);	//OK
-
-}
-
-
