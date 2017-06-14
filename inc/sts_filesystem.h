@@ -24,4 +24,6 @@ FRESULT load_all_banks(uint8_t force_reload);
 
 uint8_t load_bank_from_disk(uint8_t bank, char *bankpath);
 
+uint8_t fopen_checked(char* filepath);
+
 #endif /* INC_STS_FILESYSTEM_H_ */

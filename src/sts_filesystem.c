@@ -461,3 +461,16 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 	return (FR_OK);
 
 }
+
+
+// Enhanced f_open
+// takes file path as input
+// tries to open file with given path
+// then tries in other paths if failed with given path
+// returns flag indicating:
+//		- 0: path is correct
+//		- 1: path was corrected
+//		- 2: path couldn't be corrected
+uint8_t fopen_checked(char* filepath){
+	uint8_t flag;
+}
