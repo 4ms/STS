@@ -222,10 +222,9 @@ uint8_t load_sampleindex_file(void)
 				read_name++;
 			}
 
-			// Load file data
+			// Load .wav header data information and play data
 			else if ((!str_cmp(token,"--------------------"))&&(read_name>1))
 			{
-				// Load play data
 				num_buff = str_xt_int(read_buffer);
 				if (num_buff != 4294967295)
 				{
