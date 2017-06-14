@@ -17,7 +17,7 @@ extern enum PlayStates play_state				[NUM_PLAY_CHAN];
 
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-
+//uint8_t is_valid
 FRESULT reload_sample_file(FIL *fil, Sample *s_sample)
 {
 	FRESULT res;

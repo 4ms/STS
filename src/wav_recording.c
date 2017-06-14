@@ -13,7 +13,7 @@
 #include "sts_filesystem.h"
 #include "dig_pins.h"
 #include "bank.h"
-
+#include "calibration.h"
 
 
 extern volatile uint32_t sys_tmr;
@@ -30,6 +30,8 @@ extern uint8_t 	flags[NUM_FLAGS];
 extern enum PlayLoadTriage play_load_triage;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+
+extern SystemCalibrations *system_calibrations;
 
 //#define WRITE_BLOCK_SIZE 8192
 #define WRITE_BLOCK_SIZE 8192

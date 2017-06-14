@@ -17,8 +17,6 @@ SystemCalibrations *system_calibrations = &s_user_params;
 
 extern volatile uint32_t sys_tmr;
 
-extern SystemCalibrations *system_calibrations;
-
 extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 extern int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
 

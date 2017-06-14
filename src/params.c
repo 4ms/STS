@@ -479,9 +479,15 @@ void update_params(void)
 				flags[PlaySample1Changed + chan*2] = 1;
 
 				if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
+				{
 					flags[PlaySample1Changed_empty + chan] = 6;
+					flags[PlaySample1Changed_valid + chan] = 0;
+				}
 				else
+				{
+					flags[PlaySample1Changed_empty + chan] = 0;
 					flags[PlaySample1Changed_valid + chan] = 6;
+				}
 			}
 
 		} //for chan
@@ -507,6 +513,8 @@ void update_params(void)
 		}
 
 	} //else if EDIT_MODE
+
+
 }
 
 
