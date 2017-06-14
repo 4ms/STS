@@ -469,8 +469,98 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 // then tries in other paths if failed with given path
 // returns flag indicating:
 //		- 0: path is correct
-//		- 1: path was corrected
+//		- 1: path was incorrect, and corrected
 //		- 2: path couldn't be corrected
-uint8_t fopen_checked(char* filepath){
-	uint8_t flag;
+uint8_t fopen_checked(char* filepath, FIL fp)
+{
+	uint8_t 	flag;
+	FRESULT 	res, res_dir;
+	char* 		filepath_attempt;
+	char*		file_only; 
+	char* 		col;
+	char* 		removed_path;
+	char 		file_only_ptr[_MAX_LFN+1];
+	char 		removed_path_ptr[_MAX_LFN+1];
+	uint8_t 	try_folders=1;
+	uint8_t		try_root=1;
+	uint8_t 	i=0;
+
+	char 		foldername[_MAX_LFN];
+	DIR 		rootdir;
+
+	res = f_open(&fp, filepath, FA_READ);
+	f_sync(&fp);
+
+	// if file loaded properly, move on
+	if (res==FR_OK) return(0);
+	
+	// otherwise...
+	else
+	{
+		// extract file name
+		file_only 		= file_only_ptr;
+		removed_path 	= removed_path_ptr;
+		file_only = str_rstr(filepath, '/', removed_path);
+
+		// Until file opens properly
+		while (res!=FR_OK)
+		{
+			// clear filepath
+			filepath_attempt[0]='\0';
+
+			// try every folder in the folder tree (alphabetically?)
+			if (try_folders)
+			{
+				rootdir.obj.fs = 0; //get_next_dir() needs us to do this, to reset it
+
+				// Check for the next folder and set it as the file path
+				res_dir = get_next_dir(&rootdir, "", filepath_attempt);
+
+				// if another folder was found
+				if (res_dir == FR_OK)
+				{
+					// try opening file from folder
+					res = f_open(&fp, filepath_attempt, FA_READ);
+					f_sync(&fp);					
+					
+					// if file was found
+					// return "1: path was incorrect, and corrected" 
+					// exit function 
+					if(res == FR_OK) return(1);
+				}
+
+				// Otherwise, stop checking folders 
+				else try_folders=0; 
+			}
+
+
+			// ... then try root path
+			else if (try_root)
+			{
+				// update filepath
+				str_cat(filepath_attempt, "\\", file_only);
+				
+				// try to open current file path
+				res = f_open(&fp, filepath_attempt, FA_READ);
+				f_sync(&fp);			
+
+				// if file was found
+				// return "1: path was incorrect, and corrected" 
+				// exit function 
+				if 		(res == FR_OK) return(1);
+				
+				// if file wasn't found 
+				else if (res != FR_OK)
+				{
+
+					// close file
+					fclose(&fp);
+
+					// return "2: path couldn't be corrected"
+					// exit function 
+					return(2);
+				} 
+			}
+		}
+	}
 }
