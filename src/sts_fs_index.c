@@ -160,6 +160,8 @@ uint8_t load_sampleindex_file(void)
 	uint32_t	num_buff;
 	char 		*token;
 	char 		t_token[_MAX_LFN+1];
+	uint8_t		fopen_flag	  = 0;
+	uint8_t		rewrite_index = 0;
 
 	// Open sample index file
 	res = f_open(&temp_file,"sample_index.txt", FA_READ);
@@ -236,23 +238,54 @@ uint8_t load_sampleindex_file(void)
 						cur_sample=num_buff-1; 
 						
 						// open sample file
-						f_open(&temp_wav_file, sample_path, FA_READ); //res = 
-						f_sync(&temp_wav_file);
+						// uint8_t fopen_checked(FIL fp, char* filepath);
+						fopen_flag = fopen_checked(temp_wav_file, sample_path);
 
-						// load sample information from .wav header	
-						load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); // res=
+						// if file was opened
+						if (fopen_flag<2)
+						{
+							// if file was opened, but not from given path
+							if (fopen_flag==1)
+							{
+								// update file path in samples structure
+								str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
 
-						// close wav file
-						f_close(&temp_wav_file);
+								// request to rewrite index (from samples struct) 
+								// ... at the end of index read
+								rewrite_index =1;
+							}
 
-						str_cpy(samples[cur_bank][cur_sample].filename, sample_path); 	
-						arm_data++; token[0] = '\0';
+							// load sample information from .wav header	
+							load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); // res=
+
+							// close wav file
+							f_close(&temp_wav_file);
+
+							str_cpy(samples[cur_bank][cur_sample].filename, sample_path); 	
+							arm_data++; token[0] = '\0';
+
+						}  
+
+						// if file cannot be found on the SD card
+						else if (fopen_flag==2)
+						{
+							// write empty filename to samples struct element
+							// ... so this sample is skipped at the next index write
+							samples[cur_bank][cur_sample].filename[0]='\0';
+
+							// request to rewrite index (from samples struct) 
+							// ... at the end of index read
+							rewrite_index =1;
+
+							// skip loading sample play information
+							arm_data=0; token[0] = '\0'; read_name = 1; break;						
+						}
 					}
 
 					// update sample play information
 					else if (arm_data==2) 			{samples[cur_bank][cur_sample].inst_start=num_buff; 									arm_data++; token[0] = '\0';}
 					else if (arm_data==3) 			{samples[cur_bank][cur_sample].inst_size=num_buff; 										arm_data++; token[0] = '\0';}
-					else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f; 									arm_data=0; token[0] = '\0'; read_name = 1; break;}
+					else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f; 								arm_data=0; token[0] = '\0'; read_name = 1; break;}
 				}
 			}
 
@@ -268,6 +301,12 @@ uint8_t load_sampleindex_file(void)
 
 	// close sample index file
 	f_close(&temp_file);
+
+	//  rewrite sample index as needed
+	if(rewrite_index)
+	{
+		write_sampleindex_file();
+	}
 
 	//
 	return(0);	//OK

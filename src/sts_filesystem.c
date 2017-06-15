@@ -471,7 +471,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 //		- 0: path is correct
 //		- 1: path was incorrect, and corrected
 //		- 2: path couldn't be corrected
-uint8_t fopen_checked(char* filepath, FIL fp)
+uint8_t fopen_checked(FIL fp, char* filepath)
 {
 	uint8_t 	flag;
 	FRESULT 	res, res_dir;
