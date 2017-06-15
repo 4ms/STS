@@ -220,6 +220,8 @@ void audio_buffer_init(void)
 	sample_bank_now_playing[0] = i_param[0][BANK];
 	sample_bank_now_playing[1] = i_param[1][BANK];
 
+	flags[PlaySample1Changed] = 1;
+	flags[PlaySample2Changed] = 1;
 }
 
 //
@@ -604,6 +606,13 @@ void check_change_sample(void)
 
 		if (samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ].filename[0] == 0) //no file: fadedown or remain silent
 		{
+			//No sample in this slot:
+			//Set the sample empty flag to 1 (dim) only if it's 0
+			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
+			if (flags[PlaySample1Changed_empty]==0)
+				flags[PlaySample1Changed_empty] = 1;
+			flags[PlaySample1Changed_valid] = 0;
+	
 
 			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
 				play_state[0] = PLAY_FADEDOWN;
@@ -616,6 +625,13 @@ void check_change_sample(void)
 		}
 		else
 		{
+			//Sample found in this slot:
+			//Set the sample valid flag to 1 (dim) only if it's 0
+			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
+			if (flags[PlaySample1Changed_valid]==0)
+				flags[PlaySample1Changed_valid] = 1;
+			flags[PlaySample1Changed_empty] = 0;
+
 			if (play_state[0] == SILENT && i_param[0][LOOPING])
 				flags[Play1But]=1;
 
@@ -637,6 +653,13 @@ void check_change_sample(void)
 
 		if (samples[ i_param[1][BANK] ][ i_param[1][SAMPLE] ].filename[0] == 0 )
 		{
+			//No sample in this slot:
+			//Set the sample empty flag to 1 (dim) only if it's 0
+			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
+			if (flags[PlaySample2Changed_empty]==0)
+				flags[PlaySample2Changed_empty] = 1;
+			flags[PlaySample2Changed_valid] = 0;
+
 			if (play_state[1] != SILENT && play_state[1]!=PREBUFFERING)
 				play_state[1] = PLAY_FADEDOWN;
 			else
@@ -644,6 +667,13 @@ void check_change_sample(void)
 		}
 		else
 		{
+			//Sample found in this slot:
+			//Set the sample valid flag to 1 (dim) only if it's 0
+			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
+			if (flags[PlaySample2Changed_valid]==0)
+				flags[PlaySample2Changed_valid] = 1;
+			flags[PlaySample2Changed_empty] = 0;
+
 			if (play_state[1] == SILENT && i_param[1][LOOPING])
 				flags[Play2But]=1;
 
