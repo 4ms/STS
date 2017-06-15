@@ -414,10 +414,6 @@ void update_params(void)
 			i_param[0][SAMPLE] = new_val;
 			flags[PlaySample1Changed] = 1;
 
-			if (samples[ i_param[0][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
-				flags[PlaySample1Changed_empty] = 6;
-			else
-				flags[PlaySample1Changed_valid] = 6;
 		}
 
 	
@@ -476,8 +472,11 @@ void update_params(void)
 			if (old_val != new_val)
 			{
 				i_param[chan][SAMPLE] = new_val;
-				flags[PlaySample1Changed + chan*2] = 1;
+				flags[PlaySample1Changed + chan] = 1;
 
+				//
+				//Changing sample with CV or knob results in a bright flash (PlaySampleXChanged_* = 6)
+				//
 				if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
 				{
 					flags[PlaySample1Changed_empty + chan] = 6;

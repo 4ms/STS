@@ -207,7 +207,7 @@ void audio_buffer_init(void)
 	if (REV1BUT && REV2BUT) 
 		force_reload = 1;
 	else
-		force_reload=0;
+		force_reload = 0;
 
 	load_all_banks(force_reload);
 
@@ -563,15 +563,32 @@ uint32_t calc_play_length(float length, Sample *sample)
 
 void check_change_bank(uint8_t chan)
 {
-	if (flags[PlayBank1Changed + chan*2])
+	if (flags[PlayBank1Changed + chan])
 	{
-		flags[PlayBank1Changed + chan*2]=0;
+		flags[PlayBank1Changed + chan]=0;
 
-		//load_bank_from_disk(i_param[chan][BANK], chan);
+		i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
+
+		//ToDo: Verify sample headers in bank (?)
 
 		is_buffered_to_file_end[chan] = 0;
 
-		flags[PlaySample1Changed + chan*2]=1;
+		flags[PlaySample1Changed + chan]=1;
+
+		//
+		//Changing bank updates the play button "not-playing" color (dim white or dim red)
+		//But avoids the bright flash of white or red by setting PlaySampleXChanged_* = 1
+		//
+
+		if (samples[ i_param[chan][BANK] ][ i_param[chan][SAMPLE] ].filename[0] == 0)
+		{
+			flags[PlaySample1Changed_valid + chan] = 0;
+			flags[PlaySample1Changed_empty + chan] = 1;
+		} else 
+		{
+			flags[PlaySample1Changed_valid + chan] = 1;
+			flags[PlaySample1Changed_empty + chan] = 0;
+		}
 
 	}
 
@@ -579,7 +596,6 @@ void check_change_bank(uint8_t chan)
 
 void check_change_sample(void)
 {
-
 	if (flags[PlaySample1Changed])
 	{
 		flags[PlaySample1Changed]=0;
@@ -588,6 +604,7 @@ void check_change_sample(void)
 
 		if (samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ].filename[0] == 0) //no file: fadedown or remain silent
 		{
+
 			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
 				play_state[0] = PLAY_FADEDOWN;
 			else
@@ -611,7 +628,6 @@ void check_change_sample(void)
 				flags[AssigningEmptySample] = 0;
 			}
 		}
-
 
 	}
 
@@ -663,13 +679,15 @@ void read_storage_to_buffer(void)
 //	DEBUG3_ON;
 
 	check_change_sample();
+	check_change_bank(0);
+	check_change_bank(1);
 
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
-		if (play_state[chan] == SILENT)
-		{
-			check_change_bank(chan);
-		}	
+		// if (play_state[chan] == SILENT)
+		// {
+		// 	check_change_bank(chan);
+		// }	
 
 		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN && play_state[chan] != RETRIG_FADEDOWN)
 		{

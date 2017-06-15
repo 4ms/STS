@@ -158,17 +158,10 @@ void Button_Debounce_IRQHandler(void)
 
 							case Bank1:
 								flags[PlayBank1Changed] = 1;
-								// flags[ViewBlinkBank1] = 1;
-								i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
-
-								//load assignment samples for new bank
-								//if (global_mode[EDIT_MODE]) enter_assignment_mode();
 								break;
 
 							case Bank2:
 								flags[PlayBank2Changed] = 1;
-								// flags[ViewBlinkBank2] = 1;
-								i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
 								break;
 
 							case Rec:

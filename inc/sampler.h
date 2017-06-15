@@ -62,6 +62,7 @@ void start_playing(uint8_t chan);
 
 void toggle_reverse(uint8_t chan);
 void check_change_bank(uint8_t chan);
+void check_change_sample(void);
 
 //uint8_t preload_sample(uint32_t samplenum, FIL* sample_file);
 
