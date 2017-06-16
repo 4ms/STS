@@ -343,10 +343,13 @@ uint8_t load_all_banks(uint8_t force_reload)
 		force_reload = load_sampleindex_file();
 
 	if (!force_reload) //sampleindex file was ok
-	{
+	{	
+		// check which samples are loaded
+		// (looks for filename in samples strucure)
 		check_enabled_banks();
-//		check_sample_headers(); //TODO: Checks that all files in samples[][] exist, and their header info matches
+
 	}
+
 	else //sampleindex file was not ok, or we requested to force a reload from disk
 	{
 		//First pass: load all the banks that have default folder names
@@ -358,9 +361,16 @@ uint8_t load_all_banks(uint8_t force_reload)
 		//Third pass: go through all remaining folders and try to assign them to banks
 		load_banks_with_noncolors();
 
-		res = write_sampleindex_file();
-		if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors(); return 0;}
 	}
+
+	// Write samples struct to index
+	// ... so sample info gets updated with latest .wave header content
+	res = write_sampleindex_file();
+
+	// check if there was an error writing to index file
+	// ToDo: push this to error log
+	if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors(); return 0;}
+
 
 	//Verify the channels are set to enabled banks, and correct if necessary
 	if (!is_bank_enabled(i_param[0][BANK])) 

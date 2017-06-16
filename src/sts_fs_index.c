@@ -163,6 +163,7 @@ uint8_t load_sampleindex_file(void)
 	char 		t_token[_MAX_LFN+1];
 	uint8_t		fopen_flag	  = 0;
 	uint8_t		rewrite_index = 0;
+	uint8_t 	force_reload  = 2;
 
 	// Open sample index file
 	res = f_open(&temp_file,"sample_index.txt", FA_READ);
@@ -257,6 +258,10 @@ uint8_t load_sampleindex_file(void)
 								rewrite_index =1;
 							}
 
+							
+							// At least a sample was loaded
+							force_reload = 0;
+
 							// load sample information from .wav header	
 							load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); // res=
 
@@ -311,5 +316,5 @@ uint8_t load_sampleindex_file(void)
 	}
 
 	//
-	return(0);	//OK
+	return(force_reload);	// OK if at least a sample was loaded
 }
