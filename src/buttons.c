@@ -6,11 +6,16 @@
 #include "edit_mode.h"
 #include "calibration.h"
 #include "bank.h"
+#include "button_knob_combo.h"
+#include "adc.h"
 
+extern ButtonKnobCombo button_knob_combo[NUM_BUTTON_KNOB_COMBOS];
 
 enum ButtonStates button_state[NUM_BUTTONS];
 extern uint8_t flags[NUM_FLAGS];
 extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+
+extern int16_t old_i_smoothed_potadc[NUM_POT_ADCS];
 
 extern enum g_Errors g_error;
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
@@ -56,7 +61,7 @@ void Button_Debounce_IRQHandler(void)
 
 		for (i=0;i<NUM_BUTTONS;i++)
 		{
-			//Load the button's state
+			//Load each button's state
 			switch (i)
 			{
 				case Play1:
@@ -93,7 +98,9 @@ void Button_Debounce_IRQHandler(void)
 
 			State[i]=(State[i]<<1) | t;
 
-			//check for de-bounced down state
+			//
+			// DOWN state (debounced)
+			//
 			if (State[i]==0xff00) //1111 1111 0000 0000 = not pressed for 8 cycles , then pressed for 8 cycles
 			{
 				button_state[i] = DOWN;
@@ -123,8 +130,13 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 						case Bank1:
+							button_knob_combo[Bank1_Sample1].init_value = old_i_smoothed_potadc[SAMPLE_POT*2];
+							button_knob_combo[Bank1_Sample2].init_value = old_i_smoothed_potadc[SAMPLE_POT*2 + 1];
 							break;
+
 						case Bank2:
+							button_knob_combo[Bank2_Sample1].init_value = old_i_smoothed_potadc[SAMPLE_POT*2];
+							button_knob_combo[Bank2_Sample2].init_value = old_i_smoothed_potadc[SAMPLE_POT*2 + 1];
 							break;
 						case Rec:
 							break;
@@ -145,8 +157,9 @@ void Button_Debounce_IRQHandler(void)
 				}
 			}
 
-			//Check for debounced up-state
-			//else if ((State[i] & 0xefff)==0xe0ff)
+			//
+			// UP state (debounced)
+			//
 			else if (State[i]==0xffff)
 			{
 				if (button_state[i] != UP)
@@ -157,11 +170,31 @@ void Button_Debounce_IRQHandler(void)
 						{
 
 							case Bank1:
-								flags[PlayBank1Changed] = 1;
+								//On button
+								if (	button_knob_combo[Bank1_Sample1].combo_active \
+									|| 	button_knob_combo[Bank1_Sample2].combo_active)
+								{
+									button_knob_combo[Bank1_Sample1].combo_active = 0;
+									button_knob_combo[Bank1_Sample2].combo_active = 0;
+									button_knob_combo[Bank1_Sample1].init_value = POT_VALUE_UNREAD;
+									button_knob_combo[Bank1_Sample2].init_value = POT_VALUE_UNREAD;
+								}
+								else
+									flags[PlayBank1Changed] = 1;
+								
 								break;
 
 							case Bank2:
-								flags[PlayBank2Changed] = 1;
+								if (	button_knob_combo[Bank2_Sample1].combo_active \
+									|| 	button_knob_combo[Bank2_Sample2].combo_active)
+								{
+									button_knob_combo[Bank2_Sample1].combo_active = 0;
+									button_knob_combo[Bank2_Sample2].combo_active = 0;
+									button_knob_combo[Bank2_Sample1].init_value = POT_VALUE_UNREAD;
+									button_knob_combo[Bank2_Sample2].init_value = POT_VALUE_UNREAD;
+								}
+								else
+									flags[PlayBank2Changed] = 1;
 								break;
 
 							case Rec:
@@ -228,7 +261,9 @@ void Button_Debounce_IRQHandler(void)
 			}
 
 
-			//Check for long presses
+			//
+			// Short/Medium/Long presses
+			//
 
 			if (State[i]==0xe000) //pressed for 16 cycles
 			{
@@ -312,7 +347,9 @@ void Button_Debounce_IRQHandler(void)
 			}
 		}
 
-		//Check for multi-press holds
+		//
+		// Multi-button presses
+		//
 		if (!flags[skip_process_buttons])
 		{
 

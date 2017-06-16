@@ -146,8 +146,8 @@ uint8_t next_enabled_bank(uint8_t bank) //if bank==0xFF, we find the first enabl
 	do{
 		bank++;
 		if (bank >= MAX_NUM_BANKS)	bank = 0;
-
-	} while(!bank_status[bank] && (bank!=orig_bank));
+		if (bank==orig_bank) return(0); //no banks are enabled -->> bail out and return the first bank
+	} while(!bank_status[bank]);
 
 	return (bank);
 }
@@ -183,4 +183,27 @@ void enable_bank(uint8_t bank)
 void disable_bank(uint8_t bank)
 {
 	bank_status[bank] = 0;
+}
+
+//
+//Given a number, returns the units digit
+//This digit refers to the bank color, regardless of blink #
+//
+uint8_t get_bank_color_digit(uint8_t bank)
+{
+	uint8_t digit1;
+
+	if (bank<=9) return bank;
+	
+	while (bank>10) bank-=10;
+	return (bank);
+}
+
+//
+//Given a number, returns the tens digit
+//This digit refers to the bank blink #, regardless of color
+//
+uint8_t get_bank_blink_digit(uint8_t bank)
+{
+	return (bank / 10);
 }

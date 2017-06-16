@@ -18,10 +18,10 @@
 #include "voltoct.h"
 #include "log_taper_padded.h"
 #include "pitch_pot_cv.h"
-#include "buttons.h"
 #include "edit_mode.h"
 #include "calibration.h"
-//#include "system_settings.h"
+#include "bank.h"
+#include "button_knob_combo.h"
 
 extern float pitch_pot_cv[4096];
 const float voltoct[4096];
@@ -53,6 +53,9 @@ extern uint8_t recording_enabled;
 // extern uint8_t lock_length;
 extern uint8_t scrubbed_in_edit;
 
+extern enum ButtonStates button_state[NUM_BUTTONS];
+
+extern ButtonKnobCombo button_knob_combo[NUM_BUTTON_KNOB_COMBOS];
 
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
@@ -466,26 +469,120 @@ void update_params(void)
 			//
 			// SAMPLE POT + CV
 			//
-			old_val = i_param[chan][SAMPLE];
-			new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+chan] + old_i_smoothed_cvadc[SAMPLE_CV*2+chan] );
 
-			if (old_val != new_val)
+
+			//Button-Knob combo: Bank + Sample
+			//
+			//Holding Bank1 button while turning a Sample knob changes channel 1 bank
+			//
+			if (button_state[Bank1] >= DOWN)
 			{
-				i_param[chan][SAMPLE] = new_val;
-				flags[PlaySample1Changed + chan] = 1;
 
-				//
-				//Changing sample with CV or knob results in a bright flash (PlaySampleXChanged_* = 6)
-				//
-				if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
+				new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2]);
+
+				//If the combo is active, then track the Sample1 pot and update Bank1's color digit 
+				if (button_knob_combo[Bank1_Sample1].combo_active)
 				{
-					flags[PlaySample1Changed_empty + chan] = 6;
-					flags[PlaySample1Changed_valid + chan] = 0;
+					i_param[0][BANK] = new_val + (get_bank_blink_digit(i_param[0][BANK]) * 10);
 				}
 				else
 				{
-					flags[PlaySample1Changed_empty + chan] = 0;
-					flags[PlaySample1Changed_valid + chan] = 6;
+					//Activate button/knob combo mode when we detect the knob was turned to a new detent
+
+					old_val = detent_num(button_knob_combo[Bank1_Sample1].init_value);
+
+					if (new_val != old_val)
+						button_knob_combo[Bank1_Sample1].combo_active = 1;
+				}
+
+
+				new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2 + 1]);
+
+				//If the combo is active, then track the Sample1 pot and update Bank1's color digit 
+				if (button_knob_combo[Bank1_Sample2].combo_active)
+				{
+					i_param[0][BANK] = (new_val*10) + get_bank_color_digit(i_param[0][BANK]);
+				}
+				else
+				{
+					//Activate button/knob combo mode when we detect the knob was turned to a new detent
+					
+					old_val = detent_num(button_knob_combo[Bank1_Sample2].init_value);
+
+					if (new_val != old_val)
+						button_knob_combo[Bank1_Sample2].combo_active = 1;
+				}
+			}
+
+			//
+			//Holding Bank2 button while turning a Sample knob changes channel 2 bank
+			//
+			if (button_state[Bank2] >= DOWN)
+			{
+
+				new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2]);
+
+				//If the combo is active, then track the Sample1 pot and update Bank1's color digit 
+				if (button_knob_combo[Bank2_Sample1].combo_active)
+				{
+					i_param[1][BANK] = new_val + (get_bank_blink_digit(i_param[1][BANK]) * 10);
+				}
+				else
+				{
+					//Activate button/knob combo mode when we detect the knob was turned to a new detent
+
+					old_val = detent_num(button_knob_combo[Bank2_Sample1].init_value);
+
+					if (new_val != old_val)
+						button_knob_combo[Bank2_Sample1].combo_active = 1;
+				}
+
+
+				new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2 + 1]);
+
+				//If the combo is active, then track the Sample1 pot and update Bank1's color digit 
+				if (button_knob_combo[Bank2_Sample2].combo_active)
+				{
+					i_param[1][BANK] = (new_val*10) + get_bank_color_digit(i_param[1][BANK]);
+				}
+				else
+				{
+					//Activate button/knob combo mode when we detect the knob was turned to a new detent
+				
+					old_val = detent_num(button_knob_combo[Bank2_Sample2].init_value);
+
+					if (new_val != old_val)
+						button_knob_combo[Bank2_Sample2].combo_active = 1;
+				}
+			}
+
+			//
+			//Bank buttons not down: just change the sample
+			//
+			if (button_state[Bank1]<DOWN && button_state[Bank2] < DOWN)
+			{
+
+				old_val = i_param[chan][SAMPLE];
+				new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+chan] + old_i_smoothed_cvadc[SAMPLE_CV*2+chan] );
+
+				if (old_val != new_val)
+				{
+					i_param[chan][SAMPLE] = new_val;
+					flags[PlaySample1Changed + chan] = 1;
+
+					//
+					//Changing sample with CV or knob results in a bright flash (PlaySampleXChanged_* = 6, where 6 is the duration of the flash)
+					//
+					if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
+					{
+						flags[PlaySample1Changed_empty + chan] = 6;
+						flags[PlaySample1Changed_valid + chan] = 0;
+					}
+					else
+					{
+						flags[PlaySample1Changed_empty + chan] = 0;
+						flags[PlaySample1Changed_valid + chan] = 6;
+					}
 				}
 			}
 
