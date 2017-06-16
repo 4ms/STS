@@ -13,8 +13,9 @@
 #include "calibration.h"
 
 #define BIG_PLAY_BUTTONS
-//#define SETBANK1RGB
-//#define FROSTEDBANK1
+#define FROSTED_BUTTONS
+
+//#define DEBUG_SETBANK1RGB
 
 uint16_t ButLED_color[NUM_RGBBUTTONS][3];
 uint16_t cached_ButLED_color[NUM_RGBBUTTONS][3];
@@ -122,15 +123,14 @@ void display_all_ButtonLEDs(void)
 			if (i ==  Play1ButtonLED || i == Play2ButtonLED)
 				LEDDriver_setRGBLED_12bit(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][2] <<10) | ButLED_color[i][1] ); ///swapped [1] and [2]
 			else
+	#ifdef FROSTED_BUTTONS
+				LEDDriver_setRGBLED_12bit(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+	#else
 				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+	#endif
 
 #else
-#ifdef FROSTEDBANK1
-			if (i ==  Bank1ButtonLED){
-				LEDDriver_setRGBLED_RGB(i, ButLED_color[i][0]*4, ButLED_color[i][1]*4, ButLED_color[i][2]*4 );
- 			}else
-#endif
-				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+			LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
 #endif
 			cached_ButLED_color[i][0]=ButLED_color[i][0];
 			cached_ButLED_color[i][1]=ButLED_color[i][1];
@@ -232,8 +232,8 @@ void update_ButtonLEDs(void)
 			else if (ButLEDnum == Bank2ButtonLED) chan = 1;
 			else chan = 2; //REC channel
 
-#ifdef SETBANK1RGB
-			if (chan==0 && global_mode[EDIT_MODE]) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0], i_smoothed_potadc[1], i_smoothed_potadc[2]);
+#ifdef DEBUG_SETBANK1RGB
+			if (chan==0 && global_mode[EDIT_MODE]) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0]/4, i_smoothed_potadc[1]/4, i_smoothed_potadc[2]/4);
 			else 
 #endif
 			if (chan==2 && global_mode[EDIT_MODE]) //REC button LED off when in Edit Mode
