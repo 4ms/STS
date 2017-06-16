@@ -293,7 +293,7 @@ void str_cat(char *dest, char *srca, char *srcb)
   *dest=0;
 }
 
-//Comare strings a and b
+//Compare strings a and b
 //Return 1 if the same, 0 if not
 uint8_t str_cmp(char *a, char *b)
 {
