@@ -60,7 +60,7 @@ uint8_t bank_to_color_string(uint8_t bank, char *color)
 			break;
 
 		case 8:
-			str_cpy(color, "Lavendar"); 
+			str_cpy(color, "Lavender"); 
 			return(8);
 			break;
 
@@ -90,8 +90,8 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		//Second digit: 49 ---> (49 - 4*10) = 9
 		digit2 = bank - (digit1*10); 
 
-		//Second digit as a color string: "White"
-		len = bank_to_color(digit2, color);
+		//Second digit as a color string i.e. "White" etc
+		len = bank_to_color_string(digit2, color);
 
 		//Omit the "0" for the first bank of a color, so "Red-0" is just "Red"
 		//Otherwise append a dash and number to the color name
@@ -118,24 +118,44 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 //FixMe: Update to blink-color system
 uint8_t color_to_bank(char *color)
 {
-	if 		(str_cmp(color, "White")) 		return(0);
-	else if (str_cmp(color, "Red")) 		return(1);
-	else if (str_cmp(color, "Green")) 		return(2);
-	else if (str_cmp(color, "Blue")) 		return(3);
-	else if (str_cmp(color, "Yellow"))		return(4);
-	else if (str_cmp(color, "Cyan")) 		return(5);
-	else if (str_cmp(color, "Orange")) 		return(6);
-	else if (str_cmp(color, "Violet")) 		return(7);
-	else if (str_cmp(color, "White-SAVE")) 	return(8);
-	else if (str_cmp(color, "Red-SAVE"))	return(9);
-	else if (str_cmp(color, "Green-SAVE"))	return(10);
-	else if (str_cmp(color, "Blue-SAVE")) 	return(11);
-	else if (str_cmp(color, "Yellow-SAVE")) return(12);
-	else if (str_cmp(color, "Cyan-SAVE")) 	return(13);
-	else if (str_cmp(color, "Orange-SAVE")) return(14);
-	else if (str_cmp(color, "Violet-SAVE")) return(15);
+	uint8_t i;
+	char* 	b_color;
+	char  	t_b_color[_MAX_LFN+1];
+
+	b_color = t_b_color;
+
+	// for every bank number
+	for (i=0; i<MAX_NUM_BANKS; i++)
+	{
+		// convert bank number to color
+		bank_to_color(i, b_color);
+
+		// compare current bank color with input bank color
+		if (str_cmp(color, b_color))
+		{
+			// ... and return bank number if there's a match
+			return(i);
+		}
+	}		
 	return(200);
 
+	// if 		(str_cmp(color, "White")) 		return(0);
+	// else if (str_cmp(color, "Red")) 		return(1);
+	// else if (str_cmp(color, "Green")) 		return(2);
+	// else if (str_cmp(color, "Blue")) 		return(3);
+	// else if (str_cmp(color, "Yellow"))		return(4);
+	// else if (str_cmp(color, "Cyan")) 		return(5);
+	// else if (str_cmp(color, "Orange")) 		return(6);
+	// else if (str_cmp(color, "Violet")) 		return(7);
+	// else if (str_cmp(color, "White-SAVE")) 	return(8);
+	// else if (str_cmp(color, "Red-SAVE"))	return(9);
+	// else if (str_cmp(color, "Green-SAVE"))	return(10);
+	// else if (str_cmp(color, "Blue-SAVE")) 	return(11);
+	// else if (str_cmp(color, "Yellow-SAVE")) return(12);
+	// else if (str_cmp(color, "Cyan-SAVE")) 	return(13);
+	// else if (str_cmp(color, "Orange-SAVE")) return(14);
+	// else if (str_cmp(color, "Violet-SAVE")) return(15);
+	// return(200);
 }
 
 

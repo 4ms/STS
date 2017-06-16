@@ -471,7 +471,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 //		- 0: path is correct
 //		- 1: path was incorrect, and corrected
 //		- 2: path couldn't be corrected
-uint8_t fopen_checked(FIL fp, char* filepath)
+uint8_t fopen_checked(FIL *fp, char* filepath)
 {
 	uint8_t 	flag;
 	FRESULT 	res, res_dir;
@@ -488,8 +488,8 @@ uint8_t fopen_checked(FIL fp, char* filepath)
 	char 		foldername[_MAX_LFN];
 	DIR 		rootdir;
 
-	res = f_open(&fp, filepath, FA_READ);
-	f_sync(&fp);
+	res = f_open(fp, filepath, FA_READ);
+	f_sync(fp);
 
 	// if file loaded properly, move on
 	if (res==FR_OK) return(0);
@@ -520,8 +520,8 @@ uint8_t fopen_checked(FIL fp, char* filepath)
 				if (res_dir == FR_OK)
 				{
 					// try opening file from folder
-					res = f_open(&fp, filepath_attempt, FA_READ);
-					f_sync(&fp);					
+					res = f_open(fp, filepath_attempt, FA_READ);
+					f_sync(fp);					
 					
 					// if file was found
 					// return "1: path was incorrect, and corrected" 
@@ -538,11 +538,11 @@ uint8_t fopen_checked(FIL fp, char* filepath)
 			else if (try_root)
 			{
 				// update filepath
-				str_cat(filepath_attempt, "\\", file_only);
+				str_cat(filepath_attempt, "/", file_only);
 				
 				// try to open current file path
-				res = f_open(&fp, filepath_attempt, FA_READ);
-				f_sync(&fp);			
+				res = f_open(fp, filepath_attempt, FA_READ);
+				f_sync(fp);			
 
 				// if file was found
 				// return "1: path was incorrect, and corrected" 
@@ -554,7 +554,7 @@ uint8_t fopen_checked(FIL fp, char* filepath)
 				{
 
 					// close file
-					fclose(&fp);
+					fclose(fp);
 
 					// return "2: path couldn't be corrected"
 					// exit function 
@@ -563,4 +563,6 @@ uint8_t fopen_checked(FIL fp, char* filepath)
 			}
 		}
 	}
+
+	return(0);
 }

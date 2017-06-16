@@ -95,6 +95,7 @@ uint8_t write_sampleindex_file(void)
 				{
 					case 1:
 						f_printf(&temp_file, "sample info: %dHz, %d-bit, mono,   %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].sampleSize);
+					break;
 					case 2:
 						f_printf(&temp_file, "sample info: %dHz, %d-bit, stereo, %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].sampleSize);
 					break;
@@ -231,15 +232,16 @@ uint8_t load_sampleindex_file(void)
 				num_buff = str_xt_int(read_buffer);
 				if (num_buff != UINT32_MAX)
 				{
-					if 		(read_buffer[0]!='-') 	{arm_data=1; token[0] = '\0';}
-					else if (arm_data==1) 			
+					// if 		(read_buffer[0]!='-') 	{arm_data=1; token[0] = '\0';}
+					// else if (arm_data==1) 			
+					if 		((read_buffer[0]!='-')&&(!arm_data))	{arm_data=1; token[0] = '\0';}
+					else if  (arm_data==1) 			
 					{
 						// Sample bank
-						cur_sample=num_buff-1; 
+						cur_sample=num_buff-1;
 						
 						// open sample file
-						// uint8_t fopen_checked(FIL fp, char* filepath);
-						fopen_flag = fopen_checked(temp_wav_file, sample_path);
+						fopen_flag = fopen_checked(&temp_wav_file, sample_path);
 
 						// if file was opened
 						if (fopen_flag<2)
@@ -261,7 +263,7 @@ uint8_t load_sampleindex_file(void)
 							// close wav file
 							f_close(&temp_wav_file);
 
-							str_cpy(samples[cur_bank][cur_sample].filename, sample_path); 	
+							str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
 							arm_data++; token[0] = '\0';
 
 						}  
@@ -305,7 +307,7 @@ uint8_t load_sampleindex_file(void)
 	//  rewrite sample index as needed
 	if(rewrite_index)
 	{
-		write_sampleindex_file();
+		// write_sampleindex_file();
 	}
 
 	//
