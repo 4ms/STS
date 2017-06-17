@@ -217,7 +217,7 @@ uint8_t is_wav(char *string)
 //Returns the head of a string up until the first 'find' char
 //Copies the tail following the 'find' char into string
 // str_tok(Path/To/A/File,'/') -->> returns Path, and string becomes "To/A/File"
-char *str_tok(char *string, char find)
+void str_tok(char *string, char find, char *tokk)
 {
 
   char    *cp;
@@ -242,7 +242,7 @@ char *str_tok(char *string, char find)
     else {
       tokn[str_len(string)-str_len(cp)]=0;
       str_cpy(string, cp+1);
-      return (tokn);  
+      str_cpy (tokk, tokn);  
     }
   }
 }

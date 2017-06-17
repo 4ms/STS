@@ -507,14 +507,13 @@ uint8_t fopen_checked(FIL *fp, char* filepath)
 	else
 	{
 		// close file
-		fclose(fp);
+		// fclose(fp);
 
 		// ToDo: this can probably be removed
 		// clear filename
 		file_only[0]='\0';
 
 		// extract file name
-		// file_only 		= file_only_ptr;
 		removed_path 	= removed_path_ptr;
 		str_cpy(file_only, str_rstr(filepath, '/', removed_path));
 
@@ -524,31 +523,33 @@ uint8_t fopen_checked(FIL *fp, char* filepath)
 		while (res!=FR_OK)
 		{
 			// clear filepath
-			filepath_attempt[0]='\0';
+			filepath[0]='\0';
 
 			// try every folder in the folder tree (alphabetically?)
+			// ... faster this way
+			// ... there shouldn't be any duplicate files with the sample index
 			if (try_folders)
 			{
 
 				// Check for the next folder and set it as the file path
-				res_dir = get_next_dir(&rootdir, "", filepath_attempt);
+				res_dir = get_next_dir(&rootdir, "", filepath);
 
 				// if another folder was found
 				if (res_dir == FR_OK)
 				{	
 					// concatenate file path and name
-					str_cat	(filepath_attempt, filepath_attempt, "/");
-					str_cat	(filepath_attempt, filepath_attempt, file_only);
+					str_cat	(filepath, filepath, "/");
+					str_cat	(filepath, filepath, file_only);
 
 					// try opening file from folder
-					res = f_open(fp, filepath_attempt, FA_READ);
+					res = f_open(fp, filepath, FA_READ);
 					f_sync(fp);					
 					
 					// if file was found
 					// return "1: path was incorrect, and corrected" 
 					// exit function 
 					if(res == FR_OK) return(1);
-					else fclose(fp);
+					// else fclose(fp);
 				}
 
 				// Otherwise, stop checking folders 
@@ -560,10 +561,10 @@ uint8_t fopen_checked(FIL *fp, char* filepath)
 			else if (try_root)
 			{
 				// update filepath
-				str_cat(filepath_attempt, "/", file_only);
+				str_cat(filepath, "/", file_only);
 				
 				// try to open current file path
-				res = f_open(fp, filepath_attempt, FA_READ);
+				res = f_open(fp, filepath, FA_READ);
 				f_sync(fp);			
 
 				// if file was found

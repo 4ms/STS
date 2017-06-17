@@ -10,6 +10,7 @@
 #include "sts_filesystem.h"
 #include "bank.h"
 
+
 Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 uint8_t bank_status[MAX_NUM_BANKS];
@@ -158,12 +159,17 @@ uint8_t load_sampleindex_file(void)
 	FRESULT 	res;
 	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1];
 	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_path=0, arm_data=0, loaded_header=0, read_name=0;
-	uint32_t	num_buff;
-	char 		*token;
-	char 		t_token[_MAX_LFN+1];
+	uint32_t	num_buff=UINT32_MAX;
+	// char 		*token;
+	// char 		t_token[_MAX_LFN+1];
+	char 		token[_MAX_LFN+1];
 	uint8_t		fopen_flag	  = 0;
 	uint8_t		rewrite_index = 0;
 	uint8_t 	force_reload  = 2;
+
+	// read_buffer[0]='\0'; 
+	// folder_path[0]='\0'; 
+	// sample_path[0]='\0';
 
 	// Open sample index file
 	res = f_open(&temp_file,"sample_index.txt", FA_READ);
@@ -176,7 +182,7 @@ uint8_t load_sampleindex_file(void)
 	f_sync(&temp_file);
 	
 	//
-	token = t_token;
+	// token = t_token;
 
 	// until we reach the eof
 	while (!f_eof(&temp_file))
@@ -188,8 +194,8 @@ uint8_t load_sampleindex_file(void)
 		read_buffer[str_len(read_buffer)-1]=0;
 
 		// tokenize at spaces
-		// if((read_name!=1) && (arm_data==0)) token = str_tok(read_buffer,' ');
-		if((read_name!=1) && (arm_data==0)) token = str_tok(read_buffer,' ');
+		// if((read_name!=1) && (arm_data==0)) str_tok(read_buffer,' ', token);
+		if((read_name!=1) && (arm_data==0)) str_tok(read_buffer,' ', token);
 		else str_cpy(token, read_buffer);
 
 		// While token isn't empty
@@ -199,9 +205,9 @@ uint8_t load_sampleindex_file(void)
 			// ToDo: see if computing repeated str_cmp upstream helps saving time
 			if (!loaded_header)
 			{
-				if 		( str_cmp(token,"--------------------") && !arm_bank) {arm_bank++; 					 			token = str_tok(read_buffer,' ');}
-				else if	(!str_cmp(token,"--------------------") &&  arm_bank) {cur_bank=color_to_bank(token); 			token = str_tok(read_buffer,' ');}
-				else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; 					 			token = str_tok(read_buffer,' ');}
+				if 		( str_cmp(token,"--------------------") && !arm_bank) {arm_bank++; 					 			str_tok(read_buffer,' ', token);}
+				else if	(!str_cmp(token,"--------------------") &&  arm_bank) {cur_bank=color_to_bank(token); 			str_tok(read_buffer,' ', token);}
+				else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; 					 			str_tok(read_buffer,' ', token);}
 
 				// read folder path
 				else if (str_cmp(token, "path:")) 
@@ -230,34 +236,42 @@ uint8_t load_sampleindex_file(void)
 			// Load .wav header data information and play data
 			else if ((!str_cmp(token,"--------------------"))&&(read_name>1))
 			{
+				
+				// if there is a number in the current line
 				num_buff = str_xt_int(read_buffer);
 				if (num_buff != UINT32_MAX)
 				{
-					// if 		(read_buffer[0]!='-') 	{arm_data=1; token[0] = '\0';}
-					// else if (arm_data==1) 			
+					
+					// arm data loading
+					// if the line startes with - and data loading isn't armed
 					if 		((read_buffer[0]!='-')&&(!arm_data))	{arm_data=1; token[0] = '\0';}
+					
+					// load header data from .wav file
+					// if the data loading has just been armed
 					else if  (arm_data==1) 			
 					{
-						// Sample bank
+						// Update sample bank number
 						cur_sample=num_buff-1;
 						
 						// open sample file
-						fopen_flag = fopen_checked(&temp_wav_file, sample_path);
+						// fopen_flag = fopen_checked(&temp_wav_file, sample_path);
+						f_open(&temp_wav_file,sample_path, FA_READ);
+						fopen_flag=0;
 
 						// if file was opened
 						if (fopen_flag<2)
 						{
+
+							// update samples structure with file path
+							str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
+
 							// if file was opened, but not from given path
 							if (fopen_flag==1)
 							{
-								// update file path in samples structure
-								str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
-
 								// request to rewrite index (from samples struct) 
 								// ... at the end of index read
 								rewrite_index =1;
 							}
-
 							
 							// At least a sample was loaded
 							force_reload = 0;
@@ -268,9 +282,7 @@ uint8_t load_sampleindex_file(void)
 							// close wav file
 							f_close(&temp_wav_file);
 
-							str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
 							arm_data++; token[0] = '\0';
-
 						}  
 
 						// if file cannot be found on the SD card
@@ -289,9 +301,17 @@ uint8_t load_sampleindex_file(void)
 						}
 					}
 
-					// update sample play information
+					// load sample play information from index file
+					// if data headed has been loaded
+
+					// ToDo: make arm-data numbers #define so code is easier to read
+					// ToDo: Put limit on play start based on sample size - rewrite index if updated
 					else if (arm_data==2) 			{samples[cur_bank][cur_sample].inst_start=num_buff; 									arm_data++; token[0] = '\0';}
+
+					// ToDo: Put limit on play size  based on sample size - rewrite index if updated
 					else if (arm_data==3) 			{samples[cur_bank][cur_sample].inst_size=num_buff; 										arm_data++; token[0] = '\0';}
+
+					// ToDo: Put limit on gain value 0 to 100 - rewrite index if updated					
 					else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f; 								arm_data=0; token[0] = '\0'; read_name = 1; break;}
 				}
 			}
@@ -301,7 +321,7 @@ uint8_t load_sampleindex_file(void)
 			{
 				read_name 		= 0; 
 				loaded_header	= 0;
-				read_buffer[0]='\0';
+				read_buffer[0]  = '\0';
 			}			
 		}
 	}
@@ -315,6 +335,6 @@ uint8_t load_sampleindex_file(void)
 		// write_sampleindex_file();
 	}
 
-	//
+	// Assign samples in SD card to (previously empty) sample index
 	return(force_reload);	// OK if at least a sample was loaded
 }
