@@ -55,7 +55,7 @@ extern uint8_t scrubbed_in_edit;
 
 extern enum ButtonStates button_state[NUM_BUTTONS];
 
-extern ButtonKnobCombo button_knob_combo[NUM_BUTTON_KNOB_COMBOS];
+extern ButtonKnobCombo a_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
@@ -288,13 +288,15 @@ void process_adc(void)
 void update_params(void)
 {
 	uint8_t chan;
+	uint8_t knob;
 	uint8_t old_val;
 	uint8_t new_val;
 	//uint8_t ok_sampleslot;
 	float t_f;
-	float t_fine=0, t_coarse=0;
+	//float t_fine=0, t_coarse=0;
 	//uint32_t t_32;
 	uint8_t samplenum, banknum;
+	ButtonKnobCombo *t_bkc;
 
 	recording_enabled=1;
 
@@ -470,108 +472,102 @@ void update_params(void)
 			// SAMPLE POT + CV
 			//
 
-
+			//
 			//Button-Knob combo: Bank + Sample
+			//Holding Bank X's button while turning a Sample knob changes channel X's bank
 			//
-			//Holding Bank1 button while turning a Sample knob changes channel 1 bank
-			//
-			if (button_state[Bank1] >= DOWN)
+			if (button_state[Bank1 + chan] >= DOWN)
 			{
-
-				new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2]);
-
-				//If the combo is active, then track the Sample1 pot and update Bank1's color digit 
-				if (button_knob_combo[Bank1_Sample1].combo_active)
+				//Go through all the knobs
+				for (knob = 0; knob < 2 /*NUM_BUTTON_KNOB_COMBO_KNOBS*/; knob++)
 				{
-					i_param[0][BANK] = new_val + (get_bank_blink_digit(i_param[0][BANK]) * 10);
-				}
-				else
-				{
-					//Activate button/knob combo mode when we detect the knob was turned to a new detent
+					t_bkc = &a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
 
-					old_val = detent_num(button_knob_combo[Bank1_Sample1].init_value);
+					new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2 + knob]);
 
-					if (new_val != old_val)
-						button_knob_combo[Bank1_Sample1].combo_active = 1;
-				}
+					//If the combo is active, then use the Sample pot to update the Hover value
+					//(which becomes the Bank param when we release the button)
+					//
+					if (t_bkc->combo_state == COMBO_ACTIVE)
+					{
+						if (knob==0) t_bkc->hover_value = new_val + (get_bank_blink_digit(t_bkc->hover_value) * 10);
+						if (knob==1) t_bkc->hover_value = get_bank_color_digit(t_bkc->hover_value) + (new_val*10);
 
+						if (t_bkc->hover_value >= MAX_NUM_BANKS) 
+							t_bkc->hover_value = MAX_NUM_BANKS - 1;
 
-				new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2 + 1]);
+						//Set both hover_values to the same value
+						if (knob==0) 	a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + 1].hover_value = t_bkc->hover_value;
+						else 			a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value = t_bkc->hover_value;
+					}
 
-				//If the combo is active, then track the Sample1 pot and update Bank1's color digit 
-				if (button_knob_combo[Bank1_Sample2].combo_active)
-				{
-					i_param[0][BANK] = (new_val*10) + get_bank_color_digit(i_param[0][BANK]);
-				}
-				else
-				{
-					//Activate button/knob combo mode when we detect the knob was turned to a new detent
-					
-					old_val = detent_num(button_knob_combo[Bank1_Sample2].init_value);
+					//If the combo is not active,
+					//Activate it when we detect the knob was turned to a new detent
+					else
+					{
+						old_val = detent_num(t_bkc->latched_value);
 
-					if (new_val != old_val)
-						button_knob_combo[Bank1_Sample2].combo_active = 1;
+						if (new_val != old_val)
+						{
+							t_bkc->combo_state = COMBO_ACTIVE;
+
+							//Initialize the hover value
+							t_bkc->hover_value = i_param[chan][BANK];
+
+							//Copy the hover value to both samples
+							if (knob==0) 	a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + 1].hover_value = t_bkc->hover_value;
+							else 			a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value = t_bkc->hover_value;
+
+						}
+					}
 				}
 			}
 
+
 			//
-			//Holding Bank2 button while turning a Sample knob changes channel 2 bank
+			//If we're not doing a button+knob combo, just change the sample
 			//
-			if (button_state[Bank2] >= DOWN)
+			if (	a_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan].combo_state != COMBO_ACTIVE
+				&&	a_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan].combo_state != COMBO_ACTIVE)
 			{
 
-				new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2]);
+				//See if we need to update the sample by comparing the old value to the new value
+				//
+				//If we recently ended a combo motion, use the latched value of the pot for the old value
+				//Otherwise use the actual sample param
+				//
+				if (						a_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan].combo_state == COMBO_LATCHED)
+					old_val = detent_num(	a_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan].latched_value);
 
-				//If the combo is active, then track the Sample1 pot and update Bank1's color digit 
-				if (button_knob_combo[Bank2_Sample1].combo_active)
-				{
-					i_param[1][BANK] = new_val + (get_bank_blink_digit(i_param[1][BANK]) * 10);
-				}
 				else
-				{
-					//Activate button/knob combo mode when we detect the knob was turned to a new detent
+				if (						a_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan].combo_state == COMBO_LATCHED)
+					old_val = detent_num(	a_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan].latched_value);
 
-					old_val = detent_num(button_knob_combo[Bank2_Sample1].init_value);
-
-					if (new_val != old_val)
-						button_knob_combo[Bank2_Sample1].combo_active = 1;
-				}
-
-
-				new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2 + 1]);
-
-				//If the combo is active, then track the Sample1 pot and update Bank1's color digit 
-				if (button_knob_combo[Bank2_Sample2].combo_active)
-				{
-					i_param[1][BANK] = (new_val*10) + get_bank_color_digit(i_param[1][BANK]);
-				}
 				else
-				{
-					//Activate button/knob combo mode when we detect the knob was turned to a new detent
-				
-					old_val = detent_num(button_knob_combo[Bank2_Sample2].init_value);
+					old_val = i_param[chan][SAMPLE];
 
-					if (new_val != old_val)
-						button_knob_combo[Bank2_Sample2].combo_active = 1;
-				}
-			}
-
-			//
-			//Bank buttons not down: just change the sample
-			//
-			if (button_state[Bank1]<DOWN && button_state[Bank2] < DOWN)
-			{
-
-				old_val = i_param[chan][SAMPLE];
 				new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+chan] + old_i_smoothed_cvadc[SAMPLE_CV*2+chan] );
 
 				if (old_val != new_val)
 				{
+					//The knob has moved to a new detent (without the a Bank button down)
+
+					//
+					//Inactivate the combo motion
+					// 
+					a_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan].combo_state = COMBO_INACTIVE;
+					a_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan].combo_state = COMBO_INACTIVE;
+
+					//Update the sample parameter
 					i_param[chan][SAMPLE] = new_val;
+
 					flags[PlaySample1Changed + chan] = 1;
 
 					//
-					//Changing sample with CV or knob results in a bright flash (PlaySampleXChanged_* = 6, where 6 is the duration of the flash)
+					//Set the flag to initiate a bright flash on the Play button
+					//
+					//We first have to know if there is a sample in the new place,
+					//by seeing if there is a non-blank filename
 					//
 					if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
 					{

@@ -191,11 +191,11 @@ void disable_bank(uint8_t bank)
 //
 uint8_t get_bank_color_digit(uint8_t bank)
 {
-	uint8_t digit1;
+//	uint8_t digit1;
 
-	if (bank<=9) return bank;
+	if (bank<10) return bank;
 	
-	while (bank>10) bank-=10;
+	while (bank>=10) bank-=10;
 	return (bank);
 }
 
