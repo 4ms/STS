@@ -576,10 +576,6 @@ void check_change_bank(uint8_t chan)
 	{
 		flags[PlayBank1Changed + chan]=0;
 
-		i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
-
-		//ToDo: Verify sample headers in bank (?)
-
 		is_buffered_to_file_end[chan] = 0;
 
 		flags[PlaySample1Changed + chan]=1;

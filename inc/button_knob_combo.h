@@ -24,16 +24,6 @@ enum ButtonKnobCombo_Knobs{
 	NUM_BUTTON_KNOB_COMBO_KNOBS
 };
 
-// enum ButtonKnobCombos{
-// 	Bank1_Sample1,
-// 	Bank1_Sample2,
-// 	Bank2_Sample1,
-// 	Bank2_Sample2,
-
-// 	NUM_BUTTON_KNOB_COMBOS
-
-// };
-
 enum ComboStates{
 	COMBO_INACTIVE,
 	COMBO_ACTIVE,
@@ -51,7 +41,5 @@ typedef struct ButtonKnobCombo{
 
 } ButtonKnobCombo;
 
-#define POT_VALUE_UNREAD 0xFFFF;
 
 #endif /* INC_BUTTON_KNOB_COMBO_H */
-
