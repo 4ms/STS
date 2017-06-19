@@ -55,7 +55,7 @@ extern uint8_t scrubbed_in_edit;
 
 extern enum ButtonStates button_state[NUM_BUTTONS];
 
-extern ButtonKnobCombo a_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
+extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
@@ -294,9 +294,10 @@ void update_params(void)
 	//uint8_t ok_sampleslot;
 	float t_f;
 	//float t_fine=0, t_coarse=0;
-	//uint32_t t_32;
+	uint32_t trial_bank;
 	uint8_t samplenum, banknum;
-	ButtonKnobCombo *t_bkc;
+	ButtonKnobCombo *t_this_bkc; //pointer to the currently active button/knob combo action
+	ButtonKnobCombo *t_other_bkc; //pointer to another button/knob combo action (makes code more readable)
 
 	recording_enabled=1;
 
@@ -433,10 +434,8 @@ void update_params(void)
 			//
 			// LENGTH POT + CV
 			//
-			// if (chan==0 && lock_length){
-			// 	if (flag_pot_changed[LENGTH*2]) lock_length=0;
-			// } else
-				f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
+
+			f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
 
 			if (f_param[chan][LENGTH] > 0.990)		f_param[chan][LENGTH] = 1.0;
 			if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
@@ -445,10 +444,8 @@ void update_params(void)
 			//
 			// START POT + CV
 			//
-			// if (chan==0 && lock_start){
-			// 	if (flag_pot_changed[START*2]) lock_start=0;
-			// } else
-				f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
+
+			f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
 
 			if (f_param[chan][START] > 0.99)		f_param[chan][START] = 1.0;
 			if (f_param[chan][START] <= 0.0003)		f_param[chan][START] = 0.0;
@@ -460,7 +457,6 @@ void update_params(void)
 			if ((old_i_smoothed_cvadc[PITCH_CV*2+chan] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+chan] > 2058)) //positive voltage on 1V/oct jack
 			{
 				f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
-				//if (chan==1) f_param[chan][PITCH] *= 1.009227524f;
 			}
 			else
 				f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]];
@@ -479,45 +475,53 @@ void update_params(void)
 			if (button_state[Bank1 + chan] >= DOWN)
 			{
 				//Go through all the knobs
+				//
 				for (knob = 0; knob < 2 /*NUM_BUTTON_KNOB_COMBO_KNOBS*/; knob++)
 				{
-					t_bkc = &a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
+					t_this_bkc 	= &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
+					t_other_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + 1-knob];
 
 					new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2 + knob]);
 
 					//If the combo is active, then use the Sample pot to update the Hover value
 					//(which becomes the Bank param when we release the button)
 					//
-					if (t_bkc->combo_state == COMBO_ACTIVE)
+					if (t_this_bkc->combo_state == COMBO_ACTIVE)
 					{
-						if (knob==0) t_bkc->hover_value = new_val + (get_bank_blink_digit(t_bkc->hover_value) * 10);
-						if (knob==1) t_bkc->hover_value = get_bank_color_digit(t_bkc->hover_value) + (new_val*10);
+						//Calcuate the (tentative) new bank, based on the new_val and the current hover_value
+						//
+						if (knob==0) trial_bank = new_val + (get_bank_blink_digit(t_this_bkc->hover_value) * 10);
+						if (knob==1) trial_bank = get_bank_color_digit(t_this_bkc->hover_value) + (new_val*10);
 
-						if (t_bkc->hover_value >= MAX_NUM_BANKS) 
-							t_bkc->hover_value = MAX_NUM_BANKS - 1;
-
-						//Set both hover_values to the same value
-						if (knob==0) 	a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + 1].hover_value = t_bkc->hover_value;
-						else 			a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value = t_bkc->hover_value;
+						//If the new bank is enabled (contains samples) then update the hover_value
+						//
+						if (is_bank_enabled(trial_bank))
+						{
+							//Set both hover_values to the same value, since they are linked
+							//
+							if (t_this_bkc->hover_value != trial_bank)
+							{
+								flags[PlayBankHover1Changed + chan] = 3;
+								t_this_bkc->hover_value = trial_bank;
+								t_other_bkc->hover_value = trial_bank;
+							}		
+						}
 					}
 
 					//If the combo is not active,
 					//Activate it when we detect the knob was turned to a new detent
 					else
 					{
-						old_val = detent_num(t_bkc->latched_value);
+						old_val = detent_num(t_this_bkc->latched_value);
 
 						if (new_val != old_val)
 						{
-							t_bkc->combo_state = COMBO_ACTIVE;
+							t_this_bkc->combo_state = COMBO_ACTIVE;
 
 							//Initialize the hover value
-							t_bkc->hover_value = i_param[chan][BANK];
-
-							//Copy the hover value to both samples
-							if (knob==0) 	a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + 1].hover_value = t_bkc->hover_value;
-							else 			a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value = t_bkc->hover_value;
-
+							//Set both hover_values to the same value, since they are linked
+							t_this_bkc->hover_value = i_param[chan][BANK];
+							t_other_bkc->hover_value = i_param[chan][BANK];
 						}
 					}
 				}
@@ -527,8 +531,10 @@ void update_params(void)
 			//
 			//If we're not doing a button+knob combo, just change the sample
 			//
-			if (	a_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan].combo_state != COMBO_ACTIVE
-				&&	a_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan].combo_state != COMBO_ACTIVE)
+			t_this_bkc 	= &g_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan];
+			t_other_bkc = &g_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan];
+
+			if (t_this_bkc->combo_state != COMBO_ACTIVE	&&	t_other_bkc->combo_state != COMBO_ACTIVE)
 			{
 
 				//See if we need to update the sample by comparing the old value to the new value
@@ -536,12 +542,12 @@ void update_params(void)
 				//If we recently ended a combo motion, use the latched value of the pot for the old value
 				//Otherwise use the actual sample param
 				//
-				if (						a_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan].combo_state == COMBO_LATCHED)
-					old_val = detent_num(	a_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan].latched_value);
+				if (t_this_bkc->combo_state == COMBO_LATCHED)
+					old_val = detent_num(t_this_bkc->latched_value);
 
 				else
-				if (						a_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan].combo_state == COMBO_LATCHED)
-					old_val = detent_num(	a_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan].latched_value);
+				if (t_other_bkc->combo_state == COMBO_LATCHED)
+					old_val = detent_num(t_other_bkc->latched_value);
 
 				else
 					old_val = i_param[chan][SAMPLE];
@@ -555,8 +561,8 @@ void update_params(void)
 					//
 					//Inactivate the combo motion
 					// 
-					a_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan].combo_state = COMBO_INACTIVE;
-					a_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan].combo_state = COMBO_INACTIVE;
+					t_this_bkc->combo_state = COMBO_INACTIVE;
+					t_other_bkc->combo_state = COMBO_INACTIVE;
 
 					//Update the sample parameter
 					i_param[chan][SAMPLE] = new_val;

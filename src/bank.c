@@ -193,6 +193,8 @@ void check_enabled_banks(void)
 
 uint8_t is_bank_enabled(uint8_t bank)
 {
+	if (bank>=MAX_NUM_BANKS) return 0;
+
 	return bank_status[bank] ? 1:0;
 }
 

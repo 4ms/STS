@@ -37,7 +37,7 @@ extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 
 extern uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN];
 
-extern ButtonKnobCombo a_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
+extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 
 /*
@@ -244,16 +244,22 @@ void update_ButtonLEDs(void)
 				set_ButtonLED_byPalette(ButLEDnum, OFF);
 			}
 			else
+			if (flags[PlayBankHover1Changed + chan])
+			{
+				flags[PlayBankHover1Changed + chan]--;
+				set_ButtonLED_byPalette(ButLEDnum, CYANER);
+			}
+			else
 			{
 				t = tm_16;
 				if (chan==2)
 					bank_to_display = i_param[chan][BANK];
 				else
-				if (a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
-					bank_to_display = a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
+				if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
+					bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
 				else
-				if (a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state == COMBO_ACTIVE)
-					bank_to_display = a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].hover_value;
+				if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state == COMBO_ACTIVE)
+					bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].hover_value;
 				else
 					bank_to_display = i_param[chan][BANK];
 

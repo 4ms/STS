@@ -27,9 +27,6 @@ enum Buttons_LEDs {
 	NUM_RGBBUTTONS
 };
 
-//Play1ButtonLED+chan
-//Bank1ButtonLED+chan*3
-//Reverse1ButtonLED+chan*5
 
 void init_buttonLEDs(void);
 void set_ButtonLED_byRGB(uint8_t ButtonLED_number, uint16_t red,  uint16_t green,  uint16_t blue);

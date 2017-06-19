@@ -9,7 +9,7 @@
 #include "button_knob_combo.h"
 #include "adc.h"
 
-extern ButtonKnobCombo a_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
+extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 
 enum ButtonStates button_state[NUM_BUTTONS];
@@ -135,13 +135,13 @@ void Button_Debounce_IRQHandler(void)
 
 							//Store the pot values.
 							//We use this to determine if the pot has moved while the Bank button is down
-							a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].latched_value = old_i_smoothed_potadc[SAMPLE_POT*2];
-							a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].latched_value = old_i_smoothed_potadc[SAMPLE_POT*2 + 1];
+							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].latched_value = old_i_smoothed_potadc[SAMPLE_POT*2];
+							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].latched_value = old_i_smoothed_potadc[SAMPLE_POT*2 + 1];
 
 							//Reset the combo_state.
 							//We have to detect the knob as moving to make the combo ACTIVE
-							a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state = COMBO_INACTIVE;
-							a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state = COMBO_INACTIVE;
+							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state = COMBO_INACTIVE;
+							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state = COMBO_INACTIVE;
 						break;
 
 						case Rec:
@@ -181,7 +181,7 @@ void Button_Debounce_IRQHandler(void)
 								combo_was_active = 0;
 								for (knob=0;knob<2;knob++)
 								{
-									t_bkc = &a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
+									t_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
 
 									if (t_bkc->combo_state == COMBO_ACTIVE)
 									{
@@ -200,7 +200,9 @@ void Button_Debounce_IRQHandler(void)
 								}
 
 								if (!combo_was_active)
-									flags[PlayBank1Changed + chan] = 1;
+									i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
+
+								flags[PlayBank1Changed + chan] = 1;
 								
 							break;
 
@@ -239,9 +241,6 @@ void Button_Debounce_IRQHandler(void)
 
 							case Rev2:
 								if (global_mode[EDIT_MODE]){
-									t = global_mode[STEREO_MODE];
-									load_all_banks(0);
-									global_mode[STEREO_MODE] = t;
 								}else
 									flags[Rev2Trig]=1;
 
@@ -278,10 +277,29 @@ void Button_Debounce_IRQHandler(void)
 						if (button_state[i]!=LONG_PRESSED)
 						{
 							button_state[i] = LONG_PRESSED;
-							switch (i)
+
+							if (!flags[skip_process_buttons])
 							{
-								default:
-									break;
+								switch (i)
+								{
+									case Rev2:
+										if (global_mode[EDIT_MODE])
+										{
+											//
+											//Long press with both bank buttons (Edit+Bank1+Bank2+Rev2):
+											//Reload all banks from the backup index file
+											//Restores the entire sampler to the state it was on boot 
+											//
+											t = global_mode[STEREO_MODE];
+									//		if (button_state[Bank1]>=MED_PRESSED && button_state[Bank2]>=MED_PRESSED)
+									//			load_sampleindex_file(BACKUPFILE, ALL_BANKS);
+											global_mode[STEREO_MODE] = t;
+										}
+										break;
+
+									default:
+										break;
+								}
 							}
 						}
 					}
@@ -289,19 +307,33 @@ void Button_Debounce_IRQHandler(void)
 						if (button_state[i]!=MED_PRESSED)
 						{
 							button_state[i] = MED_PRESSED;
-							switch (i)
+							if (!flags[skip_process_buttons])
 							{
-								case Rev2:
-									if (global_mode[EDIT_MODE])
-									{
-										t = global_mode[STEREO_MODE];
-										load_all_banks(1); //Med-press: Force a reload from disk
-										global_mode[STEREO_MODE] = t;
-									}
-									break;
+								switch (i)
+								{
+									case Rev2:
+										if (global_mode[EDIT_MODE])
+										{
+											//
+											//Medium press with Bank button: reload bank from the backup index file
+											//Restores just this bank to the state it was on boot 
+											//
+											t = global_mode[STEREO_MODE];
 
-								default:
-									break;
+									//		if (button_state[Bank1]>=SHORT_PRESSED)
+									//			load_sampleindex_file(BACKUPFILE, i_param[0][BANK]);
+									//
+									//		if (button_state[Bank2]>=SHORT_PRESSED)
+									//			load_sampleindex_file(BACKUPFILE, i_param[1][BANK]);
+
+											global_mode[STEREO_MODE] = t;
+											flags[skip_process_buttons] = 1;
+										}
+										break;
+
+									default:
+										break;
+								}
 							}
 						}
 					}

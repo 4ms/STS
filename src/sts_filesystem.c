@@ -507,7 +507,7 @@ uint8_t fopen_checked(FIL *fp, char* filepath)
 	else
 	{
 		// close file
-		// f_close(fp);
+		// fclose(fp);
 
 		// ToDo: this can probably be removed
 		// clear filename

@@ -23,7 +23,7 @@
 #define FW_VERSION 1
 
 enum Flags {
-	PlaySample1Changed,
+	PlaySample1Changed, //0
 	PlaySample2Changed,
 	PlayBank1Changed,
 	PlayBank2Changed,
@@ -36,9 +36,9 @@ enum Flags {
 	Rev2Trig, //10
 	PlayBuff1_Discontinuity,
 	PlayBuff2_Discontinuity,
-	ToggleMonitor, //13
+	ToggleMonitor,
 	ToggleLooping1,
-	ToggleLooping2,
+	ToggleLooping2, //15
 	PlaySample1Changed_valid,
 	PlaySample2Changed_valid,
 	PlaySample1Changed_empty,
@@ -56,6 +56,8 @@ enum Flags {
 	skip_process_buttons,
 	ViewBlinkBank1,
 	ViewBlinkBank2,
+	PlayBankHover1Changed,
+	PlayBankHover2Changed,
 
 	NUM_FLAGS
 };
