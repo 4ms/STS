@@ -211,7 +211,7 @@ void audio_buffer_init(void)
 
 	load_all_banks(force_reload);
 
-	bank = next_enabled_bank(0xFF); //Find the first enabled bank
+	bank = next_enabled_bank(MAX_NUM_BANKS-1); //Find the first enabled bank
 	i_param[0][BANK] = bank;
 	i_param[1][BANK] = bank;
 
@@ -291,7 +291,7 @@ void toggle_reverse(uint8_t chan)
 		}
 	}
 	// Swap sample_file_curpos with cache_high or _low
-	// and move ->in to the equivlant address in play_buff
+	// and move ->in to the equivilant address in play_buff
 	// This gets us ready to read new data to the opposite end of the cache.
 
 	if (i_param[chan][REV])
@@ -307,15 +307,22 @@ void toggle_reverse(uint8_t chan)
 		play_buff[chan]->in = cache_map_pt[chan]; //cache_map_pt is the map of cache_low
 	}
 
-	//swap the endpos with the startpos
+	//Swap the endpos with the startpos
+	//This way, curpos is always moving towards endpos
+	//and away from startpos
 	t							= sample_file_endpos[chan];
 	sample_file_endpos[chan]	= sample_file_startpos[chan];
 	sample_file_startpos[chan]	= t;
 
-	res = goto_filepos(sample_file_curpos[chan]); //uses samplenum and banknum to find startOfData
+	//Seek the starting position in the file 
+	//This gets us ready to start playing from the new position
+	if (fil[chan].obj.id > 0)
+	{
+		res = goto_filepos(sample_file_curpos[chan]); //uses samplenum and banknum to find startOfData
 
-	if (res!=FR_OK)
-		g_error |= FILE_SEEK_FAIL;
+		if (res!=FR_OK)
+			g_error |= FILE_SEEK_FAIL;
+	}
 
 	 play_state[chan] = tplay_state;
 

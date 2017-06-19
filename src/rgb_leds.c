@@ -11,6 +11,7 @@
 #include "wav_recording.h"
 #include "res/LED_palette.h"
 #include "calibration.h"
+#include "button_knob_combo.h"
 
 #define BIG_PLAY_BUTTONS
 #define FROSTED_BUTTONS
@@ -36,6 +37,7 @@ extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 
 extern uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN];
 
+extern ButtonKnobCombo a_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 
 /*
@@ -183,6 +185,7 @@ void update_ButtonLEDs(void)
 {
 	uint8_t ButLEDnum;
 	uint8_t chan;
+	uint8_t bank_to_display;
 	//uint32_t tm=sys_tmr & 0x3FFF; //14-bit counter
 	//uint32_t tm_7 = sys_tmr & 0x7F; //7-bit counter
 	uint32_t tm_12 = sys_tmr & 0xFFF; //12-bit counter
@@ -243,60 +246,70 @@ void update_ButtonLEDs(void)
 			else
 			{
 				t = tm_16;
+				if (chan==2)
+					bank_to_display = i_param[chan][BANK];
+				else
+				if (a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
+					bank_to_display = a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
+				else
+				if (a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state == COMBO_ACTIVE)
+					bank_to_display = a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].hover_value;
+				else
+					bank_to_display = i_param[chan][BANK];
 
-				if (i_param[chan][BANK] <= 9) //solid color, no blinks
+				if (bank_to_display <= 9) //solid color, no blinks
 				{
-					set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1 );
+					set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1 );
 				}
 				else 
-				if (i_param[chan][BANK] <= 19) //one blink
+				if (bank_to_display <= 19) //one blink
 				{
 					if (	t < 0x1000) set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-10 );
+					else 				set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-10 );
 				}
 				else
-				if (i_param[chan][BANK] <= 29) //two blinks
+				if (bank_to_display <= 29) //two blinks
 				{
 					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-20 );
+					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-20 );
 					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-20 );
+					else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-20 );
 				}
 				else
-				if (i_param[chan][BANK] <= 39) //three blinks
+				if (bank_to_display <= 39) //three blinks
 				{
 					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-30 );
+					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
 					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-30 );
+					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
 					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-30 );
+					else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
 				}
 				else
-				if (i_param[chan][BANK] <= 49) //four blinks
+				if (bank_to_display <= 49) //four blinks
 				{
 					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-40 );
+					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
 					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-40 );
+					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
 					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-40 );
+					else if (t < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
 					else if (t < 0xA000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-40 );
+					else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
 				}
 				else
-				if (i_param[chan][BANK] <= 59) //five blinks
+				if (bank_to_display <= 59) //five blinks
 				{
 					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
 					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
 					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else if (t < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
 					else if (t < 0xA000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0xC000)  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else if (t < 0xC000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
 					else if (t < 0xD000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				  set_ButtonLED_byPalette(ButLEDnum, i_param[chan][BANK]+1-50 );
+					else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
 				}
 			}
 		}

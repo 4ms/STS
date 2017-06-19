@@ -6,11 +6,18 @@
 #include "edit_mode.h"
 #include "calibration.h"
 #include "bank.h"
+#include "button_knob_combo.h"
+#include "adc.h"
+
+extern ButtonKnobCombo a_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 
 enum ButtonStates button_state[NUM_BUTTONS];
 extern uint8_t flags[NUM_FLAGS];
 extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+
+extern int16_t old_i_smoothed_potadc[NUM_POT_ADCS];
+extern int16_t old_i_smoothed_cvadc[NUM_CV_ADCS];
 
 extern enum g_Errors g_error;
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
@@ -40,6 +47,11 @@ void Button_Debounce_IRQHandler(void)
 
 	uint16_t t;
 	uint8_t i;
+	uint8_t knob;
+	uint8_t combo_was_active;
+	ButtonKnobCombo *t_bkc;
+
+	uint8_t chan;
 	uint32_t but_read;
 	static uint32_t long_press[NUM_BUTTONS] = {0};
 	static uint32_t last_sys_tmr=0;
@@ -56,7 +68,7 @@ void Button_Debounce_IRQHandler(void)
 
 		for (i=0;i<NUM_BUTTONS;i++)
 		{
-			//Load the button's state
+			//Load each button's state
 			switch (i)
 			{
 				case Play1:
@@ -93,7 +105,9 @@ void Button_Debounce_IRQHandler(void)
 
 			State[i]=(State[i]<<1) | t;
 
-			//check for de-bounced down state
+			//
+			// DOWN state (debounced)
+			//
 			if (State[i]==0xff00) //1111 1111 0000 0000 = not pressed for 8 cycles , then pressed for 8 cycles
 			{
 				button_state[i] = DOWN;
@@ -102,30 +116,34 @@ void Button_Debounce_IRQHandler(void)
 					switch (i)
 					{
 						case Play1:
-							if (global_mode[EDIT_MODE])
-								save_exit_assignment_mode();
-							else {
-								if (!i_param[0][LOOPING]) 
-									flags[Play1But]=1;
-								clear_errors();
-							}
-							break;
-
 						case Play2:
 							if (global_mode[EDIT_MODE])
-								assign_sample_from_other_bank(i_param[1][BANK], i_param[1][SAMPLE]);
-							else 
 							{
-								if (!i_param[1][LOOPING]) 
-									flags[Play2But]=1;
+								if (i==Play1) save_exit_assignment_mode();
+								if (i==Play2) assign_sample_from_other_bank(i_param[1][BANK], i_param[1][SAMPLE]);
+							}
+							else {
+								if (!i_param[i-Play1][LOOPING]) 
+									flags[Play1But + (i-Play1)]=1;
 								clear_errors();
 							}
-							break;
+						break;
 
 						case Bank1:
-							break;
 						case Bank2:
-							break;
+							chan = i - Bank1;
+
+							//Store the pot values.
+							//We use this to determine if the pot has moved while the Bank button is down
+							a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].latched_value = old_i_smoothed_potadc[SAMPLE_POT*2];
+							a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].latched_value = old_i_smoothed_potadc[SAMPLE_POT*2 + 1];
+
+							//Reset the combo_state.
+							//We have to detect the knob as moving to make the combo ACTIVE
+							a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state = COMBO_INACTIVE;
+							a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state = COMBO_INACTIVE;
+						break;
+
 						case Rec:
 							break;
 						case RecBank:
@@ -145,8 +163,9 @@ void Button_Debounce_IRQHandler(void)
 				}
 			}
 
-			//Check for debounced up-state
-			//else if ((State[i] & 0xefff)==0xe0ff)
+			//
+			// UP state (debounced)
+			//
 			else if (State[i]==0xffff)
 			{
 				if (button_state[i] != UP)
@@ -155,41 +174,55 @@ void Button_Debounce_IRQHandler(void)
 					{
 						switch (i)
 						{
-
 							case Bank1:
-								flags[PlayBank1Changed] = 1;
-								break;
-
 							case Bank2:
-								flags[PlayBank2Changed] = 1;
-								break;
+								chan = i - Bank1;	
+
+								combo_was_active = 0;
+								for (knob=0;knob<2;knob++)
+								{
+									t_bkc = &a_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
+
+									if (t_bkc->combo_state == COMBO_ACTIVE)
+									{
+										//Latch the pot+CV value
+										//This allows us to keep using this value until either the pot or CV changes
+										t_bkc->latched_value = old_i_smoothed_potadc[SAMPLE_POT*2 + knob] + old_i_smoothed_cvadc[SAMPLE_CV*2 + knob];
+
+										//Change our combo state to latched
+										t_bkc->combo_state = COMBO_LATCHED;
+
+										//Set the bank parameter to the hover value
+										i_param[chan][BANK] = t_bkc->hover_value;
+
+										combo_was_active = 1;
+									}
+								}
+
+								if (!combo_was_active)
+									flags[PlayBank1Changed + chan] = 1;
+								
+							break;
 
 							case Rec:
 								if (button_state[Rec]<SHORT_PRESSED)
 									flags[RecTrig]=1;
-								break;
+							break;
 
 							case RecBank:
 								flags[RecBankChanged] = 1;
 								if (i_param[2][BANK] >= (MAX_NUM_BANKS-1))	i_param[2][BANK]=0;
 								else										i_param[2][BANK]++;
-								break;
+							break;
 
 							case Play1:
-								if (!global_mode[EDIT_MODE])
-								{
-									if (i_param[0][LOOPING] && button_state[Play1] == DOWN) 
-										flags[Play1But] = 1; //if looping, stop playing when lifted (assuming it's a short press)
-								}
-								break;
-
 							case Play2:
 								if (!global_mode[EDIT_MODE])
 								{
-									if (i_param[1][LOOPING] && button_state[Play2] == DOWN) 
-										flags[Play2But] = 1;
+									if (i_param[i - Play1][LOOPING] && button_state[i - Play1] == DOWN) 
+										flags[Play1But + i] = 1; //if looping, stop playing when lifted (assuming it's a short press)
 								}
-								break;
+							break;
 
 							case Rev1:
 								if (global_mode[EDIT_MODE])
@@ -228,7 +261,9 @@ void Button_Debounce_IRQHandler(void)
 			}
 
 
-			//Check for long presses
+			//
+			// Short/Medium/Long presses
+			//
 
 			if (State[i]==0xe000) //pressed for 16 cycles
 			{
@@ -312,7 +347,9 @@ void Button_Debounce_IRQHandler(void)
 			}
 		}
 
-		//Check for multi-press holds
+		//
+		// Multi-button presses
+		//
 		if (!flags[skip_process_buttons])
 		{
 
