@@ -507,7 +507,7 @@ uint8_t fopen_checked(FIL *fp, char* filepath)
 	else
 	{
 		// close file
-		// fclose(fp);
+		// f_close(fp);
 
 		// ToDo: this can probably be removed
 		// clear filename
@@ -549,7 +549,7 @@ uint8_t fopen_checked(FIL *fp, char* filepath)
 					// return "1: path was incorrect, and corrected" 
 					// exit function 
 					if(res == FR_OK) return(1);
-					// else fclose(fp);
+					// else f_close(fp);
 				}
 
 				// Otherwise, stop checking folders 
@@ -577,7 +577,7 @@ uint8_t fopen_checked(FIL *fp, char* filepath)
 				{
 
 					// close file
-					fclose(fp);
+					f_close(fp);
 
 					// return "2: path couldn't be corrected"
 					// exit function 
