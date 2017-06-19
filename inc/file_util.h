@@ -21,7 +21,7 @@ void 		str_cat(char *dest, char *srca, char *srcb);
 uint32_t 	str_len(char* str);
 char * 		str_rstr(char *string, char find, char *path);
 uint8_t 	is_wav(char *string);
-void 		str_tok(char *string, char find, char *tokk);
+void 		str_tok(char *in_string, char find, char *tokk);
 uint32_t 	str_xt_int(char *string);
 uint32_t 	intToStr(uint32_t x, char *str, uint32_t d);
 uint8_t 	str_cmp(char *a, char *b);

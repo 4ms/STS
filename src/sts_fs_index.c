@@ -205,7 +205,11 @@ uint8_t load_sampleindex_file(void)
 			// ToDo: see if computing repeated str_cmp upstream helps saving time
 			if (!loaded_header)
 			{
-				if 		( str_cmp(token,"--------------------") && !arm_bank) {arm_bank++; 					 			str_tok(read_buffer,' ', token);}
+				if 		( str_cmp(token,"--------------------") && !arm_bank) 
+				{
+					arm_bank++; 					 			
+					str_tok(read_buffer,' ', token);
+				}
 				else if	(!str_cmp(token,"--------------------") &&  arm_bank) {cur_bank=color_to_bank(token); 			str_tok(read_buffer,' ', token);}
 				else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; 					 			str_tok(read_buffer,' ', token);}
 
