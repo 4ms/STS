@@ -225,7 +225,8 @@ void str_tok(char *string, char find, char *tokk)
   char    *tokn;
   char    t_tokn[_MAX_LFN+1];
   
-  if (string[0]=='\0'){return(0);}
+  // if (string[0]=='\0'){return(0);}
+  if (string[0]=='\0'){tokn[0]='\0';}
   else{
     tokn = t_tokn;
     str_cpy(tokn, string);
@@ -238,7 +239,8 @@ void str_tok(char *string, char find, char *tokk)
       }
     }
 
-    if(!flag){string[0]=0; return (tokn);}
+    // if(!flag){string[0]=0; return (tokn);}
+    if(!flag){tokn[0]='\0';}
     else {
       tokn[str_len(string)-str_len(cp)]=0;
       str_cpy(string, cp+1);

@@ -254,6 +254,7 @@ uint8_t load_sampleindex_file(void)
 						cur_sample=num_buff-1;
 						
 						// open sample file
+						// FixMe: Temporarily disabled fopen_checked()
 						// fopen_flag = fopen_checked(&temp_wav_file, sample_path);
 						f_open(&temp_wav_file,sample_path, FA_READ);
 						fopen_flag=0;
