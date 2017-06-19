@@ -1,5 +1,5 @@
 /*
- * sts_filesystem.h
+ * bank.h
  *
  *  Created on: Jan 9, 2017
  *      Author: design
@@ -21,6 +21,8 @@ uint8_t is_bank_enabled(uint8_t bank);
 void 	enable_bank(uint8_t bank);
 void 	disable_bank(uint8_t bank);
 
+uint8_t get_bank_color_digit(uint8_t bank);
+uint8_t get_bank_blink_digit(uint8_t bank);
 
 
 #endif /* INC_BANK_H */

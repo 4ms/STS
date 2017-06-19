@@ -24,8 +24,8 @@
 
 enum Flags {
 	PlaySample1Changed,
-	PlayBank1Changed,
 	PlaySample2Changed,
+	PlayBank1Changed,
 	PlayBank2Changed,
 	RecSampleChanged,
 	RecBankChanged, //5
