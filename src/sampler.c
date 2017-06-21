@@ -209,7 +209,6 @@ void audio_buffer_init(void)
 	else
 		force_reload = 0;
 
-	flags[skip_process_buttons] = 2;
 
 	load_all_banks(force_reload);
 

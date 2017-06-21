@@ -150,12 +150,16 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 
 
 
-
+//Returns 1 if string begins with (or is equal to) prefix
+//Returns 0 if not
+//E.g.:
+// string=ABCD, prefix=ABC -->> returns 1
+// string=ABCD, prefix=ABCD -->>> returns 1
+// string=ABCD, prefix=ABCDE -->>> returns 0
+// string=ABCD, prefix=anything except {A, AB, ABC, ABCD} -->> returns 0
 uint8_t str_startswith(const char *string, const char *prefix)
 {
-   // if (str_len(string) < str_len(prefix)) return 0;
-
-    while (*prefix)
+    while (*prefix && *string)
     {
         if (*prefix++ != *string++)
             return 0;
@@ -301,10 +305,16 @@ void str_tok(char *in_string, char find, char *tokk)
 }
 
 //Copy string dest <= src
+//limit to 255 characters, which reduces harm from bad addresses
+//
 void str_cpy(char *dest, char *src)
 {
-  while(*src!=0)
+  uint32_t i=0;
+
+  while(*src!=0 && i<255){
     *dest++ = *src++;
+    i++;
+  }
 
   *dest=0;
 }

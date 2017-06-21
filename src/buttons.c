@@ -173,9 +173,9 @@ void Button_Debounce_IRQHandler(void)
 			//
 			else if (State[i]==0xffff)
 			{
-				if (button_state[i] != UP)
+				if (!flags[skip_process_buttons])
 				{
-					if (!flags[skip_process_buttons])
+					if (button_state[i] != UP)
 					{
 						switch (i)
 						{
@@ -399,11 +399,11 @@ void Button_Debounce_IRQHandler(void)
 			}
 		}
 
+		if (!flags[skip_process_buttons])
+		{
 		//
 		// Multi-button presses
 		//
-		if (!flags[skip_process_buttons])
-		{
 
 			if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED)
 			{
