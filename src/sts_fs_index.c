@@ -157,19 +157,14 @@ uint8_t load_sampleindex_file(void)
 
 	FIL 		temp_file, temp_wav_file;
 	FRESULT 	res;
-	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1];
+	uint8_t		head_load;
+	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1], file_name[_MAX_LFN+1];
 	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_path=0, arm_data=0, loaded_header=0, read_name=0;
 	uint32_t	num_buff=UINT32_MAX;
-	// char 		*token;
-	// char 		t_token[_MAX_LFN+1];
 	char 		token[_MAX_LFN+1];
 	uint8_t		fopen_flag	  = 0;
 	uint8_t		rewrite_index = 0;
 	uint8_t 	force_reload  = 2;
-
-	// read_buffer[0]='\0'; 
-	// folder_path[0]='\0'; 
-	// sample_path[0]='\0';
 
 	// Open sample index file
 	res = f_open(&temp_file,"sample_index.txt", FA_READ);
@@ -181,9 +176,6 @@ uint8_t load_sampleindex_file(void)
 	// write cached information of the file  to the volume	
 	f_sync(&temp_file);
 	
-	//
-	// token = t_token;
-
 	// until we reach the eof
 	while (!f_eof(&temp_file))
 	{
@@ -226,8 +218,9 @@ uint8_t load_sampleindex_file(void)
 			else if (!str_cmp(token,"--------------------")&&(read_name==1)) 
 			{
 
-				// update file path with file name
-				str_cat(sample_path ,folder_path, token);
+				// save file name
+				str_cpy(file_name, token);
+				// str_cat(sample_path ,folder_path, token);
 
 				token[0] = '\0'; 
 				read_name++;
@@ -252,19 +245,21 @@ uint8_t load_sampleindex_file(void)
 					{
 						// Update sample bank number
 						cur_sample=num_buff-1;
+
+						// ToDo: Add bank number check here
+						// check requested bank number against what's already used and update accordingly
 						
 						// open sample file
-						// FixMe: Temporarily disabled fopen_checked()
-						// fopen_flag = fopen_checked(&temp_wav_file, sample_path);
-						f_open(&temp_wav_file,sample_path, FA_READ);
-						fopen_flag=0;
+						fopen_flag = fopen_checked(&temp_wav_file, folder_path, file_name);
 
 						// if file was opened
 						if (fopen_flag<2)
 						{
+							// At least a sample was loaded
+							force_reload = 0;
 
 							// update samples structure with file path
-							str_cpy(samples[cur_bank][cur_sample].filename, sample_path);
+							str_cpy(samples[cur_bank][cur_sample].filename, file_name);
 
 							// if file was opened, but not from given path
 							if (fopen_flag==1)
@@ -273,12 +268,25 @@ uint8_t load_sampleindex_file(void)
 								// ... at the end of index read
 								rewrite_index =1;
 							}
-							
-							// At least a sample was loaded
-							force_reload = 0;
 
 							// load sample information from .wav header	
-							load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); // res=
+							head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
+							
+							// if information couldn't load, clear filename and request index
+							// ... rewrite so entry is removed
+							if (head_load!=FR_OK)
+							{
+								// write empty filename to samples struct element
+								// ... so this sample is skipped at the next index write
+								samples[cur_bank][cur_sample].filename[0]='\0';
+
+								// request to rewrite index (from samples struct) 
+								// ... at the end of index read
+								rewrite_index =1;
+
+								// skip loading sample play information
+								arm_data=0; token[0] = '\0'; read_name = 1; break;						
+							}								
 
 							// close wav file
 							f_close(&temp_wav_file);

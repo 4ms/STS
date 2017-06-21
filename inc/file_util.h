@@ -19,7 +19,7 @@ uint8_t 	str_startswith(const char *string, const char *prefix);
 void 		str_cpy(char *dest, char *src);
 void 		str_cat(char *dest, char *srca, char *srcb);
 uint32_t 	str_len(char* str);
-char * 		str_rstr(char *string, char find, char *path);
+char *		str_rstr(char *string, char split_char, char *before_split);
 uint8_t 	is_wav(char *string);
 void 		str_tok(char *in_string, char find, char *tokk);
 uint32_t 	str_xt_int(char *string);

@@ -476,115 +476,146 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 // Enhanced f_open
 // takes file path as input
 // tries to open file with given path
-// then tries in other paths if failed with given path
+// then tries in alternate paths if failed with given path
 // returns flag indicating:
 //		- 0: path is correct
 //		- 1: path was incorrect, and corrected
 //		- 2: path couldn't be corrected
-uint8_t fopen_checked(FIL *fp, char* filepath)
+uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 {
-	uint8_t 	flag;
-	FRESULT 	res, res_dir;
-	char 		file_only[_MAX_LFN+1];
-	char 		filepath_attempt[_MAX_LFN];
-	char* 		col;
-	char* 		removed_path;
-	char 		removed_path_ptr[_MAX_LFN+1];
-	uint8_t 	try_folders=1;
-	uint8_t		try_root=1;
-	uint8_t 	i=0;
-
-	char 		foldername[_MAX_LFN];
 	DIR 		rootdir;
+	FRESULT 	res, res_dir;
+	uint8_t 	flag;
+	char 		fullpath[_MAX_LFN+1];	
+	// char 		fname[_MAX_LFN+1];	
+	char 		dumpedpath[_MAX_LFN+1];	
+	char* 		fileonly;
+	char 		fileonly_ptr[_MAX_LFN+1];	
+	uint8_t 	try_folders	= 1;
+	uint8_t		try_root	= 1;
+	uint8_t 	i = 0;
+	char*		src;
 
-	res = f_open(fp, filepath, FA_READ);
+	// str_cpy(fname,filename);
+
+	// OPEN FILE FROM PROVIDED FOLDER	
+
+	// initialize full path to file
+	str_cat(fullpath, folderpath, filename);
+
+	// try to open full path
+	res = f_open(fp, fullpath, FA_READ);
 	f_sync(fp);
 
 	// if file loaded properly, move on
-	if (res==FR_OK) return(0);
-	
+	if (res==FR_OK)
+	{					
+		str_cpy(filename, fullpath); 
+		return(0);
+	}
+
 	// otherwise...
 	else
 	{
 		// close file
-		// f_close(fp);
+		f_close(fp);
+		
+		// remove first slash in path if there is one
+		// if(filename[0]=='\\')
+		// {
+		// 	str_cpy(src, filename);
+		// 	 *src++;
+		// 	  while(*src!=0){
+		// 	  	*filename++ = *src++;
+		// 	  }
+		// 	  *filename=0;
+		// }
 
-		// ToDo: this can probably be removed
-		// clear filename
-		file_only[0]='\0';
 
-		// extract file name
-		removed_path 	= removed_path_ptr;
-		str_cpy(file_only, str_rstr(filepath, '/', removed_path));
 
+		// OPEN FILE FROM ROOT - AS WRITTEN IN INDEX
+		// try opening file supposing its path is in the name field
+		res = f_open(fp, filename, FA_READ);
+		f_sync(fp);	
+
+		// if file was found
+		// return 0: path is correct (we don't want to rewrite index for that) 
+		// exit function 
+		if (res==FR_OK) return(0);
+				
+	
+		// OPEN FILE FROM ROOT - FILE.WAV ONLY
+		// ...Otherwise, Remove any existing path before wav file name
+		fileonly = fileonly_ptr;
+		fileonly = str_rstr(filename, '/', dumpedpath); // FixMe: we can prob dump in folderpath since it gets erased afterwards
+
+		// if there was a path before filename
+		if (fileonly!=0) 
+		{
+	
+			// try opening file name only, from root
+			res = f_open(fp, fileonly, FA_READ);
+			f_sync(fp);	
+			
+			// if file was found
+			// return 0: path is correct (we don't want to rewrite index for that) 
+			// exit function 
+			if (res==FR_OK) return(0);
+		}
+
+		// if file wasn't found 
 		rootdir.obj.fs = 0; //get_next_dir() needs us to do this, to reset it
 
+		// OPEN FILE FROM SD CARD FOLDERS
 		// Until file opens properly
 		while (res!=FR_OK)
 		{
-			// clear filepath
-			filepath[0]='\0';
+			
+			// try every folder in the folder tree
+			// ... faster this way (don't have to check for alternate spellings/upper-lower case etc...)
+			// ... there shouldn't be any duplicate files within the folder tree anyway
+			// ... since they're handled with the sample index
 
-			// try every folder in the folder tree (alphabetically?)
-			// ... faster this way
-			// ... there shouldn't be any duplicate files with the sample index
-			if (try_folders)
-			{
+			// clear folder path
+			folderpath[0]='\0';
 
-				// Check for the next folder and set it as the file path
-				res_dir = get_next_dir(&rootdir, "", filepath);
+			// find next folder path
+			res_dir = get_next_dir(&rootdir, "", folderpath);
 
-				// if another folder was found
-				if (res_dir == FR_OK)
-				{	
-					// concatenate file path and name
-					str_cat	(filepath, filepath, "/");
-					str_cat	(filepath, filepath, file_only);
+			// if another folder was found
+			if (res_dir == FR_OK)
+			{	
+				// concatenate folder path and file name
+				str_cat	(folderpath, folderpath, "/");
+				str_cat	(fullpath, folderpath, filename);
 
-					// try opening file from folder
-					res = f_open(fp, filepath, FA_READ);
-					f_sync(fp);					
-					
-					// if file was found
-					// return "1: path was incorrect, and corrected" 
-					// exit function 
-					if(res == FR_OK) return(1);
-					// else f_close(fp);
-				}
-
-				// Otherwise, stop checking folders 
-				else try_folders=0; 
-			}
-
-
-			// ... then try root path
-			else if (try_root)
-			{
-				// update filepath
-				str_cat(filepath, "/", file_only);
+				// try opening file from new path
+				res = f_open(fp, fullpath, FA_READ);
+				f_sync(fp);					
 				
-				// try to open current file path
-				res = f_open(fp, filepath, FA_READ);
-				f_sync(fp);			
-
 				// if file was found
 				// return "1: path was incorrect, and corrected" 
 				// exit function 
-				if 		(res == FR_OK) return(1);
-				
-				// if file wasn't found 
-				else if (res != FR_OK)
+				if(res == FR_OK) 
 				{
+					str_cpy(filename, fullpath); 
+					return(1);
+				}
 
-					// close file
-					f_close(fp);
-
-					// return "2: path couldn't be corrected"
-					// exit function 
-					return(2);
-				} 
+				// ... otherwise, close file
+				else f_close(fp);
 			}
+
+			// Otherwise, stop searching 
+			else
+			{
+				// close file
+				f_close(fp);
+
+				// return "2: path couldn't be corrected"
+				// exit function 
+				return(2);
+			}  
 		}
 	}
-	return(0);
 }
