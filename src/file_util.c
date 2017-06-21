@@ -175,23 +175,23 @@ uint32_t str_len(char* str)
 	return(i);
 }
 
-//Returns the tail of a string, following the splitting char
-//Truncates string at the splitting char, and copies that into path
-char *str_rstr(char *string, char find, char *path)
+// Returns the tail of a string following the last splitting char "split_char" that was found in "string" input
+// ...copies everything found before split_char (included) into "before_split"
+char *str_rstr(char *string, char split_char, char *before_split)
 {
 
   char *cp;
   char *rp;
   rp = 0;
-  str_cpy(path, string);
+  str_cpy(before_split, string);
 
   for (cp = string; *cp!=0; cp++)
   {
-    if (*cp == find) rp = cp+1;
+    if (*cp == split_char) rp = cp+1;
   }
   if (rp==0) return 0; //or maybe string?
   else {
-    path[str_len(path)-str_len(rp)]=0;
+    before_split[str_len(before_split)-str_len(rp)]=0;
     return (rp);
   }
 }
