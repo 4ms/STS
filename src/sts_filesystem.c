@@ -383,6 +383,34 @@ uint8_t load_all_banks(uint8_t force_reload)
 }
 
 
+//Tries to figure out the bank path
+//
+uint8_t get_banks_path(uint8_t sample, uint8_t bank, char *path)
+{
+	//Get path to bank's folder
+	//
+	//First try using the path from the current sample
+	//
+	if (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
+	{
+		//if that doesn't have a path, go through the whole bank until we find a path
+		sample = 0;
+		while (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
+		{
+			if (++sample >= NUM_SAMPLES_PER_BANK)
+			{
+				//No path found (perhaps no samples in the bank?)
+				//Set path to the default bank name
+				bank_to_color(bank, path);
+				return(0); //not found
+			}
+		}
+	}
+
+	return(1);//found
+}
+
+
 uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 {
 	uint8_t i;

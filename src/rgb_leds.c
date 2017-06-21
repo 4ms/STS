@@ -39,6 +39,7 @@ extern uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN];
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
+extern uint8_t 				cur_assign_bank;
 
 /*
  * init_buttonLEDs()
@@ -229,11 +230,13 @@ void update_ButtonLEDs(void)
 	{
 
 		//BANK lights
-		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED)
+		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
+			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE]))
 		{
-			if (ButLEDnum == Bank1ButtonLED) chan = 0;
-			else if (ButLEDnum == Bank2ButtonLED) chan = 1;
-			else chan = 2; //REC channel
+			if 		(ButLEDnum == Bank1ButtonLED) 	chan = 0;
+			else if (ButLEDnum == Bank2ButtonLED) 	chan = 1;
+			else if (ButLEDnum == RecBankButtonLED)	chan = 2;
+			else chan = 3;
 
 #ifdef DEBUG_SETBANK1RGB
 			if (chan==0 && global_mode[EDIT_MODE]) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0]/4, i_smoothed_potadc[1]/4, i_smoothed_potadc[2]/4);
@@ -244,7 +247,7 @@ void update_ButtonLEDs(void)
 				set_ButtonLED_byPalette(ButLEDnum, OFF);
 			}
 			else
-			if (flags[PlayBankHover1Changed + chan])
+			if (chan<3 && flags[PlayBankHover1Changed + chan])
 			{
 				flags[PlayBankHover1Changed + chan]--;
 				set_ButtonLED_byPalette(ButLEDnum, CYANER);
@@ -252,8 +255,11 @@ void update_ButtonLEDs(void)
 			else
 			{
 				t = tm_16;
-				if (chan==2)
-					bank_to_display = i_param[chan][BANK];
+				if (chan==2) //REC button
+					bank_to_display = i_param[2][BANK];
+				else
+				if (chan==3) //Rev1 button in ASSIGN_MODE
+					bank_to_display = cur_assign_bank;
 				else
 				if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
 					bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
@@ -488,9 +494,9 @@ void update_ButtonLEDs(void)
 			if (global_mode[EDIT_MODE])
 			{
 				if (chan==0)
-					if (flags[AssigningEmptySample])
-						set_ButtonLED_byPalette(ButLEDnum, tm_13>0x1000 ? RED : OFF);//set_ButtonLED_byPaletteFade(ButLEDnum, RED, OFF, tri_13);
-					else
+					// if (flags[AssigningEmptySample])
+					// 	set_ButtonLED_byPalette(ButLEDnum, tm_13>0x1000 ? RED : OFF);//set_ButtonLED_byPaletteFade(ButLEDnum, RED, OFF, tri_13);
+					// else
 						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, GREEN, tri_14);
 				else
 						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, RED, tri_14);

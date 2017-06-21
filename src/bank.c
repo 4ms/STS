@@ -13,6 +13,24 @@ extern enum g_Errors g_error;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
+//
+//Returns the sample number inside the given bank, whose filename matches the given filename
+//If not found, returns 0xFF
+//
+uint8_t find_filename_in_bank(uint8_t bank, char *filename)
+{
+	uint8_t sample;
+
+	if (bank>=MAX_NUM_BANKS) return 0xFF; //invalid bank
+	if (!is_bank_enabled(bank)) return 0xFF; //bank not enabled
+
+	for (sample=0; sample<NUM_SAMPLES_PER_BANK; sample++)
+	{
+		if (str_cmp(samples[bank][sample].filename, filename)) return sample;
+	}
+
+	return(0xFF); //not found
+}
 
 
 uint8_t bank_to_color_string(uint8_t bank, char *color)
@@ -156,6 +174,13 @@ uint8_t color_to_bank(char *color)
 	// else if (str_cmp(color, "Orange-SAVE")) return(14);
 	// else if (str_cmp(color, "Violet-SAVE")) return(15);
 	// return(200);
+}
+
+uint8_t next_bank(uint8_t bank)
+{
+	bank++;
+	if (bank >= MAX_NUM_BANKS)	return(0);
+	return (bank);
 }
 
 

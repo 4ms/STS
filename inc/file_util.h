@@ -25,6 +25,7 @@ void 		str_tok(char *in_string, char find, char *tokk);
 uint32_t 	str_xt_int(char *string);
 uint32_t 	intToStr(uint32_t x, char *str, uint32_t d);
 uint8_t 	str_cmp(char *a, char *b);
+char *		str_rstr_x(char *string, char splitchar, char *path);
 
 
 #endif /* INC_FILE_UTIL_H_ */

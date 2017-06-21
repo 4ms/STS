@@ -209,6 +209,8 @@ void audio_buffer_init(void)
 	else
 		force_reload = 0;
 
+	flags[skip_process_buttons] = 2;
+
 	load_all_banks(force_reload);
 
 	bank = next_enabled_bank(MAX_NUM_BANKS-1); //Find the first enabled bank
@@ -222,6 +224,7 @@ void audio_buffer_init(void)
 
 	flags[PlaySample1Changed] = 1;
 	flags[PlaySample2Changed] = 1;
+
 }
 
 //
@@ -604,8 +607,6 @@ void check_change_sample(void)
 	if (flags[PlaySample1Changed])
 	{
 		flags[PlaySample1Changed]=0;
-		//can_restart[0] = 0;
-		//make cache_* = 0
 
 		if (samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ].filename[0] == 0) //no file: fadedown or remain silent
 		{
@@ -614,6 +615,7 @@ void check_change_sample(void)
 			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
 			if (flags[PlaySample1Changed_empty]==0)
 				flags[PlaySample1Changed_empty] = 1;
+
 			flags[PlaySample1Changed_valid] = 0;
 	
 
@@ -622,8 +624,8 @@ void check_change_sample(void)
 			else
 				play_state[0] = SILENT;
 
-			if (global_mode[EDIT_MODE])
-				flags[AssigningEmptySample] = 1;
+			// if (global_mode[EDIT_MODE])
+			// 	flags[AssigningEmptySample] = 1;
 
 		}
 		else
@@ -641,11 +643,8 @@ void check_change_sample(void)
 			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
 				play_state[0] = PLAY_FADEDOWN;
 
-			if (global_mode[EDIT_MODE])
-			{
-				find_current_sample_in_assign(&samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]);
-				flags[AssigningEmptySample] = 0;
-			}
+			// if (global_mode[EDIT_MODE])
+			// 	flags[AssigningEmptySample] = 0;
 		}
 
 	}

@@ -15,18 +15,19 @@
 
 
 
-#define MAX_ASSIGNED 32
-uint8_t cur_assigned_sample_i;
-uint8_t end_assigned_sample_i;
-uint8_t original_assigned_sample_i;
-Sample t_assign_samples[MAX_ASSIGNED];
-uint8_t cur_assign_bank=0xFF;
+uint8_t 				cur_assign_bank=0xFF;
+DIR 					assign_dir;
+enum AssignmentStates 	cur_assign_state=ASSIGN_OFF;
+char 					cur_assign_bank_path[_MAX_LFN];
+
+Sample					sample_undo_buffer;
+uint8_t 				cur_assigned_sample_i;
+
+
 
 uint8_t	cached_looping;
 uint8_t cached_rev;
 uint8_t cached_play_state;
-// uint8_t lock_start;
-// uint8_t lock_length;
 uint8_t scrubbed_in_edit;
 
 
@@ -36,165 +37,195 @@ extern uint8_t 	flags[NUM_FLAGS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
-extern enum PlayStates play_state				[NUM_PLAY_CHAN];
+extern enum PlayStates play_state[NUM_PLAY_CHAN];
 
 
-uint8_t load_samples_to_assign(uint8_t bank)
+
+
+uint8_t enter_assignment_mode(void)
 {
-	uint32_t i;
-	uint32_t sample_num;
-	FIL temp_file;
 	FRESULT res;
-	DIR dir;
-	char path[10];
-	char tname[_MAX_LFN+1];
-	char path_tname[_MAX_LFN+1];
 
-	//if (bank >= MAX_NUM_REC_BANKS)	bank -= MAX_NUM_REC_BANKS;
+	// Return 1 if we've already entered assignment_mode
+	if (global_mode[ASSIGN_MODE]) return 1;
 
-	sample_num=0;
-	i = bank_to_color(bank, path);
+	//Enter assignment mode
 
-	res = f_opendir(&dir, path);
-	if (res==FR_NO_PATH)	return(0);
-	//ToDo: check for variations of capital letters (or can we just check the short fname?)
+	global_mode[ASSIGN_MODE] = 1;
 
-	if (res==FR_OK)
-	{
-		tname[0]=0;
+	//Find channel 1's bank's path
+	get_banks_path(i_param[0][SAMPLE], i_param[0][BANK], cur_assign_bank_path);
 
-		while (sample_num < MAX_ASSIGNED)
-		{
-			res = find_next_ext_in_dir(&dir, ".wav", tname);
-			if (res!=FR_OK) break;
+	//Open the directory
+	res = f_opendir(&assign_dir, cur_assign_bank_path);
+	if (res==FR_NO_PATH) return(0); //unable to enter assignment mode
 
-			i = str_len(path);
-			str_cpy(path_tname, path);
-			path_tname[i]='/';
-			str_cpy(&(path_tname[i+1]), tname);
+	cur_assign_state = ASSIGN_UNUSED;
 
-			// ToDo: save all sample paths to variable
-			
-			res = f_open(&temp_file, path_tname, FA_READ);
-			f_sync(&temp_file);
+	cur_assign_bank = i_param[0][BANK];
 
-			if (res==FR_OK)
-			{
-				res = load_sample_header(&t_assign_samples[sample_num], &temp_file);
+	save_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
 
-				if (res==FR_OK)
-				{
-					str_cpy(t_assign_samples[sample_num++].filename, path_tname);
-				}
-
-			}
-			f_close(&temp_file);
-		}
-		f_closedir(&dir);
-
-		//Special try again using root directory for first bank
-		if (bank==0 && sample_num < MAX_ASSIGNED)
-		{
-			res = f_opendir(&dir, "/");
-			if (res==FR_OK)
-			{
-				tname[0]=0;
-				while (sample_num < NUM_SAMPLES_PER_BANK && res==FR_OK)
-				{
-					res = find_next_ext_in_dir(&dir, ".wav", tname);
-					if (res!=FR_OK) break;
-
-					res = f_open(&temp_file, tname, FA_READ);
-					f_sync(&temp_file);
-
-					if (res==FR_OK)
-					{
-						res = load_sample_header(&t_assign_samples[sample_num], &temp_file);
-
-						if (res==FR_OK)
-						{
-							str_cpy(t_assign_samples[sample_num++].filename, tname);
-						}
-					}
-					f_close(&temp_file);
-				}
-				f_closedir(&dir);
-			}
-		}
-
-
-	}
-	else
-	{
-		g_error=CANNOT_OPEN_ROOT_DIR;
-		return(0);
-	}
-
-	return(sample_num);
+	return 1;
 }
 
-uint8_t find_current_sample_in_assign(Sample *s)
+void save_exit_assignment_mode(void)
 {
-	uint8_t i;
+	FRESULT res;
 
-	original_assigned_sample_i = 0xFF;//error, not found
+	check_enabled_banks(); //disables a bank if we cleared it out
 
-	for (i=0; i<end_assigned_sample_i; i++)
-	{
-		if (str_cmp(t_assign_samples[i].filename, s->filename))
-		{
-			original_assigned_sample_i = i;
-			break;
-		}
-	}
+	res = write_sampleindex_file();
 
-	if (original_assigned_sample_i == 0xFF)
-		return(1); //fail
-
-	cur_assigned_sample_i = original_assigned_sample_i;
-	return(0);
+	if (res!=FR_OK) {g_error|=CANNOT_WRITE_INDEX; check_errors();}
+//	else
+//		flags[Animate_Good_Save] = 16;
 
 }
 
 
-void enter_assignment_mode(void)
+
+//Find the next file in the folder, 
+//and when we get to the end we go to the next bank
+//and after that we load the original file name
+//then continue looking for the next wav file
+//The benefit of this method would be that we aren't just limited to 32 samples per folder, and it uses less memory
+uint8_t next_unassigned_sample(void)
 {
+	uint8_t is_file_found, file_is_in_bank;
+	char filename[_MAX_LFN];
+	char filepath[_MAX_LFN];
+	FRESULT res;
+	FIL temp_file;
 	uint8_t i;
 
-	//Loads first 32 sample files in a folder into an assignment array
 
-	if (cur_assign_bank != i_param[0][BANK])
+	play_state[0]=SILENT;
+	play_state[1]=SILENT;
+
+	//
+	//Search for files in the bank we are currently checking (cur_assign_dir)
+	//
+	//First, go through all files that aren't being used in this bank
+	//Then, go through the remaining files in the directory
+	//
+
+	is_file_found = 0;
+	while (!is_file_found)
 	{
-		//force us to be on a non -SAVE bank
-		// if (i_param[0][BANK] >= MAX_NUM_BANKS)
-		// {
-		// 	do i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
-		// 	while (i_param[0][BANK] >= MAX_NUM_BANKS);
+		res = find_next_ext_in_dir(&assign_dir, ".wav", filename);
 
-		// 	flags[PlayBank1Changed] = 1;
-		// }
+		if (res!=FR_OK && res!=0xFF) return(0); //error, no new file assigned
 
-		end_assigned_sample_i = load_samples_to_assign(i_param[0][BANK]);
-
-		if (end_assigned_sample_i)
+		if (res==0xFF) //no more .wav files found
 		{
-			//find the current sample in the t_assigned_samples array
-			i = find_current_sample_in_assign(&(samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ]));
-			if (i)	{flags[AssigningEmptySample] = 1;}
+			if (cur_assign_state==ASSIGN_UNUSED)
+			{
+				//Hit the end of the directory: 
+				//Go through the dir again, looking for used samples
 
-			//Add a blank/erase sample at the end
-			t_assign_samples[end_assigned_sample_i].filename[0] = 0;
-			t_assign_samples[end_assigned_sample_i].sampleSize = 0;
-			end_assigned_sample_i ++;
+				//Reset directory
+				f_opendir(&assign_dir, "");
 
-			cur_assigned_sample_i = original_assigned_sample_i;
-			cur_assign_bank = i_param[0][BANK];
+				cur_assign_state=ASSIGN_USED;
+				continue;
+			} 
+			else
+			{
+				//Hit the end of the directory:
+				//Try the next dir
+				cur_assign_bank = next_enabled_bank(cur_assign_bank);
 
-		} else
-		{
-			flags[AssignModeRefused] = 4;
+				//Todo: test if cur_assign_bank is now equal to i_param[0][BANK], meaning we've searched all the enabled bank folders
+				//Now start looking for folders which aren't the names of banks yet
+
+				get_banks_path(0, cur_assign_bank, cur_assign_bank_path);
+
+				res = f_opendir(&assign_dir, cur_assign_bank_path);
+				if (res==FR_NO_PATH) return(0);
+
+				cur_assign_state=ASSIGN_UNUSED;
+				continue;
+			}
 		}
+
+		//.wav file was found:
+		//Add the path the beginning of the filename
+		
+		i = str_len(cur_assign_bank_path);
+		str_cpy(filepath, cur_assign_bank_path);
+		filepath[i]='/';
+		str_cpy(&(filepath[i+1]), filename);
+
+		//See if the file already is assigned to a sample slot in the current bank
+		if (find_filename_in_bank(cur_assign_bank, filepath) == 0xFF)	file_is_in_bank = 0;
+		else															file_is_in_bank = 1;
+
+		if (	(cur_assign_state==ASSIGN_UNUSED && !file_is_in_bank) \
+			|| 	(cur_assign_state==ASSIGN_USED && file_is_in_bank))
+		{
+			is_file_found = 1;
+		}
+
 	}
+
+	if (is_file_found)
+	{
+		res = f_open(&temp_file, filepath, FA_READ);
+		f_sync(&temp_file);
+
+		if (res==FR_OK)
+		{
+			res = load_sample_header(&samples[i_param[0][BANK]][i_param[0][SAMPLE]], &temp_file);
+
+			if (res==FR_OK)
+			{
+				str_cpy(samples[i_param[0][BANK]][i_param[0][SAMPLE]].filename, filepath);
+			}
+
+		}
+		f_close(&temp_file);
+
+	}
+
+	return(1);
+}
+
+//backs-up sample[][] data to an undo buffer
+void save_undo_state(uint8_t bank, uint8_t samplenum)
+{
+	str_cpy(sample_undo_buffer.filename,  samples[bank][samplenum].filename);
+	sample_undo_buffer.blockAlign 		= samples[bank][samplenum].blockAlign;
+	sample_undo_buffer.numChannels 		= samples[bank][samplenum].numChannels;
+	sample_undo_buffer.sampleByteSize 	= samples[bank][samplenum].sampleByteSize;
+	sample_undo_buffer.sampleRate 		= samples[bank][samplenum].sampleRate;
+	sample_undo_buffer.sampleSize 		= samples[bank][samplenum].sampleSize;
+	sample_undo_buffer.startOfData 		= samples[bank][samplenum].startOfData;
+	sample_undo_buffer.PCM 				= samples[bank][samplenum].PCM;
+
+	sample_undo_buffer.inst_size 		= samples[bank][samplenum].inst_size  ;//& 0xFFFFFFF8;
+	sample_undo_buffer.inst_start 		= samples[bank][samplenum].inst_start  ;//& 0xFFFFFFF8;
+	sample_undo_buffer.inst_end 		= samples[bank][samplenum].inst_end  ;//& 0xFFFFFFF8;
+
+}
+
+//Restores sample[][] to the undo-state buffer
+//
+void restore_undo_state(uint8_t bank, uint8_t samplenum)
+{
+	str_cpy(samples[bank][samplenum].filename,  sample_undo_buffer.filename);
+	samples[bank][samplenum].blockAlign 		= sample_undo_buffer.blockAlign;
+	samples[bank][samplenum].numChannels 		= sample_undo_buffer.numChannels;
+	samples[bank][samplenum].sampleByteSize 	= sample_undo_buffer.sampleByteSize;
+	samples[bank][samplenum].sampleRate 		= sample_undo_buffer.sampleRate;
+	samples[bank][samplenum].sampleSize 		= sample_undo_buffer.sampleSize;
+	samples[bank][samplenum].startOfData 		= sample_undo_buffer.startOfData;
+	samples[bank][samplenum].PCM 				= sample_undo_buffer.PCM;
+
+	samples[bank][samplenum].inst_size 			= sample_undo_buffer.inst_size  ;//& 0xFFFFFFF8;
+	samples[bank][samplenum].inst_start 		= sample_undo_buffer.inst_start  ;//& 0xFFFFFFF8;
+	samples[bank][samplenum].inst_end 			= sample_undo_buffer.inst_end  ;//& 0xFFFFFFF8;
+
 }
 
 void enter_edit_mode(void)
@@ -213,8 +244,6 @@ void enter_edit_mode(void)
 
 void exit_edit_mode(void)
 {
-	// lock_start = 1;
-	// lock_length = 1;
 
 	global_mode[EDIT_MODE] = 0;
 
@@ -232,114 +261,25 @@ void exit_edit_mode(void)
 	}
 }
 
-void assign_sample(uint8_t assigned_sample_i)
+
+
+//Copies sample header info from src to dst
+//dst = src
+void copy_sample(uint8_t dst_bank, uint8_t dst_sample, uint8_t src_bank, uint8_t src_sample)
 {
-	uint8_t sample, bank;
+	str_cpy(samples[dst_bank][dst_sample].filename,   samples[src_bank][src_sample].filename);
+	samples[dst_bank][dst_sample].blockAlign 		= samples[src_bank][src_sample].blockAlign;
+	samples[dst_bank][dst_sample].numChannels 		= samples[src_bank][src_sample].numChannels;
+	samples[dst_bank][dst_sample].sampleByteSize 	= samples[src_bank][src_sample].sampleByteSize;
+	samples[dst_bank][dst_sample].sampleRate 		= samples[src_bank][src_sample].sampleRate;
+	samples[dst_bank][dst_sample].sampleSize 		= samples[src_bank][src_sample].sampleSize;
+	samples[dst_bank][dst_sample].startOfData 		= samples[src_bank][src_sample].startOfData;
+	samples[dst_bank][dst_sample].PCM 				= samples[src_bank][src_sample].PCM;
 
-	bank = i_param[0][BANK];
-	sample = i_param[0][SAMPLE];
-
-	str_cpy(samples[bank][sample].filename,   t_assign_samples[ assigned_sample_i ].filename);
-	samples[bank][sample].blockAlign 		= t_assign_samples[ assigned_sample_i ].blockAlign;
-	samples[bank][sample].numChannels 		= t_assign_samples[ assigned_sample_i ].numChannels;
-	samples[bank][sample].sampleByteSize 	= t_assign_samples[ assigned_sample_i ].sampleByteSize;
-	samples[bank][sample].sampleRate 		= t_assign_samples[ assigned_sample_i ].sampleRate;
-	samples[bank][sample].sampleSize 		= t_assign_samples[ assigned_sample_i ].sampleSize;
-	samples[bank][sample].startOfData 		= t_assign_samples[ assigned_sample_i ].startOfData;
-	samples[bank][sample].PCM 				= t_assign_samples[ assigned_sample_i ].PCM;
-
-	samples[bank][sample].inst_size 		= t_assign_samples[ assigned_sample_i ].inst_size  ;//& 0xFFFFFFF8;
-	samples[bank][sample].inst_start 		= t_assign_samples[ assigned_sample_i ].inst_start  ;//& 0xFFFFFFF8;
-	samples[bank][sample].inst_end 			= t_assign_samples[ assigned_sample_i ].inst_end  ;//& 0xFFFFFFF8;
-
-	flags[ForceFileReload1] = 1;
-
-	if (samples[bank][sample].filename[0] == 0)
-		flags[AssigningEmptySample] = 1;
-	else
-		flags[AssigningEmptySample] = 0;
-
+	samples[dst_bank][dst_sample].inst_size 		= samples[src_bank][src_sample].inst_size  ;//& 0xFFFFFFF8;
+	samples[dst_bank][dst_sample].inst_start 		= samples[src_bank][src_sample].inst_start  ;//& 0xFFFFFFF8;
+	samples[dst_bank][dst_sample].inst_end 			= samples[src_bank][src_sample].inst_end  ;//& 0xFFFFFFF8;
 }
-
-
-void save_exit_assignment_mode(void)
-{
-	FRESULT res;
-
-	//global_mode[EDIT_MODE] = 0;
-
-	check_enabled_banks(); //disables a bank if we cleared it out
-
-	res = write_sampleindex_file();
-	if (res!=FR_OK) {g_error|=CANNOT_WRITE_INDEX; check_errors();}
-//	else
-//		flags[Animate_Good_Save] = 16;
-
-}
-
-void cancel_exit_assignment_mode(void)
-{
-	load_sampleindex_file();
-	//flags[Animate_Revert] = 8;
-
-//	assign_sample(original_assigned_sample_i);
-	//global_mode[EDIT_MODE] = 0;
-}
-
-//Loads the next sample in the array.
-//Note: This could be changed to just find the next file in the folder, 
-//and when we get to the end we have a blank sample
-//and after that we load the original file name
-//then continue looking for the next wav file
-//The benefit of this method would be that we aren't just limited to 32 samples per folder, and it uses less memory
-void next_unassigned_sample(void)
-{
-
-	play_state[0]=SILENT;
-	play_state[1]=SILENT;
-
-	cur_assigned_sample_i ++;
-	if (cur_assigned_sample_i >= end_assigned_sample_i || cur_assigned_sample_i >= MAX_ASSIGNED)
-		cur_assigned_sample_i = 0;
-
-	assign_sample(cur_assigned_sample_i);
-
-	flags[Play1But]=1;
-}
-
-
-void assign_sample_from_other_bank(uint8_t src_bank, uint8_t src_sample)
-{
-
-	uint8_t sample, bank;
-
-	bank = i_param[0][BANK];
-	sample = i_param[0][SAMPLE];
-
-	str_cpy(samples[bank][sample].filename,   samples[src_bank][src_sample].filename);
-	samples[bank][sample].blockAlign 		= samples[src_bank][src_sample].blockAlign;
-	samples[bank][sample].numChannels 		= samples[src_bank][src_sample].numChannels;
-	samples[bank][sample].sampleByteSize 	= samples[src_bank][src_sample].sampleByteSize;
-	samples[bank][sample].sampleRate 		= samples[src_bank][src_sample].sampleRate;
-	samples[bank][sample].sampleSize 		= samples[src_bank][src_sample].sampleSize;
-	samples[bank][sample].startOfData 		= samples[src_bank][src_sample].startOfData;
-	samples[bank][sample].PCM 				= samples[src_bank][src_sample].PCM;
-
-	samples[bank][sample].inst_size 		= samples[src_bank][src_sample].inst_size  ;//& 0xFFFFFFF8;
-	samples[bank][sample].inst_start 		= samples[src_bank][src_sample].inst_start  ;//& 0xFFFFFFF8;
-	samples[bank][sample].inst_end 			= samples[src_bank][src_sample].inst_end  ;//& 0xFFFFFFF8;
-
-	flags[ForceFileReload1] = 1;
-
-	if (samples[bank][sample].filename[0] == 0)
-		flags[AssigningEmptySample] = 1;
-	else
-		flags[AssigningEmptySample] = 0;
-
-	//flags[Animate_Copy_2_1] = 4;
-
-}
-
 
 
 
@@ -354,31 +294,31 @@ void set_sample_gain(Sample *s_sample, float gain)
 }
 
 //sets the trim start point between 0 and 100ms before the end of the sample file
-void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
-{
-	uint32_t trimstart;
-	int32_t fine_trim;
+// void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
+// {
+// 	uint32_t trimstart;
+// 	int32_t fine_trim;
 
-	if (coarse >= 1.0f) 				trimstart = s_sample->sampleSize - 4420;
-	else if (coarse <= (1.0/4096.0))	trimstart = 0;
-	else 								trimstart = (s_sample->sampleSize - 4420) * coarse;
+// 	if (coarse >= 1.0f) 				trimstart = s_sample->sampleSize - 4420;
+// 	else if (coarse <= (1.0/4096.0))	trimstart = 0;
+// 	else 								trimstart = (s_sample->sampleSize - 4420) * coarse;
 
-	fine_trim = fine * s_sample->sampleRate * s_sample->blockAlign * 0.5; // +/- 500ms
+// 	fine_trim = fine * s_sample->sampleRate * s_sample->blockAlign * 0.5; // +/- 500ms
 
-	if ((-1.0*fine_trim) > trimstart) trimstart = 0;
-	else trimstart += fine_trim;
+// 	if ((-1.0*fine_trim) > trimstart) trimstart = 0;
+// 	else trimstart += fine_trim;
 
-	s_sample->inst_start = align_addr(trimstart, s_sample->blockAlign);
+// 	s_sample->inst_start = align_addr(trimstart, s_sample->blockAlign);
 
-	//Clip inst_end to the sampleSize (but keep inst_size the same)
-	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
-		s_sample->inst_end = s_sample->sampleSize;
-	else
-		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
+// 	//Clip inst_end to the sampleSize (but keep inst_size the same)
+// 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
+// 		s_sample->inst_end = s_sample->sampleSize;
+// 	else
+// 		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
 
-	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
+// 	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
 
-}
+// }
 
 #define TS_MIN 4412
 #define TSZC 10
@@ -434,28 +374,28 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 
 
 
-void set_sample_trim_size(Sample *s_sample, float coarse)
-{
-	uint32_t trimsize;
-	int32_t fine_trim;
+// void set_sample_trim_size(Sample *s_sample, float coarse)
+// {
+// 	uint32_t trimsize;
+// 	int32_t fine_trim;
 
 
-	if (coarse >= 1.0f) 				trimsize = s_sample->sampleSize;
-	else if (coarse <= (1.0/4096.0))	trimsize = 4420;
-	else 								trimsize = (s_sample->sampleSize - 4420) * coarse + 4420;
+// 	if (coarse >= 1.0f) 				trimsize = s_sample->sampleSize;
+// 	else if (coarse <= (1.0/4096.0))	trimsize = 4420;
+// 	else 								trimsize = (s_sample->sampleSize - 4420) * coarse + 4420;
 
-	s_sample->inst_size = align_addr(trimsize, s_sample->blockAlign);
+// 	s_sample->inst_size = align_addr(trimsize, s_sample->blockAlign);
 
-	//Set inst_end to start+size and clip it to the sampleSize
-	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
-		s_sample->inst_end = s_sample->sampleSize;
-	else
-		s_sample->inst_end = (s_sample->inst_start + s_sample->inst_size);
+// 	//Set inst_end to start+size and clip it to the sampleSize
+// 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
+// 		s_sample->inst_end = s_sample->sampleSize;
+// 	else
+// 		s_sample->inst_end = (s_sample->inst_start + s_sample->inst_size);
 
-	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
+// 	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
 
 
-}
+// }
 
 //
 //fine ranges from -4095 to +4095

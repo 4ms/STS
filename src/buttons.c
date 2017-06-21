@@ -120,7 +120,12 @@ void Button_Debounce_IRQHandler(void)
 							if (global_mode[EDIT_MODE])
 							{
 								if (i==Play1) save_exit_assignment_mode();
-								if (i==Play2) assign_sample_from_other_bank(i_param[1][BANK], i_param[1][SAMPLE]);
+								if (i==Play2)
+								{
+									copy_sample(i_param[1][BANK], i_param[1][SAMPLE], i_param[0][BANK], i_param[0][SAMPLE]);
+									flags[ForceFileReload2] = 1;
+								}
+
 							}
 							else {
 								if (!i_param[i-Play1][LOOPING]) 
@@ -199,10 +204,21 @@ void Button_Debounce_IRQHandler(void)
 									}
 								}
 
+								//Go to next bank if we weren't do a knob/button combo move
+								//Edit button down: go to next bank, whether or not it's enabled
+								//No edit button: go to next enabled bank
 								if (!combo_was_active)
-									i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
+								{
+									if (global_mode[EDIT_MODE])
+										i_param[chan][BANK] = next_bank(i_param[chan][BANK]);
+									else
+										i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
+								}
 
 								flags[PlayBank1Changed + chan] = 1;
+
+								//Exit assignment mode (if we were in it)
+								global_mode[ASSIGN_MODE] = 0;
 								
 							break;
 
@@ -229,8 +245,9 @@ void Button_Debounce_IRQHandler(void)
 							case Rev1:
 								if (global_mode[EDIT_MODE])
 								{
-									enter_assignment_mode();
-									next_unassigned_sample();
+									if (enter_assignment_mode())
+										if (next_unassigned_sample())
+											flags[Play1But]=1;
 								}
 								else if (!flags[AssignModeRefused])
 									flags[Rev1Trig]=1;
@@ -240,8 +257,11 @@ void Button_Debounce_IRQHandler(void)
 								break;
 
 							case Rev2:
-								if (global_mode[EDIT_MODE]){
-								}else
+								if (global_mode[EDIT_MODE])
+								{
+									restore_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
+								}
+								else
 									flags[Rev2Trig]=1;
 
 								clear_errors();
