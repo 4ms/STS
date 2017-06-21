@@ -88,12 +88,13 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 
         res = f_readdir(dir, &fno);
 
-        if (res != FR_OK || fno.fname[0] == 0)  return(1); //no more files found
+        if (res!=FR_OK)         return(res);  //filesystem error
+        if (fno.fname[0] == 0)  return(0xFF); //no more files found
 
-        if (fno.fname[0] == '.') continue;                  //ignore files starting with a .
+        if (fno.fname[0] == '.') continue;    //ignore files starting with a .
 
         i = str_len(fno.fname);
-        if (i==0xFFFFFFFF)                      return (2); //file name invalid
+        if (i==0xFFFFFFFF)      return (0xFE); //file name invalid
 
         if (fno.fname[i-4] == ext[0] &&
               (  (fno.fname[i-3] == ext[1] && fno.fname[i-2] == ext[2] && fno.fname[i-1] == ext[3])
@@ -105,7 +106,7 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
         }
     }
 
-    return (3); ///error
+    return (0xFD); //should not reach here, error
 }
 
 
@@ -149,12 +150,16 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 
 
 
-
+//Returns 1 if string begins with (or is equal to) prefix
+//Returns 0 if not
+//E.g.:
+// string=ABCD, prefix=ABC -->> returns 1
+// string=ABCD, prefix=ABCD -->>> returns 1
+// string=ABCD, prefix=ABCDE -->>> returns 0
+// string=ABCD, prefix=anything except {A, AB, ABC, ABCD} -->> returns 0
 uint8_t str_startswith(const char *string, const char *prefix)
 {
-   // if (str_len(string) < str_len(prefix)) return 0;
-
-    while (*prefix)
+    while (*prefix && *string)
     {
         if (*prefix++ != *string++)
             return 0;
@@ -192,6 +197,28 @@ char *str_rstr(char *string, char split_char, char *before_split)
   if (rp==0) return 0; //or maybe string?
   else {
     before_split[str_len(before_split)-str_len(rp)]=0;
+    return (rp);
+  }
+}
+
+//Returns char * to the tail of a string, following the splitting char
+//Copies string into path and truncates path before the splitting char
+//(Same as str_rstr, but path excludes the splitting char)
+char *str_rstr_x(char *string, char splitchar, char *path)
+{
+
+  char *cp;
+  char *rp;
+  rp = 0;
+  str_cpy(path, string);
+
+  for (cp = string; *cp!=0; cp++)
+  {
+    if (*cp == splitchar) rp = cp+1;
+  }
+  if (rp==0) return 0; //splitchar not found
+  else {
+    path[str_len(path)-str_len(rp)-1]=0;
     return (rp);
   }
 }
@@ -278,10 +305,16 @@ void str_tok(char *in_string, char find, char *tokk)
 }
 
 //Copy string dest <= src
+//limit to 255 characters, which reduces harm from bad addresses
+//
 void str_cpy(char *dest, char *src)
 {
-  while(*src!=0)
+  uint32_t i=0;
+
+  while(*src!=0 && i<255){
     *dest++ = *src++;
+    i++;
+  }
 
   *dest=0;
 }

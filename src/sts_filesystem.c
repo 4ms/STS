@@ -8,6 +8,7 @@
 #include "sample_file.h"
 #include "bank.h"
 #include "sts_fs_index.h"
+#include "sts_fs_renaming_queue.h"
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 extern volatile uint32_t sys_tmr;
@@ -76,6 +77,8 @@ uint8_t load_banks_by_color_prefix(void)
 	DIR testdir;
 
 	uint8_t test_path_loaded=0;
+	uint8_t existing_prefix_len, len;
+
 
 	banks_loaded=0;
 	
@@ -95,25 +98,14 @@ uint8_t load_banks_by_color_prefix(void)
 		if (res!=FR_OK) continue;
 		if (find_next_ext_in_dir(&testdir, ".wav", default_bankname) != FR_OK) continue;
 
-		//Go through all the default bank names and
-		//see if the folder we found matches one exactly.
-		//If it does, try another folder (we already should have loaded this bank in load_banks_by_default_colors())
-		//This could be replaced with:
-		//bank = color_to_bank(foldername);
-		//if (bank!=NOT_FOUND)...
-		for (bank=0;(!test_path_loaded && bank<MAX_NUM_BANKS);bank++)
-		{
-			bank_to_color(bank, default_bankname);
-			if (str_cmp(foldername, default_bankname))
-			{
-				test_path_loaded=1;
-				break;
-			}
-		}
+		//See if the folder we found is a default bank name
+		//This would mean it's already loaded (with load_banks_by_default_colors())
+		if (color_to_bank(foldername) < MAX_NUM_BANKS)
+			test_path_loaded=1;
 
-		//Go through all the default bank names with numbers (>10)
-		//see if the folder we found has a bank name as a prefix
-		//This finds things like "Red-3 - TV Clips" (but not yet "Red - Movie Clips")
+		//Go through all the numbered bank names (Red-1, Pink-1, etc...)
+		//see if the folder we found has a numbered bank name as a prefix
+		//This finds things like "Red-3 - TV Clips" (but not "Red - Movie Clips")
 		for (bank=10;(!test_path_loaded && bank<MAX_NUM_BANKS);bank++)
 		{
 			bank_to_color(bank, default_bankname);
@@ -137,17 +129,19 @@ uint8_t load_banks_by_color_prefix(void)
 
 		//Go through all the non-numbered default bank names (Red, White, Pink, etc...)
 		//and see if this bank has one of them as a prefix
-		//If the bank is a non-numbered bank name (that is, bank< 9. Example: "Red" or "Blue", but not "Red-9" or "Blue-4")
-		//Then check to see if subsequent numbered banks are disabled (so check for Red 2, Red 3, Red 4)
+		//If the bank is a non-numbered bank name (ie bank< 9, for example: "Red" or "Blue", but not "Red-9" or "Blue-4")
+		//Then check to see if subsequent numbered banks of the same color are available (so check for Red-2, Red-3, Red-4)
 		//This allows us to have "Red - Synth Pads/" become Red bank, and "Red - Drum Loops/" become Red-2 bank
+		//
 		for (bank=0;(!test_path_loaded && bank<10);bank++)
 		{
-			bank_to_color(bank, default_bankname);
+			existing_prefix_len = bank_to_color(bank, default_bankname);
 
 			if (str_startswith(foldername, default_bankname))
 			{
 				//We found a prefix for this folder
 				//If the base color name bank is still empty, load it there...
+				//E.g. if we found "Red - Synth Pads" and Red bank is still available, load it there
 				if (!is_bank_enabled(bank))
 				{
 					if (load_bank_from_disk(bank, foldername))
@@ -161,7 +155,7 @@ uint8_t load_banks_by_color_prefix(void)
 				//...Otherwise try loading it into the next higher-numbered bank (Red-2, Red-3...)
 				else
 				{
-					bank+=10;
+					bank+=10; //add 10 to go to the next numbered bank of the same color
 					while (bank<MAX_NUM_BANKS)
 					{
 						if (!is_bank_enabled(bank))
@@ -171,7 +165,32 @@ uint8_t load_banks_by_color_prefix(void)
 								enable_bank(bank);
 								banks_loaded++;
 								test_path_loaded = 1;
-								break; //exit while loop and continue with the next folder
+
+								//Queue the renaming of the bank's folder
+								//Create the new name by removing the existing color prefix, and adding the actual bank prefix
+								//e.g. "White - More Loops" becomes "White-3  - More Loops"
+								//
+								//In the special case where we have two banks that begin with a numbered bank prefix:
+								//e.g. "Red-2 Drums" and "Red-2 Synths"
+								//Then the first one found (Red-2 Drums) will go into Red-2, according to the previous for-loop.
+								//The second one will be found in this for-loop because it is a folder name prefixed by "Red".
+								//Thus it will think "-2 Synths" is the suffix. Assuming Red-3 is available,
+								//the renaming will rename it to "Red-3" + "-2 Synths" = "Red-3 2 Synths" (dash is trimmed)
+								//Should we detect a suffix as such and remove it? Or leave it to help the user know what it used to be?
+
+								len=bank_to_color(bank, default_bankname);
+								default_bankname[len++] = ' ';
+								default_bankname[len++] = '-';
+								default_bankname[len++] = ' ';
+								
+								//trim spaces and dashes off the beginning of the suffix
+								while(foldername[existing_prefix_len]==' ' || foldername[existing_prefix_len]=='-') existing_prefix_len++;
+
+								str_cpy(&(default_bankname[len]), &(foldername[existing_prefix_len]));
+
+								append_rename_queue(bank, foldername, default_bankname);
+
+								break; //exit inner while loop and continue with the next folder
 							}
 						} 
 						bank+=10;
@@ -239,17 +258,21 @@ uint8_t load_banks_with_noncolors(void)
 				{
 					enable_bank(bank);
 					banks_loaded++;
+					test_path_loaded = 1;
 
-					//Rename the folder with the bank name as a prefix
+					//Queue the renaming of the bank's folder
+					//Create the new name by adding the bank name as a prefix
+					//e.g. "Door knockers" becomes "Cyan-3 - Door knockers"
 					len=bank_to_color(bank, default_bankname);
 					default_bankname[len++] = ' ';
-					default_bankname[len++] = '-';
-					default_bankname[len++] = ' ';
+					// if (bank<10) 
+					// {
+						default_bankname[len++] = '-';
+						default_bankname[len++] = ' ';
+					// }
 					str_cpy(&(default_bankname[len]), foldername);
 
-					f_rename(foldername, default_bankname);
-
-					load_bank_from_disk(bank, default_bankname);
+					append_rename_queue(bank, foldername, default_bankname);
 
 					break; //continue with the next folder
 				}
@@ -338,6 +361,7 @@ uint8_t load_bank_from_disk(uint8_t bank, char *bankpath)
 uint8_t load_all_banks(uint8_t force_reload)
 {
 	FRESULT res;
+	FRESULT queue_valid;
 
 	if (!force_reload)
 		force_reload = load_sampleindex_file();
@@ -352,6 +376,9 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 	else //sampleindex file was not ok, or we requested to force a reload from disk
 	{
+		//initialize the renaming queue
+		queue_valid = clear_renaming_queue();
+
 		//First pass: load all the banks that have default folder names
 		load_banks_by_default_colors();
 
@@ -361,7 +388,11 @@ uint8_t load_all_banks(uint8_t force_reload)
 		//Third pass: go through all remaining folders and try to assign them to banks
 		load_banks_with_noncolors();
 
+		//process the folders/banks that need to be renamed
+		if (queue_valid==FR_OK) 
+			process_renaming_queue();
 	}
+
 
 	// Write samples struct to index
 	// ... so sample info gets updated with latest .wave header content
@@ -380,6 +411,35 @@ uint8_t load_all_banks(uint8_t force_reload)
 		i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
 
 	return 1;
+}
+
+
+//
+//Tries to figure out the bank path
+//
+uint8_t get_banks_path(uint8_t sample, uint8_t bank, char *path)
+{
+	//Get path to bank's folder
+	//
+	//First try using the path from the current sample
+	//
+	if (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
+	{
+		//if that doesn't have a path, go through the whole bank until we find a path
+		sample = 0;
+		while (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
+		{
+			if (++sample >= NUM_SAMPLES_PER_BANK)
+			{
+				//No path found (perhaps no samples in the bank?)
+				//Set path to the default bank name
+				bank_to_color(bank, path);
+				return(0); //not found
+			}
+		}
+	}
+
+	return(1);//found
 }
 
 

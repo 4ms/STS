@@ -5,7 +5,6 @@
 #include "file_util.h"
 #include "sampler.h"
 #include "wavefmt.h"
-#include "file_util.h"
 #include "sts_fs_index.h"
 #include "sts_filesystem.h"
 #include "bank.h"

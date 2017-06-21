@@ -13,6 +13,24 @@ extern enum g_Errors g_error;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
+//
+//Returns the sample number inside the given bank, whose filename matches the given filename
+//If not found, returns 0xFF
+//
+uint8_t find_filename_in_bank(uint8_t bank, char *filename)
+{
+	uint8_t sample;
+
+	if (bank>=MAX_NUM_BANKS) return 0xFF; //invalid bank
+	if (!is_bank_enabled(bank)) return 0xFF; //bank not enabled
+
+	for (sample=0; sample<NUM_SAMPLES_PER_BANK; sample++)
+	{
+		if (str_cmp(samples[bank][sample].filename, filename)) return sample;
+	}
+
+	return(0xFF); //not found
+}
 
 
 uint8_t bank_to_color_string(uint8_t bank, char *color)
@@ -106,7 +124,7 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 
 			//Append first digit as a string: "White-5"
 			intToStr(digit1, color, 1);
-			len += 2;
+			len++;
 		}
 
 		return (len);
@@ -115,14 +133,14 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		return bank_to_color_string(bank, color);
 }
 
-//FixMe: Update to blink-color system
+//FixMe: have this return an error flag, or perhaps MAX_NUM_BANKS, because we could conceivably have >200 banks someday
 uint8_t color_to_bank(char *color)
 {
 	uint8_t i;
-	char* 	b_color;
-	char  	t_b_color[_MAX_LFN+1];
+	//char* 	b_color;
+	char  	b_color[_MAX_LFN+1];
 
-	b_color = t_b_color;
+	//b_color = t_b_color;
 
 	// for every bank number
 	for (i=0; i<MAX_NUM_BANKS; i++)
@@ -138,24 +156,13 @@ uint8_t color_to_bank(char *color)
 		}
 	}		
 	return(200);
+}
 
-	// if 		(str_cmp(color, "White")) 		return(0);
-	// else if (str_cmp(color, "Red")) 		return(1);
-	// else if (str_cmp(color, "Green")) 		return(2);
-	// else if (str_cmp(color, "Blue")) 		return(3);
-	// else if (str_cmp(color, "Yellow"))		return(4);
-	// else if (str_cmp(color, "Cyan")) 		return(5);
-	// else if (str_cmp(color, "Orange")) 		return(6);
-	// else if (str_cmp(color, "Violet")) 		return(7);
-	// else if (str_cmp(color, "White-SAVE")) 	return(8);
-	// else if (str_cmp(color, "Red-SAVE"))	return(9);
-	// else if (str_cmp(color, "Green-SAVE"))	return(10);
-	// else if (str_cmp(color, "Blue-SAVE")) 	return(11);
-	// else if (str_cmp(color, "Yellow-SAVE")) return(12);
-	// else if (str_cmp(color, "Cyan-SAVE")) 	return(13);
-	// else if (str_cmp(color, "Orange-SAVE")) return(14);
-	// else if (str_cmp(color, "Violet-SAVE")) return(15);
-	// return(200);
+uint8_t next_bank(uint8_t bank)
+{
+	bank++;
+	if (bank >= MAX_NUM_BANKS)	return(0);
+	return (bank);
 }
 
 

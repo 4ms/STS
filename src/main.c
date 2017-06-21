@@ -188,6 +188,8 @@ int main(void)
 	delay();
 
 	init_SDIO_read_IRQ();
+	
+	flags[skip_process_buttons] = 2;
 
 	//Main loop
 	while(1){

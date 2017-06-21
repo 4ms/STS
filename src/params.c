@@ -121,7 +121,7 @@ void init_modes(void)
 	global_mode[MONITOR_RECORDING] = 0;
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[EDIT_MODE] = 0;
-
+	global_mode[ASSIGN_MODE] = 0;
 }
 
 
@@ -420,9 +420,10 @@ void update_params(void)
 			i_param[0][SAMPLE] = new_val;
 			flags[PlaySample1Changed] = 1;
 
+			//Exit assignment mode (if we were in it)
+			global_mode[ASSIGN_MODE] = 0;
 		}
 
-	
 
 
 	} //if not EDIT_MODE
@@ -569,8 +570,11 @@ void update_params(void)
 
 					flags[PlaySample1Changed + chan] = 1;
 
+					//Exit assignment mode (if we were in it)
+					global_mode[ASSIGN_MODE] = 0;
+
 					//
-					//Set the flag to initiate a bright flash on the Play button
+					//Set a flag to initiate a bright flash on the Play button
 					//
 					//We first have to know if there is a sample in the new place,
 					//by seeing if there is a non-blank filename
