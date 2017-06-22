@@ -329,6 +329,28 @@ void str_cat(char *dest, char *srca, char *srcb)
   *dest=0;
 }
 
+//Converts lower case characters to uppercase
+//returns everything else untouched
+char upper(char a)
+{
+  if (a>='a' && a<='z') return(a - 'a' + 'A');
+  else return(a);
+}
+
+//Compare strings a and b
+//Return 1 if the same, 0 if not
+//Case insensitive
+uint8_t str_cmp_nocase(char *a, char *b)
+{
+  while(*a!=0)
+    if (upper(*b++) != upper(*a++)) return(0);
+
+  if (*a!=*b) return(0); //check b also has 0 in the same spot as a
+
+  return(1);
+}
+
+
 //Compare strings a and b
 //Return 1 if the same, 0 if not
 uint8_t str_cmp(char *a, char *b)

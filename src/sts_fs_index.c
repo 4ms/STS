@@ -134,6 +134,10 @@ uint8_t write_sampleindex_file(void)
 
 }
 
+//.sample_index.bak
+//uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t bank) //MAX_NUM_BANKS=all banks
+//Key combo for: reload everything: load_sampleindex_file(1, MAX_NUM_BANKS);
+//Key combo for: reload one bank: load_sampleindex_file(1, bank);
 uint8_t load_sampleindex_file(void)
 {
 

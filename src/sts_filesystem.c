@@ -363,6 +363,9 @@ uint8_t load_all_banks(uint8_t force_reload)
 	FRESULT res;
 	FRESULT queue_valid;
 
+	//TODO: Backup the sampleindex file if it exists
+	//
+	
 	if (!force_reload)
 		force_reload = load_sampleindex_file();
 
