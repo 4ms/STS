@@ -89,7 +89,7 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
         res = f_readdir(dir, &fno);
 
         if (res!=FR_OK)         return(res);  //filesystem error
-        if (fno.fname[0] == 0)  return(0xFF); //no more files found
+        if (fno.fname[0] == 0)  {fname[0]=0;return(0xFF);} //no more files found
 
         if (fno.fname[0] == '.') continue;    //ignore files starting with a .
 

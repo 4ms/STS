@@ -23,7 +23,7 @@ char 					cur_assign_bank_path[_MAX_LFN];
 Sample					sample_undo_buffer;
 uint8_t 				cur_assigned_sample_i;
 
-
+ 
 
 uint8_t	cached_looping;
 uint8_t cached_rev;
@@ -115,7 +115,7 @@ uint8_t next_unassigned_sample(void)
 	{
 		res = find_next_ext_in_dir(&assign_dir, ".wav", filename);
 
-		if (res!=FR_OK && res!=0xFF) return(0); //error, no new file assigned
+		if (res!=FR_OK && res!=0xFF) return(0); //error reading directory, abort
 
 		if (res==0xFF) //no more .wav files found
 		{
@@ -125,8 +125,9 @@ uint8_t next_unassigned_sample(void)
 				//Go through the dir again, looking for used samples
 
 				//Reset directory
-				f_opendir(&assign_dir, "");
+				f_readdir(&assign_dir, (FILINFO *)0);
 
+				//TODO: some kind of flash/color change to indicate we are now doing the already assigned samples
 				cur_assign_state=ASSIGN_USED;
 				continue;
 			} 
@@ -161,34 +162,36 @@ uint8_t next_unassigned_sample(void)
 		if (find_filename_in_bank(cur_assign_bank, filepath) == 0xFF)	file_is_in_bank = 0;
 		else															file_is_in_bank = 1;
 
+		//If the file in the dir is the original file, then treat it as if it was in the bank
+		//Otherwise we would never be able to go back to the original file without exiting ASSIGN MODE
+		if (str_cmp(filepath, sample_undo_buffer.filename))				file_is_in_bank = 1;
+
 		if (	(cur_assign_state==ASSIGN_UNUSED && !file_is_in_bank) \
 			|| 	(cur_assign_state==ASSIGN_USED && file_is_in_bank))
 		{
-			is_file_found = 1;
-		}
 
-	}
-
-	if (is_file_found)
-	{
-		res = f_open(&temp_file, filepath, FA_READ);
-		f_sync(&temp_file);
-
-		if (res==FR_OK)
-		{
-			res = load_sample_header(&samples[i_param[0][BANK]][i_param[0][SAMPLE]], &temp_file);
+			res = f_open(&temp_file, filepath, FA_READ);
+			f_sync(&temp_file);
 
 			if (res==FR_OK)
 			{
-				str_cpy(samples[i_param[0][BANK]][i_param[0][SAMPLE]].filename, filepath);
+				res = load_sample_header(&samples[i_param[0][BANK]][i_param[0][SAMPLE]], &temp_file);
+
+				if (res==FR_OK)
+				{
+					str_cpy(samples[i_param[0][BANK]][i_param[0][SAMPLE]].filename, filepath);
+
+					is_file_found = 1;
+				}
+				f_close(&temp_file);
+
 			}
-
 		}
-		f_close(&temp_file);
-
 	}
-
-	return(1);
+	if (is_file_found)
+		return(1);
+	else
+		return(0);
 }
 
 //backs-up sample[][] data to an undo buffer
