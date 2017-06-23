@@ -50,15 +50,14 @@ uint8_t enter_assignment_mode(void)
 	if (global_mode[ASSIGN_MODE]) return 1;
 
 	//Enter assignment mode
-
 	global_mode[ASSIGN_MODE] = 1;
 
 	//Find channel 1's bank's path
-	get_banks_path(i_param[0][SAMPLE], i_param[0][BANK], cur_assign_bank_path);
+	get_banks_path(i_param[0][BANK], cur_assign_bank_path);
 
 	//Open the directory
 	res = f_opendir(&assign_dir, cur_assign_bank_path);
-	if (res==FR_NO_PATH) return(0); //unable to enter assignment mode
+	if (res==FR_NO_PATH) {global_mode[ASSIGN_MODE] = 0;return(0);} //unable to enter assignment mode
 
 	cur_assign_state = ASSIGN_UNUSED;
 
@@ -139,8 +138,9 @@ uint8_t next_unassigned_sample(void)
 
 				//Todo: test if cur_assign_bank is now equal to i_param[0][BANK], meaning we've searched all the enabled bank folders
 				//Now start looking for folders which aren't the names of banks yet
+				//This might be a recursive search for all .wav files, ignoring ones that exist in some bank path folder???
 
-				get_banks_path(0, cur_assign_bank, cur_assign_bank_path);
+				get_banks_path(cur_assign_bank, cur_assign_bank_path);
 
 				res = f_opendir(&assign_dir, cur_assign_bank_path);
 				if (res==FR_NO_PATH) return(0);

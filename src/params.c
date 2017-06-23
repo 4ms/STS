@@ -570,8 +570,9 @@ void update_params(void)
 
 					flags[PlaySample1Changed + chan] = 1;
 
-					//Exit assignment mode (if we were in it)
-					global_mode[ASSIGN_MODE] = 0;
+					//Exit assignment mode if we moved channel 1's Sample pot (or CV)
+					if (chan==0)
+						global_mode[ASSIGN_MODE] = 0;
 
 					//
 					//Set a flag to initiate a bright flash on the Play button

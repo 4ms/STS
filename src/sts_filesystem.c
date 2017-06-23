@@ -11,6 +11,8 @@
 #include "sts_fs_renaming_queue.h"
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+extern char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
+
 extern volatile uint32_t sys_tmr;
 
 extern enum g_Errors g_error;
@@ -365,7 +367,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 	//TODO: Backup the sampleindex file if it exists
 	//
-	
+
 	if (!force_reload)
 		force_reload = load_sampleindex_file();
 
@@ -401,6 +403,10 @@ uint8_t load_all_banks(uint8_t force_reload)
 	// ... so sample info gets updated with latest .wave header content
 	res = write_sampleindex_file();
 
+	//Create a handy array of all the bank paths
+	//TODO: this could be done in write_sampleindex_file() if we find it useful
+	create_bank_path_index();
+
 	// check if there was an error writing to index file
 	// ToDo: push this to error log
 	if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors(); return 0;}
@@ -420,29 +426,35 @@ uint8_t load_all_banks(uint8_t force_reload)
 //
 //Tries to figure out the bank path
 //
-uint8_t get_banks_path(uint8_t sample, uint8_t bank, char *path)
+uint8_t get_banks_path(uint8_t bank, char *path)
 {
 	//Get path to bank's folder
 	//
+
+	str_cpy(path, index_bank_path[ bank ]);
+	path[str_len(path)-1] = 0; //cut off the '/'
+
 	//First try using the path from the current sample
 	//
-	if (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
-	{
-		//if that doesn't have a path, go through the whole bank until we find a path
-		sample = 0;
-		while (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
-		{
-			if (++sample >= NUM_SAMPLES_PER_BANK)
-			{
-				//No path found (perhaps no samples in the bank?)
-				//Set path to the default bank name
-				bank_to_color(bank, path);
-				return(0); //not found
-			}
-		}
-	}
-
-	return(1);//found
+	// if (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
+	// {
+	// 	//if that doesn't have a path, go through the whole bank until we find a path
+	// 	sample = 0;
+	// 	while (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
+	// 	{
+	// 		if (++sample >= NUM_SAMPLES_PER_BANK)
+	// 		{
+	// 			//No path found (perhaps no samples in the bank?)
+	// 			//Set path to the default bank name
+	// 			bank_to_color(bank, path);
+	// 			return(0); //not found
+	// 		}
+	// 	}
+	// }
+	if (path[0])
+		return(1);//found
+	else
+		return(0);
 }
 
 

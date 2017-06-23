@@ -16,7 +16,7 @@ FRESULT reload_sdcard(void);
 uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path);
 
 
-uint8_t get_banks_path(uint8_t sample, uint8_t bank, char *path);
+uint8_t get_banks_path(uint8_t bank, char *path);
 
 
 uint8_t load_banks_by_color_prefix(void);

@@ -10,9 +10,24 @@ uint8_t bank_status[MAX_NUM_BANKS];
 
 extern enum g_Errors g_error;
 
+char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
+
+//Fills an array with the paths to the first sample of each bank on boot
+//This is used by Edit Mode 
+void create_bank_path_index(void)
+{
+	uint8_t i;
+	char path[_MAX_LFN];
+
+	for (i=0; i<MAX_NUM_BANKS; i++)
+	{
+		// split path and filename			
+		str_rstr(samples[i][0].filename, '/', index_bank_path[i]);
+	}
+}
 //
 //Returns the sample number inside the given bank, whose filename matches the given filename
 //If not found, returns 0xFF

@@ -218,7 +218,8 @@ void Button_Debounce_IRQHandler(void)
 								flags[PlayBank1Changed + chan] = 1;
 
 								//Exit assignment mode (if we were in it)
-								global_mode[ASSIGN_MODE] = 0;
+								if (chan==0)
+									global_mode[ASSIGN_MODE] = 0;
 								
 							break;
 

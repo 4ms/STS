@@ -27,5 +27,6 @@ void 	disable_bank(uint8_t bank);
 uint8_t get_bank_color_digit(uint8_t bank);
 uint8_t get_bank_blink_digit(uint8_t bank);
 
+void create_bank_path_index(void);
 
 #endif /* INC_BANK_H */
