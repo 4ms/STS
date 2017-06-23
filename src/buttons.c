@@ -247,7 +247,10 @@ void Button_Debounce_IRQHandler(void)
 								{
 									if (enter_assignment_mode())
 										if (next_unassigned_sample())
+										{
+											flags[ForceFileReload1] = 1;
 											flags[Play1But]=1;
+										}
 								}
 								else if (!flags[AssignModeRefused])
 									flags[Rev1Trig]=1;

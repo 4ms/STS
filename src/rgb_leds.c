@@ -231,7 +231,7 @@ void update_ButtonLEDs(void)
 
 		//BANK lights
 		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
-			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE]))
+			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE]))
 		{
 			if 		(ButLEDnum == Bank1ButtonLED) 	chan = 0;
 			else if (ButLEDnum == Bank2ButtonLED) 	chan = 1;
