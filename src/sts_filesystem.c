@@ -364,9 +364,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 {
 	FRESULT res;
 	FRESULT queue_valid;
-
-	//TODO: Backup the sampleindex file if it exists
-	//
+	uint8_t res_bak;
 
 	if (!force_reload)
 		force_reload = load_sampleindex_file();
@@ -381,6 +379,14 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 	else //sampleindex file was not ok, or we requested to force a reload from disk
 	{
+
+		// Backup the sampleindex file if it exists
+		res_bak = backup_sampleindex_file();
+		if (res_bak)
+		{
+			// ERRORLOG: sample index couldn't be backed up
+		}
+		
 		//initialize the renaming queue
 		queue_valid = clear_renaming_queue();
 

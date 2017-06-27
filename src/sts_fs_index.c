@@ -134,6 +134,47 @@ uint8_t write_sampleindex_file(void)
 
 }
 
+uint8_t backup_sampleindex_file(void)
+{
+	// ToDo: could just duplicate data and open resulting pointer
+	// ... if dup is not available
+	// FILE *fp2 = fdopen (dup (fileno (fp)), "r");
+
+	FIL 		indexfile, backupindex;
+	FRESULT		res_index, res_bak;
+	char 		read_buff[_MAX_LFN+1];
+
+	// Open index and backup files
+	res_index  = f_open(&indexfile,   "sample_index.txt", FA_READ);
+	// if(res_index!=FR_OK) f_close(&indexfile);   return 1;
+
+	res_bak = f_open(&backupindex, "index_bak.txt", FA_WRITE | FA_CREATE_ALWAYS);
+	// if(res_bak!=FR_OK) f_close(&backupindex); return 1;
+
+	while(1)
+	{
+		// read next line in index file
+		f_gets(read_buff, _MAX_LFN+1, &indexfile);
+
+		// if end of index file is not reached yet
+		if(!f_eof(&indexfile))
+		{
+			// write line into backup index file
+			f_printf(&backupindex, read_buff);
+
+			// update the volume   
+			f_sync(&backupindex);
+		}
+		else
+		{
+			f_close(&indexfile);
+			f_close(&backupindex);
+			return 0;
+		}
+	}
+}
+
+
 //.sample_index.bak
 //uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t bank) //MAX_NUM_BANKS=all banks
 //Key combo for: reload everything: load_sampleindex_file(1, MAX_NUM_BANKS);
