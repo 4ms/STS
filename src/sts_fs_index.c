@@ -148,7 +148,7 @@ uint8_t backup_sampleindex_file(void)
 	res_index  = f_open(&indexfile,   "sample_index.txt", FA_READ);
 	// if(res_index!=FR_OK) f_close(&indexfile);   return 1;
 
-	res_bak = f_open(&backupindex, "index_bak.txt", FA_WRITE | FA_CREATE_ALWAYS);
+	res_bak = f_open(&backupindex, "idx.bak", FA_WRITE | FA_CREATE_ALWAYS);
 	// if(res_bak!=FR_OK) f_close(&backupindex); return 1;
 
 	while(1)
@@ -177,9 +177,11 @@ uint8_t backup_sampleindex_file(void)
 
 //.sample_index.bak
 //uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t bank) //MAX_NUM_BANKS=all banks
+//MAX_NUM_BANKS=all banks
 //Key combo for: reload everything: load_sampleindex_file(1, MAX_NUM_BANKS);
 //Key combo for: reload one bank: load_sampleindex_file(1, bank);
-uint8_t load_sampleindex_file(void)
+uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
+// uint8_t load_sampleindex_file(void)
 {
 
 	// // Variables to load from file
@@ -209,9 +211,11 @@ uint8_t load_sampleindex_file(void)
 	uint8_t		fopen_flag	  = 0;
 	uint8_t		rewrite_index = 0;
 	uint8_t 	force_reload  = 2;
+	uint8_t		skip_cur_bank = 0;
 
 	// Open sample index file
-	res = f_open(&temp_file,"sample_index.txt", FA_READ);
+	if (use_backup) res = f_open(&temp_file,"idx.bak"		  , FA_READ);
+	else 			res = f_open(&temp_file,"sample_index.txt", FA_READ);
 
 	// rise flags if index can't be opened/created
 	if (res != FR_OK) return(1); //file not found
@@ -239,11 +243,25 @@ uint8_t load_sampleindex_file(void)
 		{
 			// Load bank data
 			// ToDo: see if computing repeated str_cmp upstream helps saving time
-			if (!loaded_header)
+			if ((!loaded_header) && (!skip_cur_bank))
 			{
-				if 		( str_cmp(token,"--------------------") && !arm_bank) {arm_bank++; 							str_tok(read_buffer,' ', token);}
-				else if	(!str_cmp(token,"--------------------") &&  arm_bank) {cur_bank=color_to_bank(token); 		str_tok(read_buffer,' ', token);}
-				else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; 					 		str_tok(read_buffer,' ', token);}
+				if 		( str_cmp(token,"--------------------") && !arm_bank) {arm_bank++; str_tok(read_buffer,' ', token);}
+				
+				// Bank number
+				else if	(!str_cmp(token,"--------------------") &&  arm_bank) 
+					{
+						cur_bank=color_to_bank(token); 		
+						
+						// request bank to be skipped if it is not to be loaded
+						if (banks != MAX_NUM_BANKS)
+						{
+							if (cur_bank !=  cur_bank) skip_cur_bank = 1;
+						}
+
+						str_tok(read_buffer,' ', token);
+					}
+
+				else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; str_tok(read_buffer,' ', token);}
 
 				// read folder path
 				else if (str_cmp(token, "path:")) 
@@ -259,7 +277,7 @@ uint8_t load_sampleindex_file(void)
 			}
 
 			// Load file name
-			else if (!str_cmp(token,"--------------------")&&(read_name==1)) 
+			else if ((!str_cmp(token,"--------------------")&&(read_name==1)) && (!skip_cur_bank))
 			{
 
 				// save file name
@@ -271,7 +289,7 @@ uint8_t load_sampleindex_file(void)
 			}
 
 			// Load .wav header data information and play data
-			else if ((!str_cmp(token,"--------------------"))&&(read_name>1))
+			else if (((!str_cmp(token,"--------------------"))&&(read_name>1)) && (!skip_cur_bank))
 			{
 				
 				// if there is a number in the current line
@@ -372,19 +390,22 @@ uint8_t load_sampleindex_file(void)
 			// Move to next bank
 			else if (str_cmp(token,"--------------------"))
 			{
+				skip_cur_bank   = 0;
 				read_name 		= 0; 
 				loaded_header	= 0;
 				read_buffer[0]  = '\0';
 			}		
 			
 			// if nothing is recognized
+			// or bank is to be skipped
 			// empty token so new line is read
-			if  (!loaded_header &&
+			if  (	!loaded_header &&
 					!(  (str_cmp(token,"--------------------") && !arm_bank)	||
 						(!str_cmp(token,"--------------------") &&  arm_bank)	||
 						(str_cmp(token,"--------------------") &&  arm_bank)	||
 						(str_cmp(token, "path:")) 
 					 )
+					 ||  skip_cur_bank
 			    )
 			{
 				token[0]='\0';

@@ -10,7 +10,11 @@
 #include <stm32f4xx.h>
 #include "ff.h"
 
-uint8_t load_sampleindex_file(void);
+#define BACKUP_FILE 1
+#define INDEX_FILE  0
+#define ALL_BANKS MAX_NUM_BANKS
+
+uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks);
 uint8_t backup_sampleindex_file(void);
 uint8_t write_sampleindex_file(void);
 
