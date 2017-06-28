@@ -175,6 +175,8 @@ int main(void)
     	write_all_system_calibrations_to_FLASH();
     }
 
+    // Backup index file
+    backup_sampleindex_file();
 
     //Begin reading inputs
     init_buttons();
