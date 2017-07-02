@@ -92,14 +92,15 @@ void toggle_recording(void)
 	}
 }
 
+//int16_t tmp_buff16[HT16_BUFF_LEN<<1]; //1024 elements, 16b each
+
 void record_audio_to_buffer(int16_t *src)
 {
 	uint32_t i;
-	int16_t t_buff16[HT16_BUFF_LEN<<1]; //stereo
-	uint8_t overrun;
+	uint32_t overrun;
 
 	//convenience vars:
-	uint16_t topbyte, bottombyte;
+	//uint16_t topbyte, bottombyte;
 	int32_t dummy;
 
 	//
@@ -108,6 +109,8 @@ void record_audio_to_buffer(int16_t *src)
 	//
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
+		overrun = 0;
+
 		for (i=0; i<HT16_BUFF_LEN; i++)
 		{
 			//
@@ -115,27 +118,34 @@ void record_audio_to_buffer(int16_t *src)
 			//
 			if (SAMPLINGBYTES==2)
 			{
-				t_buff16[i*2] = (*src++) /*+ system_calibrations->codec_adc_calibration_dcoffset[channel+0]*/;
-				dummy=*src++;
+				//The following block is essentially the same as:
+				// overrun = memory_write16_cb(rec_buff, src, HT16_BUFF_LEN, 0);
+				// but manually skipping every other *src so as to convert the codec's 24-bit into 16-bits
+				// This also allows us to add codec_adc_calibration_dcoffset[]
 
-				t_buff16[i*2+1] = (*src++) /*+ system_calibrations->codec_adc_calibration_dcoffset[channel+2]*/;
-				dummy=*src++;
+				*((int16_t *)rec_buff->in) = *src++; // + system_calibrations->codec_adc_calibration_dcoffset[i&1];
+				dummy=*src++; //ignore bottom bits
+
+				while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+				CB_offset_in_address(rec_buff, 2, 0);
+
+				if ((rec_buff->in == rec_buff->out)/* && i<(HT16_BUFF_LEN-1)*/) //don't consider the heads being crossed if they end at the same place
+					overrun = rec_buff->out;
 			}
-			else
-			{
-				topbyte 		= (uint16_t)(*src++);
-				bottombyte		= (uint16_t)(*src++);
-				t_buff16[i*2] 	= (topbyte << 16) + (uint16_t)bottombyte;
+			// else
+			// {
+			// 	topbyte 		= (uint16_t)(*src++);
+			// 	bottombyte		= (uint16_t)(*src++);
+			// 	tmp_buff16[i*2] 	= (topbyte << 16) + (uint16_t)bottombyte;
 
-				topbyte 		= (uint16_t)(*src++);
-				bottombyte 		= (uint16_t)(*src++);
-				t_buff16[i*2+1] = (topbyte << 16) + (uint16_t)bottombyte;
+			// 	topbyte 		= (uint16_t)(*src++);
+			// 	bottombyte 		= (uint16_t)(*src++);
+			// 	tmp_buff16[i*2+1] = (topbyte << 16) + (uint16_t)bottombyte;
 
-			}
+			// }
 
 		}
-
-		overrun = memory_write16_cb(rec_buff, t_buff16, HT16_BUFF_LEN, 0);
 
 		if (overrun)
 		{
@@ -151,16 +161,16 @@ void record_audio_to_buffer(int16_t *src)
 
 void write_buffer_to_storage(void)
 {
-	int16_t t_buff16[WRITE_BLOCK_SIZE>>1];
+	int16_t t_buff16[WRITE_BLOCK_SIZE>>1]; //4096 elements
 	uint32_t buffer_lead;
 	uint32_t addr_exceeded;
 	uint32_t written;
 	uint32_t data[1];
-	uint32_t samplenum;
-	uint32_t chan;
+	//uint32_t samplenum;
+	//uint32_t chan;
 
 	FRESULT res;
-	DIR dir;
+	//DIR dir;
 	char path[_MAX_LFN];
 
 

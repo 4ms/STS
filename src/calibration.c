@@ -32,13 +32,9 @@ void set_default_calibration_values(void)
 
 	system_calibrations->codec_dac_calibration_dcoffset[0]=-1746;
 	system_calibrations->codec_dac_calibration_dcoffset[1]=-1746;
-	system_calibrations->codec_dac_calibration_dcoffset[2]=-1746;
-	system_calibrations->codec_dac_calibration_dcoffset[3]=-1746;
 
 	system_calibrations->codec_adc_calibration_dcoffset[0]=0;
 	system_calibrations->codec_adc_calibration_dcoffset[1]=0;
-	system_calibrations->codec_adc_calibration_dcoffset[2]=0;
-	system_calibrations->codec_adc_calibration_dcoffset[3]=0;
 
 	system_calibrations->tracking_comp[0]=1.0;
 	system_calibrations->tracking_comp[1]=1.0;

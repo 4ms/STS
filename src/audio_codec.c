@@ -74,7 +74,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 				t_i32 = outR[0][i] + outR[1][i];
 				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-				*dst++ = t_i32 + system_calibrations->codec_dac_calibration_dcoffset[0];
+				*dst++ = t_i32 + system_calibrations->codec_dac_calibration_dcoffset[1];
 				*dst++ = 0;
 			}
 		}
@@ -86,7 +86,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				*dst++ = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
 				*dst++ = 0;
 
-				*dst++ = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+				*dst++ = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
 				*dst++ = 0;
 			}
 		}
