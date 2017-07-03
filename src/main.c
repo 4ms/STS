@@ -24,6 +24,8 @@
 #include "rgb_leds.h"
 #include "ff.h"
 #include "sampler.h"
+#include "bank.h"
+#include "sts_fs_index.h"
 #include "sts_filesystem.h"
 
 uint32_t WATCH0;
@@ -185,6 +187,7 @@ int main(void)
 
 	//Begin audio DMA
 	audio_buffer_init();
+	init_banks();
 	Start_I2SDMA();
 
 	delay();

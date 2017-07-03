@@ -157,9 +157,6 @@ extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 void audio_buffer_init(void)
 {
-	uint32_t bank;
-	uint8_t force_reload;
-
 
 //	if (MODE_24BIT_JUMPER)
 //		SAMPLINGBYTES=4;
@@ -203,36 +200,7 @@ void audio_buffer_init(void)
 	// 	init_compressor(1<<31, 0.75);
 	// }
 
-	//Force reloading of banks from disk with button press on boot
-	if (REV1BUT && REV2BUT) 
-		force_reload = 1;
-	else
-		force_reload = 0;
-
-
-	load_all_banks(force_reload);
-
-	bank = next_enabled_bank(MAX_NUM_BANKS-1); //Find the first enabled bank
-	i_param[0][BANK] = bank;
-	i_param[1][BANK] = bank;
-
-	sample_num_now_playing[0] = 0;
-	sample_num_now_playing[1] = 0;
-	sample_bank_now_playing[0] = i_param[0][BANK];
-	sample_bank_now_playing[1] = i_param[1][BANK];
-
-	flags[PlaySample1Changed] = 1;
-	flags[PlaySample2Changed] = 1;
-
 }
-
-//
-// void clear_is_buffered_to_file_end(uint8_t chan)
-// {
-// 	is_buffered_to_file_end[chan] = 0;
-// 	flags[ForceFileReload1+chan] = 1;
-// }
-
 
 
 void toggle_reverse(uint8_t chan)

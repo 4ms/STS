@@ -1,22 +1,27 @@
 #include "globals.h"
 #include "params.h"
+#include "dig_pins.h"
 #include "sts_filesystem.h"
 #include "file_util.h"
 #include "sample_file.h"
 #include "bank.h"
 
 
-uint8_t bank_status[MAX_NUM_BANKS];
-
+extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+extern uint8_t 	flags[NUM_FLAGS];
 extern enum g_Errors g_error;
-
-char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
+char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
 
+uint8_t bank_status[MAX_NUM_BANKS];
+
+
+//
 //Fills an array with the paths to the first sample of each bank on boot
 //This is used by Edit Mode 
+//
 void create_bank_path_index(void)
 {
 	uint8_t i;
@@ -28,6 +33,7 @@ void create_bank_path_index(void)
 		str_rstr(samples[i][0].filename, '/', index_bank_path[i]);
 	}
 }
+
 //
 //Returns the sample number inside the given bank, whose filename matches the given filename
 //If not found, returns 0xFF
@@ -228,6 +234,38 @@ void disable_bank(uint8_t bank)
 {
 	bank_status[bank] = 0;
 }
+
+
+void init_banks(void)
+{
+	uint32_t bank;
+	uint8_t force_reload;
+
+
+	//Force reloading of banks from disk with button press on boot
+	if (REV1BUT && REV2BUT) 
+		force_reload = 1;
+	else
+		force_reload = 0;
+
+
+	load_all_banks(force_reload);
+
+	bank = next_enabled_bank(MAX_NUM_BANKS-1); //Find the first enabled bank
+	i_param[0][BANK] = bank;
+	i_param[1][BANK] = bank;
+
+	//sample_num_now_playing[0] = 0;
+	//sample_num_now_playing[1] = 0;
+	//sample_bank_now_playing[0] = i_param[0][BANK];
+	//sample_bank_now_playing[1] = i_param[1][BANK];
+
+	flags[PlaySample1Changed] = 1;
+	flags[PlaySample2Changed] = 1;
+
+}
+
+
 
 //
 //Given a number, returns the units digit
