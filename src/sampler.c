@@ -210,6 +210,7 @@ void toggle_reverse(uint8_t chan)
 	FRESULT res;
 	enum PlayStates tplay_state;
 
+	//DEBUG1_ON;
 
 	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC || play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
 	{
@@ -228,7 +229,7 @@ void toggle_reverse(uint8_t chan)
 	//If we are PREBUFFERING or PLAY_FADEUP, then that means we just started playing. 
 	//It could be the case a common trigger fired into PLAY and REV, but the PLAY trig was detected first
 	//So we actually want to make it play from the end of the sample rather than reverse direction from the current spot
-	if (play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
+	if (tplay_state == PREBUFFERING || tplay_state==PLAY_FADEUP || tplay_state==PLAYING)
 	{
 
 		//Check the cache position of play_buff[chan]->out, to see if it's a certain distance from sample_file_startpos[chan]
@@ -236,11 +237,15 @@ void toggle_reverse(uint8_t chan)
 		//If not, play from the other end (by moving ->out to the opposite end) 
 		t = map_buffer_to_cache(play_buff[chan]->out, samples[banknum][samplenum].sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
 
-		if (!i_param[chan][REV]){ //currently going forward, so find distance ->out is ahead of startpos
+		//Find distance ->out's cache position is from startpos[]
+		if (!i_param[chan][REV])
+		{ //currently going forward, so find distance ->out is ahead of startpos
 			if (t > sample_file_startpos[chan])
 				t = t - sample_file_startpos[chan];
 			else t=0;
-		}else{
+		}
+		else
+		{//currently going backwards, so find distance ->out is behind startpos
 			if (t < sample_file_startpos[chan])
 				t = sample_file_startpos[chan] - t;
 			else t=0;
@@ -295,7 +300,7 @@ void toggle_reverse(uint8_t chan)
 	}
 
 	 play_state[chan] = tplay_state;
-
+	 //DEBUG1_OFF;
 }
 
 
@@ -320,6 +325,7 @@ void start_playing(uint8_t chan)
 	if (s_sample->filename[0] == 0)
 		return;
 
+	//DEBUG3_ON;
 
 	file_loaded = 0;
 	check_change_bank(chan);
@@ -445,6 +451,8 @@ void start_playing(uint8_t chan)
 	dbg_sample.inst_end 		= s_sample->inst_end;
 	dbg_sample.inst_size 		= s_sample->inst_size;
 	dbg_sample.inst_gain 		= s_sample->inst_gain;
+
+	//DEBUG3_OFF;
 }
 
 
@@ -767,9 +775,7 @@ void read_storage_to_buffer(void)
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 						//else align rd to 24
 
-						DEBUG1_ON;
 						res = f_read(&fil[chan], (uint8_t *)tmp_buff_u32, rd, &br);
-						DEBUG1_OFF;
 
 						if (res != FR_OK) 
 						{
@@ -835,13 +841,11 @@ void read_storage_to_buffer(void)
 						}
 
 
-						DEBUG1_ON;
 						//Read one block forward
 						t_fptr=f_tell(&fil[chan]);
 						res = f_read(&fil[chan], (uint8_t *)tmp_buff_u32, rd, &br);
 						if (res != FR_OK) 
 							g_error |= FILE_READ_FAIL_1 << chan;
-						DEBUG1_OFF;
 
 						if (br < rd)		g_error |= FILE_UNEXPECTEDEOF;
 
@@ -861,7 +865,6 @@ void read_storage_to_buffer(void)
 						if (i_param[chan][REV])
 							CB_offset_in_address(play_buff[chan], (rd * 2) / s_sample->sampleByteSize, 1);
 
-						DEBUG3_ON;
 						err=0;
 
 						//
@@ -885,7 +888,6 @@ void read_storage_to_buffer(void)
 						{
 							err = memory_write_32ias16(play_buff[chan], (uint8_t *)tmp_buff_u32, rd, 0); //rd must be a multiple of 4
 						}
-						DEBUG3_OFF;
 
 						//Update the cache addresses
 						if (i_param[chan][REV])
@@ -993,7 +995,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		//
 		//Resample data read from the play_buff and store into out[]
 		//
-DEBUG2_ON;
 		
 		if (global_mode[STEREO_MODE])
 		{
@@ -1027,7 +1028,6 @@ DEBUG2_ON;
 				resample_read16_left(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 2, chan, outL);
 
 		}
-DEBUG2_OFF;
 
 		//Calculate length and where to stop playing
 		length = f_param[chan][LENGTH];
