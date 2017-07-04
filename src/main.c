@@ -1,4 +1,6 @@
 /*
+Sample credits:
+Rain loops by JPolito, from http://freesound.org/people/JPolito/packs/22014/ licensed under CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)
  */
 #include <stm32f4xx.h>
 #include "globals.h"
