@@ -86,7 +86,7 @@ void resample_read16_avg(float rs, CircularBuffer* buf, uint32_t buff_len, uint8
 
 	if (rs == 1.0)
 	{
-		for(outpos==0;outpos<buff_len;outpos++)
+		for(outpos=0;outpos<buff_len;outpos++)
 		{
 			out[outpos] = get_16b_sample_avg(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
@@ -221,7 +221,7 @@ void resample_read16_right(float rs, CircularBuffer* buf, uint32_t buff_len, uin
 
 	if (rs == 1.0)
 	{
-		for(outpos==0;outpos<buff_len;outpos++)
+		for(outpos=0;outpos<buff_len;outpos++)
 		{
 			out[outpos] = get_16b_sample_right(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
@@ -357,7 +357,7 @@ void resample_read16_left(float rs, CircularBuffer* buf, uint32_t buff_len, uint
 
 	if (rs == 1.0)
 	{
-		for(outpos==0;outpos<buff_len;outpos++)
+		for(outpos=0;outpos<buff_len;outpos++)
 		{
 			out[outpos] = get_16b_sample_left(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
