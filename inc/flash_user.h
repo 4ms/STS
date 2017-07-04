@@ -12,7 +12,7 @@
 
 
 void set_firmware_version(void);
-void factory_reset(uint8_t loop_afterwards);
+void factory_reset(void);
 uint32_t load_flash_params(void);
 void save_flash_params(uint8_t num_led_blinks);
 void copy_system_calibrations_into_staging(void);

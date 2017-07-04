@@ -115,7 +115,7 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 #build/src/rgb_leds.o: CFLAGS = $(C0FLAGS)
 #build/src/circular_buffer.o: CFLAGS = $(C0FLAGS)
 #build/src/audio_util.o: CFLAGS = $(C0FLAGS)
-#build/src/wav_recoding.o: CFLAGS = $(C0FLAGS)
+#build/src/wav_recording.o: CFLAGS = $(C0FLAGS)
 #build/src/buttons.o: CFLAGS = $(C0FLAGS)
 #build/src/file_util.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)

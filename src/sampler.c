@@ -969,12 +969,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
 
-
-	samplenum = sample_num_now_playing[chan];
-	banknum = sample_bank_now_playing[chan];
-	s_sample = &(samples[banknum][samplenum]);
-
-
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
 	{
@@ -986,6 +980,10 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	}
 	else
 	{
+		samplenum = sample_num_now_playing[chan];
+		banknum = sample_bank_now_playing[chan];
+		s_sample = &(samples[banknum][samplenum]);
+
 		//Read from SDRAM into out[]
 
 		if (s_sample->sampleRate == BASE_SAMPLE_RATE)

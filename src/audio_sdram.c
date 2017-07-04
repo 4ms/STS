@@ -410,8 +410,14 @@ uint32_t RAM_test(void){
 
 	addr=SDRAM_BASE;
 	for (i=0;i<(SDRAM_SIZE/2);i++){
+
+		if (i & 0x80000) 	PLAYLED1_ON;
+		else 				SIGNALLED_ON;
+
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
 
+		if (i & 0x80000) 	PLAYLED1_OFF;
+		else				SIGNALLED_OFF;
 
 		rd1 = (uint16_t)((i) & 0x0000FFFF);
 		*((uint16_t *)addr) = rd1;
@@ -423,7 +429,14 @@ uint32_t RAM_test(void){
 
 	addr=SDRAM_BASE;
 	for (i=0;i<(SDRAM_SIZE/2);i++){
+
+		if (i & 0x80000) 	PLAYLED2_ON;
+		else 				BUSYLED_ON;
+
 		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+
+		if (i & 0x80000) 	PLAYLED2_OFF;
+		else				BUSYLED_OFF;
 
 		rd1 = *((uint16_t *)addr);
 
@@ -499,13 +512,9 @@ void RAM_startup_test(void)
 	while (1)
 	{
 		if (ram_errors >= 15)
-		{
 			blink_all_lights(50);
-		}
 		else if (ram_errors == 0)
-		{
-			chase_all_lights(50);
-		}
+			chase_all_lights(100);
 	}
 
 

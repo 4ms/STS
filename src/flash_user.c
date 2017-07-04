@@ -5,18 +5,20 @@
 #include "params.h"
 #include "adc.h"
 #include "leds.h"
+#include "timekeeper.h"
 #include "dig_pins.h"
-#include <string.h>
 
 SystemCalibrations s_staging_user_params;
 SystemCalibrations *staging_system_calibrations = &s_staging_user_params;
 
 extern SystemCalibrations *system_calibrations;
 
+extern uint8_t global_mode[NUM_GLOBAL_MODES];
+
 
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 
-extern int16_t i_smoothed_cvadc[NUM_POT_ADCS];
+extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
 
 
 
@@ -29,43 +31,43 @@ extern int16_t i_smoothed_cvadc[NUM_POT_ADCS];
 
 void set_firmware_version(void)
 {
-	staging_system_calibrations->firmware_version = FW_VERSION;
-	system_calibrations->firmware_version = FW_VERSION;
+	staging_system_calibrations->major_firmware_version = FW_MAJOR_VERSION;
+	system_calibrations->major_firmware_version 		= FW_MAJOR_VERSION;
+
+	staging_system_calibrations->minor_firmware_version	= FW_MINOR_VERSION;
+	system_calibrations->minor_firmware_version 		= FW_MINOR_VERSION;
 }
 
 
-void factory_reset(uint8_t loop_afterwards)
+void factory_reset(void)
 {
 	uint8_t i,fail=0;
 
 	auto_calibrate();
 	set_firmware_version();
-//	set_default_system_settings();
 
 	copy_system_calibrations_into_staging();
 	write_all_system_calibrations_to_FLASH();
 
-
-	if (loop_afterwards)
+	fail=0;
+	for (i=0;i<NUM_CV_ADCS;i++)
 	{
-		fail=0;
-		for (i=0;i<6;i++)
-		{
-			if (system_calibrations->cv_calibration_offset[i]>100 || system_calibrations->cv_calibration_offset[i]<-100 )
-				fail=1;
-		}
-
-		if (i_smoothed_cvadc[0] > 2150 || i_smoothed_cvadc[0]<1950 || i_smoothed_cvadc[1] > 2150 || i_smoothed_cvadc[1]<1950)
+		if (system_calibrations->cv_calibration_offset[i]>100 || system_calibrations->cv_calibration_offset[i]<-100 )
 			fail=1;
-
-		while(1)
-		{
-			if (fail)
-				blink_all_lights(200); //error: did not auto-calibrate!
-			else
-				chase_all_lights(10); //All good!
-		}
 	}
+
+	if (i_smoothed_cvadc[0] > 2150 || i_smoothed_cvadc[0]<1950 || i_smoothed_cvadc[1] > 2150 || i_smoothed_cvadc[1]<1950)
+		fail=1;
+
+	if (fail)
+	{
+		global_mode[CALIBRATE] = 0;
+		while(1) blink_all_lights(200); //error: did not auto-calibrate!
+	}
+
+	//if we didn't fail, then just continue in CALIBRATE mode
+	//but with the LED_PWM disabled
+
 }
 
 uint32_t load_flash_params(void)
@@ -76,7 +78,7 @@ uint32_t load_flash_params(void)
 
 	read_all_system_calibrations_from_FLASH(); //into staging area
 
-	if (staging_system_calibrations->firmware_version > 0 && staging_system_calibrations->firmware_version < 500) //valid firmware version
+	if (staging_system_calibrations->major_firmware_version <= 30) //valid firmware version
 	{
 
 		//memcopy: system_calibrations = staging_system_calibrations;
@@ -85,8 +87,7 @@ uint32_t load_flash_params(void)
 		for (i=0;i<sizeof(SystemCalibrations);i++)
 			*dst++ = *src++;
 		
-		return (staging_system_calibrations->firmware_version);
-
+		return (1); //Valid firmware version found
 	} else
 	{
     	set_firmware_version();
@@ -144,7 +145,7 @@ void write_all_system_calibrations_to_FLASH(void)
 
 	flash_open_erase_sector(FLASH_ADDR_userparams);
 
-	staging_system_calibrations->firmware_version += FLASH_SYMBOL_firmwareoffset;
+	staging_system_calibrations->major_firmware_version += FLASH_SYMBOL_firmwareoffset;
 
 	addr = (uint8_t *)staging_system_calibrations;
 
@@ -161,7 +162,7 @@ void read_all_system_calibrations_from_FLASH(void)
 {
 	uint8_t i;
 	uint8_t *ptr;
-	uint8_t invalid_fw_version;
+	uint8_t invalid_fw_version=0;
 
 	ptr = (uint8_t *)staging_system_calibrations;
 
@@ -170,9 +171,9 @@ void read_all_system_calibrations_from_FLASH(void)
 		*ptr++ = flash_read_byte(FLASH_ADDR_userparams + i);
 	}
 
-	staging_system_calibrations->firmware_version -= FLASH_SYMBOL_firmwareoffset;
+	staging_system_calibrations->major_firmware_version -= FLASH_SYMBOL_firmwareoffset;
 
-	if (staging_system_calibrations->firmware_version < 1 || staging_system_calibrations->firmware_version > 500)
+	if (staging_system_calibrations->major_firmware_version > 30)
 		invalid_fw_version = 1;
 
 	for (i=0;i<8;i++)

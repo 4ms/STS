@@ -9,9 +9,9 @@
 #include "pca9685_driver.h"
 #include "sampler.h"
 #include "wav_recording.h"
-#include "res/LED_palette.h"
 #include "calibration.h"
 #include "button_knob_combo.h"
+#include "res/LED_palette.h"
 
 #define BIG_PLAY_BUTTONS
 #define FROSTED_BUTTONS
@@ -124,10 +124,10 @@ void display_all_ButtonLEDs(void)
 		{
 #ifdef BIG_PLAY_BUTTONS
 			if (i ==  Play1ButtonLED || i == Play2ButtonLED)
-				LEDDriver_setRGBLED_12bit(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][2] <<10) | ButLED_color[i][1] ); ///swapped [1] and [2]
+				LEDDriver_setRGBLED_RGB(i, ButLED_color[i][0]*4, ButLED_color[i][2]*4, ButLED_color[i][1]*4); // swapped [1] and [2]
 			else
 	#ifdef FROSTED_BUTTONS
-				LEDDriver_setRGBLED_12bit(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
+				LEDDriver_setRGBLED_RGB(i, ButLED_color[i][0]*4, ButLED_color[i][1]*4, ButLED_color[i][2]*4);
 	#else
 				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
 	#endif
