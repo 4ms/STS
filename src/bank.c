@@ -186,8 +186,8 @@ uint8_t next_bank(uint8_t bank)
 	return (bank);
 }
 
-
-uint8_t next_enabled_bank(uint8_t bank) //if bank==0xFF, we find the first enabled bank
+//if bank==0xFF, we find the first enabled bank
+uint8_t next_enabled_bank(uint8_t bank) 
 {
 	uint8_t orig_bank=bank;
 
@@ -200,6 +200,19 @@ uint8_t next_enabled_bank(uint8_t bank) //if bank==0xFF, we find the first enabl
 	return (bank);
 }
 
+//if bank==0xFF, we find the first disabled bank
+uint8_t next_disabled_bank(uint8_t bank) 
+{
+	uint8_t orig_bank=bank;
+
+	do{
+		bank++;
+		if (bank >= MAX_NUM_BANKS)	bank = 0;
+		if (bank==orig_bank) return(0); //no banks are disabled -->> bail out and return the first bank
+	} while(bank_status[bank]);
+
+	return (bank);
+}
 
 void check_enabled_banks(void)
 {
@@ -252,8 +265,12 @@ void init_banks(void)
 	load_all_banks(force_reload);
 
 	bank = next_enabled_bank(MAX_NUM_BANKS-1); 				//Find the first enabled bank
-	i_param[0][BANK] = next_enabled_bank(bank); 			//Bank 1 starts on the second enabled bank
-	i_param[1][BANK] = next_enabled_bank(i_param[0][BANK]); //Bank 2 starts on the third enabled bank
+	i_param[0][BANK] = bank; 								//Bank 1 starts on the first enabled bank
+	i_param[1][BANK] = bank; 								//Bank 2 starts on the first enabled bank
+	
+//	i_param[1][BANK] = next_enabled_bank(i_param[0][BANK]); //Bank 2 starts on the second enabled bank
+
+	i_param[2][BANK] = next_disabled_bank(bank);			//REC bank starts on first disabled bank
 
 	//sample_bank_now_playing[0] = i_param[0][BANK];
 	//sample_bank_now_playing[1] = i_param[1][BANK];
