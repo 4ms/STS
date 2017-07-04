@@ -12,12 +12,14 @@
 
 typedef struct SystemCalibrations
 {
-	uint32_t	firmware_version;
+	uint32_t	major_firmware_version;
+	uint32_t	minor_firmware_version;
 	int32_t		cv_calibration_offset[8];
 	int32_t		codec_adc_calibration_dcoffset[2];
 	int32_t		codec_dac_calibration_dcoffset[2];
 	uint32_t	led_brightness;
 	float 		tracking_comp[NUM_PLAY_CHAN];
+	int32_t		pitch_pot_detent_offset[2];
 
 } SystemCalibrations;
 

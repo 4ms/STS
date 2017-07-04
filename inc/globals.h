@@ -20,7 +20,15 @@
 
 #define BASE_SAMPLE_RATE 44100
 
-#define FW_VERSION 1
+//Update the FW Version anytime FLASH RAM settings format is changed
+#define FW_MAJOR_VERSION 0
+#define FW_MINOR_VERSION 3
+
+//Minimum firmware version that forces a calibration on the very first boot
+//This should be set to FW_{MAJOR|MINOR}_VERSION for the first production firmware release
+// 
+#define FIRST_PRODUCTION_FW_MAJOR_VERSION 0
+#define FIRST_PRODUCTION_FW_MINOR_VERSION 2
 
 enum Flags {
 	PlaySample1Changed, //0

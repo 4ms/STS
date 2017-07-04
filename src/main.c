@@ -43,12 +43,11 @@ __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern uint8_t 	flags[NUM_FLAGS];
 
-//extern uint8_t ButLED_state[NUM_RGBBUTTONS];
-//extern uint8_t play_led_state[NUM_PLAY_CHAN];
-//extern uint8_t clip_led_state[NUM_PLAY_CHAN];
+extern SystemCalibrations *system_calibrations;
+
+
 
 void check_errors(void);
-
 void check_errors(void){
 	if (g_error>0)
 	{
@@ -84,7 +83,7 @@ int main(void)
 {
 	uint32_t do_factory_reset=0;
 	uint32_t timeout_boot;
-	uint32_t firmware_version;
+	uint32_t valid_fw_version;
 	
 
 	
@@ -162,23 +161,43 @@ int main(void)
 	init_params();
 	init_modes();
 	
-	firmware_version = load_flash_params();
+	//Read the FLASH memory for user params, system calibration settings, etc
+	valid_fw_version = load_flash_params();
 
-	//Check for boot modes (calibration, first boot after upgrade)
-    if (ENTER_CALIBRATE_BUTTONS)
+	//Check for calibration buttons on boot
+	if (ENTER_CALIBRATE_BUTTONS)
     {
     	flags[skip_process_buttons] = 1;
     	global_mode[CALIBRATE] = 1;
     }
-    else if (firmware_version < FW_VERSION ) //If we detect a recently upgraded firmware version
+
+ 	//Check the RAM chip and do a factory reset if we detect a pre-production version of firmware
+    else if (!valid_fw_version \
+    	|| (system_calibrations->major_firmware_version  < FIRST_PRODUCTION_FW_MAJOR_VERSION) \
+    	|| (	(system_calibrations->major_firmware_version == FIRST_PRODUCTION_FW_MAJOR_VERSION) \
+    	 	&& 	 system_calibrations->minor_firmware_version <= FIRST_PRODUCTION_FW_MINOR_VERSION)	) 
+    {
+    	if (RAM_test()==0)
+    	{
+    		global_mode[CALIBRATE] = 1;
+    		do_factory_reset = 960000; //run normally for about 6 seconds before calibrating the CV jacks
+    	}
+    	else
+    		while(1) blink_all_lights(100); //RAM Test failed: It's on the fritz!
+
+    }
+
+    // If we detect a different version, update the firmware version in FLASH
+   	if ( 	system_calibrations->major_firmware_version != FW_MAJOR_VERSION
+   		|| 	system_calibrations->minor_firmware_version != FW_MINOR_VERSION	)
     {
     	copy_system_calibrations_into_staging();
     	set_firmware_version();
     	write_all_system_calibrations_to_FLASH();
     }
 
-    // Backup index file
-    backup_sampleindex_file();
+    // Backup index file (unless we are booting for the first time)
+    if (!do_factory_reset) backup_sampleindex_file();
 
     //Begin reading inputs
     init_buttons();
@@ -199,12 +218,9 @@ int main(void)
 	//Main loop
 	while(1){
 
-		//DEBUG0_ON;
 		check_errors();
 		
 		write_buffer_to_storage();
-
-		//DEBUG0_OFF;
 
 		if (flags[TimeToReadStorage])
 		{
@@ -216,7 +232,7 @@ int main(void)
 
     	if (do_factory_reset)
     		if (!(--do_factory_reset))
-    			factory_reset(1);
+    			factory_reset();
 
 
 	}
@@ -241,6 +257,7 @@ void assert_failed(uint8_t* file, uint32_t line)
 { 
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+	JumpTo(0x08008000);
 
   /* Infinite loop */
   while (1)
@@ -253,6 +270,7 @@ void assert_failed(uint8_t* file, uint32_t line)
 /* exception handlers - so we know what's failing */
 void NMI_Handler(void)
 { 
+	JumpTo(0x08008000);
 	while(1){};
 }
 
@@ -272,6 +290,7 @@ void HardFault_Handler(void)
 	dfsr=SCB->DFSR;
 	cfsr=SCB->CFSR;
 
+	JumpTo(0x08008000);
 
 	if (foobar){
 		return;
@@ -282,31 +301,37 @@ void HardFault_Handler(void)
 
 void MemManage_Handler(void)
 { 
+	JumpTo(0x08008000);
 	while(1){};
 }
 
 void BusFault_Handler(void)
 { 
+	JumpTo(0x08008000);
 	while(1){};
 }
 
 void UsageFault_Handler(void)
 { 
+	JumpTo(0x08008000);
 	while(1){};
 }
 
 void SVC_Handler(void)
 { 
+	JumpTo(0x08008000);
 	while(1){};
 }
 
 void DebugMon_Handler(void)
 { 
+	JumpTo(0x08008000);
 	while(1){};
 }
 
 void PendSV_Handler(void)
 { 
+	JumpTo(0x08008000);
 	while(1){};
 }
 #endif

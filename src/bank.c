@@ -59,8 +59,8 @@ uint8_t bank_to_color_string(uint8_t bank, char *color)
 	switch(bank)
 		{
 		case 0:
-			str_cpy(color, "Pink");
-			return(4);
+			str_cpy(color, "White");
+			return(5);
 			break;
 
 		case 1:
@@ -104,8 +104,8 @@ uint8_t bank_to_color_string(uint8_t bank, char *color)
 			break;
 
 		case 9:
-			str_cpy(color, "White");
-			return(5);
+			str_cpy(color, "Pink");
+			return(4);
 			break;
 
 		default:
@@ -251,12 +251,10 @@ void init_banks(void)
 
 	load_all_banks(force_reload);
 
-	bank = next_enabled_bank(MAX_NUM_BANKS-1); //Find the first enabled bank
-	i_param[0][BANK] = bank;
-	i_param[1][BANK] = bank;
+	bank = next_enabled_bank(MAX_NUM_BANKS-1); 				//Find the first enabled bank
+	i_param[0][BANK] = next_enabled_bank(bank); 			//Bank 1 starts on the second enabled bank
+	i_param[1][BANK] = next_enabled_bank(i_param[0][BANK]); //Bank 2 starts on the third enabled bank
 
-	//sample_num_now_playing[0] = 0;
-	//sample_num_now_playing[1] = 0;
 	//sample_bank_now_playing[0] = i_param[0][BANK];
 	//sample_bank_now_playing[1] = i_param[1][BANK];
 

@@ -291,9 +291,9 @@ void update_params(void)
 	uint8_t knob;
 	uint8_t old_val;
 	uint8_t new_val;
-	//uint8_t ok_sampleslot;
+	int32_t t_pitch_potadc;
 	float t_f;
-	//float t_fine=0, t_coarse=0;
+
 	uint32_t trial_bank;
 	uint8_t samplenum, banknum;
 	ButtonKnobCombo *t_this_bkc; //pointer to the currently active button/knob combo action
@@ -312,21 +312,6 @@ void update_params(void)
 		//
 		// Trim Size 
 		// 
-		// if (flag_pot_changed[LENGTH_POT*2+0])
-		// {
-		// 	t_coarse 	 = old_i_smoothed_potadc[LENGTH_POT*2+0] / 4096.0;
-		// 	set_sample_trim_size(&samples[banknum][samplenum], t_coarse);
-
-		// 	flag_pot_changed[LENGTH_POT*2+0] = 0;
-
-		// 	scrubbed_in_edit = 1;
-		// 	f_param[0][START] = 0.999f;
-		// 	f_param[0][LENGTH] = 0.501f;
-		// 	i_param[0][LOOPING] = 1;
-		// 	i_param[0][REV] = 0;
-		// 	if (play_state[0] == SILENT) flags[Play1Trig] = 1;
-
-		// }
 
 		if (flag_pot_changed[LENGTH_POT*2+1])
 		{
@@ -348,19 +333,6 @@ void update_params(void)
 		//
 		// Trim Start
 		// 
-		// if (flag_pot_changed[START_POT*2+0])
-		// {
-		// 	t_coarse 	 = old_i_smoothed_potadc[START_POT*2+0] / 4096.0;
-		// 	set_sample_trim_start(&samples[banknum][samplenum], t_coarse, 0);
-		// 	flag_pot_changed[START_POT*2+0] = 0;
-
-		// 	scrubbed_in_edit = 1;
-		// 	f_param[0][START] = 0.000f;
-		// 	f_param[0][LENGTH] = 0.201f;
-		// 	i_param[0][LOOPING] = 1;
-		// 	i_param[0][REV] = 0;
-		// 	if (play_state[0] == SILENT) flags[Play1Trig] = 1;
-		// }
 
 		if (flag_pot_changed[START_POT*2+1])
 		{
@@ -376,13 +348,14 @@ void update_params(void)
 			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
 		}
 
-	//	clear_is_buffered_to_file_end(0);
 	//	check_trim_bounds();
 
 		//
 		// Gain (sample ch2 pot): 
-		// was: 0.1 to 2.1 with just the knob (jack disabled)
-		// 0.1 to 5.1 with just the knob (jack disabled)
+		// 0.1x when pot is at 0%
+		// 1x when pot is at 50%
+		// 5x when pot is at 100%
+		// CV jack is disabled
 		//
 		if (flag_pot_changed[SAMPLE_POT*2+1])
 		{
@@ -399,12 +372,16 @@ void update_params(void)
 		// PITCH POT
 		//
 
-		if ((old_i_smoothed_cvadc[PITCH_CV*2+0] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+0] > 2058)) //positive voltage on 1V/oct jack
-		{
-			f_param[0][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+0]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+0]];
-		}
-		else
-			f_param[0][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+0]];
+		t_pitch_potadc = i_smoothed_potadc[PITCH_POT*2+0] + system_calibrations->pitch_pot_detent_offset[0];
+		if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
+		if (t_pitch_potadc < 0) t_pitch_potadc = 0;
+
+		//if ((old_i_smoothed_cvadc[PITCH_CV*2+0] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+0] > 2058)) //positive voltage on 1V/oct jack
+		//{
+			f_param[0][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+0]];
+		//}
+		//else
+		//	f_param[0][PITCH] = pitch_pot_cv[t_pitch_potadc];
 
 		if (f_param[0][PITCH] > MAX_RS)
 			f_param[0][PITCH] = MAX_RS;
@@ -455,12 +432,11 @@ void update_params(void)
 			// PITCH POT + CV
 			//
 
-			if ((old_i_smoothed_cvadc[PITCH_CV*2+chan] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+chan] > 2058)) //positive voltage on 1V/oct jack
-			{
-				f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
-			}
-			else
-				f_param[chan][PITCH] = pitch_pot_cv[i_smoothed_potadc[PITCH_POT*2+chan]];
+			t_pitch_potadc = i_smoothed_potadc[PITCH_POT*2+chan] + system_calibrations->pitch_pot_detent_offset[chan];
+			if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
+			if (t_pitch_potadc < 0) t_pitch_potadc = 0;
+
+			f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
 
 			if (f_param[chan][PITCH] > MAX_RS)
 				f_param[chan][PITCH] = MAX_RS;
