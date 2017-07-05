@@ -23,119 +23,119 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 
 
-uint8_t write_sampleindex_file(void)
+FRESULT write_sampleindex_file(void)
 {
 
 	FIL 		temp_file;
-	FRESULT 	res;
+	FRESULT 	res, res_sysdir;
 	uint32_t 	sz, bw;
 	uint8_t 	i, j;
 	char 		b_color[10];
 	char 		path[_MAX_LFN+1];
 	char 		bank_path[_MAX_LFN+1];
+	char 		full_path[_MAX_LFN+1];
 	char 		*filename_ptr;
 	char 		t_filename_ptr[_MAX_LFN+1];
 
-	// CREATE INDEX FILE - TXT
+	// CREATE INDEX FILE
 	// previous index files are replaced
 	// f_open, f_sync and f_rpintf are functions from 
 	// ...the module application interface
 	// ...for the Generic FAT file system module  (ff.h)
-	
-	// create sample.index file
-	// ... and its pointer &temp_file
-	res = f_open(&temp_file,"sample_index.txt", FA_WRITE | FA_CREATE_ALWAYS); 
 
-	// rise flags if index can't be opened/created
-	if (res != FR_OK) return(1); 
+	// Check for system dir
+	res_sysdir = check_sys_dir();
+	if (res!=FR_OK)return(res);
 
-	// write cached information of the file  to the volume
-	// ... using the Generic FAT file system module (ff.h)
-	// ... to preserve the FAT structure on the volume 
-	// ... in case the write operation to the FAT volume is interrupted due to an accidental failure
-	// ... such as sudden blackout, incorrect media removal and unrecoverable disk error
-	f_sync(&temp_file);
+	// WRITE SAMPLES DATA TO INDEX FILE
+	else {
+		// create sample.index file
+		// ... and its pointer &temp_file
+		str_cat(full_path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
+		res = f_open(&temp_file,full_path, FA_WRITE | FA_CREATE_ALWAYS); 
+		if (res != FR_OK) return(res); 
+		f_sync(&temp_file);
 
 
-	// WRITE 'SAMPLES' INFO TO INDEX FILE
 
-	// For each bank
-	for (i=0; i<MAX_NUM_BANKS; i++)
-	{
-
-		// Print bank Color to index file
-		bank_to_color(i, b_color);
- 		f_printf(&temp_file, "--------------------\n%s\n--------------------\n", b_color);
-
-		// For each sample in bank
-		for (j=0; j<NUM_SAMPLES_PER_BANK; j++)
+		// For each bank
+		for (i=0; i<MAX_NUM_BANKS; i++)
 		{
- 		
-			// split path and filename			
-			filename_ptr = t_filename_ptr;
-			filename_ptr = str_rstr(samples[i][j].filename, '/', path);
-			
-			// Skip empty slots
-			if (filename_ptr[0]!='\0')
+
+			// Print bank Color to index file
+			bank_to_color(i, b_color);
+	 		f_printf(&temp_file, "--------------------\n%s\n--------------------\n", b_color);
+
+			// For each sample in bank
+			for (j=0; j<NUM_SAMPLES_PER_BANK; j++)
 			{
-
-				// Print bank path to index file
-				if(j==0)
-				{
-					str_cpy(bank_path, path);
-					f_printf(&temp_file, "path: %s\n\n", path);
-				}
+	 		
+				// split path and filename			
+				filename_ptr = t_filename_ptr;
+				filename_ptr = str_rstr(samples[i][j].filename, '/', path);
 				
-				// Print sample name to index file
-				if (str_cmp(path, bank_path)) f_printf(&temp_file, "%s\n",filename_ptr);
-				else f_printf(&temp_file, "%s\n", samples[i][j].filename);
-
-				// write unedditable sample info to index file
-				switch (samples[i][j].numChannels)
+				// Skip empty slots
+				if (filename_ptr[0]!='\0')
 				{
-					case 1:
-						f_printf(&temp_file, "sample info: %dHz, %d-bit, mono,   %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].sampleSize);
-					break;
-					case 2:
-						f_printf(&temp_file, "sample info: %dHz, %d-bit, stereo, %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].sampleSize);
-					break;
+
+					// Print bank path to index file
+					if(j==0)
+					{
+						str_cpy(bank_path, path);
+						f_printf(&temp_file, "path: %s\n\n", path);
+					}
+					
+					// Print sample name to index file
+					if (str_cmp(path, bank_path)) f_printf(&temp_file, "%s\n",filename_ptr);
+					else f_printf(&temp_file, "%s\n", samples[i][j].filename);
+
+					// write unedditable sample info to index file
+					switch (samples[i][j].numChannels)
+					{
+						case 1:
+							f_printf(&temp_file, "sample info: %dHz, %d-bit, mono,   %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].sampleSize);
+						break;
+						case 2:
+							f_printf(&temp_file, "sample info: %dHz, %d-bit, stereo, %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].sampleSize);
+						break;
+					}
+
+					// write edditable sample info to index file
+			 		f_printf(&temp_file, "- Sample slot: %d\n- play start: %d\n- play size: %d\n- play gain(%%): %d\n\n", j+1, samples[i][j].inst_start, samples[i][j].inst_size, (int)(100 * samples[i][j].inst_gain));
 				}
-
-				// write edditable sample info to index file
-		 		f_printf(&temp_file, "- Sample slot: %d\n- play start: %d\n- play size: %d\n- play gain(%%): %d\n\n", j+1, samples[i][j].inst_start, samples[i][j].inst_size, (int)(100 * samples[i][j].inst_gain));
 			}
+	 		f_printf(&temp_file, "\n");
 		}
- 		f_printf(&temp_file, "\n");
-	}
 
-	// Write global info to file
-	f_printf(&temp_file, "\n------------------------------------------------------------\nGlobal stereo mode: %d\n", global_mode[STEREO_MODE]);
-	f_printf(&temp_file, "Timestamp: %d\n", get_fattime());
-	
-		// timestamp  ((uint32_t)(2016 - 1980) 	<< 25)
-				// 	| ((uint32_t)month 			<< 21)
-				// 	| ((uint32_t)days 			<< 16)
-				// 	| ((uint32_t)hours 			<< 11)
-				// 	| ((uint32_t)mins 			<< 5)
-				// 	| ((uint32_t)secs 			>> 1);
+		// Write global info to file
+		f_printf(&temp_file, "\n------------------------------------------------------------\nGlobal stereo mode: %d\n", global_mode[STEREO_MODE]);
+		f_printf(&temp_file, "Timestamp: %d\n", get_fattime());
+		
+			// timestamp  ((uint32_t)(2016 - 1980) 	<< 25)
+					// 	| ((uint32_t)month 			<< 21)
+					// 	| ((uint32_t)days 			<< 16)
+					// 	| ((uint32_t)hours 			<< 11)
+					// 	| ((uint32_t)mins 			<< 5)
+					// 	| ((uint32_t)secs 			>> 1);
 
-	// update the volume   
-	f_sync(&temp_file);
+		// update the volume   
+		f_sync(&temp_file);
 
-	// FIXME: update flags
-	// rise flags as needed
-	if 		(res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
-	else if (bw < sz)		{f_close(&temp_file); return(3);} //not all data written
+		// FIXME: update flags
+		// rise flags as needed
+		if 		(res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
+		else if (bw < sz)		{f_close(&temp_file); return(3);} //not all data written
 
 
-	// CLOSE INDEX FILE
-	f_close(&temp_file);
+		// CLOSE INDEX FILE
+		f_close(&temp_file);
 
-	// WRITE SAMPLE LIST HTML FILE
-	write_samplelist();
+		// WRITE SAMPLE LIST HTML FILE
+		write_samplelist();
 
-	return(0);
+		return(FR_OK);
 
+	} 
 }
 
 
