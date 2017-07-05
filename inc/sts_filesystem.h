@@ -10,6 +10,12 @@
 #include <stm32f4xx.h>
 #include "ff.h"
 
+#define SYS_DIR 			"_STS.system"
+#define SAMPLELIST_FILE		"sample_list.html"
+#define INDEX_FILE			"sample_index.dat"
+#define RENAME_LOG_FILE		"renamed_folders.txt"
+#define ERROR_LOG_FILE		"error-log.txt"
+
 
 FRESULT reload_sdcard(void);
 
