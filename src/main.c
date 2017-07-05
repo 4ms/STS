@@ -88,7 +88,7 @@ int main(void)
 	uint32_t do_factory_reset=0;
 	uint32_t timeout_boot;
 	uint32_t valid_fw_version;
-	
+	FRESULT res;
 
 	
 	//
@@ -237,9 +237,17 @@ int main(void)
 
 		process_mode_flags();
 
+		if (flags[RewriteIndex])
+		{
+			res = write_sampleindex_file();
+			if (res) g_error |= CANNOT_WRITE_INDEX;
+			flags[RewriteIndex] = 0;
+		}
+		
     	if (do_factory_reset)
     		if (!(--do_factory_reset))
     			factory_reset();
+
 
 
 	}

@@ -70,6 +70,7 @@ enum Flags {
 	RevertBank1,
 	RevertBank2,
 	RevertAll,
+	RewriteIndex,
 
 	NUM_FLAGS
 };

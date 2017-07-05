@@ -234,8 +234,6 @@ void write_buffer_to_storage(void)
 			//f_close(&recfil);
 			f_sync(&recfil);
 
-			enable_bank(sample_bank_now_recording);
-
 			rec_state=RECORDING;
 		break;
 
@@ -329,7 +327,6 @@ void write_buffer_to_storage(void)
 						str_cpy(sample_fname_now_recording, path);
 				}
 
-				rec_state=REC_OFF;
 
 				str_cpy(samples[sample_bank_now_recording][sample_num_now_recording].filename, sample_fname_now_recording);
 				samples[sample_bank_now_recording][sample_num_now_recording].sampleSize = samplebytes_recorded;
@@ -345,14 +342,17 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded & 0xFFFFFFF8;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
 
-				res = write_sampleindex_file();
-				if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors();}
+				flags[RewriteIndex] = 1;
+				
+				enable_bank(sample_bank_now_recording);
 
 				sample_fname_now_recording[0] = 0;
 				sample_num_now_recording = 0xFF;
 				sample_bank_now_recording = 0xFF;
 				flags[ForceFileReload1] = 1;
 				flags[ForceFileReload2] = 1;
+
+				rec_state=REC_OFF;
 			}
 
 		break;

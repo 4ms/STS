@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "params.h"
+#include "timekeeper.h"
 #include "ff.h"
 #include "sts_filesystem.h"
 #include "file_util.h"
@@ -28,14 +29,13 @@ FRESULT write_sampleindex_file(void)
 
 	FIL 		temp_file;
 	FRESULT 	res, res_sysdir;
-	uint32_t 	sz, bw;
+	//uint32_t 	sz, bw;
 	uint8_t 	i, j;
 	char 		b_color[10];
-	char 		path[_MAX_LFN+1];
 	char 		bank_path[_MAX_LFN+1];
 	char 		full_path[_MAX_LFN+1];
-	char 		*filename_ptr;
-	char 		t_filename_ptr[_MAX_LFN+1];
+	char 		filename_ptr[_MAX_LFN+1];
+	char 		path[_MAX_LFN+1];
 
 	// CREATE INDEX FILE
 	// previous index files are replaced
@@ -45,18 +45,15 @@ FRESULT write_sampleindex_file(void)
 
 	// Check for system dir
 	res_sysdir = check_sys_dir();
-	if (res!=FR_OK)return(res);
+	if (res_sysdir!=FR_OK)	return(res_sysdir);
 
 	// WRITE SAMPLES DATA TO INDEX FILE
 	else {
 		// create sample.index file
 		// ... and its pointer &temp_file
 		str_cat(full_path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
-		res = f_open(&temp_file,full_path, FA_WRITE | FA_CREATE_ALWAYS); 
+		res = f_open(&temp_file, full_path, FA_WRITE | FA_CREATE_ALWAYS); 
 		if (res != FR_OK) return(res); 
-		f_sync(&temp_file);
-
-
 
 		// For each bank
 		for (i=0; i<MAX_NUM_BANKS; i++)
@@ -65,14 +62,14 @@ FRESULT write_sampleindex_file(void)
 			// Print bank Color to index file
 			bank_to_color(i, b_color);
 	 		f_printf(&temp_file, "--------------------\n%s\n--------------------\n", b_color);
+			f_sync(&temp_file);
 
 			// For each sample in bank
 			for (j=0; j<NUM_SAMPLES_PER_BANK; j++)
 			{
 	 		
 				// split path and filename			
-				filename_ptr = t_filename_ptr;
-				filename_ptr = str_rstr(samples[i][j].filename, '/', path);
+				str_split(samples[i][j].filename, '/', path, filename_ptr);
 				
 				// Skip empty slots
 				if (filename_ptr[0]!='\0')
@@ -83,28 +80,35 @@ FRESULT write_sampleindex_file(void)
 					{
 						str_cpy(bank_path, path);
 						f_printf(&temp_file, "path: %s\n\n", path);
+						f_sync(&temp_file);
 					}
 					
 					// Print sample name to index file
 					if (str_cmp(path, bank_path)) f_printf(&temp_file, "%s\n",filename_ptr);
 					else f_printf(&temp_file, "%s\n", samples[i][j].filename);
 
+					f_sync(&temp_file);
+
 					// write unedditable sample info to index file
 					switch (samples[i][j].numChannels)
 					{
 						case 1:
 							f_printf(&temp_file, "sample info: %dHz, %d-bit, mono,   %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].sampleSize);
+							f_sync(&temp_file);
 						break;
 						case 2:
 							f_printf(&temp_file, "sample info: %dHz, %d-bit, stereo, %d samples\n", samples[i][j].sampleRate, samples[i][j].sampleByteSize*8, samples[i][j].sampleSize);
+							f_sync(&temp_file);
 						break;
 					}
 
 					// write edditable sample info to index file
 			 		f_printf(&temp_file, "- Sample slot: %d\n- play start: %d\n- play size: %d\n- play gain(%%): %d\n\n", j+1, samples[i][j].inst_start, samples[i][j].inst_size, (int)(100 * samples[i][j].inst_gain));
+					f_sync(&temp_file);
 				}
 			}
 	 		f_printf(&temp_file, "\n");
+	 		f_sync(&temp_file);
 		}
 
 		// Write global info to file
@@ -117,13 +121,10 @@ FRESULT write_sampleindex_file(void)
 					// 	| ((uint32_t)mins 			<< 5)
 					// 	| ((uint32_t)secs 			>> 1);
 
-		// update the volume   
-		f_sync(&temp_file);
-
 		// FIXME: update flags
 		// rise flags as needed
-		if 		(res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
-		else if (bw < sz)		{f_close(&temp_file); return(3);} //not all data written
+		//if 		(res != FR_OK)	{f_close(&temp_file); return(2);} //file write failed
+		//else if (bw < sz)		{f_close(&temp_file); return(3);} //not all data written
 
 
 		// CLOSE INDEX FILE
@@ -148,7 +149,7 @@ uint8_t write_samplelist(void)
 	FRESULT 	res;
 	uint8_t 	i, j;
 	uint8_t		bank_is_empty;
-	char 		b_color[10];
+	char 		b_color[11]; //Lavender-5\0
 
 	// create file
 	res = f_open(&temp_file,SAMPLELIST_FILE , FA_WRITE | FA_CREATE_ALWAYS); 
@@ -157,6 +158,7 @@ uint8_t write_samplelist(void)
 
 	// WRITE 'SAMPLES' INFO TO SAMPLE LIST
 	f_printf(&temp_file, "<!DOCTYPE html>\n<html>\n<body style=\"padding-left: 100px; background-color:#F8F9FD;\">\n<br><h1>SAMPLE LIST</h1><br>\n");
+	f_sync(&temp_file);
 
 	// For each bank
 	for (i=0; i<MAX_NUM_BANKS; i++){
@@ -173,19 +175,23 @@ uint8_t write_samplelist(void)
 
 			// Print bank name to file
 			bank_to_color(i, b_color);
-			if (i>0) {f_printf(&temp_file, "<br>\n");}
+			if (i>0) {f_printf(&temp_file, "<br>\n");f_sync(&temp_file);}
 	 		f_printf(&temp_file, "<h2>%s</h2>\n", b_color);
+			f_sync(&temp_file);
 
 			// Print sample name to sample list, for each sample in bank
-			for (j=0; j<NUM_SAMPLES_PER_BANK; j++) {f_printf(&temp_file, "%d) %s<br>\n", j+1, samples[i][j].filename);} 
+			for (j=0; j<NUM_SAMPLES_PER_BANK; j++)
+			{
+				f_printf(&temp_file, "%d] %s<br>\n", j+1, samples[i][j].filename);
+				f_sync(&temp_file);
+			} 
 			
 			f_printf(&temp_file, "<br>\n");
+			f_sync(&temp_file);
 		}
 	}
 	f_printf(&temp_file, "</body>\n</html>");
-
-	// update the volume   
-	f_sync(&temp_file);
+	f_sync(&temp_file);	
 
 	// CLOSE FILE
 	f_close(&temp_file);
@@ -235,26 +241,6 @@ FRESULT backup_sampleindex_file(void)
 			f_close(&backupindex);
 			return (FR_OK); 
 		}
-
-
-		// read next line in index file
-		//f_gets(read_buff, _MAX_LFN+1, &indexfile);
-
-		// if end of index file is not reached yet
-		// if(!f_eof(&indexfile))
-		// {
-		// 	// write line into backup index file
-		// 	f_printf(&backupindex, read_buff);
-
-		// 	// update the volume   
-		// 	f_sync(&backupindex);
-		// }
-		// else
-		// {
-		// 	f_close(&indexfile);
-		// 	f_close(&backupindex);
-		// 	return 0;
-		// }
 	}
 }
 
@@ -286,8 +272,8 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	FIL 		temp_file, temp_wav_file;
 	FRESULT 	res;
 	uint8_t		head_load;
-	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1], file_name[_MAX_LFN+1], full_path[_MAX_LFN+1];
-	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_path=0, arm_data=0, loaded_header=0, read_name=0;
+	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], file_name[_MAX_LFN+1], full_path[_MAX_LFN+1];
+	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_data=0, loaded_header=0, read_name=0;
 	uint32_t	num_buff=UINT32_MAX;
 	char 		token[_MAX_LFN+1];
 	uint8_t		fopen_flag	  = 0;
@@ -354,7 +340,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 				{
 					str_cpy(folder_path, read_buffer);
 					// ToDo: check for missing / at end of path, or extra / at begining
-					arm_path=0;
 					loaded_header = 1;
 					cur_sample = 0;
 					token[0]='\0';
@@ -368,7 +353,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 				// save file name
 				str_cpy(file_name, token);
-				// str_cat(sample_path ,folder_path, token);
 
 				token[0] = '\0'; 
 				read_name++;
@@ -485,12 +469,12 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 			// if nothing is recognized
 			// or bank is to be skipped
 			// empty token so new line is read
-			if  (	!loaded_header &&
+			if  (	(!loaded_header &&
 					!(  (str_cmp(token,"--------------------") && !arm_bank)	||
 						(!str_cmp(token,"--------------------") &&  arm_bank)	||
 						(str_cmp(token,"--------------------") &&  arm_bank)	||
 						(str_cmp(token, "path:")) 
-					 )
+					 ))
 					 ||  skip_cur_bank
 			    )
 			{
