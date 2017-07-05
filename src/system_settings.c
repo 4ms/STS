@@ -3,12 +3,13 @@
  */
 
 #include "globals.h"
+#include "dig_pins.h"
+#include "params.h"
 #include "calibration.h"
 #include "flash_user.h"
 #include "adc.h"
-#include "params.h"
 #include "buttons.h"
-#include "dig_pins.h"
+#include "system_settings.h"
 
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
@@ -66,6 +67,17 @@ void check_entering_system_mode(void)
 
 }
 
+FRESULT save_system_settings(void)
+{
+
+
+}
+
+FRESULT read_system_settings(void)
+{
+
+
+}
 
 void update_system_settings(void)
 {
