@@ -6,47 +6,62 @@
 #include "sts_fs_renaming_queue.h"
 
 
+//
+// clear_renaming_queue()
+//
+// Create and truncate the queue file
+//
 FRESULT clear_renaming_queue(void)
 {
 	FIL queue_file;
 	FRESULT res;
+	char	filepath[_MAX_LFN];
 
-	//
-	//Create and truncate the queue file
-	res = f_open(&queue_file,"sts-renaming-queue.tmp", FA_WRITE | FA_CREATE_ALWAYS); 
-	if (res==FR_OK) 
-		res=f_close(&queue_file);
-
+	res = check_sys_dir();
+	if (res==FR_OK)
+	{
+		str_cat(filepath, SYS_DIR_SLASH, RENAME_TMP_FILE);
+		res = f_open(&queue_file, filepath, FA_WRITE | FA_CREATE_ALWAYS); 
+		if (res==FR_OK) 
+			res=f_close(&queue_file);
+	}
 	return(res);
 }
 
 //
-//Appends to a renaming queue file
+// append_rename_queue()
+//
+// Appends to a renaming queue file
 //
 FRESULT append_rename_queue(uint8_t bank, char *orig_name, char *new_name)
 {
 	FRESULT res;
 	FIL queue_file;
+	char	filepath[_MAX_LFN];
 
-	//Open the queue file in APPEND mode
-	res = f_open(&queue_file,"sts-renaming-queue.tmp", FA_OPEN_APPEND | FA_WRITE); 
-	if (res!=FR_OK) return(res);
+	res = check_sys_dir();
+	if (res==FR_OK)
+	{
+		str_cat(filepath, SYS_DIR_SLASH, RENAME_TMP_FILE);
+		res = f_open(&queue_file, filepath, FA_OPEN_APPEND | FA_WRITE); 
+		if (res!=FR_OK) return(res);
 
-	f_sync(&queue_file);
+		f_sync(&queue_file);
 
- 	f_printf(&queue_file, "\nBank: ");
-	f_sync(&queue_file);
+	 	f_printf(&queue_file, "\nBank: ");
+		f_sync(&queue_file);
 
- 	f_printf(&queue_file, "%d\n", bank);
-	f_sync(&queue_file);
+	 	f_printf(&queue_file, "%d\n", bank);
+		f_sync(&queue_file);
 
- 	f_printf(&queue_file, "Original name: %s\n", orig_name);
-	f_sync(&queue_file);
+	 	f_printf(&queue_file, "Original name: %s\n", orig_name);
+		f_sync(&queue_file);
 
- 	f_printf(&queue_file, "New name: %s\n", new_name);
-	f_sync(&queue_file);
+	 	f_printf(&queue_file, "New name: %s\n", new_name);
+		f_sync(&queue_file);
 
-	res = f_close(&queue_file);
+		res = f_close(&queue_file);
+	}
 	return(res);
 }
 
@@ -68,11 +83,13 @@ FRESULT process_renaming_queue(void)
 	uint32_t	bank;
 
 	//Open the queue file in read-only mode
-	res = f_open(&queue_file, "sts-renaming-queue.tmp", FA_READ); 
+	str_cat(orig_name, SYS_DIR_SLASH, RENAME_TMP_FILE);
+	res = f_open(&queue_file, orig_name, FA_READ); 
 	if (res!=FR_OK) return(res);
 
 	//Open the log file in append mode (create it if it doesn't exist)
-	res = f_open(&log_file, "STS - Renamed Folders.txt", FA_OPEN_APPEND | FA_WRITE); 
+	str_cat(orig_name, SYS_DIR_SLASH, RENAME_LOG_FILE);
+	res = f_open(&log_file, orig_name, FA_OPEN_APPEND | FA_WRITE); 
 	if (res!=FR_OK) skip_log = 1; //if we can't create the queue log file, just skip logging
 
 	//Read from the renaming queue file
@@ -157,8 +174,12 @@ FRESULT process_renaming_queue(void)
 	res = f_close(&log_file);
 
 	res = f_close(&queue_file);
-	if (res==FR_OK) 
-		res = f_unlink("sts-renaming-queue.tmp"); //Delete the file 
+	if (res==FR_OK)
+	{
+		//Delete the tmp file
+		str_cat(orig_name, SYS_DIR_SLASH, RENAME_TMP_FILE);
+		res = f_unlink(orig_name);
+	}
 
 	return(res);
 }
