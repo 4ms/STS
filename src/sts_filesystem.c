@@ -367,7 +367,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 	uint8_t res_bak;
 
 	if (!force_reload)
-		force_reload = load_sampleindex_file(INDEX_FILE, MAX_NUM_BANKS);
+		force_reload = load_sampleindex_file(USE_INDEX_FILE, MAX_NUM_BANKS);
 
 	if (!force_reload) //sampleindex file was ok
 	{	

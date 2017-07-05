@@ -130,9 +130,69 @@ uint8_t write_sampleindex_file(void)
 
 	// CLOSE INDEX FILE
 	f_close(&temp_file);
+
+	// WRITE SAMPLE LIST HTML FILE
+	write_samplelist();
+
 	return(0);
 
 }
+
+
+
+// WRITE SAMPLE LIST HTML
+// previous files are replaced
+uint8_t write_samplelist(void)
+{
+
+	FIL 		temp_file;
+	FRESULT 	res;
+	uint8_t 	i, j;
+	uint8_t		bank_is_empty;
+	char 		b_color[10];
+
+	// create file
+	res = f_open(&temp_file,SAMPLELIST_FILE , FA_WRITE | FA_CREATE_ALWAYS); 
+	if (res != FR_OK) return(1); 
+	f_sync(&temp_file);
+
+	// WRITE 'SAMPLES' INFO TO SAMPLE LIST
+	f_printf(&temp_file, "<!DOCTYPE html>\n<html>\n<body style=\"padding-left: 100px; background-color:#F8F9FD;\">\n<br><h1>SAMPLE LIST</h1><br>\n");
+
+	// For each bank
+	for (i=0; i<MAX_NUM_BANKS; i++){
+
+		// check if bank is empty
+		bank_is_empty=1; j=0;
+ 		while(j<NUM_SAMPLES_PER_BANK){
+ 			if (samples[i][j].filename[0]!=0) bank_is_empty=0; break;
+ 			j++;
+ 		}
+
+ 		// if bank isn't empty
+ 		if(!bank_is_empty){
+
+			// Print bank name to file
+			bank_to_color(i, b_color);
+			if (i>0) {f_printf(&temp_file, "<br>\n");}
+	 		f_printf(&temp_file, "<h2>%s</h2>\n", b_color);
+
+			// Print sample name to sample list, for each sample in bank
+			for (j=0; j<NUM_SAMPLES_PER_BANK; j++) {f_printf(&temp_file, "%s<br>\n", samples[i][j].filename);}
+			
+			f_printf(&temp_file, "<br>\n");
+		}
+	}
+	f_printf(&temp_file, "</body>\n</html>");
+
+	// update the volume   
+	f_sync(&temp_file);
+
+	// CLOSE FILE
+	f_close(&temp_file);
+	return(0);
+}
+
 
 uint8_t backup_sampleindex_file(void)
 {

@@ -317,7 +317,7 @@ void Button_Debounce_IRQHandler(void)
 											//
 											t = global_mode[STEREO_MODE];
 											if (button_state[Bank1]>=MED_PRESSED && button_state[Bank2]>=MED_PRESSED)
-												load_sampleindex_file(BACKUP_FILE, ALL_BANKS);
+												load_sampleindex_file(USE_BACKUP_FILE, ALL_BANKS);
 											global_mode[STEREO_MODE] = t;
 										}
 										break;
@@ -346,10 +346,10 @@ void Button_Debounce_IRQHandler(void)
 											t = global_mode[STEREO_MODE];
 
 											if (button_state[Bank1]>=SHORT_PRESSED)
-												load_sampleindex_file(BACKUP_FILE, i_param[0][BANK]);
+												load_sampleindex_file(USE_BACKUP_FILE, i_param[0][BANK]);
 									
 											if (button_state[Bank2]>=SHORT_PRESSED)
-												load_sampleindex_file(BACKUP_FILE, i_param[1][BANK]);
+												load_sampleindex_file(USE_BACKUP_FILE, i_param[1][BANK]);
 
 											global_mode[STEREO_MODE] = t;
 											flags[skip_process_buttons] = 1;
