@@ -163,6 +163,46 @@ uint32_t str_len(char* str)
 	return(i);
 }
 
+// str_split()
+//
+// Returns 0 if split_char is not found:
+//    -before_split will be the entire string
+//    -after_split will be a null string
+// Returns the position+1 of the split_char if it is found
+//    -Copies everything found before and including split_char into before_split
+//    -Copies everything found after split_char (excluded) into after_split
+// Example:
+// str_split("abcdX1234", 'X',...):
+//    returns 5
+//    before_split <== abcdX
+//    after_split <== 1234
+//
+uint8_t str_split(char *string, char split_char, char *before_split, char *after_split)
+{
+  char *cp;
+  uint8_t pos;
+  str_cpy(before_split, string);
+
+  pos=0;
+  for (cp = string; *cp!=0; cp++)
+  {
+    if (*cp == split_char) break;
+    pos++;
+  }
+  if (*cp!=split_char)
+  {
+    after_split[0]=0;
+    return 0; //split_char not found
+  }
+  else {
+    before_split[pos+1]=0;
+    str_cpy(after_split, &(string[pos+1]));
+    return (pos+1);
+  }
+}
+
+
+
 // Returns the tail of a string following the last splitting char "split_char" that was found in "string" input
 // ...copies everything found before split_char (included) into "before_split"
 char *str_rstr(char *string, char split_char, char *before_split)
