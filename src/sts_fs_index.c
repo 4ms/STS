@@ -165,7 +165,7 @@ uint8_t write_samplelist(void)
 		// check if bank is empty
 		bank_is_empty=1; j=0;
  		while(j<NUM_SAMPLES_PER_BANK){
- 			if (samples[i][j].filename[0]!=0) bank_is_empty=0; break;
+ 			if (samples[i][j].filename[0]!=0) {bank_is_empty=0; break;}
  			j++;
  		}
 
