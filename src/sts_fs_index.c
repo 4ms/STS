@@ -194,7 +194,7 @@ uint8_t write_samplelist(void)
 }
 
 
-uint8_t backup_sampleindex_file(void)
+FRESULT backup_sampleindex_file(void)
 {
 	// ToDo: could just duplicate data and open resulting pointer
 	// ... if dup is not available
@@ -205,13 +205,17 @@ uint8_t backup_sampleindex_file(void)
 	char 		read_buff[512];
 	uint32_t 	bytes_read;
 	uint32_t 	bytes_written;
+	char		idx_full_path[_MAX_LFN+1];
+	char		bak_full_path[_MAX_LFN+1];
 
 	// Open index and backup files
-	res_index  = f_open(&indexfile,   "sample_index.txt", FA_READ);
-	if(res_index!=FR_OK) {f_close(&indexfile);   return 1;}
+	str_cat(idx_full_path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
+	res_index  = f_open(&indexfile, idx_full_path, FA_READ);
+	if(res_index!=FR_OK) {f_close(&indexfile);   return (res_index);}
 
-	res_bak = f_open(&backupindex, "idx.bak", FA_WRITE | FA_CREATE_ALWAYS);
-	if(res_bak!=FR_OK) {f_close(&indexfile);f_close(&backupindex); return 1;}
+	str_cat(bak_full_path, SYS_DIR_SLASH, SAMPLE_BAK_FILE);	
+	res_bak = f_open(&backupindex, bak_full_path, FA_WRITE | FA_CREATE_ALWAYS);
+	if(res_bak!=FR_OK) {f_close(&indexfile);f_close(&backupindex); return (res_bak);}
 
 	while(1)
 	{
@@ -224,13 +228,13 @@ uint8_t backup_sampleindex_file(void)
 		{
 			f_close(&indexfile);
 			f_close(&backupindex);
-			return 1;
+			return (FR_INT_ERR); // ToDo: there should be a way to report this error more accurately
 		}
 		if (f_eof(&indexfile))
 		{
 			f_close(&indexfile);
 			f_close(&backupindex);
-			return 0;
+			return (FR_OK); 
 		}
 
 
@@ -262,7 +266,6 @@ uint8_t backup_sampleindex_file(void)
 //Key combo for: reload everything: load_sampleindex_file(1, MAX_NUM_BANKS);
 //Key combo for: reload one bank: load_sampleindex_file(1, bank);
 uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
-// uint8_t load_sampleindex_file(void)
 {
 
 	// // Variables to load from file
@@ -285,7 +288,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	FIL 		temp_file, temp_wav_file;
 	FRESULT 	res;
 	uint8_t		head_load;
-	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1], file_name[_MAX_LFN+1];
+	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+1], sample_path[_MAX_LFN+1], file_name[_MAX_LFN+1], full_path[_MAX_LFN+1];
 	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_path=0, arm_data=0, loaded_header=0, read_name=0;
 	uint32_t	num_buff=UINT32_MAX;
 	char 		token[_MAX_LFN+1];
@@ -295,8 +298,12 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	uint8_t		skip_cur_bank = 0;
 
 	// Open sample index file
-	if (use_backup) res = f_open(&temp_file,"idx.bak"		  , FA_READ);
-	else 			res = f_open(&temp_file,"sample_index.txt", FA_READ);
+	if (use_backup) {res = f_open(&temp_file,"idx.bak", FA_READ);}
+	else 			
+		{
+			str_cat(full_path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
+			res = f_open(&temp_file,full_path, FA_READ);
+		}
 
 	// rise flags if index can't be opened/created
 	if (res != FR_OK) return(1); //file not found
