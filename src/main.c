@@ -30,6 +30,7 @@ main.c
 #include "bank.h"
 #include "sts_fs_index.h"
 #include "sts_filesystem.h"
+#include "system_settings.h"
 
 uint32_t WATCH0;
 uint32_t WATCH1;
@@ -211,6 +212,9 @@ int main(void)
 	audio_buffer_init();
 	init_banks();
 	Start_I2SDMA();
+
+	set_default_system_settings();
+	read_system_settings();
 
 	delay();
 

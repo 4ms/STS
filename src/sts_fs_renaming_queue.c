@@ -76,6 +76,7 @@ FRESULT process_renaming_queue(void)
 	FIL 		queue_file;
 	FIL 		log_file;
 	uint8_t 	skip_log=0;
+	uint8_t		logged_something=0;
 	char 		read_buffer[255];//max line length
 
 	char 		orig_name[_MAX_LFN+1];
@@ -155,6 +156,8 @@ FRESULT process_renaming_queue(void)
 
 					if (!skip_log)
 					{
+						logged_something = 1;
+
 						//Log the transaction:
 						f_printf(&log_file, "\nRenamed folder for bank %d\n", bank);
 						f_sync(&log_file);
@@ -177,10 +180,18 @@ FRESULT process_renaming_queue(void)
 
 		res = f_close(&log_file);
 
+		//Delete the log file if we didn't log anything
+		if (res==FR_OK && !logged_something)
+		{
+			str_cat(orig_name, SYS_DIR_SLASH, RENAME_LOG_FILE);
+			res = f_unlink(orig_name);
+		}
+
 		res = f_close(&queue_file);
+
+		//Delete the tmp file
 		if (res==FR_OK)
 		{
-			//Delete the tmp file
 			str_cat(orig_name, SYS_DIR_SLASH, RENAME_TMP_FILE);
 			res = f_unlink(orig_name);
 		}
