@@ -11,9 +11,11 @@
 #include "ff.h"
 
 #define SYS_DIR 			"_STS.system"
+#define SYS_DIR_SLASH		"_STS.system/"
 #define SAMPLELIST_FILE		"sample_list.html"
-#define INDEX_FILE			"sample_index.dat"
+#define SAMPLE_INDEX_FILE	"sample_index.dat"
 #define RENAME_LOG_FILE		"renamed_folders.txt"
+#define RENAME_TMP_FILE		"sts-renaming-queue.tmp"
 #define ERROR_LOG_FILE		"error-log.txt"
 
 
@@ -34,5 +36,6 @@ FRESULT load_all_banks(uint8_t force_reload);
 uint8_t load_bank_from_disk(uint8_t bank, char *bankpath);
 
 uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename);
+FRESULT check_sys_dir(void);
 
 #endif /* INC_STS_FILESYSTEM_H_ */

@@ -22,6 +22,40 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern FATFS FatFs;
 
 
+FRESULT check_sys_dir(void)
+{
+	FRESULT res;
+	DIR	dir;
+
+    res = f_opendir(&dir, SYS_DIR);
+
+	//If it doesn't exist, create it
+	if (res==FR_NO_PATH)
+		res = f_mkdir(SYS_DIR);
+
+	//If we got an error opening or creating a dir
+	//try reloading the SDCard, then opening the dir (and creating if needed)
+	if (res!=FR_OK)
+	{
+		res = reload_sdcard();
+
+		if (res==FR_OK)
+		{
+			res = f_opendir(&dir, SYS_DIR);
+
+			if (res==FR_NO_PATH) 
+				res = f_mkdir(SYS_DIR);
+		}
+	}
+
+	if (res!=FR_OK)
+	{
+		return (FR_INT_ERR); //fail
+	}
+
+	return(FR_OK);
+}
+
 FRESULT reload_sdcard(void)
 {
 	FRESULT res;
