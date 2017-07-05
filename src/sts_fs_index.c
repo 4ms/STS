@@ -108,7 +108,6 @@ FRESULT write_sampleindex_file(void)
 		}
 
 		// Write global info to file
-		f_printf(&temp_file, "\n------------------------------------------------------------\nGlobal stereo mode: %d\n", global_mode[STEREO_MODE]);
 		f_printf(&temp_file, "Timestamp: %d\n", get_fattime());
 		
 			// timestamp  ((uint32_t)(2016 - 1980) 	<< 25)
@@ -178,7 +177,7 @@ uint8_t write_samplelist(void)
 	 		f_printf(&temp_file, "<h2>%s</h2>\n", b_color);
 
 			// Print sample name to sample list, for each sample in bank
-			for (j=0; j<NUM_SAMPLES_PER_BANK; j++) {f_printf(&temp_file, "%s<br>\n", samples[i][j].filename);}
+			for (j=0; j<NUM_SAMPLES_PER_BANK; j++) {f_printf(&temp_file, "%d) %s<br>\n", j+1, samples[i][j].filename);} 
 			
 			f_printf(&temp_file, "<br>\n");
 		}
@@ -274,7 +273,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	// samples[i][j].inst_start
 	// samples[i][j].inst_size
 	// (int)(100 * samples[i][j].inst_gain
-	// global_mode[STEREO_MODE]
 
 	// // Varialbles to check and update if incorrect
 	// samples[i][j].filename
