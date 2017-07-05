@@ -150,23 +150,6 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 
 
 
-//Returns 1 if string begins with (or is equal to) prefix
-//Returns 0 if not
-//E.g.:
-// string=ABCD, prefix=ABC -->> returns 1
-// string=ABCD, prefix=ABCD -->>> returns 1
-// string=ABCD, prefix=ABCDE -->>> returns 0
-// string=ABCD, prefix=anything except {A, AB, ABC, ABCD} -->> returns 0
-uint8_t str_startswith(const char *string, const char *prefix)
-{
-    while (*prefix && *string)
-    {
-        if (*prefix++ != *string++)
-            return 0;
-    }
-    return 1;
-}
-
 uint32_t str_len(char* str)
 {
 	uint32_t i=0;
@@ -237,6 +220,7 @@ uint8_t is_wav(char *string)
     d=*cp;
   }
 
+  //To Do: Make this case-insensitive
   if ((a=='.')&&(b=='w')&&(c=='a')&&(d=='v')) return 1; //or maybe string?
   else return 0;
 }
@@ -345,7 +329,7 @@ uint8_t str_cmp_nocase(char *a, char *b)
   while(*a!=0)
     if (upper(*b++) != upper(*a++)) return(0);
 
-  if (*a!=*b) return(0); //check b also has 0 in the same spot as a
+  if (*a!=*b) return(0); //strings must be the same length
 
   return(1);
 }
@@ -358,9 +342,38 @@ uint8_t str_cmp(char *a, char *b)
 	while(*a!=0)
 		if (*b++ != *a++) return(0);
 
-	if (*a!=*b) return(0); //check b also has 0 in the same spot as a
+	if (*a!=*b) return(0); //strings must be the same length
 
 	return(1);
+}
+
+//Returns 1 if string begins with (or is equal to) prefix
+//Returns 0 if not
+//E.g.:
+// string=ABCD, prefix=ABC -->> returns 1
+// string=ABCD, prefix=ABCD -->>> returns 1
+// string=ABCD, prefix=ABCDE -->>> returns 0
+// string=ABCD, prefix=anything except {A, AB, ABC, ABCD} -->> returns 0
+uint8_t str_startswith(const char *string, const char *prefix)
+{
+    while (*prefix && *string)
+    {
+        if (*prefix++ != *string++)
+            return 0;
+    }
+    return 1;
+}
+
+//Returns 1 if string begins with (or is equal to) prefix -- case insensitive
+//Returns 0 if not
+uint8_t str_startswith_nocase(const char *string, const char *prefix)
+{
+    while (*prefix && *string)
+    {
+        if (upper(*prefix++) != upper(*string++))
+            return 0;
+    }
+    return 1;
 }
 
 //Returns first position of needle in haystack

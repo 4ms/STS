@@ -9,6 +9,7 @@
 #include "bank.h"
 #include "button_knob_combo.h"
 #include "adc.h"
+#include "system_settings.h"
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
@@ -315,10 +316,8 @@ void Button_Debounce_IRQHandler(void)
 											//Reload all banks from the backup index file
 											//Restores the entire sampler to the state it was on boot 
 											//
-											t = global_mode[STEREO_MODE];
 											if (button_state[Bank1]>=MED_PRESSED && button_state[Bank2]>=MED_PRESSED)
 												load_sampleindex_file(USE_BACKUP_FILE, ALL_BANKS);
-											global_mode[STEREO_MODE] = t;
 										}
 										break;
 
@@ -343,7 +342,6 @@ void Button_Debounce_IRQHandler(void)
 											//Medium press with Bank button: reload bank from the backup index file
 											//Restores just this bank to the state it was on boot 
 											//
-											t = global_mode[STEREO_MODE];
 
 											if (button_state[Bank1]>=SHORT_PRESSED)
 												load_sampleindex_file(USE_BACKUP_FILE, i_param[0][BANK]);
@@ -351,7 +349,6 @@ void Button_Debounce_IRQHandler(void)
 											if (button_state[Bank2]>=SHORT_PRESSED)
 												load_sampleindex_file(USE_BACKUP_FILE, i_param[1][BANK]);
 
-											global_mode[STEREO_MODE] = t;
 											flags[skip_process_buttons] = 1;
 										}
 										break;
@@ -416,9 +413,13 @@ void Button_Debounce_IRQHandler(void)
 				{
 					global_mode[STEREO_MODE] = 0;
 					flags[StereoModeTurningOff] = 1;
-				} else {
+					save_system_settings();
+				} 
+				else
+				{
 					global_mode[STEREO_MODE] = 1;
 					flags[StereoModeTurningOn] = 1;
+					save_system_settings();
 				}
 
 				long_press[Bank1] = 0xFFFFFFFF;

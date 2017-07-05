@@ -18,7 +18,7 @@
 #define RENAME_LOG_FILE		"renamed_folders.txt"
 #define RENAME_TMP_FILE		"sts-renaming-queue.tmp"
 #define ERROR_LOG_FILE		"error-log.txt"
-
+#define SETTINGS_FILE		"settings.txt"
 
 FRESULT reload_sdcard(void);
 

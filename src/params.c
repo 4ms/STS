@@ -100,7 +100,6 @@ void init_params(void)
 		i_param[chan][BANK] 		= 0;
 		i_param[chan][SAMPLE] 	= 0;
 		i_param[chan][REV] 		= 0;
-		i_param[chan][STEREO_MODE]=0;
 		i_param[chan][LOOPING]	 =0;
 	}
 
