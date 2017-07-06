@@ -241,14 +241,14 @@ int main(void)
 
 		if (flags[RewriteIndex])
 		{
+			flags[RewriteIndex] = 0;
+
 			res = write_sampleindex_file();
 			if (res) {
 				g_error |= CANNOT_WRITE_INDEX;
-				flags[RewriteIndex] = 0;
 				flags[RewriteIndexFail] = 10;
 			}
 			else
-				flags[RewriteIndex] = 0;
 				flags[RewriteIndexSucess] = 10;
 		}
 
