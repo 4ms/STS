@@ -243,7 +243,8 @@ int main(void)
 		{
 			flags[RewriteIndex] = 0;
 
-			res = write_sampleindex_file();
+			// res = write_sampleindex_file();
+			res = index_write_wrapper();
 			if (res) {
 				g_error |= CANNOT_WRITE_INDEX;
 				flags[RewriteIndexFail] = 255;

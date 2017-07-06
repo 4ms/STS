@@ -441,7 +441,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 	// Write samples struct to index
 	// ... so sample info gets updated with latest .wave header content
-	res = write_sampleindex_file();
+	res = index_write_wrapper();
 
 	//Create a handy array of all the bank paths
 	//TODO: this could be done in write_sampleindex_file() if we find it useful
