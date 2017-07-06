@@ -40,9 +40,15 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 extern enum PlayStates play_state[NUM_PLAY_CHAN];
 
+DIR root_dir;
 
-
-
+// Assignment mode:
+// First we set cur_assign_bank to 0xFF 
+// Then we go through all unassigned files in the current sample's folder
+// Set cur_assign_bank to 0xFE
+// Then we go through the entire SDCard for all unassigned samples (only look 1 folder level deep, for now)
+// Then we go through all assigned samples in the banks in order starting from White
+//
 uint8_t enter_assignment_mode(void)
 {
 	FRESULT res;
@@ -53,39 +59,38 @@ uint8_t enter_assignment_mode(void)
 	//Enter assignment mode
 	global_mode[ASSIGN_MODE] = 1;
 
-	//Find channel 1's bank's path
-	get_banks_path(i_param[0][BANK], cur_assign_bank_path);
+	//Start with the unassigned samples
+	cur_assign_bank = 0xFF;
 
-	//Find current sample's folder
-	//if (str_split(samples[i_param[0][BANK]][i_param[0][SAMPLE]].filename,'/', cur_assign_bank_path, t))
-	//	cur_assign_bank_path[str_len(cur_assign_bank_path)-1]='\0'; //remove trailing slash
-	//else
-	//	cur_assign_bank_path='\0'; //root dir
+	//Start with the current sample's folder
+	cur_assign_state = ASSIGN_UNUSED_IN_FOLDER;
 
-	//Open the directory
+	//Get the folder path from the filename
+	//We are just using sample_undo_buffer.filename as a temp buffer
+	if (str_split(samples[i_param[0][BANK]][i_param[0][SAMPLE]].filename,'/', cur_assign_bank_path, sample_undo_buffer.filename))
+		cur_assign_bank_path[str_len(cur_assign_bank_path)-1]='\0'; //remove trailing slash
+	else
+		cur_assign_bank_path[0]='\0'; //filename contained no slash: use root dir
+
+	//Verify the folder exists and can be opened
+	//Leave it open, so we can browse it with next_unassigned_sample
 	res = f_opendir(&assign_dir, cur_assign_bank_path);
-	if (res==FR_NO_PATH) {global_mode[ASSIGN_MODE] = 0;return(0);} //unable to enter assignment mode
+	if (res==FR_NO_PATH) {f_closedir(&assign_dir); global_mode[ASSIGN_MODE] = 0; return(0);} //unable to enter assignment mode
 
-	cur_assign_state = ASSIGN_UNUSED;
-
-	cur_assign_bank = i_param[0][BANK];
-
+	
+	//Make a copy of the current sample info, so we can undo our changes later
 	save_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
 
 	return 1;
 }
 
-void save_exit_assignment_mode(void)
-{
-	FRESULT res;
-
-	check_enabled_banks(); //disables a bank if we cleared it out
-
-	flags[RewriteIndex] = 1;
-
+void exit_assignment_mode(void)
+{		
+	global_mode[ASSIGN_MODE] = 0;
+	f_closedir(&root_dir);
+	f_closedir(&assign_dir);
 
 }
-
 
 
 //Find the next file in the folder, 
@@ -95,64 +100,96 @@ void save_exit_assignment_mode(void)
 //The benefit of this method would be that we aren't just limited to 32 samples per folder, and it uses less memory
 uint8_t next_unassigned_sample(void)
 {
-	uint8_t is_file_found, file_is_in_bank;
-	char filename[_MAX_LFN];
-	char filepath[_MAX_LFN];
-	FRESULT res;
-	FIL temp_file;
-	uint8_t i;
-
+	uint8_t	is_unassigned_file_found;
+	uint8_t	is_file_already_assigned;
+	char 	filename[_MAX_LFN];
+	char 	filepath[_MAX_LFN];
+	FRESULT	res;
+	FIL 	temp_file;
+	uint8_t	i;
+	uint8_t	bank, orig_bank;
 
 	play_state[0]=SILENT;
 	play_state[1]=SILENT;
 
 	//
-	//Search for files in the bank we are currently checking (cur_assign_dir)
+	//Search for files in the bank we are currently checking (assign_dir)
 	//
 	//First, go through all files that aren't being used in this bank
 	//Then, go through the remaining files in the directory
 	//
 
-	is_file_found = 0;
-	while (!is_file_found)
+	is_unassigned_file_found = 0;
+	while (!is_unassigned_file_found)
 	{
 		res = find_next_ext_in_dir(&assign_dir, ".wav", filename);
 
-		if (res!=FR_OK && res!=0xFF) return(0); //error reading directory, abort
+		if (res!=FR_OK && res!=0xFF) return(0); //filesystem error reading directory, abort
 
 		if (res==0xFF) //no more .wav files found
 		{
-			if (cur_assign_state==ASSIGN_UNUSED)
+			if (cur_assign_state==ASSIGN_UNUSED_IN_FOLDER)
 			{
-				//Hit the end of the directory: 
-				//Go through the dir again, looking for used samples
+				//We hit the end of the original sample's folder: 
+				//Go through the entire filesystem
 
-				//Reset directory
-				f_readdir(&assign_dir, (FILINFO *)0);
+				//Close the assign_dir
+				f_closedir(&assign_dir);
 
-				//TODO: some kind of flash/color change to indicate we are now doing the already assigned samples
-				cur_assign_state=ASSIGN_USED;
-				continue;
+				//Reset the root_dir for use with get_next_dir()
+				root_dir.obj.fs = 0;
+
+				//TODO: some kind of flash/color change to indicate we are out of the current sample's folder
+				cur_assign_state=ASSIGN_UNUSED_IN_FS;
 			} 
-			else
+			
+			if (cur_assign_state==ASSIGN_UNUSED_IN_FS)
 			{
-				//Hit the end of the directory:
-				//Try the next dir
-				cur_assign_bank = next_enabled_bank(cur_assign_bank);
+				// Hit the end of the folder:
+				// Find the next folder in the root
 
-				//Todo: test if cur_assign_bank is now equal to i_param[0][BANK], meaning we've searched all the enabled bank folders
-				//Now start looking for folders which aren't the names of banks yet
-				//This might be a recursive search for all .wav files, ignoring ones that exist in some bank path folder???
+				f_closedir(&assign_dir);
+				while (1)
+				{
+					//Try the next folder in the root_dir
+					res = get_next_dir(&root_dir, "", cur_assign_bank_path);
 
-				get_banks_path(cur_assign_bank, cur_assign_bank_path);
+					// No more folders in the root_dir!
+					// Set cur_assign_bank to the first enabled bank
+					// And exit... but do we need to call next_assigned_sample()??
+					if (res != FR_OK) 
+					{
+						f_closedir(&root_dir);
 
-				res = f_opendir(&assign_dir, cur_assign_bank_path);
-				if (res==FR_NO_PATH) return(0);
+						cur_assign_bank = next_enabled_bank(MAX_NUM_BANKS);
+						cur_assign_state=ASSIGN_USED;
+						//next_assigned_sample();
+						return(0); 
+					}
 
-				cur_assign_state=ASSIGN_UNUSED;
+					// Skip the original sample's folder (we already scanned it)
+					if (str_split(sample_undo_buffer.filename,'/', filepath, filename))
+							filepath[str_len(filepath)-1]='\0'; //remove trailing slash
+					else	filepath[0]='\0'; //filename contained no slash: use root dir
+
+					if (str_cmp(filepath, cur_assign_bank_path)) continue; 
+
+					// Check if the folder can be opened
+					res = f_opendir(&assign_dir, cur_assign_bank_path);
+					if (res!=FR_OK) {f_closedir(&assign_dir); continue;}
+
+					break; //we found a folder, so exit the inner while loop
+
+				}
+
+				// We just found a folder, so now we need to
+				// go back to the beginning of the outer while loop and look for a file
 				continue;
 			}
 		}
+
+		// Ignore files with paths that are too long
+		if ((str_len(filename) + str_len(cur_assign_bank_path) + 1) >= _MAX_LFN) continue; 
 
 		//.wav file was found:
 		//Add the path the beginning of the filename
@@ -162,20 +199,32 @@ uint8_t next_unassigned_sample(void)
 		filepath[i]='/';
 		str_cpy(&(filepath[i+1]), filename);
 
-		//See if the file already is assigned to a sample slot in the current bank
-		if (find_filename_in_bank(cur_assign_bank, filepath) == 0xFF)	file_is_in_bank = 0;
-		else															file_is_in_bank = 1;
+		//See if the file already is assigned to a sample slot in any bank
 
-		//If the file in the dir is the original file, then treat it as if it was in the bank
-		//Otherwise we would never be able to go back to the original file without exiting ASSIGN MODE
-		if (str_cmp(filepath, sample_undo_buffer.filename))				file_is_in_bank = 1;
-
-		if (	(cur_assign_state==ASSIGN_UNUSED && !file_is_in_bank) \
-			|| 	(cur_assign_state==ASSIGN_USED && file_is_in_bank))
+		//Shortcut: if the file is the original file, then don't bother searching for it
+		if (str_cmp(filepath, sample_undo_buffer.filename))
+			is_file_already_assigned = 1;
+		else 
 		{
+			//Cycle through all enabled banks
+			//See if the filepath matches any sample in any bank
 
+			is_file_already_assigned = 0;
+
+			bank=next_enabled_bank(MAX_NUM_BANKS);
+			orig_bank=bank;
+			do{
+				if (find_filename_in_bank(bank, filepath) != 0xFF)
+					{is_file_already_assigned = 1; break;}
+
+				bank=next_enabled_bank(bank);	
+			} while(bank!=orig_bank);
+		}
+
+		if (!is_file_already_assigned)
+		{
+			//Try opening the file and verifying the header is good
 			res = f_open(&temp_file, filepath, FA_READ);
-			f_sync(&temp_file);
 
 			if (res==FR_OK)
 			{
@@ -183,16 +232,19 @@ uint8_t next_unassigned_sample(void)
 
 				if (res==FR_OK)
 				{
+					// Sucess!! We found a valid file
+					// Copy the name to the current sample slot
 					str_cpy(samples[i_param[0][BANK]][i_param[0][SAMPLE]].filename, filepath);
 
-					is_file_found = 1;
+					is_unassigned_file_found = 1;
 				}
 				f_close(&temp_file);
 
 			}
+
 		}
 	}
-	if (is_file_found)
+	if (is_unassigned_file_found)
 		return(1);
 	else
 		return(0);
