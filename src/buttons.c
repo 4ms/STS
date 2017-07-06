@@ -266,6 +266,7 @@ void Button_Debounce_IRQHandler(void)
 								if (global_mode[EDIT_MODE])
 								{
 									restore_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
+									//ToDo: flash lights to show if an undo was successful
 								}
 								else
 									flags[Rev2Trig]=1;

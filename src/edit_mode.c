@@ -21,6 +21,7 @@ enum AssignmentStates 	cur_assign_state=ASSIGN_OFF;
 char 					cur_assign_bank_path[_MAX_LFN];
 
 Sample					sample_undo_buffer;
+uint8_t					undo_samplenum, undo_bank;
 uint8_t 				cur_assigned_sample_i;
 
  
@@ -54,6 +55,12 @@ uint8_t enter_assignment_mode(void)
 
 	//Find channel 1's bank's path
 	get_banks_path(i_param[0][BANK], cur_assign_bank_path);
+
+	//Find current sample's folder
+	//if (str_split(samples[i_param[0][BANK]][i_param[0][SAMPLE]].filename,'/', cur_assign_bank_path, t))
+	//	cur_assign_bank_path[str_len(cur_assign_bank_path)-1]='\0'; //remove trailing slash
+	//else
+	//	cur_assign_bank_path='\0'; //root dir
 
 	//Open the directory
 	res = f_opendir(&assign_dir, cur_assign_bank_path);
@@ -207,25 +214,32 @@ void save_undo_state(uint8_t bank, uint8_t samplenum)
 	sample_undo_buffer.inst_start 		= samples[bank][samplenum].inst_start  ;//& 0xFFFFFFF8;
 	sample_undo_buffer.inst_end 		= samples[bank][samplenum].inst_end  ;//& 0xFFFFFFF8;
 
+	undo_bank = bank;
+	undo_samplenum = samplenum;
+
 }
 
 //Restores sample[][] to the undo-state buffer
 //
-void restore_undo_state(uint8_t bank, uint8_t samplenum)
+uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum)
 {
-	str_cpy(samples[bank][samplenum].filename,  sample_undo_buffer.filename);
-	samples[bank][samplenum].blockAlign 		= sample_undo_buffer.blockAlign;
-	samples[bank][samplenum].numChannels 		= sample_undo_buffer.numChannels;
-	samples[bank][samplenum].sampleByteSize 	= sample_undo_buffer.sampleByteSize;
-	samples[bank][samplenum].sampleRate 		= sample_undo_buffer.sampleRate;
-	samples[bank][samplenum].sampleSize 		= sample_undo_buffer.sampleSize;
-	samples[bank][samplenum].startOfData 		= sample_undo_buffer.startOfData;
-	samples[bank][samplenum].PCM 				= sample_undo_buffer.PCM;
+	if (bank==undo_bank && samplenum==undo_samplenum)
+	{
+		str_cpy(samples[undo_bank][undo_samplenum].filename,  sample_undo_buffer.filename);
+		samples[undo_bank][undo_samplenum].blockAlign 		= sample_undo_buffer.blockAlign;
+		samples[undo_bank][undo_samplenum].numChannels 		= sample_undo_buffer.numChannels;
+		samples[undo_bank][undo_samplenum].sampleByteSize 	= sample_undo_buffer.sampleByteSize;
+		samples[undo_bank][undo_samplenum].sampleRate 		= sample_undo_buffer.sampleRate;
+		samples[undo_bank][undo_samplenum].sampleSize 		= sample_undo_buffer.sampleSize;
+		samples[undo_bank][undo_samplenum].startOfData 		= sample_undo_buffer.startOfData;
+		samples[undo_bank][undo_samplenum].PCM 				= sample_undo_buffer.PCM;
 
-	samples[bank][samplenum].inst_size 			= sample_undo_buffer.inst_size  ;//& 0xFFFFFFF8;
-	samples[bank][samplenum].inst_start 		= sample_undo_buffer.inst_start  ;//& 0xFFFFFFF8;
-	samples[bank][samplenum].inst_end 			= sample_undo_buffer.inst_end  ;//& 0xFFFFFFF8;
+		samples[undo_bank][undo_samplenum].inst_size 			= sample_undo_buffer.inst_size  ;//& 0xFFFFFFF8;
+		samples[undo_bank][undo_samplenum].inst_start 		= sample_undo_buffer.inst_start  ;//& 0xFFFFFFF8;
+		samples[undo_bank][undo_samplenum].inst_end 			= sample_undo_buffer.inst_end  ;//& 0xFFFFFFF8;
 
+		return(1); //ok
+	} else return(0); //not in the right sample/bank to preform an undo
 }
 
 void enter_edit_mode(void)

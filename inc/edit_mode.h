@@ -36,6 +36,6 @@ void exit_edit_mode(void);
 void enter_edit_mode(void);
 
 void save_undo_state(uint8_t bank, uint8_t samplenum);
-void restore_undo_state(uint8_t bank, uint8_t samplenum);
+uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum);
 
 #endif /* INC_EDIT_MODE_H */
