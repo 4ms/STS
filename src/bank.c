@@ -200,16 +200,15 @@ uint8_t next_enabled_bank(uint8_t bank)
 	return (bank);
 }
 
+// same as next_enabled_bank but wraps around to 0xFF instead
 uint8_t next_enabled_bank_0xFF(uint8_t bank) 
 {
 	uint8_t orig_bank=bank;
 
 	do{
 		bank++;
-		if (bank >= MAX_NUM_BANKS)	bank = 0xFF;
-		if (bank==orig_bank) return(0); //no banks are enabled -->> bail out and return the first bank
+		if (bank >= MAX_NUM_BANKS)	{bank = 0xFF; return(0);}
 	} while(!bank_status[bank]);
-
 	return (bank);
 }
 
@@ -217,10 +216,11 @@ uint8_t prev_enabled_bank_0xFF(uint8_t bank)
 {
 	uint8_t orig_bank=bank;
 
+	if (bank == 0xFF) bank=MAX_NUM_BANKS;
 	do{
-		if (bank == 0)	bank =  0xFF;
+		if (bank == 0)	return(0xFF);
 		bank -=1;
-		if (bank==orig_bank) return(0); //no banks are enabled -->> bail out and return the first bank
+		// if (bank==orig_bank) return(0); //no banks are enabled -->> bail out and return the first bank
 	} while(!bank_status[bank]);
 	return (bank);
 }

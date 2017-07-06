@@ -19,9 +19,9 @@ uint8_t 				cur_assign_bank=0xFF;
 DIR 					assign_dir;
 enum AssignmentStates 	cur_assign_state=ASSIGN_OFF;
 char 					cur_assign_bank_path[_MAX_LFN];
+uint8_t 				cur_assign_sample=0; 
 
 Sample					sample_undo_buffer;
-uint8_t 				cur_assigned_sample_i; 
 
  
 
@@ -205,22 +205,26 @@ uint8_t next_assigned_sample(void)
 	while(cur_assign_bank =!0xFF);
 	{
 		// if there is a sample in the current slot
-		if (is_wav(samples[cur_assign_bank][cur_assigned_sample_i].filename))
+		if (is_wav(samples[cur_assign_bank][cur_assign_sample].filename))
 		{
 			// copy slot to assign
-			copy_sample( i_param[0][BANK], i_param[0][SAMPLE], cur_assign_bank, cur_assigned_sample_i);
+			copy_sample( i_param[0][BANK], i_param[0][SAMPLE], cur_assign_bank, cur_assign_sample);
+			// return(cur_assign_bank);
+			cur_assign_bank = cur_assign_bank;
 			return(1);
 		}
 		else
 		{
-			cur_assigned_sample_i++;
-			if (cur_assigned_sample_i>NUM_SAMPLES_PER_BANK)
+			cur_assign_sample++;
+			if (cur_assign_sample>NUM_SAMPLES_PER_BANK)
 			{
 				cur_assign_bank = next_enabled_bank_0xFF(cur_assign_bank);
-				cur_assigned_sample_i=0;
+				if(cur_assign_bank!=0xFF) cur_assign_sample=0;
 			}	
 		}
 	}
+	// return(0xFF);
+	cur_assign_bank = 0xFF;
 	return(0);
 }
 

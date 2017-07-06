@@ -254,7 +254,7 @@ void Button_Debounce_IRQHandler(void)
 								{
 									if (button_state[Rec]<SHORT_PRESSED)
 									{
-										if (enter_assignment_mode() && !skip_rev_release)
+										if (enter_assignment_mode())
 										{
 											// browsing unused samples (starting from current folder)
 											if (cur_assign_bank == 0xFF)
@@ -269,7 +269,7 @@ void Button_Debounce_IRQHandler(void)
 											// browsing used samples in bank order
 											else
 											{
-												if(next_assigned_sample)
+												if(next_assigned_sample())
 												{
 													flags[ForceFileReload1] = 1;
 													flags[Play1But]=1;
@@ -277,10 +277,6 @@ void Button_Debounce_IRQHandler(void)
 												}
 											}
 										} 
-										else if (skip_rev_release )
-										{
-											skip_rev_release=0;
-										}
 									}
 								}
 								else if (!flags[AssignModeRefused])
@@ -389,9 +385,10 @@ void Button_Debounce_IRQHandler(void)
 											// if( (button_state[Rev1]>=MED_PRESSED) && ((global_mode[ASSIGN_MODE])||(global_mode[EDIT_MODE])) ){
 											// if( (button_state[Rev1]>=MED_PRESSED) ){
 											flags[RevertBlink1]	  = 10;
+											flags[Play1But]		  = 1;
 											// cur_assign_bank 	 -= 1; 
 											cur_assign_bank 	  = prev_enabled_bank_0xFF(cur_assign_bank);
-											skip_rev_release	  = 1 ;
+											flags[skip_process_buttons]	= 2;
 											// }
 										break;
 
@@ -477,6 +474,7 @@ void Button_Debounce_IRQHandler(void)
 	{
 		for (i=0;i<NUM_BUTTONS;i++)
 		{
+			if (i==Edit) continue;
 			if (button_state[i] != UP) break;
 		}
 		if (i==NUM_BUTTONS) flags[skip_process_buttons] = 0;
