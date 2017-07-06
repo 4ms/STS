@@ -16,6 +16,7 @@
 
 FRESULT write_sampleindex_file(void);
 uint8_t write_samplelist(void);
+uint8_t index_write_wrapper(void);
 FRESULT backup_sampleindex_file(void);
 uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks);
 

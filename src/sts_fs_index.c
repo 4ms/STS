@@ -129,13 +129,26 @@ FRESULT write_sampleindex_file(void)
 		f_close(&temp_file);
 
 		// WRITE SAMPLE LIST HTML FILE
-	//	write_samplelist();
+		write_samplelist();
 
 		return(FR_OK);
 
 	} 
 }
 
+uint8_t index_write_wrapper(void){	
+
+	FRESULT res;
+	uint8_t	html_res;
+
+	// WRITE INDEX FILE
+	res = write_sampleindex_file();
+	if (res!=FR_OK) return(1);
+
+	// WRITE SAMPLE LIST HTML FILE
+	html_res = write_samplelist();
+	return (html_res);
+}
 
 
 // WRITE SAMPLE LIST HTML
