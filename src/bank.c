@@ -200,6 +200,18 @@ uint8_t next_enabled_bank(uint8_t bank)
 	return (bank);
 }
 
+uint8_t prev_enabled_bank(uint8_t bank) 
+{
+	uint8_t orig_bank=bank;
+
+	do{
+		if (bank == 0)	bank =  MAX_NUM_BANKS +1;
+		bank -=1;
+		if (bank==orig_bank) return(0); //no banks are enabled -->> bail out and return the first bank
+	} while(!bank_status[bank]);
+	return (bank);
+}
+
 //if bank==0xFF, we find the first disabled bank
 uint8_t next_disabled_bank(uint8_t bank) 
 {

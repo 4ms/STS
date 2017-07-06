@@ -21,7 +21,7 @@ enum AssignmentStates 	cur_assign_state=ASSIGN_OFF;
 char 					cur_assign_bank_path[_MAX_LFN];
 
 Sample					sample_undo_buffer;
-uint8_t 				cur_assigned_sample_i;
+uint8_t 				cur_assigned_sample_i; // FixMe: Variable looks like it is unused
 
  
 

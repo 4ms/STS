@@ -494,13 +494,17 @@ void update_ButtonLEDs(void)
 			if (global_mode[EDIT_MODE])
 			{
 				if (chan==0)
+				{
 					// if (flags[AssigningEmptySample])
 					// 	set_ButtonLED_byPalette(ButLEDnum, tm_13>0x1000 ? RED : OFF);//set_ButtonLED_byPaletteFade(ButLEDnum, RED, OFF, tri_13);
-					// else
+						if (flags[RevertBlink1]) {
+							set_ButtonLED_byPalette(ButLEDnum, WHITE); 
+							flags[RevertBlink1]--;
+						}
 						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, GREEN, tri_14);
-				else
-						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, RED, tri_14);
-
+				}else{
+					set_ButtonLED_byPaletteFade(ButLEDnum, OFF, RED, tri_14);
+				}
 			}
 			else if (flags[AssignModeRefused+chan])
 			{

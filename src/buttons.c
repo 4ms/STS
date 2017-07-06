@@ -25,6 +25,9 @@ extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 extern volatile uint32_t sys_tmr;
 
+extern uint8_t 	cur_assign_bank;
+extern uint8_t 	bank_status[MAX_NUM_BANKS];
+
 void clear_errors(void)
 {
 	g_error = 0;
@@ -244,15 +247,34 @@ void Button_Debounce_IRQHandler(void)
 								}
 							break;
 
+							// Load file from SD to bank
 							case Rev1:
 								if (global_mode[EDIT_MODE])
 								{
 									if (enter_assignment_mode())
-										if (next_unassigned_sample())
+									{
+										if(button_state[Rev1]>=MED_PRESSED)
 										{
-											flags[ForceFileReload1] = 1;
-											flags[Play1But]=1;
+											// i_param[Bank1][BANK] = prev_enabled_bank(i_param[Bank1][BANK]);
+											// i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
+											// while(!bank_status[cur_assign_bank])
+											// {
+												// if (cur_assign_bank=0) cur_assign_bank = MAX_NUM_BANKS;	
+												flags[RevertBlink1]	=  10;
+												cur_assign_bank 	-= 1;
+											// }
+
+											// cur_assign_bank-=1;	
 										}
+										else
+										{
+											if (next_unassigned_sample())
+											{
+												flags[ForceFileReload1] = 1;
+												flags[Play1But]=1;
+											}
+										}
+									}
 								}
 								else if (!flags[AssignModeRefused])
 									flags[Rev1Trig]=1;
