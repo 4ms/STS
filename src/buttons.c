@@ -26,6 +26,9 @@ extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 extern volatile uint32_t sys_tmr;
 
+extern uint8_t 	cur_assign_bank;
+extern uint8_t 	bank_status[MAX_NUM_BANKS];
+
 void clear_errors(void)
 {
 	g_error = 0;
@@ -59,6 +62,7 @@ void Button_Debounce_IRQHandler(void)
 	static uint32_t last_sys_tmr=0;
 	uint32_t elapsed_time;
 
+	uint8_t skip_rev_release = 0;
 
 	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET) {
 
@@ -249,15 +253,36 @@ void Button_Debounce_IRQHandler(void)
 								}
 							break;
 
+							// Load file from SD to bank
 							case Rev1:
 								if (global_mode[EDIT_MODE])
 								{
-									if (enter_assignment_mode())
-										if (next_unassigned_sample())
+									if (button_state[Rec]<SHORT_PRESSED)
+									{
+										if (enter_assignment_mode())
 										{
-											flags[ForceFileReload1] = 1;
-											flags[Play1But]=1;
-										}
+											// browsing unused samples (starting from current folder)
+											if (cur_assign_bank == 0xFF)
+											{
+												if (next_unassigned_sample())
+												{
+													flags[ForceFileReload1] = 1;
+													flags[Play1But]=1;
+													flags[RevertBlink1]	=  10;
+												}
+											}
+											// browsing used samples in bank order
+											else
+											{
+												if(next_assigned_sample())
+												{
+													flags[ForceFileReload1] = 1;
+													flags[Play1But]=1;
+													flags[RevertBlink1]	=  10;	
+												}
+											}
+										} 
+									}
 								}
 								else
 									flags[Rev1Trig]=1;
@@ -366,6 +391,17 @@ void Button_Debounce_IRQHandler(void)
 										}
 										break;
 
+										case Rev1:
+											// if( (button_state[Rev1]>=MED_PRESSED) && ((global_mode[ASSIGN_MODE])||(global_mode[EDIT_MODE])) ){
+											// if( (button_state[Rev1]>=MED_PRESSED) ){
+											flags[RevertBlink1]	  = 10;
+											flags[Play1But]		  = 1;
+											// cur_assign_bank 	 -= 1; 
+											cur_assign_bank 	  = prev_enabled_bank_0xFF(cur_assign_bank);
+											flags[skip_process_buttons]	= 2;
+											// }
+										break;
+
 									default:
 										break;
 								}
@@ -452,6 +488,7 @@ void Button_Debounce_IRQHandler(void)
 	{
 		for (i=0;i<NUM_BUTTONS;i++)
 		{
+			if (i==Edit) continue;
 			if (button_state[i] != UP) break;
 		}
 		if (i==NUM_BUTTONS) flags[skip_process_buttons] = 0;

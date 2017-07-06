@@ -261,6 +261,11 @@ void update_ButtonLEDs(void)
 		// Normal functions:
 		//
 
+		if ((ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE]) && flags[RevertBlink1]){
+			set_ButtonLED_byPalette(ButLEDnum, WHITE); 
+			flags[RevertBlink1]--;
+		}
+
 		//BANK lights
 		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
 			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE] && cur_assign_bank<MAX_NUM_BANKS))
@@ -290,8 +295,9 @@ void update_ButtonLEDs(void)
 				if (chan==2) //REC button
 					bank_to_display = i_param[2][BANK];
 				else
-				if (chan==3) //Rev1 button in ASSIGN_MODE
+				if (chan==3){ //Rev1 button in ASSIGN_MODE
 					bank_to_display = cur_assign_bank;
+				}
 				else
 				if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
 					bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;

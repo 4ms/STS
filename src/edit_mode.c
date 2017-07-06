@@ -19,10 +19,10 @@ uint8_t 				cur_assign_bank=0xFF;
 DIR 					assign_dir;
 enum AssignmentStates 	cur_assign_state=ASSIGN_OFF;
 char 					cur_assign_bank_path[_MAX_LFN];
+uint8_t 				cur_assign_sample=0; 
 
 Sample					sample_undo_buffer;
 uint8_t					undo_samplenum, undo_bank;
-uint8_t 				cur_assigned_sample_i;
 
  
 
@@ -250,6 +250,40 @@ uint8_t next_unassigned_sample(void)
 		return(0);
 }
 
+
+// Find next assigned sample in current bank
+// if no more assigned samples in current bank, go to next non-empty bank
+// if no more non-empty bank set cur_assign_bank to 0xFFFFFFFF so next_unassigned_sample() gets called
+// ... and unassigned samples get browsed
+uint8_t next_assigned_sample(void)
+{
+
+	while(cur_assign_bank =!0xFF);
+	{
+		// if there is a sample in the current slot
+		if (is_wav(samples[cur_assign_bank][cur_assign_sample].filename))
+		{
+			// copy slot to assign
+			copy_sample( i_param[0][BANK], i_param[0][SAMPLE], cur_assign_bank, cur_assign_sample);
+			// return(cur_assign_bank);
+			cur_assign_bank = cur_assign_bank;
+			return(1);
+		}
+		else
+		{
+			cur_assign_sample++;
+			if (cur_assign_sample>NUM_SAMPLES_PER_BANK)
+			{
+				cur_assign_bank = next_enabled_bank_0xFF(cur_assign_bank);
+				if(cur_assign_bank!=0xFF) cur_assign_sample=0;
+			}	
+		}
+	}
+	// return(0xFF);
+	cur_assign_bank = 0xFF;
+	return(0);
+}
+
 //backs-up sample[][] data to an undo buffer
 void save_undo_state(uint8_t bank, uint8_t samplenum)
 {
@@ -315,6 +349,8 @@ void exit_edit_mode(void)
 
 	i_param[0][LOOPING] = cached_looping;
 	i_param[0][REV]		= cached_rev;
+
+	cur_assign_bank = i_param[0][BANK];
 
 	if (scrubbed_in_edit)
 	{
