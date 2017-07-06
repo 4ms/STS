@@ -61,6 +61,7 @@ void Button_Debounce_IRQHandler(void)
 	static uint32_t last_sys_tmr=0;
 	uint32_t elapsed_time;
 
+	uint8_t skip_rev_release = 0;
 
 	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET) {
 
@@ -251,28 +252,20 @@ void Button_Debounce_IRQHandler(void)
 							case Rev1:
 								if (global_mode[EDIT_MODE])
 								{
-									if (enter_assignment_mode())
+									if (button_state[Rec]<SHORT_PRESSED)
 									{
-										if(button_state[Rev1]>=MED_PRESSED)
-										{
-											// i_param[Bank1][BANK] = prev_enabled_bank(i_param[Bank1][BANK]);
-											// i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
-											// while(!bank_status[cur_assign_bank])
-											// {
-												// if (cur_assign_bank=0) cur_assign_bank = MAX_NUM_BANKS;	
-												flags[RevertBlink1]	=  10;
-												cur_assign_bank 	-= 1;
-											// }
-
-											// cur_assign_bank-=1;	
-										}
-										else
+										if (enter_assignment_mode() && !skip_rev_release)
 										{
 											if (next_unassigned_sample())
 											{
 												flags[ForceFileReload1] = 1;
 												flags[Play1But]=1;
+												flags[RevertBlink1]	=  10;
 											}
+										} 
+										else if (skip_rev_release )
+										{
+											skip_rev_release=0;
 										}
 									}
 								}
@@ -376,6 +369,15 @@ void Button_Debounce_IRQHandler(void)
 											global_mode[STEREO_MODE] = t;
 											flags[skip_process_buttons] = 1;
 										}
+										break;
+
+										case Rev1:
+											// if( (button_state[Rev1]>=MED_PRESSED) && ((global_mode[ASSIGN_MODE])||(global_mode[EDIT_MODE])) ){
+											// if( (button_state[Rev1]>=MED_PRESSED) ){
+											flags[RevertBlink1]	  = 10;
+											cur_assign_bank 	 -= 1;
+											skip_rev_release	  = 1 ;
+											// }
 										break;
 
 									default:

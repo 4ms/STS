@@ -253,6 +253,8 @@ void exit_edit_mode(void)
 	i_param[0][LOOPING] = cached_looping;
 	i_param[0][REV]		= cached_rev;
 
+	cur_assign_bank = i_param[0][BANK];
+	
 	if (scrubbed_in_edit)
 	{
 		if (cached_play_state)	flags[Play1Trig] = 1;
