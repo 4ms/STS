@@ -236,22 +236,22 @@ void update_ButtonLEDs(void)
 		// Writing index
 		if (flags[RewriteIndex])
 		{
-			set_ButtonLED_byPalette(ButLEDnum, WHITE);
+			set_ButtonLED_byPalette(ButLEDnum, BLUE);
 		}
 		else
 
- 		// Successfully wrote index
-		if (flags[RewriteIndexSucess])
+ 		// Successfully wrote index: flicker all buttons green
+		if (flags[RewriteIndexSucess] && (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == Play1ButtonLED || ButLEDnum == Play2ButtonLED))
 		{
-			set_ButtonLED_byPalette(ButLEDnum, (tm_13 < 0x0800)? GREEN : OFF);
+			set_ButtonLED_byPalette(ButLEDnum, GREEN);
 			flags[RewriteIndexSucess]--;
 		}
 		else
 
-		// Failed writing index
+		// Failed writing index: flicker all buttons red
 		if (flags[RewriteIndexFail])
 		{
-			set_ButtonLED_byPalette(ButLEDnum, (tm_13 < 0x0800)? RED : OFF);
+			set_ButtonLED_byPalette(ButLEDnum, RED);
 			flags[RewriteIndexFail]--;
 		}
 		else

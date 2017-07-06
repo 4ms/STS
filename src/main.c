@@ -246,10 +246,10 @@ int main(void)
 			res = write_sampleindex_file();
 			if (res) {
 				g_error |= CANNOT_WRITE_INDEX;
-				flags[RewriteIndexFail] = 10;
+				flags[RewriteIndexFail] = 255;
 			}
 			else
-				flags[RewriteIndexSucess] = 10;
+				flags[RewriteIndexSucess] = 255;
 		}
 
     	if (do_factory_reset)
