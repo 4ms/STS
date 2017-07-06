@@ -121,7 +121,11 @@ void Button_Debounce_IRQHandler(void)
 						case Play2:
 							if (global_mode[EDIT_MODE])
 							{
-								if (i==Play1) save_exit_assignment_mode();
+								if (i==Play1)
+								{
+									check_enabled_banks();
+									flags[RewriteIndex] = 1;
+								}
 								if (i==Play2)
 								{
 									copy_sample(i_param[1][BANK], i_param[1][SAMPLE], i_param[0][BANK], i_param[0][SAMPLE]);
@@ -221,7 +225,7 @@ void Button_Debounce_IRQHandler(void)
 
 								//Exit assignment mode (if we were in it)
 								if (chan==0)
-									global_mode[ASSIGN_MODE] = 0;
+									exit_assignment_mode();
 								
 							break;
 
@@ -255,7 +259,7 @@ void Button_Debounce_IRQHandler(void)
 											flags[Play1But]=1;
 										}
 								}
-								else if (!flags[AssignModeRefused])
+								else
 									flags[Rev1Trig]=1;
 				
 
@@ -312,12 +316,15 @@ void Button_Debounce_IRQHandler(void)
 										if (global_mode[EDIT_MODE])
 										{
 											//
-											//Long press with both bank buttons (Edit+Bank1+Bank2+Rev2):
+											//Long press with Edit + Rev2 + both bank buttons
 											//Reload all banks from the backup index file
 											//Restores the entire sampler to the state it was on boot 
 											//
 											if (button_state[Bank1]>=MED_PRESSED && button_state[Bank2]>=MED_PRESSED)
+											{
+												flags[RevertAll]=100;
 												load_sampleindex_file(USE_BACKUP_FILE, ALL_BANKS);
+											}
 										}
 										break;
 
@@ -339,15 +346,21 @@ void Button_Debounce_IRQHandler(void)
 										if (global_mode[EDIT_MODE])
 										{
 											//
-											//Medium press with Bank button: reload bank from the backup index file
+											//Medium press with Edit + Rev2 + one Bank button: reload bank from the backup index file
 											//Restores just this bank to the state it was on boot 
 											//
 
-											if (button_state[Bank1]>=SHORT_PRESSED)
+											if (button_state[Bank1]>=SHORT_PRESSED && button_state[Bank2]==UP)
+											{
 												load_sampleindex_file(USE_BACKUP_FILE, i_param[0][BANK]);
+												flags[RevertBank1]=100;
+											}
 									
-											if (button_state[Bank2]>=SHORT_PRESSED)
+											if (button_state[Bank2]>=SHORT_PRESSED  && button_state[Bank1]==UP)
+											{
 												load_sampleindex_file(USE_BACKUP_FILE, i_param[1][BANK]);
+												flags[RevertBank2]=100;
+											}
 
 											flags[skip_process_buttons] = 1;
 										}

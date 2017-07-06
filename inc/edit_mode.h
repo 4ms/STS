@@ -12,7 +12,8 @@
 
 enum AssignmentStates{
 	ASSIGN_OFF,
-	ASSIGN_UNUSED,
+	ASSIGN_UNUSED_IN_FOLDER,
+	ASSIGN_UNUSED_IN_FS,
 	ASSIGN_USED,
 
 	ASSIGN_BLANK
@@ -20,9 +21,9 @@ enum AssignmentStates{
 
 
 uint8_t enter_assignment_mode(void);
+void exit_assignment_mode(void);
 uint8_t next_unassigned_sample(void);
 
-void save_exit_assignment_mode(void);
 
 void copy_sample(uint8_t dst_bank, uint8_t dst_sample, uint8_t src_bank, uint8_t src_sample);
 
@@ -36,6 +37,6 @@ void exit_edit_mode(void);
 void enter_edit_mode(void);
 
 void save_undo_state(uint8_t bank, uint8_t samplenum);
-void restore_undo_state(uint8_t bank, uint8_t samplenum);
+uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum);
 
 #endif /* INC_EDIT_MODE_H */
