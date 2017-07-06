@@ -229,8 +229,13 @@ void update_ButtonLEDs(void)
 	for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 	{
 
+		if ((ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE]) && flags[RevertBlink1]){
+			set_ButtonLED_byPalette(ButLEDnum, WHITE); 
+			flags[RevertBlink1]--;
+		}
+
 		//BANK lights
-		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
+		else if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
 			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE]))
 		{
 			if 		(ButLEDnum == Bank1ButtonLED) 	chan = 0;
@@ -258,8 +263,9 @@ void update_ButtonLEDs(void)
 				if (chan==2) //REC button
 					bank_to_display = i_param[2][BANK];
 				else
-				if (chan==3) //Rev1 button in ASSIGN_MODE
+				if (chan==3){ //Rev1 button in ASSIGN_MODE
 					bank_to_display = cur_assign_bank;
+				}
 				else
 				if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
 					bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
@@ -497,10 +503,10 @@ void update_ButtonLEDs(void)
 				{
 					// if (flags[AssigningEmptySample])
 					// 	set_ButtonLED_byPalette(ButLEDnum, tm_13>0x1000 ? RED : OFF);//set_ButtonLED_byPaletteFade(ButLEDnum, RED, OFF, tri_13);
-						if (flags[RevertBlink1]) {
-							set_ButtonLED_byPalette(ButLEDnum, WHITE); 
-							flags[RevertBlink1]--;
-						}
+						// if (flags[RevertBlink1]) {
+						// 	set_ButtonLED_byPalette(ButLEDnum, WHITE); 
+						// 	flags[RevertBlink1]--;
+						// }
 						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, GREEN, tri_14);
 				}else{
 					set_ButtonLED_byPaletteFade(ButLEDnum, OFF, RED, tri_14);
