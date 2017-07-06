@@ -129,7 +129,7 @@ FRESULT write_sampleindex_file(void)
 		f_close(&temp_file);
 
 		// WRITE SAMPLE LIST HTML FILE
-		write_samplelist();
+		// write_samplelist();
 
 		return(FR_OK);
 
