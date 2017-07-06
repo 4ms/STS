@@ -21,6 +21,7 @@ enum AssignmentStates{
 
 uint8_t enter_assignment_mode(void);
 uint8_t next_unassigned_sample(void);
+uint8_t next_assigned_sample(void);
 
 void save_exit_assignment_mode(void);
 

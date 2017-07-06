@@ -256,11 +256,25 @@ void Button_Debounce_IRQHandler(void)
 									{
 										if (enter_assignment_mode() && !skip_rev_release)
 										{
-											if (next_unassigned_sample())
+											// browsing unused samples (starting from current folder)
+											if (cur_assign_bank == 0xFF)
 											{
-												flags[ForceFileReload1] = 1;
-												flags[Play1But]=1;
-												flags[RevertBlink1]	=  10;
+												if (next_unassigned_sample())
+												{
+													flags[ForceFileReload1] = 1;
+													flags[Play1But]=1;
+													flags[RevertBlink1]	=  10;
+												}
+											}
+											// browsing used samples in bank order
+											else
+											{
+												if(next_assigned_sample)
+												{
+													flags[ForceFileReload1] = 1;
+													flags[Play1But]=1;
+													flags[RevertBlink1]	=  10;	
+												}
 											}
 										} 
 										else if (skip_rev_release )
@@ -375,7 +389,8 @@ void Button_Debounce_IRQHandler(void)
 											// if( (button_state[Rev1]>=MED_PRESSED) && ((global_mode[ASSIGN_MODE])||(global_mode[EDIT_MODE])) ){
 											// if( (button_state[Rev1]>=MED_PRESSED) ){
 											flags[RevertBlink1]	  = 10;
-											cur_assign_bank 	 -= 1;
+											// cur_assign_bank 	 -= 1; 
+											cur_assign_bank 	  = prev_enabled_bank_0xFF(cur_assign_bank);
 											skip_rev_release	  = 1 ;
 											// }
 										break;
