@@ -229,6 +229,39 @@ void update_ButtonLEDs(void)
 	for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 	{
 
+		//
+		// Animations of all lights:
+		//
+
+		// Writing index
+		if (flags[RewriteIndex])
+		{
+			set_ButtonLED_byPalette(ButLEDnum, WHITE);
+		}
+		else
+
+ 		// Successfully wrote index
+		if (flags[RewriteIndexSucess])
+		{
+			set_ButtonLED_byPalette(ButLEDnum, (tm_13 < 0x0800)? GREEN : OFF);
+			flags[RewriteIndexSucess]--;
+		}
+		else
+
+		// Failed writing index
+		if (flags[RewriteIndexFail])
+		{
+			set_ButtonLED_byPalette(ButLEDnum, (tm_13 < 0x0800)? RED : OFF);
+			flags[RewriteIndexFail]--;
+		}
+		else
+
+
+		//
+		// Normal functions:
+		//
+
+
 		//BANK lights
 		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
 			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE]))

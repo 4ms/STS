@@ -74,11 +74,8 @@ void save_exit_assignment_mode(void)
 
 	check_enabled_banks(); //disables a bank if we cleared it out
 
-	res = write_sampleindex_file();
+	flags[RewriteIndex] = 1;
 
-	if (res!=FR_OK) {g_error|=CANNOT_WRITE_INDEX; check_errors();}
-//	else
-//		flags[Animate_Good_Save] = 16;
 
 }
 

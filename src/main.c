@@ -210,7 +210,9 @@ int main(void)
 
 	//Begin audio DMA
 	audio_buffer_init();
+	flags[RewriteIndex]=1;
 	init_banks();
+	flags[RewriteIndex]=0;
 	Start_I2SDMA();
 
 	set_default_system_settings();
@@ -240,10 +242,16 @@ int main(void)
 		if (flags[RewriteIndex])
 		{
 			res = write_sampleindex_file();
-			if (res) g_error |= CANNOT_WRITE_INDEX;
-			flags[RewriteIndex] = 0;
+			if (res) {
+				g_error |= CANNOT_WRITE_INDEX;
+				flags[RewriteIndex] = 0;
+				flags[RewriteIndexFail] = 10;
+			}
+			else
+				flags[RewriteIndex] = 0;
+				flags[RewriteIndexSucess] = 10;
 		}
-		
+
     	if (do_factory_reset)
     		if (!(--do_factory_reset))
     			factory_reset();

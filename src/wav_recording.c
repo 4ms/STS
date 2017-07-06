@@ -157,11 +157,11 @@ void record_audio_to_buffer(int16_t *src)
 }
 
 
+int16_t rec_buff16[WRITE_BLOCK_SIZE>>1]; //4096 elements
 
 
 void write_buffer_to_storage(void)
 {
-	int16_t t_buff16[WRITE_BLOCK_SIZE>>1]; //4096 elements
 	uint32_t buffer_lead;
 	uint32_t addr_exceeded;
 	uint32_t written;
@@ -248,12 +248,12 @@ void write_buffer_to_storage(void)
 				if (buffer_lead > WRITE_BLOCK_SIZE) //Error: comparing # samples to # bytes. Should be buffer_lead*SAMPLINGBYTES
 				{
 
-					addr_exceeded = memory_read16_cb(rec_buff, t_buff16, WRITE_BLOCK_SIZE>>1, 0);
+					addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, WRITE_BLOCK_SIZE>>1, 0);
 
 					if (!addr_exceeded)
 					{
 						sz = WRITE_BLOCK_SIZE;
-						res = f_write(&recfil, t_buff16, sz, &written);
+						res = f_write(&recfil, rec_buff16, sz, &written);
 						f_sync(&recfil);
 						
 						if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
@@ -281,11 +281,11 @@ void write_buffer_to_storage(void)
 				//Write out remaining data in buffer, one WRITE_BLOCK_SIZE at a time
 				if (buffer_lead > WRITE_BLOCK_SIZE) buffer_lead = WRITE_BLOCK_SIZE;
 
-				addr_exceeded = memory_read16_cb(rec_buff, t_buff16, buffer_lead>>1, 0);
+				addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, buffer_lead>>1, 0);
 
 				if (!addr_exceeded)
 				{
-					res = f_write(&recfil, t_buff16, buffer_lead, &written);
+					res = f_write(&recfil, rec_buff16, buffer_lead, &written);
 					f_sync(&recfil);
 					if (res!=FR_OK)				{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
 					if (written!=buffer_lead)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
@@ -343,7 +343,7 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
 
 				flags[RewriteIndex] = 1;
-				
+
 				enable_bank(sample_bank_now_recording);
 
 				sample_fname_now_recording[0] = 0;

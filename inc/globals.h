@@ -71,6 +71,8 @@ enum Flags {
 	RevertBank2,
 	RevertAll,
 	RewriteIndex,
+	RewriteIndexFail,
+	RewriteIndexSucess,
 
 	NUM_FLAGS
 };

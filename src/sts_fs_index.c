@@ -26,14 +26,12 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 FRESULT write_sampleindex_file(void)
 {
-
 	FIL 		temp_file;
 	FRESULT 	res, res_sysdir;
 	//uint32_t 	sz, bw;
 	uint8_t 	i, j;
-	char 		b_color[10];
+	char 		b_color[11];
 	char 		bank_path[_MAX_LFN+1];
-	char 		full_path[_MAX_LFN+1];
 	char 		filename_ptr[_MAX_LFN+1];
 	char 		path[_MAX_LFN+1];
 
@@ -51,8 +49,8 @@ FRESULT write_sampleindex_file(void)
 	else {
 		// create sample.index file
 		// ... and its pointer &temp_file
-		str_cat(full_path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
-		res = f_open(&temp_file, full_path, FA_WRITE | FA_CREATE_ALWAYS); 
+		str_cat(path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
+		res = f_open(&temp_file, path, FA_WRITE | FA_CREATE_ALWAYS); 
 		if (res != FR_OK) return(res); 
 
 		// For each bank
@@ -131,7 +129,7 @@ FRESULT write_sampleindex_file(void)
 		f_close(&temp_file);
 
 		// WRITE SAMPLE LIST HTML FILE
-		write_samplelist();
+	//	write_samplelist();
 
 		return(FR_OK);
 
@@ -277,7 +275,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	uint32_t	num_buff=UINT32_MAX;
 	char 		token[_MAX_LFN+1];
 	uint8_t		fopen_flag	  = 0;
-	uint8_t		rewrite_index = 0;
+	// uint8_t		rewrite_index = 0;
 	uint8_t 	force_reload  = 2;
 	uint8_t		skip_cur_bank = 0;
 
@@ -398,7 +396,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 							{
 								// request to rewrite index (from samples struct) 
 								// ... at the end of index read
-								rewrite_index =1;
+								// rewrite_index =1;
 							}
 
 							// load sample information from .wav header	
@@ -414,7 +412,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 								// request to rewrite index (from samples struct) 
 								// ... at the end of index read
-								rewrite_index =1;
+								// rewrite_index =1;
 
 								// skip loading sample play information
 								arm_data=0; token[0] = '\0'; read_name = 1; break;						
@@ -435,7 +433,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 							// request to rewrite index (from samples struct) 
 							// ... at the end of index read
-							rewrite_index =1;
+							// rewrite_index =1;
 
 							// skip loading sample play information
 							arm_data=0; token[0] = '\0'; read_name = 1; break;						
@@ -486,11 +484,11 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	// close sample index file
 	f_close(&temp_file);
 
-	//  rewrite sample index as needed
-	if(rewrite_index)
-	{
-		// write_sampleindex_file();
-	}
+	// //  rewrite sample index as needed
+	// if(rewrite_index)
+	// {
+	// 	// write_sampleindex_file();
+	// }
 
 	// Assign samples in SD card to (previously empty) sample index
 	return(force_reload);	// OK if at least a sample was loaded
