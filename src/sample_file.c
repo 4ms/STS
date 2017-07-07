@@ -95,6 +95,10 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 			if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
 			if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
 
+			//Fix an odd-sized chunk, it should always be even
+			if (chunk.chunkSize & 0b1)
+				chunk.chunkSize++;
+
 			next_chunk_start = f_tell(sample_file) + chunk.chunkSize;
 			//fast-forward to the next chunk
 			if (chunk.chunkId != ccFMT)
@@ -130,6 +134,10 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 
 					if (res != FR_OK)	{g_error |= HEADER_READ_FAIL; f_close(sample_file); break;}
 					if (br < rd)		{g_error |= FILE_WAVEFORMATERR;	f_close(sample_file); break;}
+
+					//Fix an odd-sized chunk, it should always be even
+					if (chunk.chunkSize & 0b1)
+						chunk.chunkSize++;
 
 					//fast-forward to the next chunk
 					if (chunk.chunkId != ccDATA)

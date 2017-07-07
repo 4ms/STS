@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "params.h"
+#include "dig_pins.h"
 #include "ff.h"
 #include "sts_filesystem.h"
 #include "file_util.h"
@@ -600,16 +601,11 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 {
 	DIR 		rootdir;
 	FRESULT 	res, res_dir;
-	uint8_t 	flag;
 	char 		fullpath[_MAX_LFN+1];	
 	// char 		fname[_MAX_LFN+1];	
 	char 		dumpedpath[_MAX_LFN+1];	
 	char* 		fileonly;
 	char 		fileonly_ptr[_MAX_LFN+1];	
-	uint8_t 	try_folders	= 1;
-	uint8_t		try_root	= 1;
-	uint8_t 	i = 0;
-	char*		src;
 
 	// str_cpy(fname,filename);
 
@@ -733,4 +729,5 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 			}  
 		}
 	}
+	return(3); //unknown-- this is here to prevent compiler warning
 }

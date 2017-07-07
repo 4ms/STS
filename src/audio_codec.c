@@ -147,11 +147,10 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 #else //DEBUG_ADC_TO_CODEC
 	for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 	{
-		*dst++ = potadc_buffer[channel+2]*4;
+		//*dst++ = potadc_buffer[channel+2]*4;
 		*dst++ = 0;
 
-		//*dst++ = cvadc_buffer[channel+4]*4;
-		*dst++ = cvadc_buffer[channel+0]*4;
+		//*dst++ = cvadc_buffer[channel+0]*4;
 		*dst++ = 0;
 	}
 #endif
