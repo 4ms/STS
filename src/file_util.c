@@ -52,37 +52,8 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
     FRESULT res;
     FILINFO fno;
     uint32_t i;
-    char EXT[4];
 
     fname[0] = 0; //null string
-
-    //make upper if all lower-case, or lower if all upper-case
-    if (   (ext[1]>='a' && ext[1]<='z')
-        && (ext[2]>='a' && ext[2]<='z')
-        && (ext[3]>='a' && ext[3]<='z'))
-    {
-        EXT[1] = ext[1] - 0x20;
-        EXT[2] = ext[2] - 0x20;
-        EXT[3] = ext[3] - 0x20;
-    }
-
-    else if (  (ext[1]>='A' && ext[1]<='Z')
-            && (ext[2]>='A' && ext[2]<='Z')
-            && (ext[3]>='A' && ext[3]<='Z'))
-    {
-        EXT[1] = ext[1] + 0x20;
-        EXT[2] = ext[2] + 0x20;
-        EXT[3] = ext[3] + 0x20;
-    }
-    else
-    {
-        EXT[1] = ext[1];
-        EXT[2] = ext[2];
-        EXT[3] = ext[3];
-    }
-    EXT[0] = ext[0]; //dot
-
-
 
     //loop through dir until we find a file ending in ext
     for (;;) {
@@ -97,10 +68,11 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
         i = str_len(fno.fname);
         if (i==0xFFFFFFFF)      return (0xFE); //file name invalid
 
-        if (fno.fname[i-4] == ext[0] &&
-              (  (fno.fname[i-3] == ext[1] && fno.fname[i-2] == ext[2] && fno.fname[i-1] == ext[3])
-              || (fno.fname[i-3] == EXT[1] && fno.fname[i-2] == EXT[2] && fno.fname[i-1] == EXT[3])  )
-            )
+        if (         fno.fname[i-4] == ext[0] \
+            && upper(fno.fname[i-3]) == upper(ext[1]) \
+            && upper(fno.fname[i-2]) == upper(ext[2]) \
+            && upper(fno.fname[i-1]) == upper(ext[3]) \
+          )
         {
             str_cpy(fname, fno.fname);
             return(FR_OK);
@@ -251,7 +223,7 @@ uint8_t is_wav(char *string)
 {
 
   char *cp;
-  char a, b, c ,d;
+  char a=0, b=0, c=0, d=0;
 
   for (cp = string; *cp!=0; cp++)
   {
@@ -261,8 +233,7 @@ uint8_t is_wav(char *string)
     d=*cp;
   }
 
-  //To Do: Make this case-insensitive
-  if ((a=='.')&&(b=='w')&&(c=='a')&&(d=='v')) return 1; //or maybe string?
+  if ((a=='.')&&(upper(b)=='W')&&(upper(c)=='A')&&(upper(d)=='V')) return 1;
   else return 0;
 }
 

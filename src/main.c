@@ -30,6 +30,7 @@ main.c
 #include "bank.h"
 #include "sts_fs_index.h"
 #include "sts_filesystem.h"
+#include "edit_mode.h"
 #include "system_settings.h"
 
 uint32_t WATCH0;
@@ -225,6 +226,7 @@ int main(void)
 	flags[skip_process_buttons] = 2;
 
 	//Main loop
+	//All routines accessing the SD card should run here
 	while(1){
 
 		check_errors();
@@ -237,20 +239,27 @@ int main(void)
 			read_storage_to_buffer();
 		}
 
+		if (flags[FindNextSampleToAssign])
+		{
+			do_assignment(flags[FindNextSampleToAssign]);
+			flags[FindNextSampleToAssign]=0;
+		}
+
+		if (flags[SaveSystemSettings])
+		{
+			flags[SaveSystemSettings] = 0;
+			save_system_settings();
+		}
+
+
 		process_mode_flags();
 
 		if (flags[RewriteIndex])
 		{
 			flags[RewriteIndex] = 0;
-
-			// res = write_sampleindex_file();
 			res = index_write_wrapper();
-			if (res) {
-				g_error |= CANNOT_WRITE_INDEX;
-				flags[RewriteIndexFail] = 255;
-			}
-			else
-				flags[RewriteIndexSucess] = 255;
+			if (res) {	flags[RewriteIndexFail] = 255;	g_error |= CANNOT_WRITE_INDEX;}
+			else 		flags[RewriteIndexSucess] = 255;
 		}
 
     	if (do_factory_reset)

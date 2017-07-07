@@ -62,8 +62,6 @@ void Button_Debounce_IRQHandler(void)
 	static uint32_t last_sys_tmr=0;
 	uint32_t elapsed_time;
 
-	uint8_t skip_rev_release = 0;
-
 	if (TIM_GetITStatus(TIM4, TIM_IT_Update) != RESET) {
 
 		if (sys_tmr < last_sys_tmr) //then sys_tmr wrapped from 0xFFFFFFFF to 0x00000000
@@ -257,32 +255,9 @@ void Button_Debounce_IRQHandler(void)
 							case Rev1:
 								if (global_mode[EDIT_MODE])
 								{
-									if (button_state[Rec]<SHORT_PRESSED)
-									{
-										if (enter_assignment_mode())
-										{
-											// browsing unused samples (starting from current folder)
-											if (cur_assign_bank == 0xFF)
-											{
-												if (next_unassigned_sample())
-												{
-													flags[ForceFileReload1] = 1;
-													flags[Play1But]=1;
-													flags[RevertBlink1]	=  10;
-												}
-											}
-											// browsing used samples in bank order
-											else
-											{
-												if(next_assigned_sample())
-												{
-													flags[ForceFileReload1] = 1;
-													flags[Play1But]=1;
-													flags[RevertBlink1]	=  10;	
-												}
-											}
-										} 
-									}
+									//Tell the main loop to find the next sample to assign
+									if (button_state[Rev1]<SHORT_PRESSED)
+										flags[FindNextSampleToAssign] = 1;
 								}
 								else
 									flags[Rev1Trig]=1;
@@ -392,14 +367,12 @@ void Button_Debounce_IRQHandler(void)
 										break;
 
 										case Rev1:
-											// if( (button_state[Rev1]>=MED_PRESSED) && ((global_mode[ASSIGN_MODE])||(global_mode[EDIT_MODE])) ){
-											// if( (button_state[Rev1]>=MED_PRESSED) ){
-											flags[RevertBlink1]	  = 10;
-											flags[Play1But]		  = 1;
-											// cur_assign_bank 	 -= 1; 
-											cur_assign_bank 	  = prev_enabled_bank_0xFF(cur_assign_bank);
-											flags[skip_process_buttons]	= 2;
-											// }
+											if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
+											{
+												//Previous assignment bank
+												flags[FindNextSampleToAssign] = 2;
+												flags[skip_process_buttons]	= 2;
+											}
 										break;
 
 									default:
@@ -462,13 +435,13 @@ void Button_Debounce_IRQHandler(void)
 				{
 					global_mode[STEREO_MODE] = 0;
 					flags[StereoModeTurningOff] = 1;
-					save_system_settings();
+					flags[SaveSystemSettings] = 1;
 				} 
 				else
 				{
 					global_mode[STEREO_MODE] = 1;
 					flags[StereoModeTurningOn] = 1;
-					save_system_settings();
+					flags[SaveSystemSettings] = 1;
 				}
 
 				long_press[Bank1] = 0xFFFFFFFF;

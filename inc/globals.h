@@ -69,11 +69,13 @@ enum Flags {
 	RevertSample,
 	RevertBank1,
 	RevertBank2,
-	RevertBlink1,
 	RevertAll,
 	RewriteIndex,
 	RewriteIndexFail,
 	RewriteIndexSucess,
+	AssignedNewSample,
+	FindNextSampleToAssign,
+	SaveSystemSettings,
 
 	NUM_FLAGS
 };

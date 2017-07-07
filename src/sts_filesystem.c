@@ -11,7 +11,7 @@
 #include "sts_fs_renaming_queue.h"
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
-extern char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
+//extern char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
 
 extern volatile uint32_t sys_tmr;
 
@@ -445,7 +445,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 	//Create a handy array of all the bank paths
 	//TODO: this could be done in write_sampleindex_file() if we find it useful
-	create_bank_path_index();
+//	create_bank_path_index();
 
 	// check if there was an error writing to index file
 	// ToDo: push this to error log
@@ -466,13 +466,13 @@ uint8_t load_all_banks(uint8_t force_reload)
 //
 //Tries to figure out the bank path
 //
-uint8_t get_banks_path(uint8_t bank, char *path)
-{
+// uint8_t get_banks_path(uint8_t bank, char *path)
+// {
 	//Get path to bank's folder
 	//
 
-	str_cpy(path, index_bank_path[ bank ]);
-	path[str_len(path)-1] = 0; //cut off the '/'
+	// str_cpy(path, index_bank_path[ bank ]);
+	// path[str_len(path)-1] = 0; //cut off the '/'
 
 	//First try using the path from the current sample
 	//
@@ -491,11 +491,11 @@ uint8_t get_banks_path(uint8_t bank, char *path)
 	// 		}
 	// 	}
 	// }
-	if (path[0])
-		return(1);//found
-	else
-		return(0);
-}
+// 	if (path[0])
+// 		return(1);//found
+// 	else
+// 		return(0);
+// }
 
 
 uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)

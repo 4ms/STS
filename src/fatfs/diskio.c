@@ -90,14 +90,18 @@ DRESULT disk_read (
 )
 {
 	uint8_t res;
+	uint32_t timeout=0x00FFFFFF;
 
 	/* Check count */
 	if (!count) {
 		return RES_PARERR;
 	}
 	
-	if (accessing)
-		return 99;
+	while (accessing)
+	{
+		if (timeout--==0)
+			return 99;
+	}
 	BUSYLED_ON;
 	accessing |= (1<<2);
 	res = DG_disk_read(buff,sector,count);
@@ -121,13 +125,18 @@ DRESULT disk_write (
 )
 {
 	uint8_t res;
+	uint32_t timeout=0x00FFFFFF;
 
 	/* Check count */
 	if (!count) {
 		return RES_PARERR;
 	}
 	
-	if (accessing) return 99;
+	while (accessing)
+	{
+		if (timeout--==0)
+			return 99;
+	}
 	BUSYLED_ON;
 	accessing |= (1<<3);
 	res = TM_FATFS_SD_SDIO_disk_write(buff,sector,count);

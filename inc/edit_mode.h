@@ -22,8 +22,14 @@ enum AssignmentStates{
 
 uint8_t enter_assignment_mode(void);
 void exit_assignment_mode(void);
+
+void do_assignment(uint8_t direction);
+
 uint8_t next_unassigned_sample(void);
 uint8_t next_assigned_sample(void);
+
+FRESULT init_unassigned_scan(Sample *s_sample);
+void init_assigned_scan(void);
 
 
 void copy_sample(uint8_t dst_bank, uint8_t dst_sample, uint8_t src_bank, uint8_t src_sample);

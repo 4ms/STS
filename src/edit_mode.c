@@ -21,8 +21,8 @@ enum AssignmentStates 	cur_assign_state=ASSIGN_OFF;
 char 					cur_assign_bank_path[_MAX_LFN];
 uint8_t 				cur_assign_sample=0; 
 
-Sample					sample_undo_buffer;
-uint8_t					undo_samplenum, undo_bank;
+Sample					undo_sample;
+uint8_t					undo_samplenum, undo_banknum;
 
  
 
@@ -42,6 +42,74 @@ extern enum PlayStates play_state[NUM_PLAY_CHAN];
 
 DIR root_dir;
 
+//Wrapper for entering assignment mode,
+//going to the next assigned or unassigned sample
+//and handling the playback and visual feedback flags
+//
+//direction == 1 means go forward one sample
+//direction == 2 means go back one bank
+//
+void do_assignment(uint8_t direction)
+{
+	uint8_t found_sample=0;
+	FRESULT res;
+
+	if (enter_assignment_mode())
+	{
+		//Next sample:
+		if (direction==1)
+		{
+			// browsing unused samples (starting from current folder)
+			if (cur_assign_bank == 0xFF)
+				found_sample = next_unassigned_sample();
+
+			// browsing used samples in bank order
+			else
+				found_sample = next_assigned_sample();
+		}
+
+		//Previous bank:
+		else if (direction==2)
+		{
+			cur_assign_bank = prev_enabled_bank_0xFF(cur_assign_bank);
+
+			//If we end up in the unassigned 'bank'
+			//Then initialize properly
+			if (cur_assign_bank == 0xFF)
+			{
+				res = init_unassigned_scan(&(samples[i_param[0][BANK]][i_param[0][SAMPLE]]));
+
+				if (res!=FR_OK) {f_closedir(&assign_dir); global_mode[ASSIGN_MODE] = 0; return;} //unable to enter assignment mode
+
+				found_sample = next_unassigned_sample();
+			}
+
+			//If we end up in a bank
+			//then initialize for banks
+			else
+			{
+				f_closedir(&root_dir);
+				f_closedir(&assign_dir);
+
+				cur_assign_sample = 0xFF; //will wrap around to 0 when we first call next_assigned_sample()
+				cur_assign_state = ASSIGN_USED;
+
+				found_sample = next_assigned_sample();
+			}
+		}
+
+		if (found_sample)
+		{
+			flags[ForceFileReload1] = 1;
+			flags[Play1Trig]=1;
+			flags[AssignedNewSample]= 10;
+		}
+	} 
+
+}
+
+
+
 // Assignment mode:
 // First we set cur_assign_bank to 0xFF 
 // Then we go through all unassigned files in the current sample's folder
@@ -54,34 +122,20 @@ uint8_t enter_assignment_mode(void)
 	FRESULT res;
 
 	// Return 1 if we've already entered assignment_mode
-	if (global_mode[ASSIGN_MODE]) return 1;
+	if (global_mode[ASSIGN_MODE]) return 1; //success
 
 	//Enter assignment mode
 	global_mode[ASSIGN_MODE] = 1;
 
-	//Start with the unassigned samples
-	cur_assign_bank = 0xFF;
+	//Initialize the scan of unassigned samples
+	res = init_unassigned_scan(&(samples[i_param[0][BANK]][i_param[0][SAMPLE]]));
 
-	//Start with the current sample's folder
-	cur_assign_state = ASSIGN_UNUSED_IN_FOLDER;
+	if (res!=FR_OK) {f_closedir(&assign_dir); global_mode[ASSIGN_MODE] = 0; return(0);} //unable to enter assignment mode
 
-	//Get the folder path from the filename
-	//We are just using sample_undo_buffer.filename as a temp buffer
-	if (str_split(samples[i_param[0][BANK]][i_param[0][SAMPLE]].filename,'/', cur_assign_bank_path, sample_undo_buffer.filename))
-		cur_assign_bank_path[str_len(cur_assign_bank_path)-1]='\0'; //remove trailing slash
-	else
-		cur_assign_bank_path[0]='\0'; //filename contained no slash: use root dir
-
-	//Verify the folder exists and can be opened
-	//Leave it open, so we can browse it with next_unassigned_sample
-	res = f_opendir(&assign_dir, cur_assign_bank_path);
-	if (res==FR_NO_PATH) {f_closedir(&assign_dir); global_mode[ASSIGN_MODE] = 0; return(0);} //unable to enter assignment mode
-
-	
 	//Make a copy of the current sample info, so we can undo our changes later
 	save_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
 
-	return 1;
+	return 1; //success
 }
 
 void exit_assignment_mode(void)
@@ -92,6 +146,28 @@ void exit_assignment_mode(void)
 
 }
 
+FRESULT init_unassigned_scan(Sample *s_sample)
+{
+	char tmp[_MAX_LFN];
+
+	//Start with the unassigned samples
+	cur_assign_bank = 0xFF;
+
+	//Start with the current sample's folder
+	cur_assign_state = ASSIGN_UNUSED_IN_FOLDER;
+
+	//Get the folder path from the samples's filename
+
+	if (str_split(s_sample->filename, '/', cur_assign_bank_path, tmp))
+		cur_assign_bank_path[str_len(cur_assign_bank_path)-1]='\0'; //remove trailing slash
+	else
+		cur_assign_bank_path[0]='\0'; //filename contained no slash: use root dir
+
+	//Verify the folder exists and can be opened
+	//Leave it open, so we can browse it with next_unassigned_sample
+	return (f_opendir(&assign_dir, cur_assign_bank_path));
+
+}
 
 //Find the next file in the folder, 
 //and when we get to the end we go to the next bank
@@ -124,7 +200,8 @@ uint8_t next_unassigned_sample(void)
 	{
 		res = find_next_ext_in_dir(&assign_dir, ".wav", filename);
 
-		if (res!=FR_OK && res!=0xFF) return(0); //filesystem error reading directory, abort
+		if (res!=FR_OK && res!=0xFF)
+			return(0); //filesystem error reading directory, abort
 
 		if (res==0xFF) //no more .wav files found
 		{
@@ -156,19 +233,18 @@ uint8_t next_unassigned_sample(void)
 
 					// No more folders in the root_dir!
 					// Set cur_assign_bank to the first enabled bank
-					// And exit... but do we need to call next_assigned_sample()??
+					// And call next_assigned_sample()
 					if (res != FR_OK) 
 					{
 						f_closedir(&root_dir);
+						f_closedir(&assign_dir);
 
-						cur_assign_bank = next_enabled_bank(MAX_NUM_BANKS);
-						cur_assign_state=ASSIGN_USED;
-						//next_assigned_sample();
-						return(0); 
+						init_assigned_scan();
+						return (next_assigned_sample());
 					}
 
 					// Skip the original sample's folder (we already scanned it)
-					if (str_split(sample_undo_buffer.filename,'/', filepath, filename))
+					if (str_split(undo_sample.filename,'/', filepath, filename))
 							filepath[str_len(filepath)-1]='\0'; //remove trailing slash
 					else	filepath[0]='\0'; //filename contained no slash: use root dir
 
@@ -202,7 +278,7 @@ uint8_t next_unassigned_sample(void)
 		//See if the file already is assigned to a sample slot in any bank
 
 		//Shortcut: if the file is the original file, then don't bother searching for it
-		if (str_cmp(filepath, sample_undo_buffer.filename))
+		if (str_cmp(filepath, undo_sample.filename))
 			is_file_already_assigned = 1;
 		else 
 		{
@@ -241,9 +317,9 @@ uint8_t next_unassigned_sample(void)
 				f_close(&temp_file);
 
 			}
-
 		}
 	}
+
 	if (is_unassigned_file_found)
 		return(1);
 	else
@@ -251,56 +327,74 @@ uint8_t next_unassigned_sample(void)
 }
 
 
+void init_assigned_scan(void)
+{
+	cur_assign_bank = next_enabled_bank(MAX_NUM_BANKS);
+	cur_assign_sample = 0xFF; //will wrap around to 0 when we first call next_assigned_sample()
+	cur_assign_state = ASSIGN_USED;
+}
+
 // Find next assigned sample in current bank
 // if no more assigned samples in current bank, go to next non-empty bank
 // if no more non-empty bank set cur_assign_bank to 0xFFFFFFFF so next_unassigned_sample() gets called
 // ... and unassigned samples get browsed
 uint8_t next_assigned_sample(void)
 {
+	FRESULT res;
 
-	while(cur_assign_bank =!0xFF);
+	while ( 1 )
 	{
-		// if there is a sample in the current slot
+		//Go to the next sample
+		cur_assign_sample++;
+		if (cur_assign_sample>=NUM_SAMPLES_PER_BANK)
+		{
+			cur_assign_bank = next_enabled_bank_0xFF(cur_assign_bank);
+			cur_assign_sample=0;
+
+			if (cur_assign_bank == 0xFF) break;
+		}	
+
+		// Check if this is the original sample we're re-assigning
+		// If so, then we want to load the undo_sample
+		if (cur_assign_bank==i_param[0][BANK] && cur_assign_sample==i_param[0][SAMPLE])
+		{
+			restore_undo_state( i_param[0][BANK], i_param[0][SAMPLE] );
+			return(1); //sample found
+		}
+
+		// See if this sample is valid, and then load in the current slot
 		if (is_wav(samples[cur_assign_bank][cur_assign_sample].filename))
 		{
-			// copy slot to assign
 			copy_sample( i_param[0][BANK], i_param[0][SAMPLE], cur_assign_bank, cur_assign_sample);
-			// return(cur_assign_bank);
-			cur_assign_bank = cur_assign_bank;
-			return(1);
-		}
-		else
-		{
-			cur_assign_sample++;
-			if (cur_assign_sample>NUM_SAMPLES_PER_BANK)
-			{
-				cur_assign_bank = next_enabled_bank_0xFF(cur_assign_bank);
-				if(cur_assign_bank!=0xFF) cur_assign_sample=0;
-			}	
+			return(1); //sample found
 		}
 	}
-	// return(0xFF);
-	cur_assign_bank = 0xFF;
-	return(0);
+
+	// At this point, we've gone through all the assigned samples in all the banks
+	// Now switch to unassigned samples
+	res = init_unassigned_scan(&undo_sample);
+	if (res!=FR_OK) return 0;//failed
+
+	return (next_unassigned_sample());
 }
 
 //backs-up sample[][] data to an undo buffer
 void save_undo_state(uint8_t bank, uint8_t samplenum)
 {
-	str_cpy(sample_undo_buffer.filename,  samples[bank][samplenum].filename);
-	sample_undo_buffer.blockAlign 		= samples[bank][samplenum].blockAlign;
-	sample_undo_buffer.numChannels 		= samples[bank][samplenum].numChannels;
-	sample_undo_buffer.sampleByteSize 	= samples[bank][samplenum].sampleByteSize;
-	sample_undo_buffer.sampleRate 		= samples[bank][samplenum].sampleRate;
-	sample_undo_buffer.sampleSize 		= samples[bank][samplenum].sampleSize;
-	sample_undo_buffer.startOfData 		= samples[bank][samplenum].startOfData;
-	sample_undo_buffer.PCM 				= samples[bank][samplenum].PCM;
+	str_cpy(undo_sample.filename,  samples[bank][samplenum].filename);
+	undo_sample.blockAlign 		= samples[bank][samplenum].blockAlign;
+	undo_sample.numChannels 	= samples[bank][samplenum].numChannels;
+	undo_sample.sampleByteSize 	= samples[bank][samplenum].sampleByteSize;
+	undo_sample.sampleRate 		= samples[bank][samplenum].sampleRate;
+	undo_sample.sampleSize 		= samples[bank][samplenum].sampleSize;
+	undo_sample.startOfData 	= samples[bank][samplenum].startOfData;
+	undo_sample.PCM 			= samples[bank][samplenum].PCM;
 
-	sample_undo_buffer.inst_size 		= samples[bank][samplenum].inst_size  ;//& 0xFFFFFFF8;
-	sample_undo_buffer.inst_start 		= samples[bank][samplenum].inst_start  ;//& 0xFFFFFFF8;
-	sample_undo_buffer.inst_end 		= samples[bank][samplenum].inst_end  ;//& 0xFFFFFFF8;
+	undo_sample.inst_size 		= samples[bank][samplenum].inst_size  ;//& 0xFFFFFFF8;
+	undo_sample.inst_start 		= samples[bank][samplenum].inst_start  ;//& 0xFFFFFFF8;
+	undo_sample.inst_end 		= samples[bank][samplenum].inst_end  ;//& 0xFFFFFFF8;
 
-	undo_bank = bank;
+	undo_banknum = bank;
 	undo_samplenum = samplenum;
 
 }
@@ -309,20 +403,20 @@ void save_undo_state(uint8_t bank, uint8_t samplenum)
 //
 uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum)
 {
-	if (bank==undo_bank && samplenum==undo_samplenum)
+	if (bank==undo_banknum && samplenum==undo_samplenum)
 	{
-		str_cpy(samples[undo_bank][undo_samplenum].filename,  sample_undo_buffer.filename);
-		samples[undo_bank][undo_samplenum].blockAlign 		= sample_undo_buffer.blockAlign;
-		samples[undo_bank][undo_samplenum].numChannels 		= sample_undo_buffer.numChannels;
-		samples[undo_bank][undo_samplenum].sampleByteSize 	= sample_undo_buffer.sampleByteSize;
-		samples[undo_bank][undo_samplenum].sampleRate 		= sample_undo_buffer.sampleRate;
-		samples[undo_bank][undo_samplenum].sampleSize 		= sample_undo_buffer.sampleSize;
-		samples[undo_bank][undo_samplenum].startOfData 		= sample_undo_buffer.startOfData;
-		samples[undo_bank][undo_samplenum].PCM 				= sample_undo_buffer.PCM;
+		str_cpy(samples[undo_banknum][undo_samplenum].filename,  undo_sample.filename);
+		samples[undo_banknum][undo_samplenum].blockAlign 		= undo_sample.blockAlign;
+		samples[undo_banknum][undo_samplenum].numChannels 		= undo_sample.numChannels;
+		samples[undo_banknum][undo_samplenum].sampleByteSize 	= undo_sample.sampleByteSize;
+		samples[undo_banknum][undo_samplenum].sampleRate 		= undo_sample.sampleRate;
+		samples[undo_banknum][undo_samplenum].sampleSize 		= undo_sample.sampleSize;
+		samples[undo_banknum][undo_samplenum].startOfData 		= undo_sample.startOfData;
+		samples[undo_banknum][undo_samplenum].PCM 				= undo_sample.PCM;
 
-		samples[undo_bank][undo_samplenum].inst_size 			= sample_undo_buffer.inst_size  ;//& 0xFFFFFFF8;
-		samples[undo_bank][undo_samplenum].inst_start 		= sample_undo_buffer.inst_start  ;//& 0xFFFFFFF8;
-		samples[undo_bank][undo_samplenum].inst_end 			= sample_undo_buffer.inst_end  ;//& 0xFFFFFFF8;
+		samples[undo_banknum][undo_samplenum].inst_size 		= undo_sample.inst_size  ;//& 0xFFFFFFF8;
+		samples[undo_banknum][undo_samplenum].inst_start 		= undo_sample.inst_start  ;//& 0xFFFFFFF8;
+		samples[undo_banknum][undo_samplenum].inst_end 			= undo_sample.inst_end  ;//& 0xFFFFFFF8;
 
 		return(1); //ok
 	} else return(0); //not in the right sample/bank to preform an undo
@@ -349,8 +443,6 @@ void exit_edit_mode(void)
 
 	i_param[0][LOOPING] = cached_looping;
 	i_param[0][REV]		= cached_rev;
-
-	cur_assign_bank = i_param[0][BANK];
 
 	if (scrubbed_in_edit)
 	{

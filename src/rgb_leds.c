@@ -204,17 +204,15 @@ void update_ButtonLEDs(void)
 	float t_tri;
 	uint32_t t;
 
-//	if (tm_16>0x8000)
-//		tri_16 = ((float)(tm_16 - 0x8000)) / 32768.0f;
-//	else
-//		tri_16 = ((float)(0x8000 - tm_16)) / 32768.0f;
-//
-//		if (tm_15>0x4000)
-//			tri_15 = ((float)(tm_15 - 0x4000)) / 16384.0f;
-//		else
-//			tri_15 = ((float)(0x4000 - tm_15)) / 16384.0f;
+	// if (tm_16>0x8000)
+	// 	tri_16 = ((float)(tm_16 - 0x8000)) / 32768.0f;
+	// else
+	// 	tri_16 = ((float)(0x8000 - tm_16)) / 32768.0f;
 
-
+	// if (tm_15>0x4000)
+	// 	tri_15 = ((float)(tm_15 - 0x4000)) / 16384.0f;
+	// else
+	// 	tri_15 = ((float)(0x4000 - tm_15)) / 16384.0f;
 
 	if (tm_14>0x2000)
 		tri_14 = ((float)(tm_14 - 0x2000)) / 8192.0f;
@@ -261,14 +259,9 @@ void update_ButtonLEDs(void)
 		// Normal functions:
 		//
 
-		if ((ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE]) && flags[RevertBlink1]){
-			set_ButtonLED_byPalette(ButLEDnum, WHITE); 
-			flags[RevertBlink1]--;
-		}
-
 		//BANK lights
 		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
-			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE] && cur_assign_bank<MAX_NUM_BANKS))
+			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE] && cur_assign_bank<MAX_NUM_BANKS && !flags[AssignedNewSample]))
 		{
 			if 		(ButLEDnum == Bank1ButtonLED) 	chan = 0;
 			else if (ButLEDnum == Bank2ButtonLED) 	chan = 1;
@@ -295,7 +288,8 @@ void update_ButtonLEDs(void)
 				if (chan==2) //REC button
 					bank_to_display = i_param[2][BANK];
 				else
-				if (chan==3){ //Rev1 button in ASSIGN_MODE
+				if (chan==3){ //Rev1 button in ASSIGN_MODE, looking for already assigned samples
+					//We display the current bank we're scanning on the Rev1 light
 					bank_to_display = cur_assign_bank;
 				}
 				else
@@ -528,6 +522,19 @@ void update_ButtonLEDs(void)
 			{
 				if (chan==0)
 				{
+					if (flags[AssignedNewSample])
+					{
+						//When we press Edit+Rev1 and we're assigning used samples,
+						//Flicker the Rev1 light off if it's on the WHITE bank
+						//Otherwise, flicker it WHITE
+						if (cur_assign_bank==0)
+							set_ButtonLED_byPalette(ButLEDnum, OFF); 
+						else
+							set_ButtonLED_byPalette(ButLEDnum, WHITE); 
+
+						flags[AssignedNewSample]--;
+					}
+					else
 					//Reverse light Assignment of unassigned samples
 					if (global_mode[ASSIGN_MODE] && cur_assign_bank>=MAX_NUM_BANKS)
 					{
@@ -541,9 +548,10 @@ void update_ButtonLEDs(void)
 
 			}
 			else
+			{
 				if (i_param[chan][REV]) set_ButtonLED_byPalette(ButLEDnum, CYAN);
 				else					set_ButtonLED_byPalette(ButLEDnum, OFF);
-
+			}
 
 		}
 	}

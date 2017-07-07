@@ -13,7 +13,7 @@ extern enum g_Errors g_error;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
+// char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
 
 uint8_t bank_status[MAX_NUM_BANKS];
 
@@ -22,17 +22,17 @@ uint8_t bank_status[MAX_NUM_BANKS];
 //Fills an array with the paths to the first sample of each bank on boot
 //This is used by Edit Mode 
 //
-void create_bank_path_index(void)
-{
-	uint8_t i;
-	char path[_MAX_LFN];
+// void create_bank_path_index(void)
+// {
+// 	uint8_t i;
+// 	char path[_MAX_LFN];
 
-	for (i=0; i<MAX_NUM_BANKS; i++)
-	{
-		// split path and filename			
-		str_rstr(samples[i][0].filename, '/', index_bank_path[i]);
-	}
-}
+// 	for (i=0; i<MAX_NUM_BANKS; i++)
+// 	{
+// 		// split path and filename			
+// 		str_rstr(samples[i][0].filename, '/', index_bank_path[i]);
+// 	}
+// }
 
 //
 //Returns the sample number inside the given bank, whose filename matches the given filename
@@ -158,10 +158,7 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 uint8_t color_to_bank(char *color)
 {
 	uint8_t i;
-	//char* 	b_color;
-	char  	b_color[_MAX_LFN+1];
-
-	//b_color = t_b_color;
+	char  	b_color[11];
 
 	// for every bank number
 	for (i=0; i<MAX_NUM_BANKS; i++)
@@ -203,25 +200,22 @@ uint8_t next_enabled_bank(uint8_t bank)
 // same as next_enabled_bank but wraps around to 0xFF instead
 uint8_t next_enabled_bank_0xFF(uint8_t bank) 
 {
-	uint8_t orig_bank=bank;
-
 	do{
 		bank++;
-		if (bank >= MAX_NUM_BANKS)	{bank = 0xFF; return(0);}
+		if (bank >= MAX_NUM_BANKS)	return(0xFF);
 	} while(!bank_status[bank]);
+
 	return (bank);
 }
 
 uint8_t prev_enabled_bank_0xFF(uint8_t bank)
 {
-	uint8_t orig_bank=bank;
-
 	if (bank == 0xFF) bank=MAX_NUM_BANKS;
 	do{
 		if (bank == 0)	return(0xFF);
 		bank -=1;
-		// if (bank==orig_bank) return(0); //no banks are enabled -->> bail out and return the first bank
 	} while(!bank_status[bank]);
+
 	return (bank);
 }
 
