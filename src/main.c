@@ -211,9 +211,9 @@ int main(void)
 
 	//Begin audio DMA
 	audio_buffer_init();
-	flags[RewriteIndex]=1;
+
 	init_banks();
-	flags[RewriteIndex]=0;
+	
 	Start_I2SDMA();
 
 	set_default_system_settings();

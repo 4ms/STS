@@ -75,15 +75,10 @@ void do_assignment(uint8_t direction)
 			// Go to the previous bank
 			if (cur_assign_sample==0)
 				cur_assign_bank = prev_enabled_bank_0xFF(cur_assign_bank);
-			// else
-			// // If we're in the middle of a bank,
-			// // Go back to the beginning of bank
-			// {
-			// 	cur_assign_sample=-1;
-			// }
 
-			//If we end up in the unassigned 'bank'
-			//Then initialize properly
+			//Now, go to the beginning of the bank we're in:
+
+			//Unassigned 'bank': initialize properly
 			if (cur_assign_bank == 0xFF)
 			{
 				res = init_unassigned_scan(&undo_sample);
@@ -93,8 +88,7 @@ void do_assignment(uint8_t direction)
 				found_sample = next_unassigned_sample();
 			}
 
-			//After going back a bank, if we end up in a bank
-			//then initialize for banks
+			//Assigned bank: de-init unassigned 'bank', and initialize
 			else
 			{
 				f_closedir(&root_dir);

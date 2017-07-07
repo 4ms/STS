@@ -14,13 +14,13 @@
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 //extern char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
 
-extern volatile uint32_t sys_tmr;
+extern volatile uint32_t 	sys_tmr;
 
-extern enum g_Errors g_error;
-extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-extern uint8_t 	flags[NUM_FLAGS];
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
-extern FATFS FatFs;
+extern enum g_Errors 		g_error;
+extern uint8_t				i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+extern uint8_t 				flags[NUM_FLAGS];
+extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
+extern FATFS 				FatFs;
 
 
 FRESULT check_sys_dir(void)
@@ -401,8 +401,12 @@ uint8_t load_all_banks(uint8_t force_reload)
 	FRESULT queue_valid;
 	uint8_t res_bak;
 
+	//Load the index file:
+	flags[RewriteIndex]=1;
+
 	if (!force_reload)
 		force_reload = load_sampleindex_file(USE_INDEX_FILE, MAX_NUM_BANKS);
+
 
 	if (!force_reload) //sampleindex file was ok
 	{	
@@ -414,6 +418,8 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 	else //sampleindex file was not ok, or we requested to force a reload from disk
 	{
+		//Backup Index:
+		flags[RewriteIndex]=2;
 
 		// Backup the sampleindex file if it exists
 		res_bak = backup_sampleindex_file();
@@ -421,7 +427,10 @@ uint8_t load_all_banks(uint8_t force_reload)
 		{
 			// ERRORLOG: sample index couldn't be backed up
 		}
-		
+
+		// Load Banks:
+		flags[RewriteIndex]=3;
+
 		//initialize the renaming queue
 		queue_valid = clear_renaming_queue();
 
@@ -439,14 +448,15 @@ uint8_t load_all_banks(uint8_t force_reload)
 			process_renaming_queue();
 	}
 
+	// Write index file:
+	flags[RewriteIndex]=4;
 
 	// Write samples struct to index
 	// ... so sample info gets updated with latest .wave header content
 	res = index_write_wrapper();
 
-	//Create a handy array of all the bank paths
-	//TODO: this could be done in write_sampleindex_file() if we find it useful
-//	create_bank_path_index();
+	// Done re-indexing
+	flags[RewriteIndex]=0;
 
 	// check if there was an error writing to index file
 	// ToDo: push this to error log

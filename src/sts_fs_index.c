@@ -11,15 +11,15 @@
 #include "bank.h"
 
 
-Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+Sample 						samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-uint8_t bank_status[MAX_NUM_BANKS];
+uint8_t 					bank_status[MAX_NUM_BANKS];
 
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
+extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
+extern uint8_t 				flags[NUM_FLAGS];
 
 // extern enum g_Errors g_error;
 // extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-// extern uint8_t 	flags[NUM_FLAGS];
 // enum PlayStates play_state				[NUM_PLAY_CHAN];
 
 
@@ -142,10 +142,12 @@ uint8_t index_write_wrapper(void){
 	uint8_t	html_res;
 
 	// WRITE INDEX FILE
+	flags[RewriteIndex]=4;
 	res = write_sampleindex_file();
 	if (res!=FR_OK) return(1);
 
 	// WRITE SAMPLE LIST HTML FILE
+	flags[RewriteIndex]=5;
 	html_res = write_samplelist();
 	return (html_res);
 }

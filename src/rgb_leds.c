@@ -236,7 +236,7 @@ void update_ButtonLEDs(void)
 		// Writing index
 		if (flags[RewriteIndex])
 		{
-			set_ButtonLED_byPalette(ButLEDnum, BLUE);
+			set_ButtonLED_byPalette(ButLEDnum, flags[RewriteIndex]);
 		}
 		else
 
