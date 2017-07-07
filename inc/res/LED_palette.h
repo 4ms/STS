@@ -42,7 +42,7 @@ const uint32_t LED_PALETTE[NUM_LED_PALETTE][3]=
 		{0, 	280, 	150},  	//AQUA
 		{550, 	700, 	0}, 	//GREENER
 		{200, 	800, 	1000}, 	//CYANER
-		{0, 	0, 		0}, 	//DIM_WHITE
+		{100, 	100, 	100}, 	//DIM_WHITE
 		{50, 	0, 		0} 		//DIM_RED
 };
 

@@ -86,14 +86,14 @@ void do_assignment(uint8_t direction)
 			//Then initialize properly
 			if (cur_assign_bank == 0xFF)
 			{
-				res = init_unassigned_scan(&(samples[i_param[0][BANK]][i_param[0][SAMPLE]]));
+				res = init_unassigned_scan(&undo_sample);
 
 				if (res!=FR_OK) {f_closedir(&assign_dir); global_mode[ASSIGN_MODE] = 0; return;} //unable to enter assignment mode
 
 				found_sample = next_unassigned_sample();
 			}
 
-			//After going bank a bank, if we end up in a bank
+			//After going back a bank, if we end up in a bank
 			//then initialize for banks
 			else
 			{

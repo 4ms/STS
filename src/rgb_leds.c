@@ -455,8 +455,9 @@ void update_ButtonLEDs(void)
 					//Sample found
 					else
 					{
-						if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, OFF );
-						else							set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE );
+						set_ButtonLED_byPalette(ButLEDnum, OFF );
+						// if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, OFF );
+						// else							set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE );
 					}
 				}
 				//Playing
@@ -472,9 +473,7 @@ void update_ButtonLEDs(void)
 						else							set_ButtonLED_byPalette(ButLEDnum, GREEN );
 					}
 				}
-
 			}
-
 
 		}
 
@@ -531,37 +530,30 @@ void update_ButtonLEDs(void)
 
 					if (flags[AssignedNextSample])
 					{
-						if ((cur_assign_bank%10) == 0)
-							set_ButtonLED_byPalette(ButLEDnum, OFF); 
-						else
-							set_ButtonLED_byPalette(ButLEDnum, WHITE); 
-
+						set_ButtonLED_byPalette(ButLEDnum, ((cur_assign_bank%10)==(WHITE-1)) ? OFF: WHITE);
 						flags[AssignedNextSample]--;
 					}
 					else
 					if (flags[AssignedPrevBank])
 					{
-						if ((cur_assign_bank%10) == 1)
-							set_ButtonLED_byPalette(ButLEDnum, OFF); 
-						else
-							set_ButtonLED_byPalette(ButLEDnum, RED); 
-
+						set_ButtonLED_byPalette(ButLEDnum, ((cur_assign_bank%10) == (RED-1))? OFF: RED);
 						flags[AssignedPrevBank]--;
 					}
 					else
+
 					// Reverse light during assignment of unassigned samples:
 					// Flicker the bank base color rapidly if scanning unassigned samples in the folder
 					if (global_mode[ASSIGN_MODE])
 					{ 
 						if (cur_assign_state==ASSIGN_UNUSED_IN_FOLDER)
-							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10), tri_13);
+							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10)+1, tri_13);
 						else
 						if (cur_assign_state==ASSIGN_UNUSED_IN_FS || cur_assign_state==ASSIGN_UNUSED_IN_ROOT)
-							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, DIM_RED, tri_13);
+							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, DIM_WHITE, tri_13);
 					}
 					else
 						//Edit Mode, but not Assignment mode --> bank's base color
-						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10), tri_14);
+						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10)+1, tri_14);
 				}
 				else
 					//Edit Mode: Rev2 flashes red/yellow 

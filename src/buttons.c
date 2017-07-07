@@ -366,14 +366,6 @@ void Button_Debounce_IRQHandler(void)
 										}
 										break;
 
-										case Rev1:
-											if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
-											{
-												//Previous assignment bank
-												flags[FindNextSampleToAssign] = 2;
-												flags[skip_process_buttons]	= 2;
-											}
-										break;
 
 									default:
 										break;
@@ -404,8 +396,14 @@ void Button_Debounce_IRQHandler(void)
 											flags[ToggleLooping2] = 1;
 										break;
 
-									case Bank1:
-										break;
+									case Rev1:
+										if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
+										{
+											//Previous assignment bank
+											flags[FindNextSampleToAssign] = 2;
+											flags[skip_process_buttons]	= 2;
+										}
+									break;
 
 									default:
 										break;
