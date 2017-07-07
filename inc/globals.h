@@ -73,7 +73,8 @@ enum Flags {
 	RewriteIndex,
 	RewriteIndexFail,
 	RewriteIndexSucess,
-	AssignedNewSample,
+	AssignedNextSample,
+	AssignedPrevBank,
 	FindNextSampleToAssign,
 	SaveSystemSettings,
 

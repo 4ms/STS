@@ -12,34 +12,36 @@
 #include "calibration.h"
 #include "button_knob_combo.h"
 #include "res/LED_palette.h"
+#include "edit_mode.h"
 
 #define BIG_PLAY_BUTTONS
 #define FROSTED_BUTTONS
 
 //#define DEBUG_SETBANK1RGB
 
-uint16_t ButLED_color[NUM_RGBBUTTONS][3];
-uint16_t cached_ButLED_color[NUM_RGBBUTTONS][3];
-uint8_t ButLED_state[NUM_RGBBUTTONS];
+uint16_t 						ButLED_color[NUM_RGBBUTTONS][3];
+uint16_t 						cached_ButLED_color[NUM_RGBBUTTONS][3];
+uint8_t	 						ButLED_state[NUM_RGBBUTTONS];
 
-extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+extern uint8_t 					i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
-extern enum PlayStates play_state[NUM_PLAY_CHAN];
-extern enum RecStates	rec_state;
+extern enum PlayStates 			play_state[NUM_PLAY_CHAN];
+extern enum RecStates			rec_state;
 
-extern uint8_t flags[NUM_FLAGS];
+extern uint8_t 					flags[NUM_FLAGS];
 
-extern uint8_t	global_mode[NUM_GLOBAL_MODES];
+extern uint8_t					global_mode[NUM_GLOBAL_MODES];
 
-extern volatile uint32_t sys_tmr;
+extern volatile uint32_t 		sys_tmr;
 
-extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
+extern int16_t 					i_smoothed_potadc[NUM_POT_ADCS];
 
-extern uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN];
+extern uint32_t 				play_led_flicker_ctr[NUM_PLAY_CHAN];
 
-extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
+extern ButtonKnobCombo 			g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
-extern uint8_t 				cur_assign_bank;
+extern uint8_t 					cur_assign_bank;
+extern enum AssignmentStates 	cur_assign_state;
 
 /*
  * init_buttonLEDs()
@@ -197,7 +199,7 @@ void update_ButtonLEDs(void)
 	//float tri_16;
 	//float tri_15;
 	float tri_14;
-	//float tri_13;
+	float tri_13;
 
 	static uint32_t st_phase=0;
 
@@ -219,10 +221,10 @@ void update_ButtonLEDs(void)
 	else
 		tri_14 = ((float)(0x2000 - tm_14)) / 8192.0f;
 
-	// if (tm_13>0x1000)
-	// 	tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
-	// else
-	// 	tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
+	if (tm_13>0x1000)
+		tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
+	else
+		tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
 
 	for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 	{
@@ -261,7 +263,7 @@ void update_ButtonLEDs(void)
 
 		//BANK lights
 		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
-			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE] && cur_assign_bank<MAX_NUM_BANKS && !flags[AssignedNewSample]))
+			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE] && cur_assign_bank<MAX_NUM_BANKS && !flags[AssignedPrevBank] && !flags[AssignedNextSample]))
 		{
 			if 		(ButLEDnum == Bank1ButtonLED) 	chan = 0;
 			else if (ButLEDnum == Bank2ButtonLED) 	chan = 1;
@@ -522,28 +524,47 @@ void update_ButtonLEDs(void)
 			{
 				if (chan==0)
 				{
-					if (flags[AssignedNewSample])
+					//When we press Edit+Rev1,
+					//Flicker the Rev1 light White for forward motion
+					//And Red for backward motion
+					//But-- if we're on a Red or White bank, then flicker it off
+
+					if (flags[AssignedNextSample])
 					{
-						//When we press Edit+Rev1 and we're assigning used samples,
-						//Flicker the Rev1 light off if it's on the WHITE bank
-						//Otherwise, flicker it WHITE
-						if (cur_assign_bank==0)
+						if ((cur_assign_bank%10) == 0)
 							set_ButtonLED_byPalette(ButLEDnum, OFF); 
 						else
 							set_ButtonLED_byPalette(ButLEDnum, WHITE); 
 
-						flags[AssignedNewSample]--;
+						flags[AssignedNextSample]--;
 					}
 					else
-					//Reverse light Assignment of unassigned samples
-					if (global_mode[ASSIGN_MODE] && cur_assign_bank>=MAX_NUM_BANKS)
+					if (flags[AssignedPrevBank])
 					{
-						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, DIM_RED, tri_14);
+						if ((cur_assign_bank%10) == 1)
+							set_ButtonLED_byPalette(ButLEDnum, OFF); 
+						else
+							set_ButtonLED_byPalette(ButLEDnum, RED); 
+
+						flags[AssignedPrevBank]--;
 					}
 					else
-						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, YELLOW, tri_14);
+					// Reverse light during assignment of unassigned samples:
+					// Flicker the bank base color rapidly if scanning unassigned samples in the folder
+					if (global_mode[ASSIGN_MODE])
+					{ 
+						if (cur_assign_state==ASSIGN_UNUSED_IN_FOLDER)
+							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10), tri_13);
+						else
+						if (cur_assign_state==ASSIGN_UNUSED_IN_FS || cur_assign_state==ASSIGN_UNUSED_IN_ROOT)
+							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, DIM_RED, tri_13);
+					}
+					else
+						//Edit Mode, but not Assignment mode --> bank's base color
+						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10), tri_14);
 				}
 				else
+					//Edit Mode: Rev2 flashes red/yellow 
 					set_ButtonLED_byPaletteFade(ButLEDnum, YELLOW, RED, tri_14);
 
 			}

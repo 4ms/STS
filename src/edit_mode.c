@@ -19,26 +19,26 @@ uint8_t 				cur_assign_bank=0xFF;
 DIR 					assign_dir;
 enum AssignmentStates 	cur_assign_state=ASSIGN_OFF;
 char 					cur_assign_bank_path[_MAX_LFN];
-uint8_t 				cur_assign_sample=0; 
+int32_t 				cur_assign_sample=0; 
 
 Sample					undo_sample;
 uint8_t					undo_samplenum, undo_banknum;
 
  
 
-uint8_t	cached_looping;
-uint8_t cached_rev;
-uint8_t cached_play_state;
-uint8_t scrubbed_in_edit;
+uint8_t					cached_looping;
+uint8_t 				cached_rev;
+uint8_t 				cached_play_state;
+uint8_t 				scrubbed_in_edit;
 
 
-extern enum g_Errors g_error;
-extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-extern uint8_t 	flags[NUM_FLAGS];
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
+extern enum 			g_Errors g_error;
+extern uint8_t			i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+extern uint8_t 			flags[NUM_FLAGS];
+extern uint8_t 			global_mode[NUM_GLOBAL_MODES];
 
-extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
-extern enum PlayStates play_state[NUM_PLAY_CHAN];
+extern Sample 			samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+extern enum 			PlayStates play_state[NUM_PLAY_CHAN];
 
 DIR root_dir;
 
@@ -71,7 +71,16 @@ void do_assignment(uint8_t direction)
 		//Previous bank:
 		else if (direction==2)
 		{
-			cur_assign_bank = prev_enabled_bank_0xFF(cur_assign_bank);
+			// If we're at the beginning of the bank,
+			// Go to the previous bank
+			if (cur_assign_sample==0)
+				cur_assign_bank = prev_enabled_bank_0xFF(cur_assign_bank);
+			// else
+			// // If we're in the middle of a bank,
+			// // Go back to the beginning of bank
+			// {
+			// 	cur_assign_sample=-1;
+			// }
 
 			//If we end up in the unassigned 'bank'
 			//Then initialize properly
@@ -84,14 +93,14 @@ void do_assignment(uint8_t direction)
 				found_sample = next_unassigned_sample();
 			}
 
-			//If we end up in a bank
+			//After going bank a bank, if we end up in a bank
 			//then initialize for banks
 			else
 			{
 				f_closedir(&root_dir);
 				f_closedir(&assign_dir);
 
-				cur_assign_sample = 0xFF; //will wrap around to 0 when we first call next_assigned_sample()
+				cur_assign_sample = -1; //will wrap around to 0 when we first call next_assigned_sample()
 				cur_assign_state = ASSIGN_USED;
 
 				found_sample = next_assigned_sample();
@@ -102,7 +111,9 @@ void do_assignment(uint8_t direction)
 		{
 			flags[ForceFileReload1] = 1;
 			flags[Play1Trig]=1;
-			flags[AssignedNewSample]= 10;
+			if (direction==1) 	flags[AssignedNextSample] = 10;
+			else
+			if (direction==2) 	flags[AssignedPrevBank] = 10;
 		}
 	} 
 
@@ -152,6 +163,7 @@ FRESULT init_unassigned_scan(Sample *s_sample)
 
 	//Start with the unassigned samples
 	cur_assign_bank = 0xFF;
+	cur_assign_sample = -1;
 
 	//Start with the current sample's folder
 	cur_assign_state = ASSIGN_UNUSED_IN_FOLDER;
@@ -184,6 +196,7 @@ uint8_t next_unassigned_sample(void)
 	FIL 	temp_file;
 	uint8_t	i;
 	uint8_t	bank, orig_bank;
+	uint32_t max_folders_bailout=1024;
 
 	play_state[0]=SILENT;
 	play_state[1]=SILENT;
@@ -213,34 +226,49 @@ uint8_t next_unassigned_sample(void)
 				//Close the assign_dir
 				f_closedir(&assign_dir);
 
-				//Reset the root_dir for use with get_next_dir()
-				root_dir.obj.fs = 0;
 
 				//TODO: some kind of flash/color change to indicate we are out of the current sample's folder
-				cur_assign_state=ASSIGN_UNUSED_IN_FS;
+				cur_assign_state=ASSIGN_UNUSED_IN_ROOT;
 			} 
 			
-			if (cur_assign_state==ASSIGN_UNUSED_IN_FS)
+			//Todo: Search root dir after current dir
+			if (cur_assign_state==ASSIGN_UNUSED_IN_FS || cur_assign_state==ASSIGN_UNUSED_IN_ROOT)
 			{
 				// Hit the end of the folder:
 				// Find the next folder in the root
 
 				f_closedir(&assign_dir);
-				while (1)
+				while (max_folders_bailout--)
 				{
-					//Try the next folder in the root_dir
-					res = get_next_dir(&root_dir, "", cur_assign_bank_path);
-
-					// No more folders in the root_dir!
-					// Set cur_assign_bank to the first enabled bank
-					// And call next_assigned_sample()
-					if (res != FR_OK) 
+					//Searching in root dir: set path to root
+					if (cur_assign_state==ASSIGN_UNUSED_IN_ROOT)
 					{
-						f_closedir(&root_dir);
-						f_closedir(&assign_dir);
+						cur_assign_bank_path[0]='\0';
 
-						init_assigned_scan();
-						return (next_assigned_sample());
+						//Set the state to check the folders in the FS, so that the next time 
+						//the while loop executes, we'll be ready
+						cur_assign_state=ASSIGN_UNUSED_IN_FS;
+
+						//Reset the root_dir for use with get_next_dir()
+						root_dir.obj.fs = 0;
+					}
+
+					//Searching in folders: Try the next folder inside the root_dir
+					else if (cur_assign_state==ASSIGN_UNUSED_IN_FS)
+					{
+						res = get_next_dir(&root_dir, "", cur_assign_bank_path);
+
+						// No more folders in the root_dir!
+						// Set cur_assign_bank to the first enabled bank
+						// And call next_assigned_sample()
+						if (res != FR_OK) 
+						{
+							f_closedir(&root_dir);
+							f_closedir(&assign_dir);
+
+							init_assigned_scan();
+							return (next_assigned_sample());
+						}
 					}
 
 					// Skip the original sample's folder (we already scanned it)
@@ -258,8 +286,12 @@ uint8_t next_unassigned_sample(void)
 
 				}
 
-				// We just found a folder, so now we need to
-				// go back to the beginning of the outer while loop and look for a file
+				// In case the SD Card is removed, we don't want to search forever, so just bailout
+				if (max_folders_bailout==0) return(0);
+
+				// We just found a folder,
+				// so now we need to go back to the beginning of the outer while loop
+				// and look for a file
 				continue;
 			}
 		}
@@ -321,16 +353,19 @@ uint8_t next_unassigned_sample(void)
 	}
 
 	if (is_unassigned_file_found)
-		return(1);
-	else
-		return(0);
+	{
+		cur_assign_sample++;
+		return(1); //sample found
+	}
+
+	else return(0); //no sample found
 }
 
 
 void init_assigned_scan(void)
 {
 	cur_assign_bank = next_enabled_bank(MAX_NUM_BANKS);
-	cur_assign_sample = 0xFF; //will wrap around to 0 when we first call next_assigned_sample()
+	cur_assign_sample = -1; //will wrap around to 0 when we first call next_assigned_sample()
 	cur_assign_state = ASSIGN_USED;
 }
 
