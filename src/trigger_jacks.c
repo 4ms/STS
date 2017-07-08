@@ -10,10 +10,11 @@
 #include "dig_pins.h"
 #include "trigger_jacks.h"
 
-enum TriggerStates jack_state[NUM_TRIG_JACKS];
-extern uint8_t flags[NUM_FLAGS];
-extern uint32_t play_trig_delay[2];
+enum TriggerStates 			jack_state[NUM_TRIG_JACKS];
+extern uint8_t 				flags[NUM_FLAGS];
+extern uint32_t 			play_trig_timestamp[2];
 
+volatile uint32_t 			sys_tmr;
 
 
 void Trigger_Jack_Debounce_IRQHandler(void)
@@ -59,9 +60,10 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 				{
 					case TrigJack_Play1:
 						flags[Play1Trig]=1;
-						play_trig_delay[0]=12500;
+						play_trig_timestamp[0]=sys_tmr;
 						DEBUG1_ON;
 						break;
+						
 					case TrigJack_Play2:
 						flags[Play2Trig]=1;
 						break;

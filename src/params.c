@@ -45,7 +45,7 @@ uint8_t settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
 uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 uint8_t flags[NUM_FLAGS];
-uint32_t play_trig_delay[2];
+uint32_t play_trig_timestamp[2];
 
 uint8_t flag_pot_changed[NUM_POT_ADCS];
 
@@ -56,6 +56,7 @@ extern uint8_t recording_enabled;
 extern uint8_t scrubbed_in_edit;
 
 extern enum ButtonStates button_state[NUM_BUTTONS];
+volatile uint32_t 			sys_tmr;
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
@@ -632,8 +633,12 @@ void process_mode_flags(void)
 
 		if (flags[Play1Trig])
 		{
-			if (!play_trig_delay[0]) {DEBUG1_OFF;start_playing(0);flags[Play1Trig]=0;}
-			else play_trig_delay[0]--;
+			if ((sys_tmr - play_trig_timestamp[0]) > 500) //about 11.5ms
+			{
+				DEBUG1_OFF;
+				start_playing(0);
+				flags[Play1Trig]=0;
+			}
 		}
 		if (flags[Play2Trig])
 		{
