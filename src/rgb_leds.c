@@ -240,7 +240,7 @@ void update_ButtonLEDs(void)
 		}
 		else
 
- 		// Successfully wrote index: flicker all buttons green
+ 		// Successfully wrote index: flicker top row of buttons green
 		if (flags[RewriteIndexSucess] && (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == Play1ButtonLED || ButLEDnum == Play2ButtonLED))
 		{
 			set_ButtonLED_byPalette(ButLEDnum, GREEN);
@@ -256,7 +256,32 @@ void update_ButtonLEDs(void)
 		}
 		else
 
+		if (flags[RevertAll])
+		{
+			set_ButtonLED_byPalette(ButLEDnum, GREEN);
+			flags[RevertAll]--;
+		}
+		else
 
+		// Success re-loading bank 1: flash all ch1 buttons green
+		if (flags[RevertBank1] && (ButLEDnum == Bank1ButtonLED || ButLEDnum == Play1ButtonLED || ButLEDnum == Reverse1ButtonLED || ButLEDnum == RecButtonLED))
+		{
+			set_ButtonLED_byPalette(ButLEDnum, GREEN);
+			flags[RevertBank1]--;
+		}
+		else
+		if (flags[RevertBank2] && (ButLEDnum == Bank2ButtonLED || ButLEDnum == Play2ButtonLED || ButLEDnum == Reverse2ButtonLED || ButLEDnum == RecBankButtonLED))
+		{
+			set_ButtonLED_byPalette(ButLEDnum, GREEN);
+			flags[RevertBank1]--;
+		}
+		else
+
+		if (flags[SkipProcessButtons]==2)
+		{
+			set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
+		}
+		else
 		//
 		// Normal functions:
 		//
@@ -555,10 +580,14 @@ void update_ButtonLEDs(void)
 						//Edit Mode, but not Assignment mode --> bank's base color
 						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10)+1, tri_14);
 				}
-				else
-					//Edit Mode: Rev2 flashes red/yellow 
-					set_ButtonLED_byPaletteFade(ButLEDnum, YELLOW, RED, tri_14);
-
+				else //chan==1
+				{
+					//Edit Mode: Rev2 flashes red/yellow if there's an undo available
+					if (flags[UndoSampleExists])
+						set_ButtonLED_byPaletteFade(ButLEDnum, YELLOW, RED, tri_14);
+					else
+						set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
+				}
 			}
 			else
 			{

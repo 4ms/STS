@@ -172,7 +172,7 @@ int main(void)
 	//Check for calibration buttons on boot
 	if (ENTER_CALIBRATE_BUTTONS)
     {
-    	flags[skip_process_buttons] = 1;
+    	flags[SkipProcessButtons] = 1;
     	global_mode[CALIBRATE] = 1;
     }
 
@@ -223,7 +223,6 @@ int main(void)
 
 	init_SDIO_read_IRQ();
 	
-	flags[skip_process_buttons] = 2;
 
 	//Main loop
 	//All routines accessing the SD card should run here
@@ -251,15 +250,23 @@ int main(void)
 			save_system_settings();
 		}
 
-
 		process_mode_flags();
 
 		if (flags[RewriteIndex])
 		{
-			flags[RewriteIndex] = 0;
 			res = index_write_wrapper();
 			if (res) {	flags[RewriteIndexFail] = 255;	g_error |= CANNOT_WRITE_INDEX;}
 			else 		flags[RewriteIndexSucess] = 255;
+
+			flags[RewriteIndex] = 0;
+		}
+
+		if (flags[LoadBackupIndex])
+		{
+			load_sampleindex_file(USE_BACKUP_FILE, flags[LoadBackupIndex] - 1);
+			flags[LoadBackupIndex] 		= 0;
+			flags[ForceFileReload1] 	= 1;
+			flags[ForceFileReload2] 	= 1;
 		}
 
     	if (do_factory_reset)

@@ -61,7 +61,7 @@ enum Flags {
 	Play2Trig,
 	StereoModeTurningOn,
 	StereoModeTurningOff,
-	skip_process_buttons,
+	SkipProcessButtons,
 	ViewBlinkBank1,
 	ViewBlinkBank2,
 	PlayBankHover1Changed,
@@ -77,6 +77,8 @@ enum Flags {
 	AssignedPrevBank,
 	FindNextSampleToAssign,
 	SaveSystemSettings,
+	UndoSampleExists,
+	LoadBackupIndex,
 
 	NUM_FLAGS
 };

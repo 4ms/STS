@@ -136,7 +136,7 @@ void update_calibration(void)
 		{
 			save_flash_params(10);
 			global_mode[CALIBRATE] = 0;
-			flags[skip_process_buttons] = 2; //indicate we're ready to clear the flag, once all buttons are released
+			flags[SkipProcessButtons] = 2; //indicate we're ready to clear the flag, once all buttons are released
 
 		}
 	} else

@@ -10,6 +10,7 @@
 #include "button_knob_combo.h"
 #include "adc.h"
 #include "system_settings.h"
+#include "sampler.h"
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
@@ -28,6 +29,7 @@ extern volatile uint32_t sys_tmr;
 
 extern uint8_t 	cur_assign_bank;
 extern uint8_t 	bank_status[MAX_NUM_BANKS];
+extern enum 			PlayStates play_state[NUM_PLAY_CHAN];
 
 void clear_errors(void)
 {
@@ -42,6 +44,8 @@ void init_buttons(void)
 
 	for (i=0;i<NUM_BUTTONS;i++)
 		button_state[i] = UP;
+
+	flags[SkipProcessButtons] = 2;
 
 }
 
@@ -115,27 +119,14 @@ void Button_Debounce_IRQHandler(void)
 			if (State[i]==0xff00) //1111 1111 0000 0000 = not pressed for 8 cycles , then pressed for 8 cycles
 			{
 				button_state[i] = DOWN;
-				if (!flags[skip_process_buttons])
+				if (!flags[SkipProcessButtons])
 				{
 					switch (i)
 					{
 						case Play1:
 						case Play2:
-							if (global_mode[EDIT_MODE])
+							if (!global_mode[EDIT_MODE])
 							{
-								if (i==Play1)
-								{
-									check_enabled_banks();
-									flags[RewriteIndex] = 1;
-								}
-								if (i==Play2)
-								{
-									copy_sample(i_param[1][BANK], i_param[1][SAMPLE], i_param[0][BANK], i_param[0][SAMPLE]);
-									flags[ForceFileReload2] = 1;
-								}
-
-							}
-							else {
 								if (!i_param[i-Play1][LOOPING]) 
 									flags[Play1But + (i-Play1)]=1;
 								clear_errors();
@@ -181,7 +172,7 @@ void Button_Debounce_IRQHandler(void)
 			//
 			else if (State[i]==0xffff)
 			{
-				if (!flags[skip_process_buttons])
+				if (!flags[SkipProcessButtons])
 				{
 					if (button_state[i] != UP)
 					{
@@ -278,7 +269,7 @@ void Button_Debounce_IRQHandler(void)
 								break;
 
 							case Edit:
-								exit_edit_mode();
+								//This is handled outside the SkipProcessButtons if block
 								break;
 
 							default:
@@ -286,7 +277,10 @@ void Button_Debounce_IRQHandler(void)
 						}
 					}
 				}
+				if (button_state[i]!=UP && i==Edit)
+					exit_edit_mode();
 				button_state[i] = UP;
+
 			}
 
 
@@ -298,6 +292,7 @@ void Button_Debounce_IRQHandler(void)
 			{
 				if (long_press[i] != 0xFFFFFFFF) //already detected, ignore
 				{
+					//FixMe: This will roll over if elapsed_time>1
 					if (long_press[i] != 0xFFFFFFFE) //prevent roll-over if holding down for a REALLY long time
 						long_press[i]+=elapsed_time;
 
@@ -308,25 +303,11 @@ void Button_Debounce_IRQHandler(void)
 						{
 							button_state[i] = LONG_PRESSED;
 
-							if (!flags[skip_process_buttons])
+							if (!flags[SkipProcessButtons])
 							{
 								switch (i)
 								{
-									case Rev2:
-										if (global_mode[EDIT_MODE])
-										{
-											//
-											//Long press with Edit + Rev2 + both bank buttons
-											//Reload all banks from the backup index file
-											//Restores the entire sampler to the state it was on boot 
-											//
-											if (button_state[Bank1]>=MED_PRESSED && button_state[Bank2]>=MED_PRESSED)
-											{
-												flags[RevertAll]=100;
-												load_sampleindex_file(USE_BACKUP_FILE, ALL_BANKS);
-											}
-										}
-										break;
+					
 
 									default:
 										break;
@@ -338,33 +319,10 @@ void Button_Debounce_IRQHandler(void)
 						if (button_state[i]!=MED_PRESSED)
 						{
 							button_state[i] = MED_PRESSED;
-							if (!flags[skip_process_buttons])
+							if (!flags[SkipProcessButtons])
 							{
 								switch (i)
 								{
-									case Rev2:
-										if (global_mode[EDIT_MODE])
-										{
-											//
-											//Medium press with Edit + Rev2 + one Bank button: reload bank from the backup index file
-											//Restores just this bank to the state it was on boot 
-											//
-
-											if (button_state[Bank1]>=SHORT_PRESSED && button_state[Bank2]==UP)
-											{
-												load_sampleindex_file(USE_BACKUP_FILE, i_param[0][BANK]);
-												flags[RevertBank1]=100;
-											}
-									
-											if (button_state[Bank2]>=SHORT_PRESSED  && button_state[Bank1]==UP)
-											{
-												load_sampleindex_file(USE_BACKUP_FILE, i_param[1][BANK]);
-												flags[RevertBank2]=100;
-											}
-
-											flags[skip_process_buttons] = 1;
-										}
-										break;
 
 
 									default:
@@ -377,7 +335,7 @@ void Button_Debounce_IRQHandler(void)
 						if (button_state[i]!=SHORT_PRESSED)
 						{
 							button_state[i] = SHORT_PRESSED;
-							if (!flags[skip_process_buttons])
+							if (!flags[SkipProcessButtons])
 							{
 								switch (i)
 								{
@@ -387,12 +345,24 @@ void Button_Debounce_IRQHandler(void)
 										break;
 
 									case Play1:
-										if (button_state[Rev1] == UP)
+										if (global_mode[EDIT_MODE])
+										{
+											check_enabled_banks();
+											flags[RewriteIndex] = 1;
+											flags[SkipProcessButtons]	= 2;
+										}
+										else if (button_state[Rev1] == UP)
 											flags[ToggleLooping1] = 1;
 										break;
 
 									case Play2:
-										if (button_state[Rev1] == UP)
+										if (global_mode[EDIT_MODE])
+										{
+											copy_sample(i_param[1][BANK], i_param[1][SAMPLE], i_param[0][BANK], i_param[0][SAMPLE]);
+											flags[ForceFileReload2] = 1;
+											flags[SkipProcessButtons]	= 2;
+										}
+										else if (button_state[Rev1] == UP)
 											flags[ToggleLooping2] = 1;
 										break;
 
@@ -401,9 +371,9 @@ void Button_Debounce_IRQHandler(void)
 										{
 											//Previous assignment bank
 											flags[FindNextSampleToAssign] = 2;
-											flags[skip_process_buttons]	= 2;
+											flags[SkipProcessButtons]	= 2;
 										}
-									break;
+										break;
 
 									default:
 										break;
@@ -421,49 +391,104 @@ void Button_Debounce_IRQHandler(void)
 			}
 		}
 
-		if (!flags[skip_process_buttons])
+		if (!flags[SkipProcessButtons])
 		{
 		//
 		// Multi-button presses
 		//
 
-			if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED)
+
+			if (global_mode[EDIT_MODE])
 			{
-				if (global_mode[STEREO_MODE] == 1)
+				//
+				//Medium press with Edit + Rev2 + one Bank button: reload bank from the backup index file
+				//Restores just this bank to the state it was on boot 
+				//
+				if (button_state[Bank1]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank2]==UP)
 				{
-					global_mode[STEREO_MODE] = 0;
-					flags[StereoModeTurningOff] = 1;
-					flags[SaveSystemSettings] = 1;
-				} 
-				else
+					flags[LoadBackupIndex] = i_param[0][BANK]+1;
+					flags[RevertBank1]=200;
+	
+					flags[SkipProcessButtons] = 2;
+					flags[UndoSampleExists] = 0;
+					play_state[0] = SILENT;
+					play_state[1] = SILENT;
+				}
+		
+				if (button_state[Bank2]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank1]==UP)
 				{
-					global_mode[STEREO_MODE] = 1;
-					flags[StereoModeTurningOn] = 1;
-					flags[SaveSystemSettings] = 1;
+					flags[LoadBackupIndex] = i_param[0][BANK]+1;
+					flags[RevertBank2]=200;
+
+					flags[SkipProcessButtons] = 2;
+					flags[UndoSampleExists] = 0;
+					play_state[0] = SILENT;
+					play_state[1] = SILENT;
 				}
 
-				long_press[Bank1] = 0xFFFFFFFF;
-				long_press[Bank2] = 0xFFFFFFFF;
-				button_state[Bank1] = UP;
-				button_state[Bank2] = UP;
+				//
+				//Long press with Edit + Rev2 + both bank buttons
+				//Reload all banks from the backup index file
+				//Restores the entire sampler to the state it was on boot 
+				//
+
+				if (button_state[Bank1]>=LONG_PRESSED && button_state[Bank2]>=LONG_PRESSED && button_state[Rev2]>=LONG_PRESSED)
+				{
+					flags[LoadBackupIndex] = ALL_BANKS + 1;
+					flags[RevertAll]=255;
+
+					flags[SkipProcessButtons] = 2;
+					flags[UndoSampleExists] = 0;
+					play_state[0] = SILENT;
+					play_state[1] = SILENT;
+				}
+			}
+			else //not EDIT_MODE
+			{
+
+				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED)
+				{
+					if (global_mode[STEREO_MODE] == 1)
+					{
+						global_mode[STEREO_MODE] = 0;
+						flags[StereoModeTurningOff] = 1;
+						flags[SaveSystemSettings] = 1;
+					} 
+					else
+					{
+						global_mode[STEREO_MODE] = 1;
+						flags[StereoModeTurningOn] = 1;
+						flags[SaveSystemSettings] = 1;
+					}
+
+					long_press[Bank1] = 0xFFFFFFFF;
+					long_press[Bank2] = 0xFFFFFFFF;
+					button_state[Bank1] = UP;
+					button_state[Bank2] = UP;
+				}
+
 			}
 
+
 		}
+
+
+		if (flags[SkipProcessButtons]==2) //ready to clear flag, but wait until all buttons are up
+		{
+			for (i=0;i<NUM_BUTTONS;i++)
+			{
+				if (i==Edit) continue;
+				if (button_state[i] != UP) break;
+			}
+			if (i==NUM_BUTTONS) flags[SkipProcessButtons] = 0;
+		}
+
 
 		// Clear TIM update interrupt
 		TIM_ClearITPendingBit(TIM4, TIM_IT_Update);
 
 	}
 
-	if (flags[skip_process_buttons]==2) //ready to clear flag, but wait until all buttons are up
-	{
-		for (i=0;i<NUM_BUTTONS;i++)
-		{
-			if (i==Edit) continue;
-			if (button_state[i] != UP) break;
-		}
-		if (i==NUM_BUTTONS) flags[skip_process_buttons] = 0;
-	}
 
 }
 

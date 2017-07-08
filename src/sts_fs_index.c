@@ -165,7 +165,7 @@ uint8_t write_samplelist(void)
 	char 		b_color[11]; //Lavender-5\0
 
 	// create file
-	res = f_open(&temp_file,SAMPLELIST_FILE , FA_WRITE | FA_CREATE_ALWAYS); 
+	res = f_open(&temp_file, SAMPLELIST_FILE , FA_WRITE | FA_CREATE_ALWAYS); 
 	if (res != FR_OK) return(1); 
 	f_sync(&temp_file);
 
@@ -227,7 +227,7 @@ FRESULT backup_sampleindex_file(void)
 	char		bak_full_path[_MAX_LFN+1];
 
 	// Open index and backup files
-	str_cat(idx_full_path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
+	str_cat(idx_full_path, SYS_DIR_SLASH, SAMPLE_INDEX_FILE);
 	res_index  = f_open(&indexfile, idx_full_path, FA_READ);
 	if(res_index!=FR_OK) {f_close(&indexfile);   return (res_index);}
 
@@ -295,18 +295,22 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	uint8_t		skip_cur_bank = 0;
 
 	// Open sample index file
-	if (use_backup) {res = f_open(&temp_file,"idx.bak", FA_READ);}
+	if (use_backup)
+	{
+		str_cat(full_path, SYS_DIR_SLASH, SAMPLE_BAK_FILE);
+		res = f_open(&temp_file,full_path, FA_READ);
+	}
 	else 			
-		{
-			str_cat(full_path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
-			res = f_open(&temp_file,full_path, FA_READ);
-		}
+	{
+		str_cat(full_path, SYS_DIR_SLASH, SAMPLE_INDEX_FILE);
+		res = f_open(&temp_file,full_path, FA_READ);
+	}
 
-	// rise flags if index can't be opened/created
+	// raise flags if index can't be opened/created
 	if (res != FR_OK) return(1); //file not found
 
 	// ToDo: Check is f_sync is necessary here
-	// write cached information of the file  to the volume	
+	// write cached information of the file to the volume	
 	f_sync(&temp_file);
 	
 	// until we reach the eof
@@ -319,7 +323,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		read_buffer[str_len(read_buffer)-1]=0;
 
 		// tokenize at spaces
-		// if((read_name!=1) && (arm_data==0)) str_tok(read_buffer,' ', token);
 		if((read_name!=1) && (arm_data==0)) str_tok(read_buffer,' ', token);
 		else str_cpy(token, read_buffer);
 

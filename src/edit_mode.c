@@ -83,7 +83,7 @@ void do_assignment(uint8_t direction)
 			{
 				res = init_unassigned_scan(&undo_sample);
 
-				if (res!=FR_OK) {f_closedir(&assign_dir); global_mode[ASSIGN_MODE] = 0; return;} //unable to enter assignment mode
+				if (res!=FR_OK) {exit_assignment_mode(); return;} //unable to enter assignment mode
 
 				found_sample = next_unassigned_sample();
 			}
@@ -104,10 +104,11 @@ void do_assignment(uint8_t direction)
 		if (found_sample)
 		{
 			flags[ForceFileReload1] = 1;
-			flags[Play1Trig]=1;
-			if (direction==1) 	flags[AssignedNextSample] = 10;
+			flags[Play1Trig]		= 1;
+
+			if (direction==1) 	flags[AssignedNextSample] 	= 10;
 			else
-			if (direction==2) 	flags[AssignedPrevBank] = 10;
+			if (direction==2) 	flags[AssignedPrevBank] 	= 10;
 		}
 	} 
 
@@ -127,7 +128,7 @@ uint8_t enter_assignment_mode(void)
 	FRESULT res;
 
 	// Return 1 if we've already entered assignment_mode
-	if (global_mode[ASSIGN_MODE]) return 1; //success
+	if (global_mode[ASSIGN_MODE]) return 1;
 
 	//Enter assignment mode
 	global_mode[ASSIGN_MODE] = 1;
@@ -135,7 +136,7 @@ uint8_t enter_assignment_mode(void)
 	//Initialize the scan of unassigned samples
 	res = init_unassigned_scan(&(samples[i_param[0][BANK]][i_param[0][SAMPLE]]));
 
-	if (res!=FR_OK) {f_closedir(&assign_dir); global_mode[ASSIGN_MODE] = 0; return(0);} //unable to enter assignment mode
+	if (res!=FR_OK) {exit_assignment_mode(); return(0);} //unable to enter assignment mode
 
 	//Make a copy of the current sample info, so we can undo our changes later
 	save_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
@@ -148,7 +149,7 @@ void exit_assignment_mode(void)
 	global_mode[ASSIGN_MODE] = 0;
 	f_closedir(&root_dir);
 	f_closedir(&assign_dir);
-
+	flags[UndoSampleExists] = 0;
 }
 
 FRESULT init_unassigned_scan(Sample *s_sample)
@@ -423,9 +424,10 @@ void save_undo_state(uint8_t bank, uint8_t samplenum)
 	undo_sample.inst_start 		= samples[bank][samplenum].inst_start  ;//& 0xFFFFFFF8;
 	undo_sample.inst_end 		= samples[bank][samplenum].inst_end  ;//& 0xFFFFFFF8;
 
-	undo_banknum = bank;
-	undo_samplenum = samplenum;
+	undo_banknum			= bank;
+	undo_samplenum 			= samplenum;
 
+	flags[UndoSampleExists] = 1;
 }
 
 //Restores sample[][] to the undo-state buffer
@@ -446,6 +448,10 @@ uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum)
 		samples[undo_banknum][undo_samplenum].inst_size 		= undo_sample.inst_size  ;//& 0xFFFFFFF8;
 		samples[undo_banknum][undo_samplenum].inst_start 		= undo_sample.inst_start  ;//& 0xFFFFFFF8;
 		samples[undo_banknum][undo_samplenum].inst_end 			= undo_sample.inst_end  ;//& 0xFFFFFFF8;
+
+		flags[ForceFileReload1] = 1;
+		flags[Play1Trig]		= 1;
+		flags[UndoSampleExists] = 0;
 
 		return(1); //ok
 	} else return(0); //not in the right sample/bank to preform an undo
