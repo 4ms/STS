@@ -82,12 +82,12 @@ extern FATFS FatFs;
 extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
+extern uint8_t 	global_mode[NUM_GLOBAL_MODES];
 
 extern uint8_t 	flags[NUM_FLAGS];
-extern enum g_Errors g_error;
+extern enum 	g_Errors g_error;
 
-extern uint8_t play_led_state[NUM_PLAY_CHAN];
+extern uint8_t 	play_led_state[NUM_PLAY_CHAN];
 //extern uint8_t clip_led_state[NUM_PLAY_CHAN];
 
 
@@ -319,6 +319,10 @@ void start_playing(uint8_t chan)
 	uint8_t file_loaded;
 
 	samplenum = i_param[chan][SAMPLE];
+	if (samplenum==9) {DEBUG3_ON;DEBUG2_OFF;}
+	if (samplenum==0) {DEBUG2_ON;DEBUG3_OFF;}
+	else 			{DEBUG3_OFF;DEBUG2_OFF;}
+
 	banknum = i_param[chan][BANK];
 	s_sample = &(samples[banknum][samplenum]);
 

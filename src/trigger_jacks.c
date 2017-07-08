@@ -12,6 +12,7 @@
 
 enum TriggerStates jack_state[NUM_TRIG_JACKS];
 extern uint8_t flags[NUM_FLAGS];
+extern uint32_t play_trig_delay[2];
 
 
 
@@ -58,6 +59,8 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 				{
 					case TrigJack_Play1:
 						flags[Play1Trig]=1;
+						play_trig_delay[0]=12500;
+						DEBUG1_ON;
 						break;
 					case TrigJack_Play2:
 						flags[Play2Trig]=1;
