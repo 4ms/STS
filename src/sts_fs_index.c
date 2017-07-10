@@ -161,6 +161,7 @@ uint8_t write_samplelist(void)
 	FIL 		temp_file;
 	FRESULT 	res;
 	uint8_t 	i, j;
+	uint32_t	minutes, seconds;
 	uint8_t		bank_is_empty;
 	char 		b_color[11]; //Lavender-5\0
 
@@ -189,17 +190,21 @@ uint8_t write_samplelist(void)
 			// Print bank name to file
 			bank_to_color(i, b_color);
 			if (i>0) {f_printf(&temp_file, "<br>\n");f_sync(&temp_file);}
-	 		f_printf(&temp_file, "<h2>%s</h2>\n", b_color);
+	 		f_printf(&temp_file, "<h2>%s</h2>\n<table>\n", b_color);
 			f_sync(&temp_file);
 
 			// Print sample name to sample list, for each sample in bank
 			for (j=0; j<NUM_SAMPLES_PER_BANK; j++)
 			{
-				f_printf(&temp_file, "%d] %s<br>\n", j+1, samples[i][j].filename);
+				seconds = (samples[i][j].sampleSize/samples[i][j].blockAlign) / samples[i][j].sampleRate;
+				minutes = seconds / 60;
+				seconds-= minutes * 60;
+				if (!minutes && !seconds) seconds =1;
+				if(samples[i][j].filename[0]!=0)f_printf(&temp_file, "<tr>\n<td>%d]  %s</td>\n<td>........... [%02d:%02d]</td>\n</tr>\n", j+1, samples[i][j].filename, minutes, seconds);
 				f_sync(&temp_file);
 			} 
 			
-			f_printf(&temp_file, "<br>\n");
+			f_printf(&temp_file, "</table><br>\n");
 			f_sync(&temp_file);
 		}
 	}
