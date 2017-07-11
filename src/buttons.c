@@ -419,7 +419,7 @@ void Button_Debounce_IRQHandler(void)
 		
 				if (button_state[Bank2]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank1]==UP)
 				{
-					flags[LoadIndex] = i_param[0][BANK]+1;
+					flags[LoadIndex] = i_param[1][BANK]+1;
 					flags[RevertBank2]=200;
 
 					flags[SkipProcessButtons] = 2;
