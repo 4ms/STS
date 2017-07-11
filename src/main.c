@@ -269,6 +269,14 @@ int main(void)
 			flags[ForceFileReload2] 	= 1;
 		}
 
+		if (flags[LoadIndex])
+		{
+			load_sampleindex_file(USE_INDEX_FILE, flags[LoadIndex] - 1);
+			flags[LoadIndex] 		= 0;
+			flags[ForceFileReload1] 	= 1;
+			flags[ForceFileReload2] 	= 1;
+		}
+
     	if (do_factory_reset)
     		if (!(--do_factory_reset))
     			factory_reset();

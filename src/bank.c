@@ -18,21 +18,80 @@ extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 uint8_t bank_status[MAX_NUM_BANKS];
 
 
-//
-//Fills an array with the paths to the first sample of each bank on boot
-//This is used by Edit Mode 
-//
-// void create_bank_path_index(void)
-// {
-// 	uint8_t i;
-// 	char path[_MAX_LFN];
+void copy_bank(Sample *dst, Sample *src)
+{
+	uint8_t *p_dst;
+	uint8_t *p_src;
+	uint32_t i;
 
-// 	for (i=0; i<MAX_NUM_BANKS; i++)
-// 	{
-// 		// split path and filename			
-// 		str_rstr(samples[i][0].filename, '/', index_bank_path[i]);
-// 	}
-// }
+	p_dst = (uint8_t *)(dst);
+	p_src = (uint8_t *)(src);
+	for (i=0;i<(sizeof(Sample)*NUM_SAMPLES_PER_BANK);i++)
+		*p_dst++ = *p_src++;
+
+
+	// for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
+	// {
+	// 		str_cpy(samples[dst][i].filename,  samples[src][i].filename);
+	// 		samples[dst][i].blockAlign 		= samples[src][i].blockAlign;
+	// 		samples[dst][i].numChannels 	= samples[src][i].numChannels;
+	// 		samples[dst][i].sampleByteSize 	= samples[src][i].sampleByteSize;
+	// 		samples[dst][i].sampleRate 		= samples[src][i].sampleRate;
+	// 		samples[dst][i].sampleSize 		= samples[src][i].sampleSize;
+	// 		samples[dst][i].startOfData 	= samples[src][i].startOfData;
+	// 		samples[dst][i].PCM 			= samples[src][i].PCM;
+
+	// 		samples[dst][i].inst_size 		= samples[src][i].inst_size  ;//& 0xFFFFFFF8;
+	// 		samples[dst][i].inst_start 		= samples[src][i].inst_start  ;//& 0xFFFFFFF8;
+	// 		samples[dst][i].inst_end 		= samples[src][i].inst_end  ;//& 0xFFFFFFF8;
+
+	// 		samples[dst][i].file_found 		= samples[src][i].file_found  ;
+
+	// }
+
+}
+
+
+//
+// Copy bank+40 to bank+50, bank+40 to bank+40, etc...
+// The goal is to open up bank#=bank so we can place a new set of files in there
+// FixMe: This must be changed manually if MAX_NUM_BANKS changes
+uint8_t bump_down_banks(uint8_t bank)
+{
+	uint8_t t_bank;
+
+	if (bank<10){
+		copy_bank(samples[bank+50], samples[bank+40]);
+		bank_status[bank+50] = bank_status[bank+40];
+	}
+
+	if (bank<20){
+		copy_bank(samples[bank+40], samples[bank+30]);
+		bank_status[bank+40] = bank_status[bank+30];
+	}
+
+	if (bank<30){
+		copy_bank(samples[bank+30], samples[bank+20]);
+		bank_status[bank+30] = bank_status[bank+20];
+	}
+
+	if (bank<40){
+		copy_bank(samples[bank+20], samples[bank+10]);
+		bank_status[bank+20] = bank_status[bank+10];
+	}
+
+	if (bank<50){
+		copy_bank(samples[bank+10], samples[bank]);
+		bank_status[bank+10] = bank_status[bank];
+	}
+
+	else{ //bank>=50 would get bumped out, so try to place it elsewhere
+		t_bank = prev_disabled_bank(MAX_NUM_BANKS);
+		copy_bank(samples[t_bank], samples[bank]);
+		bank_status[t_bank] = bank_status[bank];
+	}
+
+}
 
 //
 //Returns the sample number inside the given bank, whose filename matches the given filename
@@ -51,6 +110,26 @@ uint8_t find_filename_in_bank(uint8_t bank, char *filename)
 	}
 
 	return(0xFF); //not found
+}
+
+//Searches all banks for a filename
+//Returns bank# if filename exists in ANY sample in that bank
+//Returns 0xFF if filename is not found anywhere
+//bank is the first bank to look in, setting this to a likely candidate will save CPU time
+//
+uint8_t find_filename_in_all_banks(uint8_t bank, char *filename)
+{
+	uint8_t orig_bank;
+	
+	orig_bank=bank;
+	do{
+		if (find_filename_in_bank(bank, filename) != 0xFF)
+			return(bank);
+
+		bank=next_enabled_bank(bank);	
+	} while(bank!=orig_bank);
+
+	return(0xFF);//not found
 }
 
 
@@ -232,6 +311,22 @@ uint8_t next_disabled_bank(uint8_t bank)
 
 	return (bank);
 }
+
+uint8_t prev_disabled_bank(uint8_t bank) 
+{
+	uint8_t orig_bank=bank;
+
+	if (bank >= MAX_NUM_BANKS) bank=MAX_NUM_BANKS;
+
+	do{
+		if (bank == 0)	bank = MAX_NUM_BANKS;
+		bank--;
+		if (bank==orig_bank) return(bank); //no banks are disabled -->> bail out and return the same bank given
+	} while(!bank_status[bank]);
+
+	return (bank);
+}
+
 
 void check_enabled_banks(void)
 {

@@ -368,7 +368,7 @@ uint8_t str_cmp(char *a, char *b)
 // string=ABCD, prefix=anything except {A, AB, ABC, ABCD} -->> returns 0
 uint8_t str_startswith(const char *string, const char *prefix)
 {
-    while (*prefix && *string)
+    while (*prefix)
     {
         if (*prefix++ != *string++)
             return 0;
@@ -380,7 +380,7 @@ uint8_t str_startswith(const char *string, const char *prefix)
 //Returns 0 if not
 uint8_t str_startswith_nocase(const char *string, const char *prefix)
 {
-    while (*prefix && *string)
+    while (*prefix)
     {
         if (upper(*prefix++) != upper(*string++))
             return 0;

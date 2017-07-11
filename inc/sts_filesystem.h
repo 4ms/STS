@@ -9,6 +9,7 @@
 #define INC_STS_FILESYSTEM_H_
 #include <stm32f4xx.h>
 #include "ff.h"
+#include "sample_file.h"
 
 #define SYS_DIR 			"_STS.system"
 #define SYS_DIR_SLASH		"_STS.system/"
@@ -27,6 +28,8 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path);
 
 //uint8_t get_banks_path(uint8_t bank, char *path);
 
+void load_new_folders(void);
+void load_missing_files(void);
 
 uint8_t load_banks_by_color_prefix(void);
 uint8_t load_banks_by_default_colors(void);
@@ -34,7 +37,9 @@ uint8_t load_banks_with_noncolors(void);
 
 FRESULT load_all_banks(uint8_t force_reload);
 
-uint8_t load_bank_from_disk(uint8_t bank, char *bankpath);
+uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath);
+
+uint8_t dir_contains_assigned_samples(char *path);
 
 uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename);
 FRESULT check_sys_dir(void);

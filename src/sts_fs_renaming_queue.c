@@ -5,6 +5,8 @@
 #include "sts_filesystem.h"
 #include "sts_fs_renaming_queue.h"
 
+#define DO_RENAMING 0
+extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 //
 // clear_renaming_queue()
@@ -17,6 +19,8 @@ FRESULT clear_renaming_queue(void)
 	FRESULT res;
 	char	filepath[_MAX_LFN];
 
+	if (!DO_RENAMING) return(FR_OK);
+
 	res = check_sys_dir();
 	if (res==FR_OK)
 	{
@@ -25,6 +29,7 @@ FRESULT clear_renaming_queue(void)
 		if (res==FR_OK) 
 			res=f_close(&queue_file);
 	}
+
 	return(res);
 }
 
@@ -38,6 +43,8 @@ FRESULT append_rename_queue(uint8_t bank, char *orig_name, char *new_name)
 	FRESULT res;
 	FIL queue_file;
 	char	filepath[_MAX_LFN];
+
+	if (!DO_RENAMING) return(FR_OK);
 
 	res = check_sys_dir();
 	if (res==FR_OK)
@@ -82,6 +89,8 @@ FRESULT process_renaming_queue(void)
 	char 		orig_name[_MAX_LFN+1];
 	char 		new_name[_MAX_LFN+1];
 	uint32_t	bank;
+
+	if (!DO_RENAMING) return(FR_OK);
 
 	res = check_sys_dir();
 	if (res==FR_OK)
@@ -152,7 +161,7 @@ FRESULT process_renaming_queue(void)
 
 					//Reload the bank using the new folder name
 					//ToDo: this is inefficient, we could just update every samples[bank][].filename
-					load_bank_from_disk(bank, new_name);
+					load_bank_from_disk((samples[bank]), new_name);
 
 					if (!skip_log)
 					{

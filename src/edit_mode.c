@@ -221,12 +221,9 @@ uint8_t next_unassigned_sample(void)
 				//Close the assign_dir
 				f_closedir(&assign_dir);
 
-
-				//TODO: some kind of flash/color change to indicate we are out of the current sample's folder
 				cur_assign_state=ASSIGN_UNUSED_IN_ROOT;
 			} 
 			
-			//Todo: Search root dir after current dir
 			if (cur_assign_state==ASSIGN_UNUSED_IN_FS || cur_assign_state==ASSIGN_UNUSED_IN_ROOT)
 			{
 				// Hit the end of the folder:
@@ -315,13 +312,16 @@ uint8_t next_unassigned_sample(void)
 			is_file_already_assigned = 0;
 
 			bank=next_enabled_bank(MAX_NUM_BANKS);
-			orig_bank=bank;
-			do{
-				if (find_filename_in_bank(bank, filepath) != 0xFF)
-					{is_file_already_assigned = 1; break;}
+			if (find_filename_in_all_banks(bank, filepath) != 0xFF)
+				is_file_already_assigned = 1;
 
-				bank=next_enabled_bank(bank);	
-			} while(bank!=orig_bank);
+			// orig_bank=bank;
+			// do{
+			// 	if (find_filename_in_bank(bank, filepath) != 0xFF)
+			// 		{is_file_already_assigned = 1; break;}
+
+			// 	bank=next_enabled_bank(bank);	
+			// } while(bank!=orig_bank);
 		}
 
 		if (!is_file_already_assigned)
