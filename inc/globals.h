@@ -51,35 +51,37 @@ enum Flags {
 	PlaySample2Changed_valid,
 	PlaySample1Changed_empty,
 	PlaySample2Changed_empty,
-	RecSampleChanged_light,
+	RecSampleChanged_light, //20
 	ForceFileReload1,
 	ForceFileReload2,
 	AssignModeRefused,
 	AssigningEmptySample,
-	TimeToReadStorage,
+	TimeToReadStorage, //25
 	Play1Trig,
 	Play2Trig,
 	StereoModeTurningOn,
 	StereoModeTurningOff,
-	SkipProcessButtons,
+	SkipProcessButtons, //30
 	ViewBlinkBank1,
 	ViewBlinkBank2,
 	PlayBankHover1Changed,
 	PlayBankHover2Changed,
-	RevertSample,
+	RevertSample, //35
 	RevertBank1,
 	RevertBank2,
 	RevertAll,
 	RewriteIndex,
-	RewriteIndexFail,
+	RewriteIndexFail, //40
 	RewriteIndexSucess,
 	AssignedNextSample,
 	AssignedPrevBank,
 	FindNextSampleToAssign,
-	SaveSystemSettings,
+	SaveSystemSettings, //45
 	UndoSampleExists,
 	LoadBackupIndex,
 	LoadIndex,
+	latch1voctcv1,
+	latch1voctcv2, 
 
 	NUM_FLAGS
 };

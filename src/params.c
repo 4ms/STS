@@ -68,6 +68,9 @@ float POT_LPF_COEF[NUM_POT_ADCS];
 float CV_LPF_COEF[NUM_CV_ADCS];
 float RAWCV_LPF_COEF[NUM_CV_ADCS];
 
+// Latched 1voct values
+float voct_latch_value[2];
+
 //Low Pass filtered adc values:
 float smoothed_potadc[NUM_POT_ADCS];
 float smoothed_cvadc[NUM_CV_ADCS];
@@ -440,10 +443,14 @@ void update_params(void)
 			if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 			if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
-			f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
+			if(flags[latch1voctcv1+chan]){f_param[chan][PITCH] = voct_latch_value[chan];} 
+			else{
+				f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
+				if (f_param[chan][PITCH] > MAX_RS)
+				   {f_param[chan][PITCH] = MAX_RS;}
+				voct_latch_value[chan] = f_param[chan][PITCH];
+			}
 
-			if (f_param[chan][PITCH] > MAX_RS)
-				f_param[chan][PITCH] = MAX_RS;
 
 			//
 			// SAMPLE POT + CV
@@ -633,16 +640,24 @@ void process_mode_flags(void)
 
 		if (flags[Play1Trig])
 		{
+			flags[latch1voctcv1] = 1;
 			if ((sys_tmr - play_trig_timestamp[0]) > 500) // 11.3ms = 500/44100Hz
 			{
 				start_playing(0);
-				flags[Play1Trig]=0;
+				flags[Play1Trig]	= 0;
+				flags[latch1voctcv1] = 0;
 			}
 		}
+
 		if (flags[Play2Trig])
 		{
-			flags[Play2Trig] = 0;
-			start_playing(1);
+			flags[latch1voctcv2] = 1;
+			if ((sys_tmr - play_trig_timestamp[1]) > 500) // 11.3ms = 500/44100Hz
+			{
+				start_playing(1);
+				flags[Play2Trig]	= 0;
+				flags[latch1voctcv2] = 0;
+			}
 		}
 
 		if (flags[RecTrig]==1)
