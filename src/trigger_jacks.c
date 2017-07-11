@@ -61,7 +61,6 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 					case TrigJack_Play1:
 						flags[Play1Trig]=1;
 						play_trig_timestamp[0]=sys_tmr;
-						DEBUG1_ON;
 						break;
 						
 					case TrigJack_Play2:

@@ -633,9 +633,8 @@ void process_mode_flags(void)
 
 		if (flags[Play1Trig])
 		{
-			if ((sys_tmr - play_trig_timestamp[0]) > 500) //about 11.5ms
+			if ((sys_tmr - play_trig_timestamp[0]) > 500) // 11.3ms = 500/44100Hz
 			{
-				DEBUG1_OFF;
 				start_playing(0);
 				flags[Play1Trig]=0;
 			}

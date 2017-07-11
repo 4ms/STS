@@ -149,7 +149,7 @@ void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 	int16_t *src, *dst, sz;
 	uint32_t err=0;
 
-	DEBUG0_ON;
+	//DEBUG0_ON;
 
 	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_FE) != RESET)
 		err=AUDIO_I2S2_EXT_DMA_FLAG_FE;
@@ -188,7 +188,7 @@ void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 
 		DMA_ClearFlag(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_HT);
 	}
-	DEBUG0_OFF;
+	//DEBUG0_OFF;
 	
 }
 

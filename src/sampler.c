@@ -59,16 +59,6 @@ ToDo: Allow (in system mode?) a selection of length param modes:
 //
 // DEBUG
 //
-//volatile uint32_t tdebug[256];
-//uint8_t t_i;
-//uint32_t debug_i=0x80000000;
-//uint32_t debug_tri_dir=0;
-//debug:
-//extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
-//extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
-//extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
-//extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
-
 extern uint32_t WATCH0;
 extern uint32_t WATCH1;
 extern uint32_t WATCH2;
@@ -210,8 +200,6 @@ void toggle_reverse(uint8_t chan)
 	FRESULT res;
 	enum PlayStates tplay_state;
 
-	//DEBUG1_ON;
-
 	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC || play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
 	{
 		samplenum =sample_num_now_playing[chan];
@@ -300,7 +288,6 @@ void toggle_reverse(uint8_t chan)
 	}
 
 	 play_state[chan] = tplay_state;
-	 //DEBUG1_OFF;
 }
 
 
@@ -319,17 +306,12 @@ void start_playing(uint8_t chan)
 	uint8_t file_loaded;
 
 	samplenum = i_param[chan][SAMPLE];
-	if (samplenum==9) {DEBUG3_ON;DEBUG2_OFF;}
-	if (samplenum==0) {DEBUG2_ON;DEBUG3_OFF;}
-	else 			{DEBUG3_OFF;DEBUG2_OFF;}
 
 	banknum = i_param[chan][BANK];
 	s_sample = &(samples[banknum][samplenum]);
 
 	if (s_sample->filename[0] == 0)
 		return;
-
-	//DEBUG3_ON;
 
 	file_loaded = 0;
 	check_change_bank(chan);
@@ -430,7 +412,6 @@ void start_playing(uint8_t chan)
 		is_buffered_to_file_end[chan] = 0;
 
 		play_state[chan]=PREBUFFERING;
-//		DEBUG2_ON;
 	}
 
 	flags[PlayBuff1_Discontinuity+chan] = 1;
@@ -456,7 +437,6 @@ void start_playing(uint8_t chan)
 	dbg_sample.inst_size 		= s_sample->inst_size;
 	dbg_sample.inst_gain 		= s_sample->inst_gain;
 
-	//DEBUG3_OFF;
 }
 
 
@@ -687,7 +667,6 @@ void read_storage_to_buffer(void)
 	uint32_t active_buff_size;
 	float pb_adjustment;
 
-//	DEBUG3_ON;
 
 	check_change_sample();
 	check_change_bank(0);
@@ -940,7 +919,6 @@ void read_storage_to_buffer(void)
 			//Check if we've prebuffered enough to start playing
 			if ((is_buffered_to_file_end[chan] || play_buff_bufferedamt[chan] >= pre_buff_size) && play_state[chan] == PREBUFFERING)
 			{
-			//	DEBUG2_OFF;
 				if (f_param[chan][LENGTH] < 0.5 && i_param[chan][REV])
 					play_state[chan] = PLAYING_PERC;
 				else
@@ -950,7 +928,6 @@ void read_storage_to_buffer(void)
 
 		} //play_state != SILENT, FADEDOWN
 	} //for (chan)
-//	DEBUG3_OFF;
 
 }
 
@@ -1155,7 +1132,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 								//else//buffer underrun: tried to read too much out. Try to recover!
 								//{
-									//DEBUG2_ON;
 									g_error |= READ_BUFF1_OVERRUN<<chan;
 									check_errors();
 
