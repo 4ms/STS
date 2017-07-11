@@ -45,6 +45,8 @@ uint8_t settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
 uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 uint8_t flags[NUM_FLAGS];
+uint32_t play_trig_timestamp[2];
+
 uint8_t flag_pot_changed[NUM_POT_ADCS];
 
 extern uint8_t recording_enabled;
@@ -54,6 +56,7 @@ extern uint8_t recording_enabled;
 extern uint8_t scrubbed_in_edit;
 
 extern enum ButtonStates button_state[NUM_BUTTONS];
+volatile uint32_t 			sys_tmr;
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
@@ -130,7 +133,7 @@ void init_LowPassCoefs(void)
 	float t;
 	uint8_t i;
 
-	t=10.0;
+	t=15.0; //LPF for Pitch CV
 
 	CV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[PITCH_CV*2+1] = 1.0-(1.0/t);
@@ -142,6 +145,8 @@ void init_LowPassCoefs(void)
 
 	CV_LPF_COEF[LENGTH_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[LENGTH_CV*2+1] = 1.0-(1.0/t);
+
+	t=1.0; //No LPF for Sample CV
 
 	CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
 	CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
@@ -161,8 +166,8 @@ void init_LowPassCoefs(void)
 	RAWCV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
 
-	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 15;
-	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 15;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 40;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 40;
 
 	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
@@ -170,8 +175,8 @@ void init_LowPassCoefs(void)
 	MIN_CV_ADC_CHANGE[LENGTH_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[LENGTH_CV*2+1] = 20;
 
-	MIN_CV_ADC_CHANGE[SAMPLE_CV*2] = 20;
-	MIN_CV_ADC_CHANGE[SAMPLE_CV*2+1] = 20;
+	MIN_CV_ADC_CHANGE[SAMPLE_CV*2] = 1;
+	MIN_CV_ADC_CHANGE[SAMPLE_CV*2+1] = 1;
 
 	t=20.0; //50.0 = about 100ms to turn a knob fully
 
@@ -601,6 +606,7 @@ void update_params(void)
 //
 void process_mode_flags(void)
 {
+
 	if (!disable_mode_changes)
 	{
 		if (flags[Rev1Trig])
@@ -627,8 +633,12 @@ void process_mode_flags(void)
 
 		if (flags[Play1Trig])
 		{
-			flags[Play1Trig] = 0;
-			start_playing(0);
+			if ((sys_tmr - play_trig_timestamp[0]) > 500) //about 11.5ms
+			{
+				DEBUG1_OFF;
+				start_playing(0);
+				flags[Play1Trig]=0;
+			}
 		}
 		if (flags[Play2Trig])
 		{
