@@ -201,9 +201,6 @@ int main(void)
     	write_all_system_calibrations_to_FLASH();
     }
 
-    // Backup index file (unless we are booting for the first time)
-    if (!do_factory_reset) backup_sampleindex_file();
-
     //Begin reading inputs
     init_buttons();
     init_ButtonDebounce_IRQ();
@@ -212,8 +209,12 @@ int main(void)
 	//Begin audio DMA
 	audio_buffer_init();
 
+	//Load all banks
 	init_banks();
-	
+ 
+  	// Backup index file (unless we are booting for the first time)
+    if (!do_factory_reset) backup_sampleindex_file();
+
 	Start_I2SDMA();
 
 	set_default_system_settings();
@@ -269,13 +270,13 @@ int main(void)
 			flags[ForceFileReload2] 	= 1;
 		}
 
-		if (flags[LoadIndex])
-		{
-			load_sampleindex_file(USE_INDEX_FILE, flags[LoadIndex] - 1);
-			flags[LoadIndex] 		= 0;
-			flags[ForceFileReload1] 	= 1;
-			flags[ForceFileReload2] 	= 1;
-		}
+		// if (flags[LoadIndex])
+		// {
+		// 	load_sampleindex_file(USE_INDEX_FILE, flags[LoadIndex] - 1);
+		// 	flags[LoadIndex] 			= 0;
+		// 	flags[ForceFileReload1] 	= 1;
+		// 	flags[ForceFileReload2] 	= 1;
+		// }
 
     	if (do_factory_reset)
     		if (!(--do_factory_reset))

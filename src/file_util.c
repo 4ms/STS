@@ -150,6 +150,12 @@ uint32_t str_len(char* str)
 //    before_split <== abcdX
 //    after_split <== 1234
 //
+// Example:
+// str_split("path/to/file.wav", '/', ...):
+// returns 5
+// before_split <== path/
+// after_split <== to/file.wav
+//
 uint8_t str_split(char *string, char split_char, char *before_split, char *after_split)
 {
   char *cp;
@@ -175,7 +181,7 @@ uint8_t str_split(char *string, char split_char, char *before_split, char *after
 }
 
 
-
+//FixMe: Don't return a char*: consider replacing all uses of str_rstr() with str_split()
 // Returns the tail of a string following the last splitting char "split_char" that was found in "string" input
 // ...copies everything found before split_char (included) into "before_split"
 char *str_rstr(char *string, char split_char, char *before_split)
@@ -197,6 +203,7 @@ char *str_rstr(char *string, char split_char, char *before_split)
   }
 }
 
+//FixMe: Don't return a char*
 //Returns char * to the tail of a string, following the splitting char
 //Copies string into path and truncates path before the splitting char
 //(Same as str_rstr, but path excludes the splitting char)

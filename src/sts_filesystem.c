@@ -78,8 +78,8 @@ FRESULT reload_sdcard(void)
 
 //Go through all banks and samples, 
 //If file_found==0, then look for a file to fill the slot:
-//If samples[][].filename == "path/file.wav":
-//1) look for the first .wav in path (path/*.wav)
+//If samples[][].filename == "path/to/file.wav": 
+//1) look for the first .wav in path (path/*.wav) <<Notice sub-folders are not supported 
 //2) If none found, search all dirs for file.wav (*/file.wav)
 //3) If still none found, keep file_found=0 and exit 
 //
@@ -88,32 +88,113 @@ FRESULT reload_sdcard(void)
 //
 void load_missing_files(void)
 {
-	uint8_t bank, samplenum;
+	uint8_t	bank, samplenum;
+	char 	path[_MAX_LFN+1];
+	char	filename[_MAX_LFN+1];
+	char	fullpath[_MAX_LFN+1];
+	DIR		testdir;
+	FIL		temp_file;
+	FRESULT	res;
+	uint8_t	path_len;
 
 	for (bank=0;bank<MAX_NUM_BANKS;bank++)
 	{
 		for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++)
 		{
-			if (!samples[bank][samplenum].file_found)
+			//Look for non-blank filename and file_found==0
+			if (samples[bank][samplenum].filename[0] && !samples[bank][samplenum].file_found)
 			{
 				//split up filename
+				if (str_split(samples[bank][samplenum].filename, '/', path, filename) == 0)
+				{
+					//no slashes exist in filename, so look in the root dir
+					path[0]='\0'; //root dir
+					str_cpy(filename, samples[bank][samplenum].filename);
+				}
 
-				//Look for unused wavs in path/
+				path_len = str_len(path);
+
+				//Look for any unused file in the original sample's folder
+				res = f_opendir(&testdir, path);
+				if (res==FR_OK)
+				{
+					while (1)
+					{
+						//Find first .wav file in directory
+						res = find_next_ext_in_dir(&testdir, ".wav", filename);
+						if (res!=FR_OK) break; 		//Stop if no more files found in directory
+						if (str_len(filename) > (_MAX_LFN - path_len - 2)) continue; //Skip if filename is too long, can't use it
+
+						//Append filename onto path
+						str_cat(fullpath, path, filename);
+
+						//Check if this file is being used in any bank
+						//Skip it if it's used (unused returns 0xFF)
+						if (find_filename_in_all_banks(0, fullpath) != 0xFF) continue; 
+
+						//Open the file
+						res = f_open(&temp_file, fullpath, FA_READ);
+
+						if (res==FR_OK)
+						{
+							//Load the sample header info into samples[][]
+							res = load_sample_header(&(samples[bank][samplenum]), &temp_file);
+
+							if (res==FR_OK)
+							{
+								//Set the filename (full path)
+								str_cpy(samples[bank][samplenum].filename, fullpath);
+								samples[bank][samplenum].file_found = 1;
+							}
+						}
+						f_close(&temp_file);
+				
+					}
+					f_closedir(&testdir);
+				}
+
+
+				//ToDo: check sub-folders?
 				//
-				//str_split(filename, '/', path...)
-				//f_opendir(path)
-				//while () 
-				//	get_next_wav_in_dir(testdir)
-				//	if (find_filename_in_all_banks(0, filepath) == 0xFF) //file not already being used
-				//		load_sample_header()
-				//		if (ok) str_cpy(...filename); samples[][].file_found=1;
 
-				//if no more files found, try a fopen_checked() (or a modified version of that?)
+				//If no files are found, try searching anywhere for the filename
+				if (!samples[bank][samplenum].file_found)
+				{
+					if (fopen_checked(&temp_file, path, filename) == 2) //can't find file anywhere on disk
+					{
+						samples[bank][samplenum].filename[0]='\0'; //blank out filename
+						//ToDo: If we change indexing, we may not want to blank out the filename here
+						//so that we can write "path/notfoundfile.wav -- NOT FOUND" in the index text file
+						//For now, we leave this because sometimes we use a blank filename to indicate file is
+						//not able to be loaded
+						
+					}
+					else //We found  */filename, and put the full path into filename
+					{
+						//See if it's a valid wav file:
+						//Open the file
+						res = f_open(&temp_file, filename, FA_READ);
 
-			}
-		}
-	}
+						if (res==FR_OK)
+						{
+							//Load the sample header info into samples[][]
+							res = load_sample_header(&(samples[bank][samplenum]), &temp_file);
 
+							if (res==FR_OK)
+							{
+								//Set the filename (full path)
+								str_cpy(samples[bank][samplenum].filename, filename);
+								samples[bank][samplenum].file_found = 1;
+							}
+						}
+						f_close(&temp_file);
+					}
+
+				} //search with fopen_checked
+			} //if file_found==0
+
+		} //for each sample
+	}//for each bank
 }
 
 //
@@ -572,6 +653,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 	if (!force_reload) //sampleindex file was ok
 	{	
 		// Update the list of banks that are enabled
+		// Banks with no file_found will be disabled (but filenames will be preserved, for use in load_missing_files)
 		check_enabled_banks();
 
 		// Check for new folders, and turn them into banks if possible
@@ -791,26 +873,24 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 		// OPEN FILE FROM ROOT - AS WRITTEN IN INDEX
 		// try opening file supposing its path is in the name field
 		res = f_open(fp, filename, FA_READ);
-		f_sync(fp);	
 
 		// if file was found
 		// return 0: path is correct (we don't want to rewrite index for that) 
 		// exit function 
 		if (res==FR_OK) return(0);
-				
 	
 		// OPEN FILE FROM ROOT - FILE.WAV ONLY
 		// ...Otherwise, Remove any existing path before wav file name
 		fileonly = fileonly_ptr;
-		fileonly = str_rstr(filename, '/', dumpedpath); // FixMe: we can prob dump in folderpath since it gets erased afterwards
+		//fileonly = str_rstr(filename, '/', dumpedpath); // FixMe: we can prob dump in folderpath since it gets erased afterwards
+		str_split(filename, '/', dumpedpath, fileonly);
 
 		// if there was a path before filename
-		if (fileonly!=0) 
+		if (fileonly[0]!=0) 
 		{
 	
 			// try opening file name only, from root
 			res = f_open(fp, fileonly, FA_READ);
-			f_sync(fp);	
 			
 			// if file was found
 			// return 0: path is correct (we don't want to rewrite index for that) 

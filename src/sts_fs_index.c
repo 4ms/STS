@@ -299,6 +299,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	// uint8_t		rewrite_index = 0;
 	uint8_t 	force_reload  = 2;
 	uint8_t		skip_cur_bank = 0;
+	uint8_t		can_strip=1;
 
 	// Open sample index file
 	if (use_backup)
@@ -322,8 +323,10 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		read_buffer[str_len(read_buffer)-1]=0;
 
 		// tokenize at spaces
-		if((read_name!=1) && (arm_data==0)) str_tok(read_buffer,' ', token);
+		if((read_name!=1) && (arm_data==0) && ((read_buffer[0]!='-') || (read_buffer[1]=='-')) ) str_tok(read_buffer,' ', token);
 		else str_cpy(token, read_buffer);
+
+		can_strip=1;
 
 		// While token isn't empty
 		while(token[0]!='\0')
@@ -384,7 +387,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 					
 					// arm data loading
 					// if the line startes with - and data loading isn't armed
-					if 		((read_buffer[0]!='-')&&(!arm_data))	{arm_data=1; token[0] = '\0';}
+					if 		((read_buffer[0]!='-')&&(!arm_data))	{can_strip=0; arm_data=1; token[0] = '\0';}
 					
 					// load header data from .wav file
 					// if the data loading has just been armed
@@ -398,11 +401,16 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 						//ToDo: check this DragAndDrop code:
 
-						//Try the filename as written
-						//If that fails, try the folder_path + file_name
 
-						str_cpy(full_path, file_name);
-						res = f_open(&temp_wav_file, full_path, FA_READ);
+						res = FR_INT_ERR; //not FR_OK
+
+						//If filename contains a slash, then try the filename as written
+						//--- if it doesn't contain a slash, then it's not a path, so don't assume it's in root
+						if (str_pos('/', file_name) != 0xFFFFFFFF)
+						{
+							str_cpy(full_path, file_name);
+							res = f_open(&temp_wav_file, full_path, FA_READ);
+						}
 						if (res!=FR_OK)
 						{
 							//add a slash to folder_path if it doesn't have one, and file_name doesn't start with one
@@ -439,7 +447,8 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 								// ... so this sample is skipped at the next index write
 								// ... Keep file_found==1 because the file was found, it just was corrupted
 								samples[cur_bank][cur_sample].filename[0]='\0';
-
+								samples[cur_bank][cur_sample].file_found = 0;
+								
 								// skip loading sample play information
 								arm_data=0; token[0] = '\0'; read_name = 1; break;						
 							}		
@@ -449,7 +458,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 						else if (res!=FR_OK) //file not found
 						{
-							str_cpy(samples[cur_bank][cur_sample].filename, file_name); //use the file_name as written in index
+							str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use the file_name as written in index
 
 							//Mark file as not found
 							samples[cur_bank][cur_sample].file_found = 0;

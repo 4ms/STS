@@ -13,8 +13,6 @@ extern enum g_Errors g_error;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-// char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
-
 uint8_t bank_status[MAX_NUM_BANKS];
 
 
@@ -32,20 +30,20 @@ void copy_bank(Sample *dst, Sample *src)
 
 	// for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
 	// {
-	// 		str_cpy(samples[dst][i].filename,  samples[src][i].filename);
-	// 		samples[dst][i].blockAlign 		= samples[src][i].blockAlign;
-	// 		samples[dst][i].numChannels 	= samples[src][i].numChannels;
-	// 		samples[dst][i].sampleByteSize 	= samples[src][i].sampleByteSize;
-	// 		samples[dst][i].sampleRate 		= samples[src][i].sampleRate;
-	// 		samples[dst][i].sampleSize 		= samples[src][i].sampleSize;
-	// 		samples[dst][i].startOfData 	= samples[src][i].startOfData;
-	// 		samples[dst][i].PCM 			= samples[src][i].PCM;
+	// 		str_cpy(dst[i].filename,  src[i].filename);
+	// 		dst[i].blockAlign 		= src[i].blockAlign;
+	// 		dst[i].numChannels 		= src[i].numChannels;
+	// 		dst[i].sampleByteSize 	= src[i].sampleByteSize;
+	// 		dst[i].sampleRate 		= src[i].sampleRate;
+	// 		dst[i].sampleSize 		= src[i].sampleSize;
+	// 		dst[i].startOfData 		= src[i].startOfData;
+	// 		dst[i].PCM 				= src[i].PCM;
 
-	// 		samples[dst][i].inst_size 		= samples[src][i].inst_size  ;//& 0xFFFFFFF8;
-	// 		samples[dst][i].inst_start 		= samples[src][i].inst_start  ;//& 0xFFFFFFF8;
-	// 		samples[dst][i].inst_end 		= samples[src][i].inst_end  ;//& 0xFFFFFFF8;
+	// 		dst[i].inst_size 		= src[i].inst_size  ;//& 0xFFFFFFF8;
+	// 		dst[i].inst_start 		= src[i].inst_start  ;//& 0xFFFFFFF8;
+	// 		dst[i].inst_end 		= src[i].inst_end  ;//& 0xFFFFFFF8;
 
-	// 		samples[dst][i].file_found 		= samples[src][i].file_found  ;
+	// 		dst[i].file_found 		= src[i].file_found  ;
 
 	// }
 
@@ -327,7 +325,9 @@ uint8_t prev_disabled_bank(uint8_t bank)
 	return (bank);
 }
 
-
+// Go through all banks, and enable/disable each one:
+// If the bank has at least one slot with a filename and file_found==1, then enable the bank 
+// Otherwise disable it
 void check_enabled_banks(void)
 {
 	uint32_t sample_num, bank;
@@ -337,7 +337,7 @@ void check_enabled_banks(void)
 		bank_status[bank] = 0; //does not exist
 		for(sample_num=0; sample_num<NUM_SAMPLES_PER_BANK; sample_num++)
 		{
-			if (samples[bank][sample_num].filename[0] != 0)
+			if (samples[bank][sample_num].filename[0] != 0 && samples[bank][sample_num].file_found==1)
 			{
 				bank_status[bank] = 1;
 				break;
@@ -382,12 +382,7 @@ void init_banks(void)
 	i_param[0][BANK] = bank; 								//Bank 1 starts on the first enabled bank
 	i_param[1][BANK] = bank; 								//Bank 2 starts on the first enabled bank
 	
-//	i_param[1][BANK] = next_enabled_bank(i_param[0][BANK]); //Bank 2 starts on the second enabled bank
-
 	i_param[2][BANK] = next_disabled_bank(bank);			//REC bank starts on first disabled bank
-
-	//sample_bank_now_playing[0] = i_param[0][BANK];
-	//sample_bank_now_playing[1] = i_param[1][BANK];
 
 	flags[PlaySample1Changed] = 1;
 	flags[PlaySample2Changed] = 1;
