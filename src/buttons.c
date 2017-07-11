@@ -401,12 +401,14 @@ void Button_Debounce_IRQHandler(void)
 			if (global_mode[EDIT_MODE])
 			{
 				//
-				//Medium press with Edit + Rev2 + one Bank button: reload bank from the backup index file
+				//Medium press with Edit + Rev2 + one Bank button: reload bank from the saved index file
+				//(not the backup-- this is because we want to undo changes since we booted, 
+				//not since the last time we booted)
 				//Restores just this bank to the state it was on boot 
 				//
 				if (button_state[Bank1]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank2]==UP)
 				{
-					flags[LoadBackupIndex] = i_param[0][BANK]+1;
+					flags[LoadIndex] = i_param[0][BANK]+1;
 					flags[RevertBank1]=200;
 	
 					flags[SkipProcessButtons] = 2;
@@ -417,7 +419,7 @@ void Button_Debounce_IRQHandler(void)
 		
 				if (button_state[Bank2]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank1]==UP)
 				{
-					flags[LoadBackupIndex] = i_param[0][BANK]+1;
+					flags[LoadIndex] = i_param[1][BANK]+1;
 					flags[RevertBank2]=200;
 
 					flags[SkipProcessButtons] = 2;

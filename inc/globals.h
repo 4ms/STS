@@ -79,6 +79,7 @@ enum Flags {
 	SaveSystemSettings,
 	UndoSampleExists,
 	LoadBackupIndex,
+	LoadIndex,
 
 	NUM_FLAGS
 };

@@ -25,6 +25,7 @@ typedef struct Sample {
 	float		inst_gain;
 
 	uint16_t	PCM;
+	uint8_t		file_found;
 } Sample;
 
 

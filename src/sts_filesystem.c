@@ -23,6 +23,9 @@ extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 extern FATFS 				FatFs;
 
 
+Sample		test_bank[NUM_SAMPLES_PER_BANK];
+
+
 FRESULT check_sys_dir(void)
 {
 	FRESULT res;
@@ -73,6 +76,162 @@ FRESULT reload_sdcard(void)
 }
 
 
+//Go through all banks and samples, 
+//If file_found==0, then look for a file to fill the slot:
+//If samples[][].filename == "path/file.wav":
+//1) look for the first .wav in path (path/*.wav)
+//2) If none found, search all dirs for file.wav (*/file.wav)
+//3) If still none found, keep file_found=0 and exit 
+//
+//When a file is found, load the header. If loading the header fails, keep trying more files
+//If the header succeeds, set file_found to 1 and copy the filename to samples[][].filename
+//
+void load_missing_files(void)
+{
+	uint8_t bank, samplenum;
+
+	for (bank=0;bank<MAX_NUM_BANKS;bank++)
+	{
+		for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++)
+		{
+			if (!samples[bank][samplenum].file_found)
+			{
+				//split up filename
+
+				//Look for unused wavs in path/
+				//
+				//str_split(filename, '/', path...)
+				//f_opendir(path)
+				//while () 
+				//	get_next_wav_in_dir(testdir)
+				//	if (find_filename_in_all_banks(0, filepath) == 0xFF) //file not already being used
+				//		load_sample_header()
+				//		if (ok) str_cpy(...filename); samples[][].file_found=1;
+
+				//if no more files found, try a fopen_checked() (or a modified version of that?)
+
+			}
+		}
+	}
+
+}
+
+//
+//Given a path to a directory, see if any of the files in it are assigned to a sample slot
+//
+//Instead of going through each file in the directory in the filesystem
+//and checking all the sample slots if it matches a filename, 
+//it's faster to search the samples[][] array for filenames that begin with this directory path + "/"
+//
+//Returns 1 if some sample slot uses this directory
+//0 if not
+//
+//Note: path must end in a slash! We don't add the slash here because we don't know if path[str_len(path)+1] is a valid memory location
+//This is important because path="Blue" could return a false positive for "Blue Loops/mysound.wav"
+uint8_t dir_contains_assigned_samples(char *path)
+{
+	uint8_t bank, samplenum;
+	uint8_t l;
+
+	l=str_len(path);
+	if (path[l-1] != '/') return 0xFF; //fail, path must end in a slash
+
+	for (bank=0;bank<MAX_NUM_BANKS;bank++)
+	{
+		for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++)
+		{
+			if (samples[bank][samplenum].filename[0] != 0)
+				if (str_startswith(samples[bank][samplenum].filename, path) == 1) //
+					return(1); //found! at least one sample filename begins with path 
+		}
+	}
+
+	return (0); //no filenames start with path
+}
+
+
+//
+//
+//
+void load_new_folders(void)
+{
+	DIR 	root_dir, test_dir;
+	FRESULT res;
+	char 	foldername[_MAX_LFN+1];
+	char 	default_bankname[_MAX_LFN];
+	uint8_t bank;
+	uint8_t bank_loaded=0;
+	uint8_t l; 
+
+	//reset dir
+	root_dir.obj.fs = 0;
+
+	while (1)
+	{
+		res = get_next_dir(&root_dir, "", foldername);
+
+		//exit if no more dirs found
+		if (res != FR_OK) {f_closedir(&root_dir); break;}
+
+		//Check if folder contains any .wav files
+		res = f_opendir(&test_dir, foldername);
+		if (res!=FR_OK) continue;
+		if (find_next_ext_in_dir(&test_dir, ".wav", default_bankname) != FR_OK) continue;
+
+		//add a slash to folder_path if it doesn't have one
+		l = str_len(foldername);
+		if (foldername[l-1] !='/'){
+			foldername[l] = '/';
+			foldername[l+1] = '\0';
+		}
+
+		//Check if the dir is already being used
+		if (dir_contains_assigned_samples(foldername)==0)
+		{
+			//Found a directory that doesn't contain assigned samples!!
+
+			//Strip the slash
+			foldername[l]='\0';
+
+			//Try to load it as a bank before we go any farther, to make sure we're dealing with a potential bank
+			//Not a folder with all unusable files
+			if (load_bank_from_disk(test_bank, foldername))
+			{
+				//First see if the foldername begins with a color or color-blink name:
+				//Search banks from end to start, so we look for "Yellow-2" before "Yellow"
+				for (bank=(MAX_NUM_BANKS-1);bank!=0xFF;bank--)
+				{
+					bank_to_color(bank, default_bankname);
+
+					if (str_startswith(foldername, default_bankname))
+					{
+						//If the bank is already being used (e.g. "Yellow-2" is already used)
+						//Then bump down Yellow-2 ==> Yellow-3, Yellow-3 ==> Yellow-4, etc..
+						if (is_bank_enabled(bank))
+							bump_down_banks(bank);
+
+						//Copy the test_bank into bank
+						copy_bank(samples[bank], test_bank);
+						enable_bank(bank);
+						bank_loaded=1;
+						break; //exit the for loop
+					}
+				}
+
+				//If it's not a color/blink name, then load it anywhere
+				if (!bank_loaded)
+				{
+					//try to load it into the first unused bank
+					bank = next_disabled_bank(MAX_NUM_BANKS);
+					copy_bank(samples[bank], test_bank);
+					enable_bank(bank);
+					bank_loaded=1;
+				}
+			}
+		}
+	}
+}
+
 
 //
 //Go through all default bank folder names,
@@ -90,7 +249,7 @@ uint8_t load_banks_by_default_colors(void)
 	{
 		bank_to_color(bank, bankname);
 
-		if (load_bank_from_disk(bank, bankname))
+		if (load_bank_from_disk((samples[bank]), bankname))
 		{
 			enable_bank(bank); 
 			banks_loaded++;
@@ -153,7 +312,7 @@ uint8_t load_banks_by_color_prefix(void)
 				if (!is_bank_enabled(bank))
 				{
 					//...and if not, then try to load it as a bank
-					if (load_bank_from_disk(bank, foldername))
+					if (load_bank_from_disk((samples[bank]), foldername))
 					{
 						enable_bank(bank);
 						banks_loaded++;
@@ -181,7 +340,7 @@ uint8_t load_banks_by_color_prefix(void)
 				//E.g. if we found "Red - Synth Pads" and Red bank is still available, load it there
 				if (!is_bank_enabled(bank))
 				{
-					if (load_bank_from_disk(bank, foldername))
+					if (load_bank_from_disk((samples[bank]), foldername))
 					{
 						enable_bank(bank);
 						banks_loaded++;
@@ -197,7 +356,7 @@ uint8_t load_banks_by_color_prefix(void)
 					{
 						if (!is_bank_enabled(bank))
 						{
-							if (load_bank_from_disk(bank, foldername))
+							if (load_bank_from_disk((samples[bank]), foldername))
 							{
 								enable_bank(bank);
 								banks_loaded++;
@@ -291,7 +450,7 @@ uint8_t load_banks_with_noncolors(void)
 		{
 			if (!is_bank_enabled(bank))
 			{
-				if (load_bank_from_disk(bank, foldername))
+				if (load_bank_from_disk((samples[bank]), foldername))
 				{
 					enable_bank(bank);
 					banks_loaded++;
@@ -329,7 +488,8 @@ uint8_t load_banks_with_noncolors(void)
 //
 //Returns number of samples loaded (0 if folder not found, and sample[bank][] will be cleared)
 //
-uint8_t load_bank_from_disk(uint8_t bank, char *bankpath)
+
+uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 {
 	uint32_t i;
 	uint32_t sample_num;
@@ -344,7 +504,7 @@ uint8_t load_bank_from_disk(uint8_t bank, char *bankpath)
 
 
 	for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
-		clear_sample_header(&samples[bank][i]);
+		clear_sample_header(&(sample_bank[i]));
 
 	//Copy bankpath into path so we can work with it
 	if (bankpath[0] != '\0')	str_cpy(path, bankpath);
@@ -378,12 +538,12 @@ uint8_t load_bank_from_disk(uint8_t bank, char *bankpath)
 		if (res==FR_OK)
 		{
 			//Load the sample header info into samples[][]
-			res = load_sample_header(&samples[bank][sample_num], &temp_file);
+			res = load_sample_header(&(sample_bank[sample_num]), &temp_file);
 
 			if (res==FR_OK)
 			{
 				//Set the filename (full path)
-				str_cpy(samples[bank][sample_num++].filename, path);
+				str_cpy(sample_bank[sample_num++].filename, path);
 //				preloaded_clmt[sample_num] = load_file_clmt(&temp_file);
 			}
 		}
@@ -404,19 +564,27 @@ uint8_t load_all_banks(uint8_t force_reload)
 	//Load the index file:
 	flags[RewriteIndex]=1;
 
+	//Load the index file, marking files found or not found with samples[][].file_found = 1/0;
 	if (!force_reload)
 		force_reload = load_sampleindex_file(USE_INDEX_FILE, MAX_NUM_BANKS);
 
 
 	if (!force_reload) //sampleindex file was ok
 	{	
-		// check which samples are loaded
-		// (looks for filename in samples strucure)
+		// Update the list of banks that are enabled
 		check_enabled_banks();
+
+		// Check for new folders, and turn them into banks if possible
+		load_new_folders();
+
+		// Go through all sample slots in all banks that have file_found==0
+		// Look for a file to fill this slot
+		load_missing_files();
+
 
 	}
 
-	else //sampleindex file was not ok, or we requested to force a reload from disk
+	else //sampleindex file was not ok, or we requested to force a full reload from disk
 	{
 		//Backup Index:
 		flags[RewriteIndex]=2;
@@ -473,40 +641,6 @@ uint8_t load_all_banks(uint8_t force_reload)
 	return 1;
 }
 
-
-//
-//Tries to figure out the bank path
-//
-// uint8_t get_banks_path(uint8_t bank, char *path)
-// {
-	//Get path to bank's folder
-	//
-
-	// str_cpy(path, index_bank_path[ bank ]);
-	// path[str_len(path)-1] = 0; //cut off the '/'
-
-	//First try using the path from the current sample
-	//
-	// if (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
-	// {
-	// 	//if that doesn't have a path, go through the whole bank until we find a path
-	// 	sample = 0;
-	// 	while (!(str_rstr_x(samples[ bank ][ sample ].filename, '/', path)))
-	// 	{
-	// 		if (++sample >= NUM_SAMPLES_PER_BANK)
-	// 		{
-	// 			//No path found (perhaps no samples in the bank?)
-	// 			//Set path to the default bank name
-	// 			bank_to_color(bank, path);
-	// 			return(0); //not found
-	// 		}
-	// 	}
-	// }
-// 	if (path[0])
-// 		return(1);//found
-// 	else
-// 		return(0);
-// }
 
 
 uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
