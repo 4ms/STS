@@ -63,11 +63,11 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 						play_trig_timestamp[0]=sys_tmr;
 						break;
 					
-					// FixMe(H) shouldn't this have sys_tmr too - or actually its own timer?	
 					case TrigJack_Play2:
 						flags[Play2Trig]=1;
 						play_trig_timestamp[1]=sys_tmr;
 						break;
+
 					case TrigJack_Rec:
 						flags[RecTrig]=1;
 						break;
