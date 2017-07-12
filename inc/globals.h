@@ -66,21 +66,22 @@ enum Flags {
 	ViewBlinkBank2,
 	PlayBankHover1Changed,
 	PlayBankHover2Changed,
-	RevertSample, //35
+	RecBankHoverChanged, //35
+	RevertSample,
 	RevertBank1,
 	RevertBank2,
 	RevertAll,
-	RewriteIndex,
-	RewriteIndexFail, //40
+	RewriteIndex, //40
+	RewriteIndexFail,
 	RewriteIndexSucess,
 	AssignedNextSample,
 	AssignedPrevBank,
-	FindNextSampleToAssign,
-	SaveSystemSettings, //45
+	FindNextSampleToAssign, //45
+	SaveSystemSettings,
 	UndoSampleExists,
 	LoadBackupIndex,
 	LoadIndex,
-	latch1voctcv1,
+	latch1voctcv1, //50
 	latch1voctcv2, 
 
 	NUM_FLAGS

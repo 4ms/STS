@@ -342,7 +342,7 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded & 0xFFFFFFF8;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
 
-				flags[RewriteIndex] = 1;
+				//flags[RewriteIndex] = 1;
 
 				enable_bank(sample_bank_now_recording);
 

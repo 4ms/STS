@@ -59,6 +59,7 @@ void Button_Debounce_IRQHandler(void)
 	uint8_t knob;
 	uint8_t combo_was_active;
 	ButtonKnobCombo *t_bkc;
+	uint8_t bank_blink, bank_color;
 
 	uint8_t chan;
 	uint32_t but_read;
@@ -150,8 +151,16 @@ void Button_Debounce_IRQHandler(void)
 
 						case Rec:
 							break;
+
 						case RecBank:
-							break;
+							//Store the pot values.
+							//We use this to determine if the pot has moved while the Bank button is down
+							g_button_knob_combo[bkc_RecBank][bkc_RecSample].latched_value = old_i_smoothed_potadc[RECSAMPLE_POT];
+
+							//Reset the combo_state.
+							//We have to detect the knob as moving to make the combo ACTIVE
+							g_button_knob_combo[bkc_RecBank][bkc_RecSample].combo_state = COMBO_INACTIVE;
+						break;
 
 						case Rev1:
 							break;
@@ -185,6 +194,7 @@ void Button_Debounce_IRQHandler(void)
 								combo_was_active = 0;
 								for (knob=0;knob<2;knob++)
 								{
+									//store a short-hand version for the combo, just to make code more readable
 									t_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
 
 									if (t_bkc->combo_state == COMBO_ACTIVE)
@@ -228,9 +238,37 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 							case RecBank:
+								//See if there was a combo button+knob happening
+
+								//this a short-hand version for the combo, just to make code more readable:
+								t_bkc = &g_button_knob_combo[bkc_RecBank][bkc_RecSample];
+								if (t_bkc->combo_state == COMBO_ACTIVE)
+								{
+									//Change our combo state to inactive
+									//Note: unlike Bank1 and Bank2, we do not latch Rec Sample value after RecBank is released
+									t_bkc->combo_state = COMBO_INACTIVE;
+
+									//Set the rec bank parameter to the hover value
+									i_param[REC][BANK] = t_bkc->hover_value;
+
+									combo_was_active = 1;
+								}
+
+								else
+								//No combo, so just increment the Rec Bank color, but not blink
+								{
+									bank_blink = get_bank_blink_digit(i_param[REC][BANK]);
+									bank_color = get_bank_color_digit(i_param[REC][BANK]);
+									bank_color++;
+									if (bank_color>=10) bank_color=0;
+
+									i_param[REC][BANK] = bank_color + (bank_blink*10);
+
+									//range check, but should not be neccessary
+									if (i_param[REC][BANK] >= (MAX_NUM_BANKS-1))	i_param[REC][BANK]=0;
+								}
+
 								flags[RecBankChanged] = 1;
-								if (i_param[2][BANK] >= (MAX_NUM_BANKS-1))	i_param[2][BANK]=0;
-								else										i_param[2][BANK]++;
 							break;
 
 							case Play1:
@@ -447,8 +485,8 @@ void Button_Debounce_IRQHandler(void)
 			}
 			else //not EDIT_MODE
 			{
-
-				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED)
+				//Both bank buttons --> Stereo Mode toggle
+				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED && button_state[RecBank] == UP)
 				{
 					if (global_mode[STEREO_MODE] == 1)
 					{
@@ -467,6 +505,34 @@ void Button_Debounce_IRQHandler(void)
 					long_press[Bank2] = 0xFFFFFFFF;
 					button_state[Bank1] = UP;
 					button_state[Bank2] = UP;
+				}
+
+				//RecBank and one bank button --> change the play bank to the Rec bank's value
+				if (button_state[RecBank] >= SHORT_PRESSED)
+				{
+					if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] == UP)
+					{
+						i_param[0][BANK] 		= i_param[REC][BANK];
+						flags[PlayBank1Changed] = 1;
+
+						long_press[Bank1] 		= 0xFFFFFFFF;
+						long_press[RecBank] 	= 0xFFFFFFFF;
+						button_state[Bank1] 	= UP;
+						button_state[RecBank] 	= UP;
+
+						//Exit assignment mode (if we were in it)
+						exit_assignment_mode();
+					}
+					if (button_state[Bank2] >= SHORT_PRESSED && button_state[Bank1] == UP)
+					{
+						i_param[1][BANK] 		= i_param[REC][BANK];
+						flags[PlayBank2Changed] = 1;
+						
+						long_press[Bank2] 		= 0xFFFFFFFF;
+						long_press[RecBank] 	= 0xFFFFFFFF;
+						button_state[Bank2] 	= UP;
+						button_state[RecBank] 	= UP;
+					}
 				}
 
 			}

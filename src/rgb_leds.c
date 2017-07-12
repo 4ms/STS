@@ -191,7 +191,7 @@ void update_ButtonLEDs(void)
 	uint8_t bank_to_display;
 	//uint32_t tm=sys_tmr & 0x3FFF; //14-bit counter
 	//uint32_t tm_7 = sys_tmr & 0x7F; //7-bit counter
-	uint32_t tm_12 = sys_tmr & 0xFFF; //12-bit counter
+	//uint32_t tm_12 = sys_tmr & 0xFFF; //12-bit counter
 	uint32_t tm_13 = sys_tmr & 0x1FFF; //13-bit counter
 	uint32_t tm_14 = sys_tmr & 0x3FFF; //14-bit counter
 //	uint32_t tm_15 = sys_tmr & 0x7FFF; //15-bit counter
@@ -313,13 +313,19 @@ void update_ButtonLEDs(void)
 			{
 				t = tm_16;
 				if (chan==2) //REC button
-					bank_to_display = i_param[2][BANK];
+				{
+					//Display bank hover value
+					if (g_button_knob_combo[bkc_RecBank][bkc_RecSample].combo_state == COMBO_ACTIVE)
+						bank_to_display = g_button_knob_combo[bkc_RecBank][bkc_RecSample].hover_value;
+					else
+						bank_to_display = i_param[2][BANK];
+				}
 				else
 				if (chan==3){ //Rev1 button in ASSIGN_MODE, looking for already assigned samples
 					//We display the current bank we're scanning on the Rev1 light
 					bank_to_display = cur_assign_bank;
 				}
-				else
+				else //chan must be 0 or 1 from here onwards:
 				if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
 					bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
 				else

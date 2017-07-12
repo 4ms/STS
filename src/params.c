@@ -462,9 +462,9 @@ void update_params(void)
 			//
 			if (button_state[Bank1 + chan] >= DOWN)
 			{
-				//Go through all the knobs
+				//Go through both the knobs
 				//
-				for (knob = 0; knob < 2 /*NUM_BUTTON_KNOB_COMBO_KNOBS*/; knob++)
+				for (knob = 0; knob < 2 /*NUM_BUTTON_KNOB_COMBO_KNOBS*/; knob++) //FixMe: This is not portable, it only works because we have Sample1 and Sample2 in the start of the bkc array
 				{
 					t_this_bkc 	= &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
 					t_other_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + 1-knob];
@@ -586,19 +586,65 @@ void update_params(void)
 		//
 		// REC SAMPLE POT
 		//
-		old_val = i_param[REC][SAMPLE];
-		new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+		t_this_bkc 	= &g_button_knob_combo[bkc_RecBank][bkc_RecSample];
 
-		if (old_val != new_val)
+		if (button_state[RecBank] >= DOWN)
 		{
-			i_param[REC][SAMPLE] = new_val;
-			flags[RecSampleChanged] = 1;
-			if (global_mode[MONITOR_RECORDING])
+			new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+
+			// If the combo is not active,
+			// Activate it when we detect the knob was turned to a new detent
+			//
+			if (t_this_bkc->combo_state != COMBO_ACTIVE)
 			{
-				flags[RecSampleChanged_light] = 10;
-				//?? DO THIS???
-				//play the sample selected by rec bank/sample
-				//have to override i_param[0][BANK] and [SAMPLE] and all params (pitch, length...)
+				old_val = detent_num(t_this_bkc->latched_value);
+
+				if (new_val != old_val)
+				{
+					t_this_bkc->combo_state = COMBO_ACTIVE;
+
+					//Initialize the hover value
+					t_this_bkc->hover_value = i_param[REC][BANK];
+				}
+			}
+
+			// If the combo is active, then use the RecSample pot to update the Hover value
+			// (which becomes the RecBank param when we release the button)
+			//	
+			else			
+			{
+				//Calcuate the (tentative) new bank, based on the new_val and the current hover_value
+
+				trial_bank = get_bank_color_digit(t_this_bkc->hover_value) + (new_val*10);
+
+				//bring the # blinks down until we get a bank in the valid range
+				while (trial_bank >= MAX_NUM_BANKS) trial_bank-=10;
+
+				if (t_this_bkc->hover_value != trial_bank)
+				{
+					flags[RecBankHoverChanged] = 3;
+					t_this_bkc->hover_value = trial_bank;
+				}		
+			}
+		}
+
+		//If the RecBank button is not down, just change the sample
+		//Note: we don't have value-crossing for the RecBank knob, so this section
+		//is simplier than the case of play Bank1/2 + Sample1/2
+		else
+		{
+			old_val = i_param[REC][SAMPLE];
+			new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+
+			if (old_val != new_val)
+			{
+				i_param[REC][SAMPLE] = new_val;
+				flags[RecSampleChanged] = 1;
+
+				if (global_mode[MONITOR_RECORDING])
+				{
+					flags[RecSampleChanged_light] = 10;
+				}
 			}
 		}
 

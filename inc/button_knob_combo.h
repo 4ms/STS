@@ -13,6 +13,7 @@
 enum ButtonKnobCombo_Buttons{
 	bkc_Bank1,
 	bkc_Bank2,
+	bkc_RecBank,
 
 	NUM_BUTTON_KNOB_COMBO_BUTTONS
 };
@@ -20,6 +21,7 @@ enum ButtonKnobCombo_Buttons{
 enum ButtonKnobCombo_Knobs{
 	bkc_Sample1,
 	bkc_Sample2,
+	bkc_RecSample,
 
 	NUM_BUTTON_KNOB_COMBO_KNOBS
 };
