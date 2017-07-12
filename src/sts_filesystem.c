@@ -642,16 +642,22 @@ uint8_t load_all_banks(uint8_t force_reload)
 	FRESULT queue_valid;
 	uint8_t res_bak;
 
-	//Load the index file:
+	//Load the index file: (buttons are white)
 	flags[RewriteIndex]=1;
 
 	//Load the index file, marking files found or not found with samples[][].file_found = 1/0;
 	if (!force_reload)
 		force_reload = load_sampleindex_file(USE_INDEX_FILE, MAX_NUM_BANKS);
-
+	//ToDo: load_sampleindex_file() should detect a bad file, (missing timestamp at end?)
+	//Then it should re-run itself by loading the backup file
+	//The use-case is if power cuts out shortly after boot, during write_sampleindex_file()
+	//The next time we boot, we don't want to load the truncated index, we should load from the last known source
 
 	if (!force_reload) //sampleindex file was ok
 	{	
+		//Look for new folders and missing files: (buttons are yellow)
+		flags[RewriteIndex]=4;
+
 		// Update the list of banks that are enabled
 		// Banks with no file_found will be disabled (but filenames will be preserved, for use in load_missing_files)
 		check_enabled_banks();
@@ -668,18 +674,9 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 	else //sampleindex file was not ok, or we requested to force a full reload from disk
 	{
-		//Backup Index:
-		flags[RewriteIndex]=2;
 
-		// Backup the sampleindex file if it exists
-		res_bak = backup_sampleindex_file();
-		if (res_bak)
-		{
-			// ERRORLOG: sample index couldn't be backed up
-		}
-
-		// Load Banks:
-		flags[RewriteIndex]=3;
+		// Ignore index and create new banks from disk: (buttons are blue)
+		flags[RewriteIndex]=7;
 
 		//initialize the renaming queue
 		queue_valid = clear_renaming_queue();
@@ -698,14 +695,13 @@ uint8_t load_all_banks(uint8_t force_reload)
 			process_renaming_queue();
 	}
 
-	// Write index file:
-	flags[RewriteIndex]=4;
+	// Write index file: (buttons are red for index file, then orange for html file)
 
 	// Write samples struct to index
 	// ... so sample info gets updated with latest .wave header content
 	res = index_write_wrapper();
 
-	// Done re-indexing
+	// Done re-indexing (buttons are normal)
 	flags[RewriteIndex]=0;
 
 	// check if there was an error writing to index file

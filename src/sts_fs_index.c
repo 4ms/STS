@@ -111,7 +111,9 @@ FRESULT write_sampleindex_file(void)
 
 		// Write global info to file
 		f_printf(&temp_file, "Timestamp: %d\n", get_fattime());
-		
+
+		f_printf(&temp_file, EOF_TAG);
+
 			// timestamp  ((uint32_t)(2016 - 1980) 	<< 25)
 					// 	| ((uint32_t)month 			<< 21)
 					// 	| ((uint32_t)days 			<< 16)
@@ -141,13 +143,13 @@ uint8_t index_write_wrapper(void){
 	FRESULT res;
 	uint8_t	html_res;
 
-	// WRITE INDEX FILE
-	flags[RewriteIndex]=4;
+	// WRITE INDEX FILE (buttons are red)
+	flags[RewriteIndex]=2;
 	res = write_sampleindex_file();
 	if (res!=FR_OK) return(1);
 
-	// WRITE SAMPLE LIST HTML FILE
-	flags[RewriteIndex]=5;
+	// WRITE SAMPLE LIST HTML FILE (buttons are orange)
+	flags[RewriteIndex]=3;
 	html_res = write_samplelist();
 	return (html_res);
 }
@@ -262,12 +264,48 @@ FRESULT backup_sampleindex_file(void)
 	}
 }
 
+//Returns 0 if invalid file (file can't be opened/read, or no EOF_TAG at end of file)
+//Returns 1 if we read EOF_TAG at the end of the file
+uint8_t check_sampleindex_valid(char *indexfilename)
+{
+	FIL 		temp_file;
+	FRESULT 	res;
+	char		full_path[_MAX_LFN+1];
+	char 		readdata[_MAX_LFN+1];
+	uint8_t		l;
+	uint32_t	br;
 
-//.sample_index.bak
-//uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t bank) //MAX_NUM_BANKS=all banks
-//MAX_NUM_BANKS=all banks
-//Key combo for: reload everything: load_sampleindex_file(1, MAX_NUM_BANKS);
-//Key combo for: reload one bank: load_sampleindex_file(1, bank);
+	str_cat(full_path, SYS_DIR_SLASH, SAMPLE_INDEX_FILE);
+	res = f_open(&temp_file, full_path, FA_READ);
+
+	if (res != FR_OK) 					{return 0;}							//file can't open
+
+	//Verify it's a complete file, with EOF_TAG at the end
+	l = str_len(EOF_TAG);
+
+	res = f_lseek(&temp_file, f_size(&temp_file)-l);
+	if (res != FR_OK) 					{f_close(&temp_file); return 0;}	//can't seek to end: file/disk error
+	
+	res = f_read(&temp_file, readdata, l, &br);
+	if (res != FR_OK) 					{f_close(&temp_file); return 0;}	//can't read from file: file/disk error
+
+	if (br!=l) 							{f_close(&temp_file); return 0;}	//didn't read proper number of bytes: disk/read error
+	if (!str_cmp(EOF_TAG, readdata)) 	{f_close(&temp_file); return 0;}	//no EOF_TAG found at end of file: index is incomplete
+	
+	//Index file is ok
+	f_close(&temp_file);
+	return 1;
+
+}
+
+
+//Loads a sample index file
+//Sets samples[][] for all banks, or just one bank (specified with banks=bank# or banks=MAX_NUM_BANKS --> all banks)
+//
+//Can request the normal index file, or the backup file (use_backup=USE_INDEX_FILE or USE_BACKUP_FILE)
+//Note: if we request backup file, but it's invalid/missing, then we exit with an error
+//On the other hand, if we request the index file but it's invalid/missing, then we use the backup file instead
+//
 uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 {
 
@@ -300,12 +338,30 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	uint8_t 	force_reload  = 2;
 	uint8_t		skip_cur_bank = 0;
 
-	// Open sample index file
+
+	//If we requested the normal non-backup file but it's not a valid file,
+	//use the backup file instead
+	if (use_backup==USE_INDEX_FILE)
+	{
+		if (!check_sampleindex_valid(SAMPLE_INDEX_FILE))
+			use_backup=USE_BACKUP_FILE;
+	}
+
+	//If we requested the backup file (or if we requested the normal file, and it was invalid)
+	//Then see if the backup file is valid
+	//If not, then we exit with an error
+	if (use_backup==USE_BACKUP_FILE)
+	{
+		if (!check_sampleindex_valid(SAMPLE_BAK_FILE))
+			return(1); //file not found
+	}
+
 	if (use_backup)
 		str_cat(full_path, SYS_DIR_SLASH, SAMPLE_BAK_FILE);
 
-	else 			
+	else
 		str_cat(full_path, SYS_DIR_SLASH, SAMPLE_INDEX_FILE);
+
 
 	res = f_open(&temp_file,full_path, FA_READ);
 
@@ -464,7 +520,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 							arm_data=0; token[0] = '\0'; read_name = 1; break;						
 
 						}
-						//End ToDo: DranAndDrop
+						//End ToDo: DragAndDrop
 
 						// // open sample file
 						// fopen_flag = fopen_checked(&temp_wav_file, folder_path, file_name);

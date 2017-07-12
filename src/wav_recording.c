@@ -213,15 +213,15 @@ void write_buffer_to_storage(void)
 
 	uint32_t sz;
 
-	//If user changed the record sample slot, start recording from the beginning of that slot
 	if (flags[RecSampleChanged])
 	{
+		//Currently, nothing happens if you change record sample slot
 		flags[RecSampleChanged]=0;
 	}
 
-	//If user changed the record bank, start recording from the beginning of that slot
 	if (flags[RecBankChanged])
 	{
+		//Currently, nothing happens if you change record bank
 		flags[RecBankChanged]=0;
 	}
 
@@ -249,7 +249,6 @@ void write_buffer_to_storage(void)
 		//read a block from rec_buff->out
 			if (play_load_triage==0)
 			{
-				//buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
 				buffer_lead = CB_distance(rec_buff, 0);
 
 				if (buffer_lead > WRITE_BLOCK_SIZE) //Error: comparing # samples to # bytes. Should be buffer_lead*SAMPLINGBYTES
@@ -271,7 +270,6 @@ void write_buffer_to_storage(void)
 					else
 					{
 						rec_state = CLOSING_FILE;
-						//ButLED_state[RecButtonLED] = 2; //flash it?
 					}
 				}
 			}
@@ -348,8 +346,6 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded & 0xFFFFFFF8;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded & 0xFFFFFFF8;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
-
-				//flags[RewriteIndex] = 1;
 
 				enable_bank(sample_bank_now_recording);
 
