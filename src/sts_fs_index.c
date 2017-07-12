@@ -299,7 +299,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	// uint8_t		rewrite_index = 0;
 	uint8_t 	force_reload  = 2;
 	uint8_t		skip_cur_bank = 0;
-	uint8_t		can_strip=1;
 
 	// Open sample index file
 	if (use_backup)
@@ -325,8 +324,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		// tokenize at spaces
 		if((read_name!=1) && (arm_data==0) && ((read_buffer[0]!='-') || (read_buffer[1]=='-')) ) str_tok(read_buffer,' ', token);
 		else str_cpy(token, read_buffer);
-
-		can_strip=1;
 
 		// While token isn't empty
 		while(token[0]!='\0')
@@ -387,7 +384,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 					
 					// arm data loading
 					// if the line startes with - and data loading isn't armed
-					if 		((read_buffer[0]!='-')&&(!arm_data))	{can_strip=0; arm_data=1; token[0] = '\0';}
+					if 		((read_buffer[0]!='-')&&(!arm_data))	{arm_data=1; token[0] = '\0';}
 					
 					// load header data from .wav file
 					// if the data loading has just been armed
