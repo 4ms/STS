@@ -15,11 +15,14 @@
 #define SYS_DIR_SLASH		"_STS.system/"
 #define SAMPLELIST_FILE		"sample_list.html"
 #define SAMPLE_INDEX_FILE	"sample_index.dat"
-#define SAMPLE_BAK_FILE		"sample_index.bak"
+#define SAMPLE_BAK_FILE		"sample_index-bak.dat"
+#define SAMPLE_BAK0_FILE	"sample_index-bak0.dat"
 #define RENAME_LOG_FILE		"renamed_folders.txt"
 #define RENAME_TMP_FILE		"sts-renaming-queue.tmp"
 #define ERROR_LOG_FILE		"error-log.txt"
 #define SETTINGS_FILE		"settings.txt"
+
+#define EOF_TAG				"End of file\n"
 
 FRESULT reload_sdcard(void);
 

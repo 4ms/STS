@@ -159,6 +159,43 @@ void record_audio_to_buffer(int16_t *src)
 
 int16_t rec_buff16[WRITE_BLOCK_SIZE>>1]; //4096 elements
 
+void create_new_recording(void)
+{
+	uint32_t sz;
+	FRESULT res;
+	WaveHeaderAndChunk whac;
+	uint32_t written;
+
+	//Make a file with a temp name (tmp-XXXXX.wav)
+	sz=4;
+	str_cpy(sample_fname_now_recording, "tmp-");
+	sz += intToStr(sys_tmr, &(sample_fname_now_recording[sz]), 0);
+	sample_fname_now_recording[sz++] = '.';
+	sample_fname_now_recording[sz++] = 'w';
+	sample_fname_now_recording[sz++] = 'a';
+	sample_fname_now_recording[sz++] = 'v';
+	sample_fname_now_recording[sz++] = 0;
+
+	res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
+	if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_REC_OPEN_FAIL; check_errors(); return;}
+
+	create_waveheader(&whac.wh, &whac.fc);
+	create_chunk(ccDATA, 0, &whac.wc);
+
+	sz = sizeof(WaveHeaderAndChunk);
+
+	res = f_write(&recfil, &whac.wh, sz, &written);
+	if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); return;}
+	if (sz!=written)	{rec_state=REC_OFF; g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return;}
+
+	samplebytes_recorded = 0;
+
+	//f_close(&recfil);
+	f_sync(&recfil);
+
+	rec_state=RECORDING;
+
+}
 
 void write_buffer_to_storage(void)
 {
@@ -174,20 +211,17 @@ void write_buffer_to_storage(void)
 	char path[_MAX_LFN];
 
 
-//	WaveHeader wavh;
-	WaveHeaderAndChunk whac;
-
 	uint32_t sz;
 
-	//If user changed the record sample slot, start recording from the beginning of that slot
 	if (flags[RecSampleChanged])
 	{
+		//Currently, nothing happens if you change record sample slot
 		flags[RecSampleChanged]=0;
 	}
 
-	//If user changed the record bank, start recording from the beginning of that slot
 	if (flags[RecBankChanged])
 	{
+		//Currently, nothing happens if you change record bank
 		flags[RecBankChanged]=0;
 	}
 
@@ -207,42 +241,14 @@ void write_buffer_to_storage(void)
 			sample_num_now_recording = i_param[REC_CHAN][SAMPLE];
 			sample_bank_now_recording = i_param[REC_CHAN][BANK];
 
-			//Make a file with a temp name (tmp-XXXXX.wav)
-			sz=4;
-			str_cpy(sample_fname_now_recording, "tmp-");
-			sz += intToStr(sys_tmr, &(sample_fname_now_recording[sz]), 0);
-			sample_fname_now_recording[sz++] = '.';
-			sample_fname_now_recording[sz++] = 'w';
-			sample_fname_now_recording[sz++] = 'a';
-			sample_fname_now_recording[sz++] = 'v';
-			sample_fname_now_recording[sz++] = 0;
-
-			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
-			if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_REC_OPEN_FAIL; check_errors(); break;}
-
-			create_waveheader(&whac.wh, &whac.fc);
-			create_chunk(ccDATA, 0, &whac.wc);
-
-			sz = sizeof(WaveHeaderAndChunk);
-
-			res = f_write(&recfil, &whac.wh, sz, &written);
-			if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); break;}
-			if (sz!=written)	{rec_state=REC_OFF; g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
-
-			samplebytes_recorded = 0;
-
-			//f_close(&recfil);
-			f_sync(&recfil);
-
-			rec_state=RECORDING;
-		break;
-
+			//flags[CreateTmpRecFile] = 1;
+			create_new_recording();
+			break;
 
 		case (RECORDING):
 		//read a block from rec_buff->out
 			if (play_load_triage==0)
 			{
-				//buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
 				buffer_lead = CB_distance(rec_buff, 0);
 
 				if (buffer_lead > WRITE_BLOCK_SIZE) //Error: comparing # samples to # bytes. Should be buffer_lead*SAMPLINGBYTES
@@ -264,7 +270,6 @@ void write_buffer_to_storage(void)
 					else
 					{
 						rec_state = CLOSING_FILE;
-						//ButLED_state[RecButtonLED] = 2; //flash it?
 					}
 				}
 			}
