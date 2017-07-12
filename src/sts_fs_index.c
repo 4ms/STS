@@ -377,8 +377,9 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		// Remove /n from buffer
 		read_buffer[str_len(read_buffer)-1]=0;
 
-		// tokenize at spaces
-		if((read_name!=1) && (arm_data==0) && ((read_buffer[0]!='-') || (read_buffer[1]=='-')) ) str_tok(read_buffer,' ', token);
+		// tokenize at space if we're not trying to read_name 
+		// ... which is both [reading name] and [reading play  data] cases
+		if((read_name<1) && (arm_data==0)) str_tok(read_buffer,' ', token);
 		else str_cpy(token, read_buffer);
 
 		// While token isn't empty
@@ -439,162 +440,169 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 				{
 					
 					// arm data loading
-					// if the line startes with - and data loading isn't armed
-					if 		((read_buffer[0]!='-')&&(!arm_data))	{arm_data=1; token[0] = '\0';}
+					// arm data loading if line starts with '-'
+					// skips header info and extra lines otherwise
+					// if 		((read_buffer[0]=='-')&&(!arm_data))	{arm_data=1;}
 					
-					// load header data from .wav file
-					// if the data loading has just been armed
-					else if  (arm_data==1) 			
-					{
-						// Update sample bank number
-						cur_sample=num_buff-1;
-
-						// ToDo: Add bank number check here
-						// check requested bank number against what's already used and update accordingly
-
-						//ToDo: check this DragAndDrop code:
-
-
-						res = FR_INT_ERR; //not FR_OK
-
-						//If filename contains a slash, then try the filename as written
-						//--- if it doesn't contain a slash, then it's not a path, so don't assume it's in root
-						if (str_pos('/', file_name) != 0xFFFFFFFF)
+					// Process data if line starts with '-'
+					// skip lines that don't start with '-'					
+					if (read_buffer[0]=='-') {
+						if (!arm_data) {arm_data=1;}
+						// load header data from .wav file
+						// if the data loading has just been armed
+						if  (arm_data==1) 			
 						{
-							str_cpy(full_path, file_name);
-							res = f_open(&temp_wav_file, full_path, FA_READ);
-						}
-						if (res!=FR_OK)
-						{
-							//add a slash to folder_path if it doesn't have one, and file_name doesn't start with one
-							l = str_len(folder_path);
-							if (folder_path[l-1] !='/' && file_name[0]!='/'){
-								folder_path[l] = '/';
-								folder_path[l+1] = '\0';
+							// Update sample bank number
+							cur_sample=num_buff-1;
+
+							// ToDo: Add bank number check here
+							// check requested bank number against what's already used and update accordingly
+
+							//ToDo: check this DragAndDrop code:
+
+
+							res = FR_INT_ERR; //not FR_OK
+
+							//If filename contains a slash, then try the filename as written
+							//--- if it doesn't contain a slash, then it's not a path, so don't assume it's in root
+							if (str_pos('/', file_name) != 0xFFFFFFFF)
+							{
+								str_cpy(full_path, file_name);
+								res = f_open(&temp_wav_file, full_path, FA_READ);
+							}
+							if (res!=FR_OK)
+							{
+								//add a slash to folder_path if it doesn't have one, and file_name doesn't start with one
+								l = str_len(folder_path);
+								if (folder_path[l-1] !='/' && file_name[0]!='/'){
+									folder_path[l] = '/';
+									folder_path[l+1] = '\0';
+								}
+
+								//try to open folder_path/file_name
+								str_cat(full_path, folder_path, file_name);
+								res = f_open(&temp_wav_file, full_path, FA_READ);
 							}
 
-							//try to open folder_path/file_name
-							str_cat(full_path, folder_path, file_name);
-							res = f_open(&temp_wav_file, full_path, FA_READ);
-						}
-
-						if (res==FR_OK)//file found
-						{
-							str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use whatever file_name was opened
-							samples[cur_bank][cur_sample].file_found = 1;
-
-							// At least a sample was loaded
-							force_reload = 0;
-
-							// load sample information from .wav header	
-							head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
-
-							// close wav file
-							f_close(&temp_wav_file);
-
-							// if information couldn't load, clear filename and request index
-							// ... rewrite so entry is removed
-							if (head_load!=FR_OK)
+							if (res==FR_OK)//file found
 							{
-								// write empty filename to samples struct element
-								// ... so this sample is skipped at the next index write
-								// ... Keep file_found==1 because the file was found, it just was corrupted
-								samples[cur_bank][cur_sample].filename[0]='\0';
+								str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use whatever file_name was opened
+								samples[cur_bank][cur_sample].file_found = 1;
+
+								// At least a sample was loaded
+								force_reload = 0;
+
+								// load sample information from .wav header	
+								head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
+
+								// close wav file
+								f_close(&temp_wav_file);
+
+								// if information couldn't load, clear filename and request index
+								// ... rewrite so entry is removed
+								if (head_load!=FR_OK)
+								{
+									// write empty filename to samples struct element
+									// ... so this sample is skipped at the next index write
+									// ... Keep file_found==1 because the file was found, it just was corrupted
+									samples[cur_bank][cur_sample].filename[0]='\0';
+									samples[cur_bank][cur_sample].file_found = 0;
+									
+									// skip loading sample play information
+									arm_data=0; token[0] = '\0'; read_name = 1; break;						
+								}		
+
+								arm_data++; token[0] = '\0';
+							}
+
+							else if (res!=FR_OK) //file not found
+							{
+								str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use the file_name as written in index
+
+								//Mark file as not found
 								samples[cur_bank][cur_sample].file_found = 0;
-								
+
 								// skip loading sample play information
 								arm_data=0; token[0] = '\0'; read_name = 1; break;						
-							}		
 
-							arm_data++; token[0] = '\0';
+							}
+							//End ToDo: DragAndDrop
+
+							// // open sample file
+							// fopen_flag = fopen_checked(&temp_wav_file, folder_path, file_name);
+
+							// // if file was opened
+							// if (fopen_flag<2)
+							// {
+							// 	// At least a sample was loaded
+							// 	force_reload = 0;
+
+							// 	// update samples structure with file path
+							// 	str_cpy(samples[cur_bank][cur_sample].filename, file_name);
+
+							// 	// if file was opened, but not from given path
+							// 	if (fopen_flag==1)
+							// 	{
+							// 		// request to rewrite index (from samples struct) 
+							// 		// ... at the end of index read
+							// 		// rewrite_index =1;
+							// 	}
+
+							// 	// load sample information from .wav header	
+							// 	head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
+								
+							// 	// if information couldn't load, clear filename and request index
+							// 	// ... rewrite so entry is removed
+							// 	if (head_load!=FR_OK)
+							// 	{
+							// 		// write empty filename to samples struct element
+							// 		// ... so this sample is skipped at the next index write
+							// 		samples[cur_bank][cur_sample].filename[0]='\0';
+
+							// 		// request to rewrite index (from samples struct) 
+							// 		// ... at the end of index read
+							// 		// rewrite_index =1;
+
+							// 		// skip loading sample play information
+							// 		arm_data=0; token[0] = '\0'; read_name = 1; break;						
+							// 	}								
+
+							// 	// close wav file
+							// 	f_close(&temp_wav_file);
+
+							// 	arm_data++; token[0] = '\0';
+							// }  
+
+							// // if file cannot be found on the SD card
+							// else if (fopen_flag==2)
+							// {
+							// 	// write empty filename to samples struct element
+							// 	// ... so this sample is skipped at the next index write
+							// 	samples[cur_bank][cur_sample].filename[0]='\0';
+
+							// 	// request to rewrite index (from samples struct) 
+							// 	// ... at the end of index read
+							// 	// rewrite_index =1;
+
+							// 	// skip loading sample play information
+							// 	arm_data=0; token[0] = '\0'; read_name = 1; break;						
+							// }
 						}
 
-						else if (res!=FR_OK) //file not found
-						{
-							str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use the file_name as written in index
+						// load sample play information from index file
+						// if data headed has been loaded
 
-							//Mark file as not found
-							samples[cur_bank][cur_sample].file_found = 0;
+						// ToDo: make arm-data numbers #define so code is easier to read
+						// ToDo: Put limit on play start based on sample size - rewrite index if updated
+						else if (arm_data==2) 			{samples[cur_bank][cur_sample].inst_start=num_buff; 									arm_data++; token[0] = '\0';}
 
-							// skip loading sample play information
-							arm_data=0; token[0] = '\0'; read_name = 1; break;						
+						// ToDo: Put limit on play size  based on sample size - rewrite index if updated
+						else if (arm_data==3) 			{samples[cur_bank][cur_sample].inst_size=num_buff; 										arm_data++; token[0] = '\0';}
 
-						}
-						//End ToDo: DragAndDrop
-
-						// // open sample file
-						// fopen_flag = fopen_checked(&temp_wav_file, folder_path, file_name);
-
-						// // if file was opened
-						// if (fopen_flag<2)
-						// {
-						// 	// At least a sample was loaded
-						// 	force_reload = 0;
-
-						// 	// update samples structure with file path
-						// 	str_cpy(samples[cur_bank][cur_sample].filename, file_name);
-
-						// 	// if file was opened, but not from given path
-						// 	if (fopen_flag==1)
-						// 	{
-						// 		// request to rewrite index (from samples struct) 
-						// 		// ... at the end of index read
-						// 		// rewrite_index =1;
-						// 	}
-
-						// 	// load sample information from .wav header	
-						// 	head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
-							
-						// 	// if information couldn't load, clear filename and request index
-						// 	// ... rewrite so entry is removed
-						// 	if (head_load!=FR_OK)
-						// 	{
-						// 		// write empty filename to samples struct element
-						// 		// ... so this sample is skipped at the next index write
-						// 		samples[cur_bank][cur_sample].filename[0]='\0';
-
-						// 		// request to rewrite index (from samples struct) 
-						// 		// ... at the end of index read
-						// 		// rewrite_index =1;
-
-						// 		// skip loading sample play information
-						// 		arm_data=0; token[0] = '\0'; read_name = 1; break;						
-						// 	}								
-
-						// 	// close wav file
-						// 	f_close(&temp_wav_file);
-
-						// 	arm_data++; token[0] = '\0';
-						// }  
-
-						// // if file cannot be found on the SD card
-						// else if (fopen_flag==2)
-						// {
-						// 	// write empty filename to samples struct element
-						// 	// ... so this sample is skipped at the next index write
-						// 	samples[cur_bank][cur_sample].filename[0]='\0';
-
-						// 	// request to rewrite index (from samples struct) 
-						// 	// ... at the end of index read
-						// 	// rewrite_index =1;
-
-						// 	// skip loading sample play information
-						// 	arm_data=0; token[0] = '\0'; read_name = 1; break;						
-						// }
+						// ToDo: Put limit on gain value 0 to 100 - rewrite index if updated					
+						else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f; 								arm_data=0; token[0] = '\0'; read_name = 1; break;}
 					}
-
-					// load sample play information from index file
-					// if data headed has been loaded
-
-					// ToDo: make arm-data numbers #define so code is easier to read
-					// ToDo: Put limit on play start based on sample size - rewrite index if updated
-					else if (arm_data==2) 			{samples[cur_bank][cur_sample].inst_start=num_buff; 									arm_data++; token[0] = '\0';}
-
-					// ToDo: Put limit on play size  based on sample size - rewrite index if updated
-					else if (arm_data==3) 			{samples[cur_bank][cur_sample].inst_size=num_buff; 										arm_data++; token[0] = '\0';}
-
-					// ToDo: Put limit on gain value 0 to 100 - rewrite index if updated					
-					else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f; 								arm_data=0; token[0] = '\0'; read_name = 1; break;}
+					else	{ token[0] = '\0';} 
 				}
 			}
 
