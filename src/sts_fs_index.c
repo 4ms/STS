@@ -619,6 +619,20 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 					 ||  skip_cur_bank
 			    )
 			{
+			// should be the same as commented section below since
+			// && has precedence over ||
+			/*
+			if  (	!loaded_header &&
+					!(  (str_cmp(token,"--------------------") && !arm_bank)	||
+						(!str_cmp(token,"--------------------") &&  arm_bank)	||
+						(str_cmp(token,"--------------------") &&  arm_bank)	||
+						(str_cmp(token, "path:")) 
+					 )
+					 ||  skip_cur_bank
+			    )
+			{
+			*/
+
 				token[0]='\0';
 			}	
 		}
