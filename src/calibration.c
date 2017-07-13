@@ -17,7 +17,7 @@ SystemCalibrations *system_calibrations = &s_user_params;
 
 extern volatile uint32_t sys_tmr;
 
-extern int16_t old_i_smoothed_potadc[NUM_POT_ADCS];
+extern int16_t bracketed_potadc[NUM_POT_ADCS];
 
 extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 extern int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
@@ -94,13 +94,13 @@ void update_calibration(void)
 	//or the detent calibration is incorrectly set
 	//or the hardware is faulty
 	//Use the PLAY light to show if we detect a non-centered calibrated value
-	t = old_i_smoothed_potadc[PITCH_POT*2] + system_calibrations->pitch_pot_detent_offset[0];
+	t = bracketed_potadc[PITCH_POT*2] + system_calibrations->pitch_pot_detent_offset[0];
 	if (t > 2079 || t < 2010)		playbut1_color = 2; //red: out of pitch=1.0 range
 	else if (t > 2069 || t < 2020)	playbut1_color = 4; //yellow: warning, close to edge
 	else if (t > 2058 || t < 2038)	playbut1_color = 5; //green: ok: more than 10 from center
 	else 							playbut1_color = 1; //white: within 10 of center 
 
-	t = old_i_smoothed_potadc[PITCH_POT*2+1] + system_calibrations->pitch_pot_detent_offset[1];
+	t = bracketed_potadc[PITCH_POT*2+1] + system_calibrations->pitch_pot_detent_offset[1];
 	if (t > 2079 || t < 2010)		playbut2_color = 2; //red: out of pitch=1.0 range
 	else if (t > 2069 || t < 2020)	playbut2_color = 4; //yellow: warning, close to edge
 	else if (t > 2058 || t < 2038)	playbut2_color = 5; //green: ok: more than 10 from center

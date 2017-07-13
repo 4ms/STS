@@ -75,13 +75,19 @@ float voct_latch_value[2];
 float smoothed_potadc[NUM_POT_ADCS];
 float smoothed_cvadc[NUM_CV_ADCS];
 
-//Integer-ized low pass filtered adc values:
+//Integer-ized LowPassFiltered adc values:
 int16_t i_smoothed_potadc[NUM_POT_ADCS];
 int16_t i_smoothed_cvadc[NUM_CV_ADCS];
 
-int16_t old_i_smoothed_cvadc[NUM_CV_ADCS];
-int16_t old_i_smoothed_potadc[NUM_POT_ADCS];
+//LPF -> Bracketed adc values
+int16_t bracketed_cvadc[NUM_CV_ADCS];
+int16_t bracketed_potadc[NUM_POT_ADCS];
 
+#define PITCH_DELAY_BUFFER_SZ 20
+int32_t delayed_pitch_cvadc_buffer[NUM_PLAY_CHAN][PITCH_DELAY_BUFFER_SZ];
+uint32_t del_cv_i[NUM_PLAY_CHAN];
+
+//LPF of raw ADC values for calibration
 float smoothed_rawcvadc[NUM_CV_ADCS];
 int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
 
@@ -94,7 +100,7 @@ int32_t cv_delta[NUM_CV_ADCS];
 
 void init_params(void)
 {
-	uint8_t chan,i;
+	uint32_t chan,i;
 
 	//set_default_calibration_values();
 
@@ -116,6 +122,7 @@ void init_params(void)
 	{
 		flags[i]=0;
 	}
+
 }
 
 //initializes modes that aren't read from flash ram
@@ -128,7 +135,6 @@ void init_modes(void)
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
 }
-
 
 
 void init_LowPassCoefs(void)
@@ -169,8 +175,8 @@ void init_LowPassCoefs(void)
 	RAWCV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
 
-	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 40;
-	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 40;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 20;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 20;
 
 	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
@@ -217,7 +223,7 @@ void init_LowPassCoefs(void)
 	for (i=0;i<NUM_POT_ADCS;i++)
 	{
 		smoothed_potadc[i]		=0;
-		old_i_smoothed_potadc[i]=0;
+		bracketed_potadc[i]=0;
 		i_smoothed_potadc[i]	=0x7FFF;
 		pot_delta[i]			=0;
 	}
@@ -225,11 +231,29 @@ void init_LowPassCoefs(void)
 	{
 		smoothed_cvadc[i]		=0;
 		smoothed_rawcvadc[i]	=0;
-		old_i_smoothed_cvadc[i]	=0;
+		bracketed_cvadc[i]	=0;
 		i_smoothed_cvadc[i]		=0x7FFF;
 		i_smoothed_rawcvadc[i]	=0x7FFF;
 		cv_delta[i]				=0;
 	}
+	smoothed_cvadc[0] = 2048;
+	smoothed_cvadc[1] = 2048;
+	for (i=0;i<PITCH_DELAY_BUFFER_SZ;i++)
+	{
+		delayed_pitch_cvadc_buffer[0][i]=2048;
+		delayed_pitch_cvadc_buffer[1][i]=2048;
+	}
+
+	del_cv_i[0]=0;
+	del_cv_i[1]=0;
+
+}
+
+void reset_cv_lowpassfilter(uint8_t cv_num)
+{
+	smoothed_cvadc[cv_num] = (float)(cvadc_buffer[cv_num] + system_calibrations->cv_calibration_offset[cv_num]);
+	i_smoothed_cvadc[cv_num] = smoothed_cvadc[cv_num];
+	bracketed_cvadc[cv_num] = smoothed_cvadc[cv_num];
 }
 
 
@@ -237,6 +261,8 @@ void process_adc(void)
 {
 	uint8_t i;
 	int32_t t;
+	int32_t old_val, new_val;
+	uint8_t chan;
 
 	static uint32_t track_moving_pot[NUM_POT_ADCS]={0,0,0,0,0,0,0,0,0};
 
@@ -250,7 +276,7 @@ void process_adc(void)
 		smoothed_potadc[i] = LowPassSmoothingFilter(smoothed_potadc[i], (float)potadc_buffer[i], POT_LPF_COEF[i]);
 		i_smoothed_potadc[i] = (int16_t)smoothed_potadc[i];
 
-		t=i_smoothed_potadc[i] - old_i_smoothed_potadc[i];
+		t=i_smoothed_potadc[i] - bracketed_potadc[i];
 		if ((t>MIN_POT_ADC_CHANGE[i]) || (t<-MIN_POT_ADC_CHANGE[i]))
 			track_moving_pot[i]=250;
 
@@ -259,14 +285,40 @@ void process_adc(void)
 			track_moving_pot[i]--;
 			flag_pot_changed[i]=1;
 			pot_delta[i] = t;
-			old_i_smoothed_potadc[i] = i_smoothed_potadc[i];
+			bracketed_potadc[i] = i_smoothed_potadc[i];
 		}
 	}
 
 
 	for (i=0;i<NUM_CV_ADCS;i++)
 	{
-		smoothed_cvadc[i] = LowPassSmoothingFilter(smoothed_cvadc[i], (float)(cvadc_buffer[i]+system_calibrations->cv_calibration_offset[i]), CV_LPF_COEF[i]);
+		if (i==PITCH_CV*2 || i==PITCH_CV*2+1)
+		{
+			chan = i&1;
+
+			//Pull out the oldest value (before overwriting it):
+			old_val = delayed_pitch_cvadc_buffer[chan][del_cv_i[chan]];
+
+			//Put in the new cv value (overwrite oldest value):
+			new_val 											= cvadc_buffer[i] + system_calibrations->cv_calibration_offset[i];
+			delayed_pitch_cvadc_buffer[chan][del_cv_i[chan]] 	= new_val;
+
+			//Increment the index, wrapping around the whole buffer
+			if (++del_cv_i[chan] >= PITCH_DELAY_BUFFER_SZ) del_cv_i[chan]=0;
+
+			//Calculate the arithmetic average (FIR LPF)
+			smoothed_cvadc[i] = (float)((smoothed_cvadc[i] * PITCH_DELAY_BUFFER_SZ) - old_val + new_val) / (float)PITCH_DELAY_BUFFER_SZ;
+
+			//smoothed_cvadc[i] = LowPassSmoothingFilter(smoothed_cvadc[i], (float)(old_val), CV_LPF_COEF[i]);
+
+		}
+		else
+		{
+			new_val = cvadc_buffer[i] + system_calibrations->cv_calibration_offset[i];
+
+			smoothed_cvadc[i] = LowPassSmoothingFilter(smoothed_cvadc[i], (float)(new_val), CV_LPF_COEF[i]);
+		}
+
 		i_smoothed_cvadc[i] = (int16_t)smoothed_cvadc[i];
 		if (i_smoothed_cvadc[i] < 0) i_smoothed_cvadc[i] = 0;
 		if (i_smoothed_cvadc[i] > 4095) i_smoothed_cvadc[i] = 4095;
@@ -279,12 +331,13 @@ void process_adc(void)
 			if (i_smoothed_rawcvadc[i] > 4095) i_smoothed_rawcvadc[i] = 4095;
 		}
 
-		t=i_smoothed_cvadc[i] - old_i_smoothed_cvadc[i];
+		t=i_smoothed_cvadc[i] - bracketed_cvadc[i];
 		if ((t>MIN_CV_ADC_CHANGE[i]) || (t<-MIN_CV_ADC_CHANGE[i]))
 		{
 			cv_delta[i] = t;
-			old_i_smoothed_cvadc[i] = i_smoothed_cvadc[i];
-		}
+			bracketed_cvadc[i] = i_smoothed_cvadc[i];
+			if (i==SAMPLE_CV*2) DEBUG1_ON;
+		} else if (i==SAMPLE_CV*2) DEBUG1_OFF;
 	}
 
 }
@@ -366,12 +419,12 @@ void update_params(void)
 		//
 		if (flag_pot_changed[SAMPLE_POT*2+1])
 		{
-			if (old_i_smoothed_potadc[SAMPLE_POT*2+1] < 2020) 
-				t_f = (old_i_smoothed_potadc[SAMPLE_POT*2+1] / 2244.44f) + 0.1; //0.1 to 1.0
-			else if (old_i_smoothed_potadc[SAMPLE_POT*2+1] < 2080)
+			if (bracketed_potadc[SAMPLE_POT*2+1] < 2020) 
+				t_f = (bracketed_potadc[SAMPLE_POT*2+1] / 2244.44f) + 0.1; //0.1 to 1.0
+			else if (bracketed_potadc[SAMPLE_POT*2+1] < 2080)
 				t_f = 1.0;
 			else
-				t_f	= (old_i_smoothed_potadc[SAMPLE_POT*2+1] - 1577.5) / 503.5f; //1.0 to 5.0
+				t_f	= (bracketed_potadc[SAMPLE_POT*2+1] - 1577.5) / 503.5f; //1.0 to 5.0
 			set_sample_gain(&samples[banknum][samplenum], t_f);
 		}
 
@@ -383,13 +436,8 @@ void update_params(void)
 		if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 		if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
-		//if ((old_i_smoothed_cvadc[PITCH_CV*2+0] < 2038) || (old_i_smoothed_cvadc[PITCH_CV*2+0] > 2058)) //positive voltage on 1V/oct jack
-		//{
-			f_param[0][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+0]];
-		//}
-		//else
-		//	f_param[0][PITCH] = pitch_pot_cv[t_pitch_potadc];
 
+		f_param[0][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[bracketed_cvadc[PITCH_CV*2+0]];
 		if (f_param[0][PITCH] > MAX_RS)
 			f_param[0][PITCH] = MAX_RS;
 
@@ -397,7 +445,7 @@ void update_params(void)
 		// SAMPLE POT + CV
 		//
 		old_val = i_param[0][SAMPLE];
-		new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+0] + old_i_smoothed_cvadc[SAMPLE_CV*2+0] );
+		new_val = detent_num( bracketed_potadc[SAMPLE_POT*2+0] + bracketed_cvadc[SAMPLE_CV*2+0] );
 
 		if (old_val != new_val)
 		{
@@ -420,7 +468,7 @@ void update_params(void)
 			// LENGTH POT + CV
 			//
 
-			f_param[chan][LENGTH] 	= (old_i_smoothed_potadc[LENGTH_POT*2+chan] + old_i_smoothed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
+			f_param[chan][LENGTH] 	= (bracketed_potadc[LENGTH_POT*2+chan] + bracketed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
 
 			if (f_param[chan][LENGTH] > 0.990)		f_param[chan][LENGTH] = 1.0;
 			if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
@@ -430,7 +478,7 @@ void update_params(void)
 			// START POT + CV
 			//
 
-			f_param[chan][START] 	= (old_i_smoothed_potadc[START_POT*2+chan] + old_i_smoothed_cvadc[START_CV*2+chan]) / 4096.0;
+			f_param[chan][START] 	= (bracketed_potadc[START_POT*2+chan] + bracketed_cvadc[START_CV*2+chan]) / 4096.0;
 
 			if (f_param[chan][START] > 0.99)		f_param[chan][START] = 1.0;
 			if (f_param[chan][START] <= 0.0003)		f_param[chan][START] = 0.0;
@@ -443,12 +491,16 @@ void update_params(void)
 			if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 			if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
-			if(flags[latch1voctcv1+chan]){f_param[chan][PITCH] = voct_latch_value[chan];} 
-			else{
-				f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[old_i_smoothed_cvadc[PITCH_CV*2+chan]];
+			if(flags[latch1voctcv1+chan])
+			{
+				f_param[chan][PITCH] = voct_latch_value[chan];
+				if (chan==0)DEBUG0_ON;
+			} 
+			else{if (chan==0)DEBUG0_OFF; 
+				f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[bracketed_cvadc[PITCH_CV*2+chan]];
 				if (f_param[chan][PITCH] > MAX_RS)
 				   {f_param[chan][PITCH] = MAX_RS;}
-				voct_latch_value[chan] = f_param[chan][PITCH];
+				
 			}
 
 
@@ -469,7 +521,7 @@ void update_params(void)
 					t_this_bkc 	= &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
 					t_other_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + 1-knob];
 
-					new_val = detent_num(old_i_smoothed_potadc[SAMPLE_POT*2 + knob]);
+					new_val = detent_num(bracketed_potadc[SAMPLE_POT*2 + knob]);
 
 					//If the combo is active, then use the Sample pot to update the Hover value
 					//(which becomes the Bank param when we release the button)
@@ -540,7 +592,7 @@ void update_params(void)
 				else
 					old_val = i_param[chan][SAMPLE];
 
-				new_val = detent_num( old_i_smoothed_potadc[SAMPLE_POT*2+chan] + old_i_smoothed_cvadc[SAMPLE_CV*2+chan] );
+				new_val = detent_num( bracketed_potadc[SAMPLE_POT*2+chan] + bracketed_cvadc[SAMPLE_CV*2+chan] );
 
 				if (old_val != new_val)
 				{
@@ -692,7 +744,9 @@ void process_mode_flags(void)
 				start_playing(0);
 				flags[Play1Trig]	= 0;
 				flags[latch1voctcv1] = 0;
+				DEBUG3_OFF;
 			}
+			
 		}
 
 		if (flags[Play2Trig])

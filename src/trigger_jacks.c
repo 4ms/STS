@@ -9,10 +9,13 @@
 #include "globals.h"
 #include "dig_pins.h"
 #include "trigger_jacks.h"
+#include "params.h"
 
 enum TriggerStates 			jack_state[NUM_TRIG_JACKS];
 extern uint8_t 				flags[NUM_FLAGS];
 extern uint32_t 			play_trig_timestamp[2];
+
+extern float				voct_latch_value[2];
 
 volatile uint32_t 			sys_tmr;
 
@@ -26,6 +29,7 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 
 
 	if (TIM_GetITStatus(TrigJack_TIM, TIM_IT_Update) != RESET) {
+		DEBUG2_ON;
 
 		for (i=0;i<NUM_TRIG_JACKS;i++)
 		{
@@ -58,14 +62,19 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 
 				switch (i)
 				{
-					case TrigJack_Play1:
-						flags[Play1Trig]=1;
-						play_trig_timestamp[0]=sys_tmr;
+					case TrigJack_Play1: //we detect a trigger 2.38ms - 2.64ms after voltage appears on the jack
+						DEBUG3_ON;
+						//reset_cv_lowpassfilter(PITCH_CV*2);
+						flags[Play1Trig]		= 1;
+						play_trig_timestamp[0]	= sys_tmr;
+						//voct_latch_value[0] 	= f_param[0][PITCH];
 						break;
 					
 					case TrigJack_Play2:
-						flags[Play2Trig]=1;
-						play_trig_timestamp[1]=sys_tmr;
+						//reset_cv_lowpassfilter(PITCH_CV*2+1);
+						flags[Play2Trig]		= 1;
+						play_trig_timestamp[1]	= sys_tmr;
+						//voct_latch_value[1] 	= f_param[1][PITCH];
 						break;
 
 					case TrigJack_Rec:
@@ -88,7 +97,7 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 
 		// Clear TIM update interrupt
 		TIM_ClearITPendingBit(TrigJack_TIM, TIM_IT_Update);
-
+DEBUG2_OFF;
 	}
 }
 

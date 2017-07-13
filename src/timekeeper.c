@@ -214,13 +214,13 @@ void init_TrigJackDebounce_IRQ(void)
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
 
 	nvic.NVIC_IRQChannel = TIM5_IRQn;
-	nvic.NVIC_IRQChannelPreemptionPriority = 3;
-	nvic.NVIC_IRQChannelSubPriority = 1;
+	nvic.NVIC_IRQChannelPreemptionPriority = 0;
+	nvic.NVIC_IRQChannelSubPriority = 0;
 	nvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&nvic);
 
 	TIM_TimeBaseStructInit(&tim);
-	//30000 --> 2.8kHz
+	//30000 --> 2.8kHz 0.36ms
 	tim.TIM_Period = 30000;
 	tim.TIM_Prescaler = 0;
 	tim.TIM_ClockDivision = 0;
