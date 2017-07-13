@@ -97,7 +97,7 @@ uint32_t pitch_lpf_i[NUM_PLAY_CHAN];
 int32_t delayed_pitch_cvadc_buffer[NUM_PLAY_CHAN][PITCH_DELAY_BUFFER_SZ];
 uint32_t del_cv_i[NUM_PLAY_CHAN];
 
-#define PLAY_TRIG_LATCH_PITCH_TIME 512 
+#define PLAY_TRIG_LATCH_PITCH_TIME 768 
 
 #define PLAY_TRIG_DELAY 1024 
 // delay in sec = # / 44100Hz
