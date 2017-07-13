@@ -104,7 +104,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				*dst++ = t_i32;
 				//DEBUG:
 				// *dst++ = f_param[0][START] * 4000;
-				// *dst++ = 0;
+				*dst++ = 0;
 			}
 		}
 

@@ -377,6 +377,9 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		// Remove /n from buffer
 		read_buffer[str_len(read_buffer)-1]=0;
 
+		// Check if it's the end of the file
+		if (str_cmp(read_buffer, EOF_TAG))	break;
+
 		// tokenize at space if we're not trying to read_name 
 		// ... which is both [reading name] and [reading play  data] cases
 		if((read_name<1) && (arm_data==0)) str_tok(read_buffer,' ', token);
