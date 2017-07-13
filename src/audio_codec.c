@@ -9,6 +9,7 @@ extern SystemCalibrations *system_calibrations;
 extern uint8_t SAMPLINGBYTES;
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
+extern volatile float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 
 //extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
 //extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
@@ -101,7 +102,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				t_i32 = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
 				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 				*dst++ = t_i32;
-				*dst++ = 0;
+				//DEBUG:
+				// *dst++ = f_param[0][START] * 4000;
+				// *dst++ = 0;
 			}
 		}
 

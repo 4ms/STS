@@ -19,8 +19,8 @@ enum ButtonStates button_state[NUM_BUTTONS];
 extern uint8_t flags[NUM_FLAGS];
 extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
-extern int16_t old_i_smoothed_potadc[NUM_POT_ADCS];
-extern int16_t old_i_smoothed_cvadc[NUM_CV_ADCS];
+extern int16_t bracketed_potadc[NUM_POT_ADCS];
+extern int16_t bracketed_cvadc[NUM_CV_ADCS];
 
 extern enum g_Errors g_error;
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
@@ -140,8 +140,8 @@ void Button_Debounce_IRQHandler(void)
 
 							//Store the pot values.
 							//We use this to determine if the pot has moved while the Bank button is down
-							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].latched_value = old_i_smoothed_potadc[SAMPLE_POT*2];
-							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].latched_value = old_i_smoothed_potadc[SAMPLE_POT*2 + 1];
+							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].latched_value = bracketed_potadc[SAMPLE_POT*2];
+							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].latched_value = bracketed_potadc[SAMPLE_POT*2 + 1];
 
 							//Reset the combo_state.
 							//We have to detect the knob as moving to make the combo ACTIVE
@@ -155,7 +155,7 @@ void Button_Debounce_IRQHandler(void)
 						case RecBank:
 							//Store the pot values.
 							//We use this to determine if the pot has moved while the Bank button is down
-							g_button_knob_combo[bkc_RecBank][bkc_RecSample].latched_value = old_i_smoothed_potadc[RECSAMPLE_POT];
+							g_button_knob_combo[bkc_RecBank][bkc_RecSample].latched_value = bracketed_potadc[RECSAMPLE_POT];
 
 							//Reset the combo_state.
 							//We have to detect the knob as moving to make the combo ACTIVE
@@ -201,7 +201,7 @@ void Button_Debounce_IRQHandler(void)
 									{
 										//Latch the pot+CV value
 										//This allows us to keep using this value until either the pot or CV changes
-										t_bkc->latched_value = old_i_smoothed_potadc[SAMPLE_POT*2 + knob] + old_i_smoothed_cvadc[SAMPLE_CV*2 + knob];
+										t_bkc->latched_value = bracketed_potadc[SAMPLE_POT*2 + knob] + bracketed_cvadc[SAMPLE_CV*2 + knob];
 
 										//Change our combo state to latched
 										t_bkc->combo_state = COMBO_LATCHED;

@@ -9,10 +9,17 @@
 #include "globals.h"
 #include "dig_pins.h"
 #include "trigger_jacks.h"
+#include "params.h"
+#include "adc.h"
+#include "sampler.h"
 
 enum TriggerStates 			jack_state[NUM_TRIG_JACKS];
 extern uint8_t 				flags[NUM_FLAGS];
 extern uint32_t 			play_trig_timestamp[2];
+
+extern uint32_t				voct_latch_value[2];
+extern int16_t				prepared_cvadc[NUM_CV_ADCS];
+enum PlayStates 			play_state[NUM_PLAY_CHAN];
 
 volatile uint32_t 			sys_tmr;
 
@@ -26,6 +33,7 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 
 
 	if (TIM_GetITStatus(TrigJack_TIM, TIM_IT_Update) != RESET) {
+		
 
 		for (i=0;i<NUM_TRIG_JACKS;i++)
 		{
@@ -52,22 +60,29 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 			else				t=0xe001;
 
 			State[i]=(State[i]<<1) | t;
-			if (State[i]==0xff00) //1111 1111 0000 0000 = not pressed for 8 cycles , then pressed for 8 cycles
+			if (State[i]==0xfffe) //1111 1111 1111 1110 = low for 15 cycles, then high for 1 cycle
 			{
 				jack_state[i] = TrigJack_DOWN;
 
 				switch (i)
 				{
-					case TrigJack_Play1:
-						flags[Play1Trig]=1;
-						play_trig_timestamp[0]=sys_tmr;
+					case TrigJack_Play1: //we detect a trigger within 0.338ms after voltage appears on the jack
+						DEBUG3_ON;
+						if (play_state[0] == PLAYING) 
+							play_state[0] = PLAY_FADEDOWN;
+						voct_latch_value[0]		= prepared_cvadc[0];
+						flags[Play1Trig]		= 1;
+						play_trig_timestamp[0]	= sys_tmr;
 						break;
 					
-					// FixMe(H) shouldn't this have sys_tmr too - or actually its own timer?	
 					case TrigJack_Play2:
-						flags[Play2Trig]=1;
-						play_trig_timestamp[1]=sys_tmr;
+						if (play_state[1] == PLAYING) 
+							play_state[1] = PLAY_FADEDOWN;
+						voct_latch_value[1]		= prepared_cvadc[1];
+						flags[Play2Trig]		= 1;
+						play_trig_timestamp[1]	= sys_tmr;
 						break;
+
 					case TrigJack_Rec:
 						flags[RecTrig]=1;
 						break;
@@ -85,10 +100,10 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 				jack_state[i] = TrigJack_UP;
 			}
 		}
+		process_pitch_adc(); 
 
 		// Clear TIM update interrupt
 		TIM_ClearITPendingBit(TrigJack_TIM, TIM_IT_Update);
-
 	}
 }
 

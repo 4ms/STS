@@ -88,6 +88,7 @@ enum GlobalModes
 	NUM_GLOBAL_MODES
 };
 
+void reset_cv_lowpassfilter(uint8_t cv_num);
 
 
 static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef)
@@ -99,6 +100,7 @@ float LowPassSmoothingFilter(float current_value, float new_value, float coef);
 
 void update_params(void);
 void process_adc(void);
+void process_pitch_adc(void);
 
 void process_mode_flags(void);
 

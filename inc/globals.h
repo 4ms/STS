@@ -17,6 +17,7 @@
 #define codec_BUFF_LEN 2048 /*2048 bytes per DMA transfer*/
 #define HT16_BUFF_LEN (codec_BUFF_LEN>>2) /* 1024 bytes/half-transfer @ 16 bits/sample = 512 samples per half-transfer*/
 #define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) /* 512 samples/half-transfer = 256 samples per channel per half-transfer */
+//256 blocks/interrupt @ 44100Hz = interrupt runs every 5.8ms
 
 #define BASE_SAMPLE_RATE 44100
 
