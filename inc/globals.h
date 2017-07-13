@@ -82,8 +82,10 @@ enum Flags {
 	UndoSampleExists,
 	LoadBackupIndex,
 	LoadIndex,
-	latch1voctcv1, //50
-	latch1voctcv2, 
+	LatchVoltOctCV1, //50
+	LatchVoltOctCV2, 
+	Play1TrigDelaying,
+	Play2TrigDelaying,
 
 	NUM_FLAGS
 };

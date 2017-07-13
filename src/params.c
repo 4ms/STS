@@ -570,7 +570,7 @@ void update_params(void)
 			if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 			if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
-			if(flags[latch1voctcv1+chan])
+			if(flags[LatchVoltOctCV1+chan])
 				f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[voct_latch_value[chan]];
 
 			else
@@ -811,32 +811,48 @@ void process_mode_flags(void)
 			toggle_playing(1);
 		}
 
-		if (flags[Play1Trig])
+		if (flags[Play1TrigDelaying])
 		{
 			if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_LATCH_PITCH_TIME)
-				flags[latch1voctcv1] = 0;
+				flags[LatchVoltOctCV1] = 0;
 			else
-				flags[latch1voctcv1] = 1;
+				flags[LatchVoltOctCV1] = 1;
 
 			if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_DELAY) 
 			{
-				start_playing(0);
-				flags[Play1Trig]	= 0;
-				flags[latch1voctcv1] = 0;
+				flags[Play1Trig] 			= 1;
+				flags[Play1TrigDelaying]	= 0;
+				flags[LatchVoltOctCV1] 		= 0;		
 				DEBUG3_OFF;
 			}
-			
+		}
+		if (flags[Play1Trig])
+		{
+			start_playing(0);
+			flags[Play1Trig]	= 0;
 		}
 
-		if (flags[Play2Trig])
+
+
+		if (flags[Play2TrigDelaying])
 		{
-			flags[latch1voctcv2] = 1;
+			if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_LATCH_PITCH_TIME)
+				flags[LatchVoltOctCV2] = 0;
+			else
+				flags[LatchVoltOctCV2] = 1;
+
 			if ((sys_tmr - play_trig_timestamp[1]) > PLAY_TRIG_DELAY)
 			{
-				start_playing(1);
-				flags[Play2Trig]	= 0;
-				flags[latch1voctcv2] = 0;
+				flags[Play2Trig] 			= 1;
+				flags[Play2TrigDelaying]	= 0;
+				flags[LatchVoltOctCV2]		= 0;
 			}
+		}
+		if (flags[Play2Trig])
+		{
+			start_playing(1);
+			flags[Play2Trig]	 = 0;
+			flags[LatchVoltOctCV2] = 0;		
 		}
 
 		if (flags[RecTrig]==1)

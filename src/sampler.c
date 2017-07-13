@@ -254,7 +254,7 @@ void toggle_reverse(uint8_t chan)
 		}
 	}
 	// Swap sample_file_curpos with cache_high or _low
-	// and move ->in to the equivilant address in play_buff
+	// and move ->in to the equivalant address in play_buff
 	// This gets us ready to read new data to the opposite end of the cache.
 
 	if (i_param[chan][REV])
@@ -1048,7 +1048,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				end_out_ctr[chan] = (length>0.05)? 35 : ((length * 540) + 8);
 				play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+10);
 
-				if (play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING])
+				//Start playing again if we're looking, or re-triggered
+				//Unless we faded down because of a play trigger
+				if ((play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING]) && !flags[Play1TrigDelaying+chan])
 					flags[Play1But+chan] = 1;
 
 				//else

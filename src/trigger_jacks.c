@@ -70,17 +70,19 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 						DEBUG3_ON;
 						if (play_state[0] == PLAYING) 
 							play_state[0] = PLAY_FADEDOWN;
-						voct_latch_value[0]		= prepared_cvadc[0];
-						flags[Play1Trig]		= 1;
-						play_trig_timestamp[0]	= sys_tmr;
+
+						voct_latch_value[0]			= prepared_cvadc[0];
+						flags[Play1TrigDelaying]	= 1;
+						play_trig_timestamp[0]		= sys_tmr;
 						break;
 					
 					case TrigJack_Play2:
 						if (play_state[1] == PLAYING) 
 							play_state[1] = PLAY_FADEDOWN;
-						voct_latch_value[1]		= prepared_cvadc[1];
-						flags[Play2Trig]		= 1;
-						play_trig_timestamp[1]	= sys_tmr;
+
+						voct_latch_value[1]			= prepared_cvadc[1];
+						flags[Play2TrigDelaying]	= 1;
+						play_trig_timestamp[1]		= sys_tmr;
 						break;
 
 					case TrigJack_Rec:
