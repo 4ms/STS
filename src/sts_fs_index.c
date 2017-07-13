@@ -374,11 +374,11 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		// Read next line
 		f_gets(read_buffer, _MAX_LFN+1, &temp_file);
 
-		// Remove /n from buffer
-		read_buffer[str_len(read_buffer)-1]=0;
-
 		// Check if it's the end of the file
 		if (str_cmp(read_buffer, EOF_TAG))	break;
+
+		// Remove /n from buffer
+		read_buffer[str_len(read_buffer)-1]=0;
 
 		// tokenize at space if we're not trying to read_name 
 		// ... which is both [reading name] and [reading play  data] cases
