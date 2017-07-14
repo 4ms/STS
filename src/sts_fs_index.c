@@ -9,6 +9,7 @@
 #include "sts_fs_index.h"
 #include "sts_filesystem.h"
 #include "bank.h"
+#include "res/LED_palette.h"
 
 
 Sample 						samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
@@ -144,12 +145,12 @@ uint8_t index_write_wrapper(void){
 	uint8_t	html_res;
 
 	// WRITE INDEX FILE (buttons are red)
-	flags[RewriteIndex]=2;
+	flags[RewriteIndex]=RED;
 	res = write_sampleindex_file();
 	if (res!=FR_OK) return(1);
 
 	// WRITE SAMPLE LIST HTML FILE (buttons are orange)
-	flags[RewriteIndex]=3;
+	flags[RewriteIndex]=ORANGE;
 	html_res = write_samplelist();
 	return (html_res);
 }

@@ -11,6 +11,7 @@
 #include "adc.h"
 #include "system_settings.h"
 #include "sampler.h"
+#include "res/LED_palette.h"
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
@@ -386,7 +387,7 @@ void Button_Debounce_IRQHandler(void)
 										if (global_mode[EDIT_MODE])
 										{
 											check_enabled_banks();
-											flags[RewriteIndex] = 1;
+											flags[RewriteIndex] = WHITE;
 											flags[SkipProcessButtons]	= 2;
 										}
 										else if (button_state[Rev1] == UP)

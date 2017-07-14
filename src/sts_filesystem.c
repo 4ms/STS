@@ -1,3 +1,17 @@
+/*
+ * sts_filesystem.c
+ *
+ * Startup procedure: All button LEDs turn colors to indicate present operation:
+ * Load index file: WHITE
+ * Look for missing files and new folders: YELLOW
+ * --Or: No index found, create all new banks from folders: BLUE
+ * Write index file: RED
+ * Write html file: ORANGE
+ * Done: OFF
+ * 
+ * 
+ */
+
 #include "globals.h"
 #include "params.h"
 #include "dig_pins.h"
@@ -10,6 +24,7 @@
 #include "bank.h"
 #include "sts_fs_index.h"
 #include "sts_fs_renaming_queue.h"
+#include "res/LED_palette.h"
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 //extern char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
@@ -643,7 +658,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 	uint8_t res_bak;
 
 	//Load the index file: (buttons are white)
-	flags[RewriteIndex]=1;
+	flags[RewriteIndex]=WHITE;
 
 	//Load the index file, marking files found or not found with samples[][].file_found = 1/0;
 	if (!force_reload)
@@ -656,7 +671,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 	if (!force_reload) //sampleindex file was ok
 	{	
 		//Look for new folders and missing files: (buttons are yellow)
-		flags[RewriteIndex]=4;
+		flags[RewriteIndex]=YELLOW;
 
 		// Update the list of banks that are enabled
 		// Banks with no file_found will be disabled (but filenames will be preserved, for use in load_missing_files)
@@ -676,7 +691,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 	{
 
 		// Ignore index and create new banks from disk: (buttons are blue)
-		flags[RewriteIndex]=7;
+		flags[RewriteIndex]=BLUE;
 
 		//initialize the renaming queue
 		queue_valid = clear_renaming_queue();
@@ -695,11 +710,14 @@ uint8_t load_all_banks(uint8_t force_reload)
 			process_renaming_queue();
 	}
 
-	// Write index file: (buttons are red for index file, then orange for html file)
 
 	// Write samples struct to index
 	// ... so sample info gets updated with latest .wave header content
-	res = index_write_wrapper();
+	// Buttons are red for index file, then orange for html file
+
+	flags[RewriteIndex]=RED; 
+
+	res = index_write_wrapper(); //the wrapper sets flags[RewriteIndex] to ORANGE during html file write
 
 	// Done re-indexing (buttons are normal)
 	flags[RewriteIndex]=0;
