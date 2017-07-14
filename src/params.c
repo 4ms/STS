@@ -529,7 +529,7 @@ void update_params(void)
 			if (f_param[chan][LENGTH] > 0.990)		f_param[chan][LENGTH] = 1.0;
 
 			// These value seem to work better as they prevent noise in short segments, due to PLAYING_PERC's envelope
-			if (f_param[chan][LENGTH] <= 0.02)	f_param[chan][LENGTH] = 0.02;
+			if (f_param[chan][LENGTH] <= 0.01)	f_param[chan][LENGTH] = 0.01;
 			//if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
 
 

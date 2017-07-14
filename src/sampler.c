@@ -453,20 +453,21 @@ void toggle_playing(uint8_t chan)
 		start_playing(chan);
 	}
 
+	//Stop it if we're playing a full sample
+	else if (play_state[chan]==PLAYING && f_param[chan][LENGTH] > 0.98)
+	{
+		play_state[chan]=PLAY_FADEDOWN;
+		play_led_state[chan]=0;
+	}
+
 	//Re-start if we have a short length
-	else if (play_state[chan]==PLAYING_PERC || (play_state[chan]==PLAYING && f_param[chan][LENGTH] <= 0.98))
+	else if (play_state[chan]==PLAYING_PERC || play_state[chan]==PLAYING)
 	{
 		play_state[chan]=RETRIG_FADEDOWN;
 		play_led_state[chan]=0;
 
 	}
 
-	//Stop it if we're playing a full sample
-	else if (play_state[chan]==PLAYING/* && f_param[chan][LENGTH] > 0.98*/)
-	{
-		play_state[chan]=PLAY_FADEDOWN;
-		play_led_state[chan]=0;
-	}
 
 }
 
@@ -514,7 +515,7 @@ uint32_t calc_play_length(float knob_pos, Sample *sample)
 
 	// FixMe: Add plateau at the end of knob range to account for brackets and guarantee that 0% and 100% are achievable
 
-	// knob > 98%	:  env = play lenght x100% 
+	// knob > 98%	:  env = play length x100% 
 	// plateau accounts for bracketing error at end of knob course
 	if (knob_pos > 0.98){env_len = play_len;}																			// 100% >= knob >0.98  env: 100%
 
@@ -525,12 +526,12 @@ uint32_t calc_play_length(float knob_pos, Sample *sample)
 	// 95% >= knob > 50%
 	else if (knob_pos>0.50) 
 	{
-		if (play_len > (5 * seconds) ) 																					// if play lenght > 5s
+		if (play_len > (5 * seconds) ) 																					// if play length > 5s
 		{
 			if (knob_pos>0.85){ env_len = 4.5 * seconds + ((knob_pos-0.85) * 8) * (play_len - 4.5 * seconds); } 			// 95% >= knob > 85%  env: 80%  to 5.5s
 			else{env_len = (11.43 * knob_pos - 5.215) * seconds;} 															// 85% >= knob > 50%  env: 4.5s to 0.5s
 		}
-																														// if play lenght < 5s
+																														// if play length < 5s
 		else																											
 			{env_len = 0.5 * seconds + (knob_pos * 1.7778 - 0.8889) * (play_len - 0.5 * seconds); } 						// 95% >= knob > 50%  env: 80% to 0.5s		
 	}
@@ -541,7 +542,7 @@ uint32_t calc_play_length(float knob_pos, Sample *sample)
 	// // 2% >= knob
 	// else{env_len = 0.95 * knob_pos + 0.001;}																			// 2% >= knob >=0	env: 0.02s to 0.001s
 
-	// Return envelope lenght
+	// Return envelope length
 	return(env_len);
 }
 
@@ -1141,27 +1142,12 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 							if (play_buff_bufferedamt[chan] <= resampled_buffer_size)
 							{
 
-								//This gives a false end of file sometimes, if the ->in pointer is misplaced
-								//
-								//if (is_buffered_to_file_end[chan])
-								//	play_state[chan] = PLAY_FADEDOWN; //hit end of file
+								//buffer underrun: tried to read too much out. Try to recover!
+								g_error |= READ_BUFF1_OVERRUN<<chan;
+								check_errors();
 
-								//else//buffer underrun: tried to read too much out. Try to recover!
-								//{
-									g_error |= READ_BUFF1_OVERRUN<<chan;
-									check_errors();
-
-									play_state[chan] = PREBUFFERING;
-									//is_buffered_to_file_end[chan] = 0;
-
-									//play_buff[chan]->out = play_buff[chan]->in;
-
-									//if (i_param[chan][REV]) resampled_buffer_size *= 4;
-
-									//CB_offset_out_address(play_buff[chan], resampled_buffer_size, !i_param[chan][REV]);
-									//play_buff[chan]->out = play_buff[chan]->min + align_addr((play_buff[chan]->out - play_buff[chan]->min), s_sample->blockAlign);
-
-								//}
+								play_state[chan] = PREBUFFERING;
+				
 							}
 
 						}
@@ -1172,7 +1158,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 			 	 	break;
 
 			 case (PLAYING_PERC):
-		//		decay_inc[chan] += 1.0f/((length)*2621440.0f);
 				decay_inc[chan] = 1.0f/((length)*20000.0f);
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
@@ -1183,10 +1168,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					if (decay_amp_i[chan] < 0.0f) 		decay_amp_i[chan] = 0.0f;
 					else if (decay_amp_i[chan] > 1.0f) 	decay_amp_i[chan] = 1.0f;
 
-					if (length>0.02){ //fixme: not efficient to have an if inside the for-loop! All we want to do is use decay_amp_i as a duration counter, but not apply an envelope if we have a very short length
-						outL[i] = ((float)outL[i]) * decay_amp_i[chan];
-						outR[i] = ((float)outR[i]) * decay_amp_i[chan];
-					}
+					outL[i] = ((float)outL[i]) * decay_amp_i[chan];
+					outR[i] = ((float)outR[i]) * decay_amp_i[chan];
 
 					t_i32 = (float)outL[i] * gain;
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
@@ -1201,6 +1184,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				{
 					decay_amp_i[chan] = 0.0f;
 
+					//Flicker the Play LED and flag the End Out jack for emitting a pulse
+					//The PW is fixed unless the length is very short, in which case the PW is a percentage of the period
 					end_out_ctr[chan] = (length>0.05)? 35 : ((length * 540) + 8);
 					play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+10);
 					play_led_state[chan] = 0;
@@ -1210,8 +1195,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 					else
 					{
-						if (/*play_state[chan]==RETRIG_FADEDOWN ||*/ i_param[chan][LOOPING])
-							flags[Play1But+chan] = 1;
+						//Restart loop
+						if (i_param[chan][LOOPING])
+							flags[Play1Trig+chan] = 1;
 
 						play_state[chan] = SILENT;
 					}
