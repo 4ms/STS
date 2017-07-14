@@ -102,7 +102,9 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 				jack_state[i] = TrigJack_UP;
 			}
 		}
-		process_pitch_adc(); 
+		DEBUG2_ON;
+		process_cv_adc(); 
+		DEBUG2_OFF;
 
 		// Clear TIM update interrupt
 		TIM_ClearITPendingBit(TrigJack_TIM, TIM_IT_Update);

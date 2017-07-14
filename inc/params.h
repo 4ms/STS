@@ -99,8 +99,8 @@ float LowPassSmoothingFilter(float current_value, float new_value, float coef);
 
 
 void update_params(void);
-void process_adc(void);
-void process_pitch_adc(void);
+void process_cv_adc(void);
+void process_pot_adc(void);
 
 void process_mode_flags(void);
 

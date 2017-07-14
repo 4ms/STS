@@ -60,13 +60,29 @@ volatile uint32_t 			sys_tmr;
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
+float POT_LPF_COEF[NUM_POT_ADCS];
+//float CV_LPF_COEF[NUM_CV_ADCS];
+
+float RAWCV_LPF_COEF[NUM_CV_ADCS];
+
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
 
 
-float POT_LPF_COEF[NUM_POT_ADCS];
-float CV_LPF_COEF[NUM_CV_ADCS];
-float RAWCV_LPF_COEF[NUM_CV_ADCS];
+//20 gives about 10ms slew
+//40 gives about 18ms slew
+//100 gives about 40ms slew
+#define MAX_FIR_LPF_SIZE 40
+const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
+		40,40, //PITCH
+		20,20, //START
+		20,20, //LENGTH
+		10,10 //SAMPLE
+};
+
+int32_t fir_lpf[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
+uint32_t fir_lpf_i[NUM_CV_ADCS];
+
 
 // Latched 1voct values
 uint32_t voct_latch_value[2];
@@ -83,22 +99,15 @@ int16_t i_smoothed_cvadc[NUM_CV_ADCS];
 int16_t bracketed_cvadc[NUM_CV_ADCS];
 int16_t bracketed_potadc[NUM_POT_ADCS];
 
+
 int16_t prepared_cvadc[NUM_CV_ADCS];
 
-//20 gives about 10ms slew
-//40 gives about 18ms slew
-//100 gives about 40ms slew
-#define PITCH_LPF_SZ 40
-int32_t pitch_lpf[NUM_PLAY_CHAN][PITCH_LPF_SZ];
-uint32_t pitch_lpf_i[NUM_PLAY_CHAN];
 
-
-#define PITCH_DELAY_BUFFER_SZ 1
-int32_t delayed_pitch_cvadc_buffer[NUM_PLAY_CHAN][PITCH_DELAY_BUFFER_SZ];
-uint32_t del_cv_i[NUM_PLAY_CHAN];
+// #define PITCH_DELAY_BUFFER_SZ 1
+// int32_t delayed_pitch_cvadc_buffer[NUM_PLAY_CHAN][PITCH_DELAY_BUFFER_SZ];
+// uint32_t del_cv_i[NUM_PLAY_CHAN];
 
 #define PLAY_TRIG_LATCH_PITCH_TIME 768 
-
 #define PLAY_TRIG_DELAY 1024 
 // delay in sec = # / 44100Hz
 // There is an additional delay before audio starts, 5.8ms - 11.6ms due to the codec needing to be pre-loaded
@@ -138,6 +147,14 @@ void init_params(void)
 		flags[i]=0;
 	}
 
+	// for (i=0;i<PITCH_DELAY_BUFFER_SZ;i++)
+	// {
+	// 	delayed_pitch_cvadc_buffer[0][i]=2048;
+	// 	delayed_pitch_cvadc_buffer[1][i]=2048;
+	// }
+	// del_cv_i[0]=0;
+	// del_cv_i[1]=0;
+
 }
 
 //initializes modes that aren't read from flash ram
@@ -157,23 +174,23 @@ void init_LowPassCoefs(void)
 	float t;
 	uint8_t i;
 
-	t=15.0; //LPF for Pitch CV
+	// t=15.0; //LPF for Pitch CV
 
-	CV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
-	CV_LPF_COEF[PITCH_CV*2+1] = 1.0-(1.0/t);
+	// CV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
+	// CV_LPF_COEF[PITCH_CV*2+1] = 1.0-(1.0/t);
 
-	t=50.0;
+	// t=50.0;
 
-	CV_LPF_COEF[START_CV*2] = 1.0-(1.0/t);
-	CV_LPF_COEF[START_CV*2+1] = 1.0-(1.0/t);
+	// CV_LPF_COEF[START_CV*2] = 1.0-(1.0/t);
+	// CV_LPF_COEF[START_CV*2+1] = 1.0-(1.0/t);
 
-	CV_LPF_COEF[LENGTH_CV*2] = 1.0-(1.0/t);
-	CV_LPF_COEF[LENGTH_CV*2+1] = 1.0-(1.0/t);
+	// CV_LPF_COEF[LENGTH_CV*2] = 1.0-(1.0/t);
+	// CV_LPF_COEF[LENGTH_CV*2+1] = 1.0-(1.0/t);
 
-	t=1.0; //No LPF for Sample CV
+	// t=1.0; //No LPF for Sample CV
 
-	CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
-	CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
+	// CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
+	// CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
 	t=300.0;
 
@@ -234,7 +251,6 @@ void init_LowPassCoefs(void)
 
 	MIN_POT_ADC_CHANGE[RECSAMPLE_POT] = 60;
 
-
 	for (i=0;i<NUM_POT_ADCS;i++)
 	{
 		smoothed_potadc[i]		=0;
@@ -252,110 +268,105 @@ void init_LowPassCoefs(void)
 		cv_delta[i]				=0;
 	}
 
-	for (i=0;i<PITCH_DELAY_BUFFER_SZ;i++)
-	{
-		delayed_pitch_cvadc_buffer[0][i]=2048;
-		delayed_pitch_cvadc_buffer[1][i]=2048;
-	}
-	del_cv_i[0]=0;
-	del_cv_i[1]=0;
 
+	//initialize FIR LPF
 
-	smoothed_cvadc[0] = 2048;
-	smoothed_cvadc[1] = 2048;
-	for (i=0;i<PITCH_LPF_SZ;i++)
+	for (i=0;i<MAX_FIR_LPF_SIZE;i++)
 	{
-		pitch_lpf[0][i]=2048;
-		pitch_lpf[1][i]=2048;
+		//PITCH CVs default to value of 2048
+		fir_lpf[0][i]=2048;
+		fir_lpf[1][i]=2048;
+
+		//Other CVs default to 0
+		fir_lpf[2][i]=0;
+		fir_lpf[3][i]=0;
+		fir_lpf[4][i]=0;
+		fir_lpf[5][i]=0;
+		fir_lpf[6][i]=0;
+		fir_lpf[7][i]=0;
+
 	}
-	pitch_lpf_i[0]=0;
-	pitch_lpf_i[1]=0;
+	for(i=0;i<NUM_CV_ADCS;i++)
+	{
+		fir_lpf_i[i]=0;
+		smoothed_cvadc[i] = fir_lpf[i][0];
+	}
 
 }
 
-void reset_cv_lowpassfilter(uint8_t cv_num)
-{
-	smoothed_cvadc[cv_num] = (float)(cvadc_buffer[cv_num] + system_calibrations->cv_calibration_offset[cv_num]);
-	i_smoothed_cvadc[cv_num] = smoothed_cvadc[cv_num];
-	bracketed_cvadc[cv_num] = smoothed_cvadc[cv_num];
-}
 
-void process_pitch_adc(void)
+void process_cv_adc(void)
 {//takes about 3.4us to run, at -O0
 
 	uint8_t i;
 	int32_t old_val, new_val;
 	int32_t t;
 
+	//Do PITCH CVs first
 	//This function assumes:
 	//Channel 1's pitch cv = PITCH_CV*2   = 0
 	//Channel 2's pitch cv = PITCH_CV*2+1 = 1
-
-
-	for (i=0;i<NUM_PLAY_CHAN;i++)
+	for (i=0;i<NUM_CV_ADCS;i++)
 	{
 		//Apply Linear average LPF:
 
 		//Pull out the oldest value (before overwriting it):
-		old_val = pitch_lpf[i][pitch_lpf_i[i]];
+		old_val = fir_lpf[i][fir_lpf_i[i]];
 
 		//Put in the new cv value (overwrite oldest value):
 		new_val 					= cvadc_buffer[i] + system_calibrations->cv_calibration_offset[i];
-		pitch_lpf[i][pitch_lpf_i[i]] 	= new_val;
+		fir_lpf[i][fir_lpf_i[i]] 	= new_val;
 
 		//Increment the index, wrapping around the whole buffer
-		if (++pitch_lpf_i[i] >= PITCH_LPF_SZ) pitch_lpf_i[i]=0;
+		if (++fir_lpf_i[i] >= FIR_LPF_SIZE[i]) fir_lpf_i[i]=0;
 
 		//Calculate the arithmetic average (FIR LPF)
-		smoothed_cvadc[i] = (float)((smoothed_cvadc[i] * PITCH_LPF_SZ) - old_val + new_val) / (float)PITCH_LPF_SZ;
+		smoothed_cvadc[i] = (float)((smoothed_cvadc[i] * FIR_LPF_SIZE[i]) - old_val + new_val) / (float)FIR_LPF_SIZE[i];
 
+		//Range check and convert to integer
 		i_smoothed_cvadc[i] = (int16_t)smoothed_cvadc[i];
 		if (i_smoothed_cvadc[i] < 0) i_smoothed_cvadc[i] = 0;
 		if (i_smoothed_cvadc[i] > 4095) i_smoothed_cvadc[i] = 4095;
 
-
-		//Apply bracketing, comparing the latest LPF'ed value with the most recent value we put into the delayed_ buffer
+		//Apply bracketing
 		t=i_smoothed_cvadc[i] - bracketed_cvadc[i];
-
-//37 - 24 = 13 > 12
-//37 - 12 = 25
-//24==>25
 		if (t>MIN_CV_ADC_CHANGE[i])
 		{
 			cv_delta[i] = t;
-			//bracketed_cvadc[i] = i_smoothed_cvadc[i] - (MIN_CV_ADC_CHANGE[i]/2);
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] - (MIN_CV_ADC_CHANGE[i]);
 		}
-//11 - 24 = -13  < -12
-//11 + 12 = 23
-//24==>23
+
 		else if (t<-MIN_CV_ADC_CHANGE[i])
 		{
 			cv_delta[i] = t;
-		//	bracketed_cvadc[i] = i_smoothed_cvadc[i] + (MIN_CV_ADC_CHANGE[i]/2);
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] + (MIN_CV_ADC_CHANGE[i]);
 		}
 
-		// if ((t>MIN_CV_ADC_CHANGE[i]) || (t<-MIN_CV_ADC_CHANGE[i]))
-		// {
-		// 	cv_delta[i] = t;
-		// 	bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
-		// }
+		//Store the useful value in prepared_cvadc (ToDo: just use bracketed_cvadc!)
+		prepared_cvadc[i] = bracketed_cvadc[i];
 
+		//Calculate the Calibration CV's (super well smoothed) if needed
+		if (global_mode[CALIBRATE])
+		{
+			smoothed_rawcvadc[i] = LowPassSmoothingFilter(smoothed_rawcvadc[i], (float)(cvadc_buffer[i]), RAWCV_LPF_COEF[i]);
+			i_smoothed_rawcvadc[i] = (int16_t)smoothed_rawcvadc[i];
+			if (i_smoothed_rawcvadc[i] < 0) i_smoothed_rawcvadc[i] = 0;
+			if (i_smoothed_rawcvadc[i] > 4095) i_smoothed_rawcvadc[i] = 4095;
+		}
+
+		//Not using a delay buffer
 		//Set the final usable value to the oldest element in the delayed_ buffer
-		prepared_cvadc[i] = delayed_pitch_cvadc_buffer[i][del_cv_i[i]];
+		// prepared_cvadc[i] = delayed_pitch_cvadc_buffer[i][del_cv_i[i]];
 
-		//Overwrite the oldest value with the newest value
-		delayed_pitch_cvadc_buffer[i][del_cv_i[i]] = bracketed_cvadc[i];
+		// //Overwrite the oldest value with the newest value
+		// delayed_pitch_cvadc_buffer[i][del_cv_i[i]] = bracketed_cvadc[i];
 
-		//Increment the index, wrapping around the whole buffer
-		if (++del_cv_i[i] >= PITCH_DELAY_BUFFER_SZ) del_cv_i[i]=0;
-
-
+		// //Increment the index, wrapping around the whole buffer
+		// if (++del_cv_i[i] >= PITCH_DELAY_BUFFER_SZ) del_cv_i[i]=0;
 	}
 }
 
-void process_adc(void)
+void process_pot_adc(void)
 {
 	uint8_t i;
 	int32_t t;
@@ -385,40 +396,6 @@ void process_adc(void)
 			bracketed_potadc[i] = i_smoothed_potadc[i];
 		}
 	}
-
-
-	for (i=START_CV*2;i<NUM_CV_ADCS;i++) //skip the PITCH pots
-	{
-		// if (i==PITCH_CV*2 || i==PITCH_CV*2+1)
-		// {
-		// }
-		// else
-		// {
-			new_val = cvadc_buffer[i] + system_calibrations->cv_calibration_offset[i];
-
-			smoothed_cvadc[i] = LowPassSmoothingFilter(smoothed_cvadc[i], (float)(new_val), CV_LPF_COEF[i]);
-		// }
-
-		i_smoothed_cvadc[i] = (int16_t)smoothed_cvadc[i];
-		if (i_smoothed_cvadc[i] < 0) i_smoothed_cvadc[i] = 0;
-		if (i_smoothed_cvadc[i] > 4095) i_smoothed_cvadc[i] = 4095;
-
-		if (global_mode[CALIBRATE])
-		{
-			smoothed_rawcvadc[i] = LowPassSmoothingFilter(smoothed_rawcvadc[i], (float)(cvadc_buffer[i]), RAWCV_LPF_COEF[i]);
-			i_smoothed_rawcvadc[i] = (int16_t)smoothed_rawcvadc[i];
-			if (i_smoothed_rawcvadc[i] < 0) i_smoothed_rawcvadc[i] = 0;
-			if (i_smoothed_rawcvadc[i] > 4095) i_smoothed_rawcvadc[i] = 4095;
-		}
-
-		t=i_smoothed_cvadc[i] - bracketed_cvadc[i];
-		if ((t>MIN_CV_ADC_CHANGE[i]) || (t<-MIN_CV_ADC_CHANGE[i]))
-		{
-			cv_delta[i] = t;
-			bracketed_cvadc[i] = i_smoothed_cvadc[i];
-		}
-	}
-
 }
 
 
@@ -948,7 +925,7 @@ void adc_param_update_IRQHandler(void)
 	if (TIM_GetITStatus(TIM9, TIM_IT_Update) != RESET) {
 
 
-		process_adc();
+		process_pot_adc();
 
 		if (global_mode[CALIBRATE])
 		{
