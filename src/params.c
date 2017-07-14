@@ -2,9 +2,8 @@
  * params.c
  *
  *  Created on: Mar 27, 2015
- *      Author: design
+ *      Author: Dan Green danngreen1@gmail.com
  */
-
 
 #include "globals.h"
 #include "adc.h"
@@ -22,6 +21,12 @@
 #include "calibration.h"
 #include "bank.h"
 #include "button_knob_combo.h"
+
+#define PLAY_TRIG_LATCH_PITCH_TIME 256 
+#define PLAY_TRIG_DELAY 384
+// delay in sec = # / 44100Hz
+// There is an additional delay before audio starts, 5.8ms - 11.6ms due to the codec needing to be pre-loaded
+
 
 extern float pitch_pot_cv[4096];
 const float voltoct[4096];
@@ -72,9 +77,9 @@ int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
 //20 gives about 10ms slew
 //40 gives about 18ms slew
 //100 gives about 40ms slew
-#define MAX_FIR_LPF_SIZE 40
+#define MAX_FIR_LPF_SIZE 80
 const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
-		40,40, //PITCH
+		80,80, //PITCH
 		20,20, //START
 		20,20, //LENGTH
 		10,10 //SAMPLE
@@ -107,10 +112,6 @@ int16_t prepared_cvadc[NUM_CV_ADCS];
 // int32_t delayed_pitch_cvadc_buffer[NUM_PLAY_CHAN][PITCH_DELAY_BUFFER_SZ];
 // uint32_t del_cv_i[NUM_PLAY_CHAN];
 
-#define PLAY_TRIG_LATCH_PITCH_TIME 768 
-#define PLAY_TRIG_DELAY 1024 
-// delay in sec = # / 44100Hz
-// There is an additional delay before audio starts, 5.8ms - 11.6ms due to the codec needing to be pre-loaded
 
 
 //LPF of raw ADC values for calibration
@@ -133,7 +134,7 @@ void init_params(void)
 		f_param[chan][START] 	= 0.0;
 		f_param[chan][LENGTH] 	= 1.0;
 
-		i_param[chan][BANK] 		= 0;
+		i_param[chan][BANK] 	= 0;
 		i_param[chan][SAMPLE] 	= 0;
 		i_param[chan][REV] 		= 0;
 		i_param[chan][LOOPING]	 =0;
@@ -173,24 +174,6 @@ void init_LowPassCoefs(void)
 {
 	float t;
 	uint8_t i;
-
-	// t=15.0; //LPF for Pitch CV
-
-	// CV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
-	// CV_LPF_COEF[PITCH_CV*2+1] = 1.0-(1.0/t);
-
-	// t=50.0;
-
-	// CV_LPF_COEF[START_CV*2] = 1.0-(1.0/t);
-	// CV_LPF_COEF[START_CV*2+1] = 1.0-(1.0/t);
-
-	// CV_LPF_COEF[LENGTH_CV*2] = 1.0-(1.0/t);
-	// CV_LPF_COEF[LENGTH_CV*2+1] = 1.0-(1.0/t);
-
-	// t=1.0; //No LPF for Sample CV
-
-	// CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
-	// CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
 	t=300.0;
 
@@ -296,7 +279,7 @@ void init_LowPassCoefs(void)
 
 
 void process_cv_adc(void)
-{//takes about 3.4us to run, at -O0
+{//takes about 7us to run, at -O3
 
 	uint8_t i;
 	int32_t old_val, new_val;
@@ -334,12 +317,18 @@ void process_cv_adc(void)
 		{
 			cv_delta[i] = t;
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] - (MIN_CV_ADC_CHANGE[i]);
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i] - (MIN_CV_ADC_CHANGE[i]/2);
+			//bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
 		}
 
 		else if (t<-MIN_CV_ADC_CHANGE[i])
 		{
 			cv_delta[i] = t;
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] + (MIN_CV_ADC_CHANGE[i]);
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i] + (MIN_CV_ADC_CHANGE[i]/2);
+			//bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
 		}
 
 		//Store the useful value in prepared_cvadc (ToDo: just use bracketed_cvadc!)

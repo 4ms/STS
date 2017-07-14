@@ -155,9 +155,9 @@ void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 
 	/* ADC Common Init ------------------------------------------------------*/
 	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
-	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div8;
+	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div2;
 	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
-	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_20Cycles;
+	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
 	ADC_CommonInit(&ADC_CommonInitStructure);
 
 	/* ADC3 Init ------------------------------------------------------------*/
@@ -183,14 +183,14 @@ void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	GPIO_Init(GPIOF, &GPIO_InitStructure);
 
 	/* ADC3 regular channel configuration -----------------------------------*/
-	ADC_RegularChannelConfig(ADC3, ADC_Channel_4, PITCH1_CV+1, ADC_SampleTime_144Cycles); //PF6
-	ADC_RegularChannelConfig(ADC3, ADC_Channel_5, PITCH2_CV+1, ADC_SampleTime_144Cycles); //PF7
-	ADC_RegularChannelConfig(ADC3, ADC_Channel_8, START1_CV+1, ADC_SampleTime_144Cycles); //PF10
-	ADC_RegularChannelConfig(ADC3, ADC_Channel_0, START2_CV+1, ADC_SampleTime_144Cycles); //PA0
-	ADC_RegularChannelConfig(ADC3, ADC_Channel_6, LENGTH1_CV+1, ADC_SampleTime_144Cycles); //PF8
-	ADC_RegularChannelConfig(ADC3, ADC_Channel_7, LENGTH2_CV+1, ADC_SampleTime_144Cycles); //PF9
-	ADC_RegularChannelConfig(ADC3, ADC_Channel_1, SAMPLE1_CV+1, ADC_SampleTime_144Cycles); //PA1
-	ADC_RegularChannelConfig(ADC3, ADC_Channel_2, SAMPLE2_CV+1, ADC_SampleTime_144Cycles); //PA2
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_4, PITCH1_CV+1, ADC_SampleTime_3Cycles); //PF6
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_5, PITCH2_CV+1, ADC_SampleTime_3Cycles); //PF7
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_8, START1_CV+1, ADC_SampleTime_3Cycles); //PF10
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_0, START2_CV+1, ADC_SampleTime_3Cycles); //PA0
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_6, LENGTH1_CV+1, ADC_SampleTime_3Cycles); //PF8
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_7, LENGTH2_CV+1, ADC_SampleTime_3Cycles); //PF9
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_1, SAMPLE1_CV+1, ADC_SampleTime_3Cycles); //PA1
+	ADC_RegularChannelConfig(ADC3, ADC_Channel_2, SAMPLE2_CV+1, ADC_SampleTime_3Cycles); //PA2
 
 
 	//DMA_ITConfig(DMA2_Stream0, DMA_IT_TC, ENABLE);

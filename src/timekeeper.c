@@ -221,7 +221,7 @@ void init_TrigJackDebounce_IRQ(void)
 
 	TIM_TimeBaseStructInit(&tim);
 	//30000 --> 2.8kHz 0.36ms
-	tim.TIM_Period = 30000;
+	tim.TIM_Period = 7500;
 	tim.TIM_Prescaler = 0;
 	tim.TIM_ClockDivision = 0;
 	tim.TIM_CounterMode = TIM_CounterMode_Up;
