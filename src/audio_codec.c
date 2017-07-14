@@ -102,8 +102,8 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				t_i32 = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
 				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 				//DEBUG:
-				*dst++ = f_param[0][PITCH] * 4000;
-				//*dst++ = t_i32;
+				//*dst++ = f_param[0][PITCH] * 4000;
+				*dst++ = t_i32;
 
 				*dst++ = 0;
 			}
