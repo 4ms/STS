@@ -363,6 +363,19 @@ void Button_Debounce_IRQHandler(void)
 								switch (i)
 								{
 
+									case Rev1:
+										if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
+										{
+											//Go to previous assignment bank
+											flags[FindNextSampleToAssign] = 2;
+
+											//Disable the Rev1 button from doing anything until it's released
+											button_state[Rev1] = UP;
+
+											//Make the prev-bank action repeat at faster rate
+											long_press[Rev1] = MED_PRESS_REPEAT;
+										}
+										break;
 
 									default:
 										break;
@@ -405,14 +418,14 @@ void Button_Debounce_IRQHandler(void)
 											flags[ToggleLooping2] = 1;
 										break;
 
-									case Rev1:
-										if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
-										{
-											//Previous assignment bank
-											flags[FindNextSampleToAssign] = 2;
-											flags[SkipProcessButtons]	= 2;
-										}
-										break;
+									// case Rev1:
+									// 	if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
+									// 	{
+									// 		//Previous assignment bank
+									// 		flags[FindNextSampleToAssign] = 2;
+									// 		flags[SkipProcessButtons]	= 2;
+									// 	}
+									// 	break;
 
 									default:
 										break;

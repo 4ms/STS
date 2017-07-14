@@ -81,6 +81,7 @@ enum ButtonStates {
 	UP,
 	DOWN,
 	SHORT_PRESSED = 22050, /* 0.5sec */
+	MED_PRESS_REPEAT = 44100, /* 1.0 sec */
 	MED_PRESSED = 88200, /* 2.0sec */
 	LONG_PRESSED = 176400 /* 4sec */
 };
