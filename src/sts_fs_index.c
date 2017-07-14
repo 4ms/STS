@@ -9,6 +9,7 @@
 #include "sts_fs_index.h"
 #include "sts_filesystem.h"
 #include "bank.h"
+#include "res/LED_palette.h"
 
 
 Sample 						samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
@@ -144,12 +145,12 @@ uint8_t index_write_wrapper(void){
 	uint8_t	html_res;
 
 	// WRITE INDEX FILE (buttons are red)
-	flags[RewriteIndex]=2;
+	flags[RewriteIndex]=RED;
 	res = write_sampleindex_file();
 	if (res!=FR_OK) return(1);
 
 	// WRITE SAMPLE LIST HTML FILE (buttons are orange)
-	flags[RewriteIndex]=3;
+	flags[RewriteIndex]=ORANGE;
 	html_res = write_samplelist();
 	return (html_res);
 }
@@ -429,8 +430,10 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 				// save file name
 				str_cpy(file_name, token);
 
+				// move on to reading data only if file name is valid	
+				if (file_name[0]!='-') {read_name++;}
+
 				token[0] = '\0'; 
-				read_name++;
 			}
 
 			// Load .wav header data information and play data
@@ -460,9 +463,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 							// ToDo: Add bank number check here
 							// check requested bank number against what's already used and update accordingly
-
-							//ToDo: check this DragAndDrop code:
-
 
 							res = FR_INT_ERR; //not FR_OK
 
@@ -501,26 +501,28 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 								// close wav file
 								f_close(&temp_wav_file);
 
-								// if information couldn't load, clear filename and request index
-								// ... rewrite so entry is removed
+								// if information couldn't load, clear filename 
 								if (head_load!=FR_OK)
 								{
 									// write empty filename to samples struct element
 									// ... so this sample is skipped at the next index write
-									// ... Keep file_found==1 because the file was found, it just was corrupted
-									samples[cur_bank][cur_sample].filename[0]='\0';
+									// FixMe:?? Set file_found==1 because the file was found, it just was corrupted
+									// Or set it to 0?
+									// samples[cur_bank][cur_sample].filename[0]='\0';
 									samples[cur_bank][cur_sample].file_found = 0;
 									
 									// skip loading sample play information
 									arm_data=0; token[0] = '\0'; read_name = 1; break;						
 								}		
-
+								//FixMe: Should we have an 'else' here? Otherwise arm_data=1 after not loading a header
 								arm_data++; token[0] = '\0';
 							}
 
 							else if (res!=FR_OK) //file not found
 							{
-								str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use the file_name as written in index
+								// Copy the file name into the sample struct element
+								// This is used to find the missing file, or other files in its folder
+								str_cpy(samples[cur_bank][cur_sample].filename, full_path);
 
 								//Mark file as not found
 								samples[cur_bank][cur_sample].file_found = 0;
@@ -529,67 +531,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 								arm_data=0; token[0] = '\0'; read_name = 1; break;						
 
 							}
-							//End ToDo: DragAndDrop
-
-							// // open sample file
-							// fopen_flag = fopen_checked(&temp_wav_file, folder_path, file_name);
-
-							// // if file was opened
-							// if (fopen_flag<2)
-							// {
-							// 	// At least a sample was loaded
-							// 	force_reload = 0;
-
-							// 	// update samples structure with file path
-							// 	str_cpy(samples[cur_bank][cur_sample].filename, file_name);
-
-							// 	// if file was opened, but not from given path
-							// 	if (fopen_flag==1)
-							// 	{
-							// 		// request to rewrite index (from samples struct) 
-							// 		// ... at the end of index read
-							// 		// rewrite_index =1;
-							// 	}
-
-							// 	// load sample information from .wav header	
-							// 	head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
-								
-							// 	// if information couldn't load, clear filename and request index
-							// 	// ... rewrite so entry is removed
-							// 	if (head_load!=FR_OK)
-							// 	{
-							// 		// write empty filename to samples struct element
-							// 		// ... so this sample is skipped at the next index write
-							// 		samples[cur_bank][cur_sample].filename[0]='\0';
-
-							// 		// request to rewrite index (from samples struct) 
-							// 		// ... at the end of index read
-							// 		// rewrite_index =1;
-
-							// 		// skip loading sample play information
-							// 		arm_data=0; token[0] = '\0'; read_name = 1; break;						
-							// 	}								
-
-							// 	// close wav file
-							// 	f_close(&temp_wav_file);
-
-							// 	arm_data++; token[0] = '\0';
-							// }  
-
-							// // if file cannot be found on the SD card
-							// else if (fopen_flag==2)
-							// {
-							// 	// write empty filename to samples struct element
-							// 	// ... so this sample is skipped at the next index write
-							// 	samples[cur_bank][cur_sample].filename[0]='\0';
-
-							// 	// request to rewrite index (from samples struct) 
-							// 	// ... at the end of index read
-							// 	// rewrite_index =1;
-
-							// 	// skip loading sample play information
-							// 	arm_data=0; token[0] = '\0'; read_name = 1; break;						
-							// }
+						
 						}
 
 						// load sample play information from index file

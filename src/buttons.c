@@ -11,6 +11,7 @@
 #include "adc.h"
 #include "system_settings.h"
 #include "sampler.h"
+#include "res/LED_palette.h"
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
@@ -362,6 +363,19 @@ void Button_Debounce_IRQHandler(void)
 								switch (i)
 								{
 
+									case Rev1:
+										if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
+										{
+											//Go to previous assignment bank
+											flags[FindNextSampleToAssign] = 2;
+
+											//Disable the Rev1 button from doing anything until it's released
+											button_state[Rev1] = UP;
+
+											//Make the prev-bank action repeat at faster rate
+											long_press[Rev1] = MED_PRESS_REPEAT;
+										}
+										break;
 
 									default:
 										break;
@@ -386,7 +400,7 @@ void Button_Debounce_IRQHandler(void)
 										if (global_mode[EDIT_MODE])
 										{
 											check_enabled_banks();
-											flags[RewriteIndex] = 1;
+											flags[RewriteIndex] = WHITE;
 											flags[SkipProcessButtons]	= 2;
 										}
 										else if (button_state[Rev1] == UP)
@@ -404,14 +418,14 @@ void Button_Debounce_IRQHandler(void)
 											flags[ToggleLooping2] = 1;
 										break;
 
-									case Rev1:
-										if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
-										{
-											//Previous assignment bank
-											flags[FindNextSampleToAssign] = 2;
-											flags[SkipProcessButtons]	= 2;
-										}
-										break;
+									// case Rev1:
+									// 	if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
+									// 	{
+									// 		//Previous assignment bank
+									// 		flags[FindNextSampleToAssign] = 2;
+									// 		flags[SkipProcessButtons]	= 2;
+									// 	}
+									// 	break;
 
 									default:
 										break;

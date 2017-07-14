@@ -484,8 +484,7 @@ void exit_edit_mode(void)
 		if (cached_play_state)	flags[Play1Trig] = 1;
 		else if (play_state[0] == PREBUFFERING) 	play_state[0] = SILENT;
 		else if (play_state[0] != SILENT){
-			/*if (cached_looping)						play_state[0] = RETRIG_FADEDOWN;
-			else 									*/play_state[0] = PLAY_FADEDOWN;
+			play_state[0] = PLAY_FADEDOWN;
 		}
 	}
 }
