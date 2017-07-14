@@ -489,11 +489,11 @@ uint32_t calc_start_point(float start_param, Sample *sample)
 }
 
 
-uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos)
+uint32_t calc_stop_points(float knob_pos, Sample *sample, uint32_t startpos)
 {
 	uint32_t dist, fwd_stop_point;
 
-	dist = calc_play_length(length, sample);
+	dist = calc_play_length(knob_pos, sample);
 
 	fwd_stop_point = startpos + dist;
 	if (fwd_stop_point > sample->inst_end)
@@ -503,32 +503,46 @@ uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos)
 
 }
 
-uint32_t calc_play_length(float length, Sample *sample)
+uint32_t calc_play_length(float knob_pos, Sample *sample)
 {
-	uint32_t dist;
-	uint32_t inst_size;
+	uint32_t env_len;
+	uint32_t play_len;
+	uint32_t seconds;
 
-	inst_size = sample->inst_end - sample->inst_start; //as opposed to taking sample->inst_size because that won't be clipped to the end of a sample file
+	seconds  = sample->sampleRate * sample->blockAlign;
+	play_len = sample->inst_end - sample->inst_start; 	// as opposed to taking sample->play_len because that won't be clipped to the end of a sample file
 
-	if (length > 0.98)
-	 	dist = inst_size * (length-0.9) * 10; //80% to 100%
+	// FixMe: Add plateau at the end of knob range to account for brackets and guarantee that 0% and 100% are achievable
 
-	else 
-	if (length>=0.5) //>=0.5 to <0.95
+	// knob > 98%	:  env = play lenght x100% 
+	// plateau accounts for bracketing error at end of knob course
+	if (knob_pos > 0.98){env_len = play_len;}																			// 100% >= knob >0.98  env: 100%
+
+	// 98% >= knob > 95%
+	else if (knob_pos>0.95) {env_len = play_len * (6.67 * knob_pos - 5.5366);} 											// 98% >= knob > 55%  env: 100% to 80%
+
+
+	// 95% >= knob > 50%
+	else if (knob_pos>0.50) 
 	{
-		if (inst_size > (5 * sample->sampleRate * sample->blockAlign) ) //sample is > 5 seconds long
-			dist = (length - (0.5-0.25/8.0)) * 8.0 * sample->sampleRate  * sample->blockAlign; //0.25 .. 4.25 seconds
-		else
-			dist = (length - (0.5-0.25/8.0)) * 1.6 * inst_size; //sampletime/5.0 .. sampletime seconds
+		if (play_len > (5 * seconds) ) 																					// if play lenght > 5s
+		{
+			if (knob_pos>0.85){ env_len = 4.5 * seconds + ((knob_pos-0.85) * 8) * (play_len - 4.5 * seconds); } 			// 95% >= knob > 85%  env: 80%  to 5.5s
+			else{env_len = (11.43 * knob_pos - 5.215) * seconds;} 															// 85% >= knob > 50%  env: 4.5s to 0.5s
+		}
+																														// if play lenght < 5s
+		else																											
+			{env_len = 0.5 * seconds + (knob_pos * 1.7778 - 0.8889) * (play_len - 0.5 * seconds); } 						// 95% >= knob > 50%  env: 80% to 0.5s		
 	}
+	
+	// 50% >= knob 
+	else {env_len = knob_pos  * seconds;}																				// 50% >= knob > 2% env: 0.5s to 0s (as it was in this region)
 
-	else //length < 0.5
-	{
-		dist = sample->sampleRate * sample->blockAlign * length; //very small to 0.5 seconds
-	}
+	// // 2% >= knob
+	// else{env_len = 0.95 * knob_pos + 0.001;}																			// 2% >= knob >=0	env: 0.02s to 0.001s
 
-	return(dist);
-
+	// Return envelope lenght
+	return(env_len);
 }
 
 

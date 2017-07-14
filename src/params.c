@@ -527,7 +527,9 @@ void update_params(void)
 			f_param[chan][LENGTH] 	= (bracketed_potadc[LENGTH_POT*2+chan] + bracketed_cvadc[LENGTH_CV*2+chan]) / 4096.0;
 
 			if (f_param[chan][LENGTH] > 0.990)		f_param[chan][LENGTH] = 1.0;
-			if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
+			// FixMe (H) These value seem to work better as they prevent noise in short segments (maybe due to buffer size)
+			if (f_param[chan][LENGTH] <= 0.024414)	f_param[chan][LENGTH] = 0.024414;
+			// if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
 
 
 			//
