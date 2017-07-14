@@ -97,6 +97,7 @@ static inline float LowPassSmoothingFilter(float current_value, float new_value,
 }
 float LowPassSmoothingFilter(float current_value, float new_value, float coef);
 
+uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt);
 
 void update_params(void);
 void process_cv_adc(void);

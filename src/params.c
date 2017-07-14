@@ -16,7 +16,7 @@
 #include "equal_pow_pan_padded.h"
 #include "voltoct.h"
 #include "log_taper_padded.h"
-#include "pitch_pot_cv.h"
+#include "pitch_pot_lut.h"
 #include "edit_mode.h"
 #include "calibration.h"
 #include "bank.h"
@@ -28,7 +28,7 @@
 // There is an additional delay before audio starts, 5.8ms - 11.6ms due to the codec needing to be pre-loaded
 
 
-extern float pitch_pot_cv[4096];
+extern float pitch_pot_lut[4096];
 const float voltoct[4096];
 
 
@@ -190,8 +190,8 @@ void init_LowPassCoefs(void)
 	RAWCV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
 
-	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 20;
-	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 20;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 5;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 5;
 
 	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
@@ -387,8 +387,29 @@ void process_pot_adc(void)
 	}
 }
 
+//
+// Applies tracking comp for a bi-polar adc
+// Assumes 2048 is the center value
+//
+uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt)
+{
+	if (cv_adcval > 2048)
+	{
+		cv_adcval -= 2048;
+		cv_adcval = (float)cv_adcval * cal_amt;
+		cv_adcval += 2048;
+	}
+	else
+	{
+		cv_adcval = 2048 - cv_adcval;
+		cv_adcval = (float)cv_adcval * cal_amt;
+		cv_adcval = 2048 - cv_adcval;
 
-
+	}
+	if (cv_adcval > 4095) cv_adcval = 4095;
+	if (cv_adcval < 0) cv_adcval = 0;
+	return(cv_adcval);
+}
 
 void update_params(void)
 {
@@ -398,6 +419,7 @@ void update_params(void)
 	uint8_t new_val;
 	int32_t t_pitch_potadc;
 	float t_f;
+	uint32_t compensated_pitch_cv;
 
 	uint32_t trial_bank;
 	uint8_t samplenum, banknum;
@@ -405,6 +427,13 @@ void update_params(void)
 	ButtonKnobCombo *t_other_bkc; //pointer to another button/knob combo action (makes code more readable)
 
 	recording_enabled=1;
+	
+	//DEBUG:
+	// if (REV2BUT)
+	// 	system_calibrations->tracking_comp[0] = (f_param[1][PITCH] / 2.0) - (f_param[1][LENGTH]/50.0);
+
+	// system_calibrations->tracking_comp[1] = 1.0;
+
 
 	//
 	// Edit mode
@@ -477,12 +506,14 @@ void update_params(void)
 		// PITCH POT
 		//
 
-		t_pitch_potadc = i_smoothed_potadc[PITCH_POT*2+0] + system_calibrations->pitch_pot_detent_offset[0];
+		t_pitch_potadc = bracketed_potadc[PITCH_POT*2+0] + system_calibrations->pitch_pot_detent_offset[0];
 		if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 		if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
+		//Pitch CV:
+		compensated_pitch_cv = apply_tracking_compensation(prepared_cvadc[PITCH1_CV+0], system_calibrations->tracking_comp[0]);
 
-		f_param[0][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[prepared_cvadc[PITCH_CV*2+0]];
+		f_param[0][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 		if (f_param[0][PITCH] > MAX_RS)
 			f_param[0][PITCH] = MAX_RS;
 
@@ -532,15 +563,16 @@ void update_params(void)
 			// PITCH POT + CV
 			//
 
-			t_pitch_potadc = i_smoothed_potadc[PITCH_POT*2+chan] + system_calibrations->pitch_pot_detent_offset[chan];
+			t_pitch_potadc = bracketed_potadc[PITCH_POT*2+chan] + system_calibrations->pitch_pot_detent_offset[chan];
 			if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 			if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
-			if(flags[LatchVoltOctCV1+chan])
-				f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[voct_latch_value[chan]];
-
+			if(flags[LatchVoltOctCV1+chan]) 
+				compensated_pitch_cv = apply_tracking_compensation(voct_latch_value[chan], system_calibrations->tracking_comp[chan]);
 			else
-				f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[prepared_cvadc[PITCH_CV*2+chan]];
+				compensated_pitch_cv = apply_tracking_compensation(prepared_cvadc[PITCH1_CV+chan], system_calibrations->tracking_comp[chan]);
+
+			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 
 			if (f_param[chan][PITCH] > MAX_RS)
 			    f_param[chan][PITCH] = MAX_RS;

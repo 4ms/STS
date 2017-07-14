@@ -189,7 +189,7 @@ void read_all_system_calibrations_from_FLASH(void)
 		if (invalid_fw_version || staging_system_calibrations->codec_dac_calibration_dcoffset[i] > 4000 || staging_system_calibrations->codec_dac_calibration_dcoffset[i] < -4000)
 			staging_system_calibrations->codec_dac_calibration_dcoffset[i] = 0;
 	
-		if (invalid_fw_version || staging_system_calibrations->tracking_comp[i] > 1.25 || staging_system_calibrations->tracking_comp[i] < 0.75 || (*(uint32_t *)(&staging_system_calibrations->tracking_comp[i])==0xFFFFFFFF))
+		if (invalid_fw_version || staging_system_calibrations->tracking_comp[i] > 2.0 || staging_system_calibrations->tracking_comp[i] < 0.50 || (*(uint32_t *)(&staging_system_calibrations->tracking_comp[i])==0xFFFFFFFF))
 			staging_system_calibrations->tracking_comp[i] = 1.0;
 	}
 
