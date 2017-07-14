@@ -655,7 +655,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 {
 	FRESULT res;
 	FRESULT queue_valid;
-	uint8_t res_bak;
+	// uint8_t res_bak; // Unused variable
 
 	//Load the index file: (buttons are white)
 	flags[RewriteIndex]=WHITE;

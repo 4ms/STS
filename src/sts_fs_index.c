@@ -430,8 +430,10 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 				// save file name
 				str_cpy(file_name, token);
 
+				// move on to reading data only if file name is valid	
+				if (file_name[0]!='-') {read_name++;}
+
 				token[0] = '\0'; 
-				read_name++;
 			}
 
 			// Load .wav header data information and play data
@@ -506,7 +508,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 									// ... so this sample is skipped at the next index write
 									// FixMe:?? Set file_found==1 because the file was found, it just was corrupted
 									// Or set it to 0?
-									samples[cur_bank][cur_sample].filename[0]='\0';
+									// samples[cur_bank][cur_sample].filename[0]='\0';
 									samples[cur_bank][cur_sample].file_found = 0;
 									
 									// skip loading sample play information
