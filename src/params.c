@@ -488,7 +488,7 @@ void update_params(void)
 		// PITCH POT
 		//
 
-		t_pitch_potadc = i_smoothed_potadc[PITCH_POT*2+0] + system_calibrations->pitch_pot_detent_offset[0];
+		t_pitch_potadc = bracketed_potadc[PITCH_POT*2+0] + system_calibrations->pitch_pot_detent_offset[0];
 		if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 		if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
@@ -546,7 +546,7 @@ void update_params(void)
 			// PITCH POT + CV
 			//
 
-			t_pitch_potadc = i_smoothed_potadc[PITCH_POT*2+chan] + system_calibrations->pitch_pot_detent_offset[chan];
+			t_pitch_potadc = bracketed_potadc[PITCH_POT*2+chan] + system_calibrations->pitch_pot_detent_offset[chan];
 			if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 			if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
@@ -697,7 +697,7 @@ void update_params(void)
 
 		if (button_state[RecBank] >= DOWN)
 		{
-			new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+			new_val = detent_num(bracketed_potadc[RECSAMPLE_POT]);
 
 			// If the combo is not active,
 			// Activate it when we detect the knob was turned to a new detent
@@ -741,7 +741,7 @@ void update_params(void)
 		else
 		{
 			old_val = i_param[REC][SAMPLE];
-			new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+			new_val = detent_num(bracketed_potadc[RECSAMPLE_POT]);
 
 			if (old_val != new_val)
 			{
