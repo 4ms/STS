@@ -279,19 +279,22 @@ uint8_t check_sampleindex_valid(char *indexfilename)
 	str_cat(full_path, SYS_DIR_SLASH, SAMPLE_INDEX_FILE);
 	res = f_open(&temp_file, full_path, FA_READ);
 
-	if (res != FR_OK) 					{return 0;}							//file can't open
+	if (res != FR_OK) 						{return 0;}							//file can't open
 
 	//Verify it's a complete file, with EOF_TAG at the end
 	l = str_len(EOF_TAG);
 
 	res = f_lseek(&temp_file, f_size(&temp_file)-l);
-	if (res != FR_OK) 					{f_close(&temp_file); return 0;}	//can't seek to end: file/disk error
+	if (res != FR_OK) 						{f_close(&temp_file); return 0;}	//can't seek to end: file/disk error
 	
 	res = f_read(&temp_file, readdata, l, &br);
-	if (res != FR_OK) 					{f_close(&temp_file); return 0;}	//can't read from file: file/disk error
+	if (res != FR_OK) 						{f_close(&temp_file); return 0;}	//can't read from file: file/disk error
 
-	if (br!=l) 							{f_close(&temp_file); return 0;}	//didn't read proper number of bytes: disk/read error
-	if (!str_cmp(EOF_TAG, readdata)) 	{f_close(&temp_file); return 0;}	//no EOF_TAG found at end of file: index is incomplete
+	if (br!=l) 								{f_close(&temp_file); return 0;}	//didn't read proper number of bytes: disk/read error
+
+	//Truncate ending \n or \r
+	readdata[br-1] = '\0';
+	if (!str_startswith(EOF_TAG, readdata)) {f_close(&temp_file); return 0;}	//no EOF_TAG found at end of file: index is incomplete
 	
 	//Index file is ok
 	f_close(&temp_file);
@@ -489,17 +492,24 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 							if (res==FR_OK)//file found
 							{
-								str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use whatever file_name was opened
-								samples[cur_bank][cur_sample].file_found = 1;
+								//Sanity check: cur_bank and cur_sample must be in range, or we risk memory corruption
+								if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK)
+								{
+									str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use whatever file_name was opened
+									samples[cur_bank][cur_sample].file_found = 1;
 
-								// At least a sample was loaded
-								force_reload = 0;
+									// At least a sample was loaded
+									force_reload = 0;
 
-								// load sample information from .wav header	
-								head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
+									// load sample information from .wav header	
 
-								// close wav file
-								f_close(&temp_wav_file);
+									head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
+									// close wav file
+									f_close(&temp_wav_file);
+								}
+								else //exit if cur_bank and/or cur_sample are out of range
+									{f_close(&temp_wav_file); arm_data=0; token[0] = '\0'; read_name = 1; break;}
+
 
 								// if information couldn't load, clear filename 
 								if (head_load!=FR_OK)
@@ -509,7 +519,9 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 									// FixMe:?? Set file_found==1 because the file was found, it just was corrupted
 									// Or set it to 0?
 									// samples[cur_bank][cur_sample].filename[0]='\0';
-									samples[cur_bank][cur_sample].file_found = 0;
+
+									if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK)
+										samples[cur_bank][cur_sample].file_found = 0;
 									
 									// skip loading sample play information
 									arm_data=0; token[0] = '\0'; read_name = 1; break;						
@@ -522,10 +534,13 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 							{
 								// Copy the file name into the sample struct element
 								// This is used to find the missing file, or other files in its folder
-								str_cpy(samples[cur_bank][cur_sample].filename, full_path);
+								if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK)
+								{
+									str_cpy(samples[cur_bank][cur_sample].filename, full_path);
 
-								//Mark file as not found
-								samples[cur_bank][cur_sample].file_found = 0;
+									//Mark file as not found
+									samples[cur_bank][cur_sample].file_found = 0;
+								}
 
 								// skip loading sample play information
 								arm_data=0; token[0] = '\0'; read_name = 1; break;						

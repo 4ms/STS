@@ -105,6 +105,7 @@ void load_missing_files(void)
 {
 	uint8_t	bank, samplenum;
 	char 	path[_MAX_LFN+1];
+	char 	path_noslash[_MAX_LFN+1];
 	char	filename[_MAX_LFN+1];
 	char	fullpath[_MAX_LFN+1];
 	DIR		testdir;
@@ -129,11 +130,16 @@ void load_missing_files(void)
 
 				path_len = str_len(path);
 
+				//Create a copy of path that doesn't end in a slash
+				str_cpy(path_noslash, path);
+				if (path[path_len-1] == '/')
+					path_noslash[path_len-1]='\0';
+
 				//Look for any unused file in the original sample's folder
-				res = f_opendir(&testdir, path);
+				res = f_opendir(&testdir, path_noslash);
 				if (res==FR_OK)
 				{
-					while (1)
+					while (!samples[bank][samplenum].file_found)
 					{
 						//Find first .wav file in directory
 						res = find_next_ext_in_dir(&testdir, ".wav", filename);
@@ -837,6 +843,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 //		- 0: path is correct
 //		- 1: path was incorrect, and corrected
 //		- 2: path couldn't be corrected
+//Note: folderpath should be blank (root), or end in a '/'
 uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 {
 	DIR 		rootdir;
