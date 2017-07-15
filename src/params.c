@@ -720,7 +720,7 @@ void update_params(void)
 
 		if (button_state[RecBank] >= DOWN)
 		{
-			new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+			new_val = detent_num(bracketed_potadc[RECSAMPLE_POT]);
 
 			// If the combo is not active,
 			// Activate it when we detect the knob was turned to a new detent
@@ -764,7 +764,7 @@ void update_params(void)
 		else
 		{
 			old_val = i_param[REC][SAMPLE];
-			new_val = detent_num(i_smoothed_potadc[RECSAMPLE_POT]);
+			new_val = detent_num(bracketed_potadc[RECSAMPLE_POT]);
 
 			if (old_val != new_val)
 			{
