@@ -22,8 +22,38 @@
 #include "bank.h"
 #include "button_knob_combo.h"
 
-#define PLAY_TRIG_LATCH_PITCH_TIME 256 
-#define PLAY_TRIG_DELAY 384
+#if X_FAST_ADC == 1
+	#define PLAY_TRIG_LATCH_PITCH_TIME 256 
+	#define PLAY_TRIG_DELAY 384
+
+	#define MAX_FIR_LPF_SIZE 80
+	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
+			80,80, //PITCH
+			20,20, //START
+			20,20, //LENGTH
+			10,10 //SAMPLE
+	};
+#else
+	#define PLAY_TRIG_LATCH_PITCH_TIME 768 
+	#define PLAY_TRIG_DELAY 1024
+
+	#define MAX_FIR_LPF_SIZE 40
+	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
+			40,40, //PITCH
+			20,20, //START
+			20,20, //LENGTH
+			10,10 //SAMPLE
+	};
+#endif
+
+//20 gives about 10ms slew
+//40 gives about 18ms slew
+//100 gives about 40ms slew
+
+
+int32_t fir_lpf[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
+uint32_t fir_lpf_i[NUM_CV_ADCS];
+
 // delay in sec = # / 44100Hz
 // There is an additional delay before audio starts, 5.8ms - 11.6ms due to the codec needing to be pre-loaded
 
@@ -66,28 +96,11 @@ volatile uint32_t 			sys_tmr;
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 float POT_LPF_COEF[NUM_POT_ADCS];
-//float CV_LPF_COEF[NUM_CV_ADCS];
 
 float RAWCV_LPF_COEF[NUM_CV_ADCS];
 
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
-
-
-//20 gives about 10ms slew
-//40 gives about 18ms slew
-//100 gives about 40ms slew
-#define MAX_FIR_LPF_SIZE 80
-const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
-		80,80, //PITCH
-		20,20, //START
-		20,20, //LENGTH
-		10,10 //SAMPLE
-};
-
-int32_t fir_lpf[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
-uint32_t fir_lpf_i[NUM_CV_ADCS];
-
 
 // Latched 1voct values
 uint32_t voct_latch_value[2];
@@ -189,9 +202,13 @@ void init_LowPassCoefs(void)
 	RAWCV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
 	RAWCV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
-
+#if X_FAST_ADC == 1
 	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 5;
 	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 5;
+#else
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 20;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 20;
+#endif
 
 	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
