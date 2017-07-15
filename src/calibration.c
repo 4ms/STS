@@ -41,7 +41,7 @@ void set_default_calibration_values(void)
 	system_calibrations->codec_adc_calibration_dcoffset[1]=0;
 
 	system_calibrations->tracking_comp[0]=1.025;
-	system_calibrations->tracking_comp[1]=1.025;
+	system_calibrations->tracking_comp[1]=1.034;
 
 	system_calibrations->led_brightness = 4;
 
@@ -140,7 +140,7 @@ void update_calibration(void)
 	//>>> Find x, where y = voltoct[adc_high * x] / voltoct[adc_low * x], y = 2.000 (...or 1.999< y <2.001)
 
 	system_calibrations->tracking_comp[0]=1.025;
-	system_calibrations->tracking_comp[1]=1.025;
+	system_calibrations->tracking_comp[1]=1.034;
 
 
 	if (SAVE_CALIBRATE_BUTTONS)

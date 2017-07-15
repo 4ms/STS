@@ -13,24 +13,26 @@
 #include "sampler.h"
 #include "res/LED_palette.h"
 
-extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
+extern ButtonKnobCombo 		g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 
-enum ButtonStates button_state[NUM_BUTTONS];
-extern uint8_t flags[NUM_FLAGS];
-extern uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+enum ButtonStates 			button_state[NUM_BUTTONS];
+extern uint8_t 				flags[NUM_FLAGS];
+extern uint8_t 				i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
-extern int16_t bracketed_potadc[NUM_POT_ADCS];
-extern int16_t bracketed_cvadc[NUM_CV_ADCS];
+extern int16_t 				bracketed_potadc[NUM_POT_ADCS];
+extern int16_t 				bracketed_cvadc[NUM_CV_ADCS];
 
-extern enum g_Errors g_error;
-extern uint8_t	global_mode[NUM_GLOBAL_MODES];
+extern enum g_Errors 		g_error;
+extern uint8_t				global_mode[NUM_GLOBAL_MODES];
 
-extern volatile uint32_t sys_tmr;
+extern volatile uint32_t 	sys_tmr;
 
-extern uint8_t 	cur_assign_bank;
-extern uint8_t 	bank_status[MAX_NUM_BANKS];
-extern enum 			PlayStates play_state[NUM_PLAY_CHAN];
+extern uint8_t 				cur_assign_bank;
+extern uint8_t 				bank_status[MAX_NUM_BANKS];
+extern enum 				PlayStates play_state[NUM_PLAY_CHAN];
+
+extern SystemCalibrations 	*system_calibrations;
 
 void clear_errors(void)
 {
@@ -115,6 +117,9 @@ void Button_Debounce_IRQHandler(void)
 
 			State[i]=(State[i]<<1) | t;
 
+
+
+
 			//
 			// DOWN state (debounced)
 			//
@@ -151,16 +156,29 @@ void Button_Debounce_IRQHandler(void)
 						break;
 
 						case Rec:
-							break;
+							if (global_mode[EDIT_MODE])
+							{
+								if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
+								if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
+							}
+						break;
 
 						case RecBank:
-							//Store the pot values.
-							//We use this to determine if the pot has moved while the Bank button is down
-							g_button_knob_combo[bkc_RecBank][bkc_RecSample].latched_value = bracketed_potadc[RECSAMPLE_POT];
+							if (global_mode[EDIT_MODE])
+							{
+								if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
+								if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
+							}
+							else
+							{
+								//Store the pot values.
+								//We use this to determine if the pot has moved while the Bank button is down
+								g_button_knob_combo[bkc_RecBank][bkc_RecSample].latched_value = bracketed_potadc[RECSAMPLE_POT];
 
-							//Reset the combo_state.
-							//We have to detect the knob as moving to make the combo ACTIVE
-							g_button_knob_combo[bkc_RecBank][bkc_RecSample].combo_state = COMBO_INACTIVE;
+								//Reset the combo_state.
+								//We have to detect the knob as moving to make the combo ACTIVE
+								g_button_knob_combo[bkc_RecBank][bkc_RecSample].combo_state = COMBO_INACTIVE;
+							}
 						break;
 
 						case Rev1:
@@ -448,7 +466,6 @@ void Button_Debounce_IRQHandler(void)
 		//
 		// Multi-button presses
 		//
-
 
 			if (global_mode[EDIT_MODE])
 			{

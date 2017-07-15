@@ -331,6 +331,13 @@ void process_cv_adc(void)
 			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
 		}
 
+		//Additional bracketing for special-case of CV jack being near 0V
+		if (i==0 || i==1) //PITCH CV
+		{
+			if (bracketed_cvadc[i] > 2040 && bracketed_cvadc[i] < 2056)
+				bracketed_cvadc[i] = 2048;
+		}
+
 		//Store the useful value in prepared_cvadc (ToDo: just use bracketed_cvadc!)
 		prepared_cvadc[i] = bracketed_cvadc[i];
 
@@ -428,12 +435,6 @@ void update_params(void)
 
 	recording_enabled=1;
 	
-	//DEBUG:
-	// if (REV2BUT)
-	// 	system_calibrations->tracking_comp[0] = (f_param[1][PITCH] / 2.0) - (f_param[1][LENGTH]/50.0);
-
-	// system_calibrations->tracking_comp[1] = 1.0;
-
 
 	//
 	// Edit mode
@@ -579,6 +580,7 @@ void update_params(void)
 
 			if (f_param[chan][PITCH] > MAX_RS)
 			    f_param[chan][PITCH] = MAX_RS;
+
 
 			//
 			// SAMPLE POT + CV
