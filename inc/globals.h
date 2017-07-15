@@ -7,6 +7,10 @@
 #ifndef GLOBALS_H_
 #define GLOBALS_H_
 
+//Set this to 0 for slower ADC (classic)
+//Set to 1 for faster ADC (newer, less tested)
+#define X_FAST_ADC 1
+
 //codec_BUFF_LEN = Size (in samples) of the DMA rx/tx buffers:
 //Each channel = codec_BUFF_LEN/2 samples
 //We process the rx buffer when it's half-full and 100% full, so codec_BUFF_LEN/4 samples are processed at one time
@@ -14,10 +18,21 @@
 //=2048B codec_BUFF_LEN
 //=1024B each Half Transfer
 //=256 samples (32-bit samples from codec, even if in 16bit mode)
-#define codec_BUFF_LEN 2048 /*2048 bytes per DMA transfer*/
-#define HT16_BUFF_LEN (codec_BUFF_LEN>>2) /* 1024 bytes/half-transfer @ 16 bits/sample = 512 samples per half-transfer*/
-#define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) /* 512 samples/half-transfer = 256 samples per channel per half-transfer */
-//256 blocks/interrupt @ 44100Hz = interrupt runs every 5.8ms
+#if X_FAST_ADC == 1
+	#define codec_BUFF_LEN 1024 
+#else
+	#define codec_BUFF_LEN 2048
+#endif
+#define HT16_BUFF_LEN (codec_BUFF_LEN>>2)
+#define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) 
+
+/* @codec_BUFF_LEN2048:
+ * 2048 bytes per DMA transfer
+ * 1024 bytes/half-transfer @ 16 bits/sample = 512 samples per half-transfer
+ * 512 samples/half-transfer = 256 samples per channel per half-transfer
+
+ * 256/interrupt @ 44100Hz = interrupt runs every 5.8ms
+*/
 
 #define BASE_SAMPLE_RATE 44100
 

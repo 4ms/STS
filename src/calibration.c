@@ -40,8 +40,8 @@ void set_default_calibration_values(void)
 	system_calibrations->codec_adc_calibration_dcoffset[0]=0;
 	system_calibrations->codec_adc_calibration_dcoffset[1]=0;
 
-	system_calibrations->tracking_comp[0]=1.0;
-	system_calibrations->tracking_comp[1]=1.0;
+	system_calibrations->tracking_comp[0]=1.025;
+	system_calibrations->tracking_comp[1]=1.034;
 
 	system_calibrations->led_brightness = 4;
 
@@ -128,6 +128,20 @@ void update_calibration(void)
 	// 	system_calibrations->codec_adc_calibration_dcoffset[0]= -1*rx_buffer[0];
 	// 	system_calibrations->codec_adc_calibration_dcoffset[1]= -1*rx_buffer[2];
 	// }
+
+	//FixMe: make this controlable in system mode
+	//In tracking calibration mode, user should input C0 (0.00V) into 1V/oct jack
+	//When a voltage -0.5 < V < 0.5 is registered, a button lights up. Then the user taps that button
+	//Then input C3 (2.00V) into 1V/oct jack
+	//When a voltage 1.5 > V > 2.5 is registered, a button lights up. Then the user taps that button
+	//
+	//The procedure can then be repeated for the other channel
+	//The difference between adc values can be used to determine the tracking_comp:
+	//>>> Find x, where y = voltoct[adc_high * x] / voltoct[adc_low * x], y = 2.000 (...or 1.999< y <2.001)
+
+	system_calibrations->tracking_comp[0]=1.025;
+	system_calibrations->tracking_comp[1]=1.034;
+
 
 	if (SAVE_CALIBRATE_BUTTONS)
 	{

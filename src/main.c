@@ -201,6 +201,11 @@ int main(void)
     	write_all_system_calibrations_to_FLASH();
     }
 
+    //FixMe: set this in system mode
+	system_calibrations->tracking_comp[0]=1.025;
+	system_calibrations->tracking_comp[1]=1.034;
+
+
     //Begin reading inputs
     init_buttons();
     init_ButtonDebounce_IRQ();

@@ -2,9 +2,8 @@
  * params.c
  *
  *  Created on: Mar 27, 2015
- *      Author: design
+ *      Author: Dan Green danngreen1@gmail.com
  */
-
 
 #include "globals.h"
 #include "adc.h"
@@ -17,13 +16,49 @@
 #include "equal_pow_pan_padded.h"
 #include "voltoct.h"
 #include "log_taper_padded.h"
-#include "pitch_pot_cv.h"
+#include "pitch_pot_lut.h"
 #include "edit_mode.h"
 #include "calibration.h"
 #include "bank.h"
 #include "button_knob_combo.h"
 
-extern float pitch_pot_cv[4096];
+#if X_FAST_ADC == 1
+	#define PLAY_TRIG_LATCH_PITCH_TIME 256 
+	#define PLAY_TRIG_DELAY 384
+
+	#define MAX_FIR_LPF_SIZE 80
+	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
+			80,80, //PITCH
+			20,20, //START
+			20,20, //LENGTH
+			10,10 //SAMPLE
+	};
+#else
+	#define PLAY_TRIG_LATCH_PITCH_TIME 768 
+	#define PLAY_TRIG_DELAY 1024
+
+	#define MAX_FIR_LPF_SIZE 40
+	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
+			40,40, //PITCH
+			20,20, //START
+			20,20, //LENGTH
+			10,10 //SAMPLE
+	};
+#endif
+
+//20 gives about 10ms slew
+//40 gives about 18ms slew
+//100 gives about 40ms slew
+
+
+int32_t fir_lpf[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
+uint32_t fir_lpf_i[NUM_CV_ADCS];
+
+// delay in sec = # / 44100Hz
+// There is an additional delay before audio starts, 5.8ms - 11.6ms due to the codec needing to be pre-loaded
+
+
+extern float pitch_pot_lut[4096];
 const float voltoct[4096];
 
 
@@ -61,28 +96,11 @@ volatile uint32_t 			sys_tmr;
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 float POT_LPF_COEF[NUM_POT_ADCS];
-//float CV_LPF_COEF[NUM_CV_ADCS];
 
 float RAWCV_LPF_COEF[NUM_CV_ADCS];
 
 int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
 int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
-
-
-//20 gives about 10ms slew
-//40 gives about 18ms slew
-//100 gives about 40ms slew
-#define MAX_FIR_LPF_SIZE 40
-const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
-		40,40, //PITCH
-		20,20, //START
-		20,20, //LENGTH
-		10,10 //SAMPLE
-};
-
-int32_t fir_lpf[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
-uint32_t fir_lpf_i[NUM_CV_ADCS];
-
 
 // Latched 1voct values
 uint32_t voct_latch_value[2];
@@ -107,10 +125,6 @@ int16_t prepared_cvadc[NUM_CV_ADCS];
 // int32_t delayed_pitch_cvadc_buffer[NUM_PLAY_CHAN][PITCH_DELAY_BUFFER_SZ];
 // uint32_t del_cv_i[NUM_PLAY_CHAN];
 
-#define PLAY_TRIG_LATCH_PITCH_TIME 768 
-#define PLAY_TRIG_DELAY 1024 
-// delay in sec = # / 44100Hz
-// There is an additional delay before audio starts, 5.8ms - 11.6ms due to the codec needing to be pre-loaded
 
 
 //LPF of raw ADC values for calibration
@@ -133,7 +147,7 @@ void init_params(void)
 		f_param[chan][START] 	= 0.0;
 		f_param[chan][LENGTH] 	= 1.0;
 
-		i_param[chan][BANK] 		= 0;
+		i_param[chan][BANK] 	= 0;
 		i_param[chan][SAMPLE] 	= 0;
 		i_param[chan][REV] 		= 0;
 		i_param[chan][LOOPING]	 =0;
@@ -174,24 +188,6 @@ void init_LowPassCoefs(void)
 	float t;
 	uint8_t i;
 
-	// t=15.0; //LPF for Pitch CV
-
-	// CV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
-	// CV_LPF_COEF[PITCH_CV*2+1] = 1.0-(1.0/t);
-
-	// t=50.0;
-
-	// CV_LPF_COEF[START_CV*2] = 1.0-(1.0/t);
-	// CV_LPF_COEF[START_CV*2+1] = 1.0-(1.0/t);
-
-	// CV_LPF_COEF[LENGTH_CV*2] = 1.0-(1.0/t);
-	// CV_LPF_COEF[LENGTH_CV*2+1] = 1.0-(1.0/t);
-
-	// t=1.0; //No LPF for Sample CV
-
-	// CV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
-	// CV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
-
 	t=300.0;
 
 	RAWCV_LPF_COEF[PITCH_CV*2] = 1.0-(1.0/t);
@@ -206,9 +202,13 @@ void init_LowPassCoefs(void)
 	RAWCV_LPF_COEF[SAMPLE_CV*2] = 1.0-(1.0/t);
 	RAWCV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
-
+#if X_FAST_ADC == 1
+	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 5;
+	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 5;
+#else
 	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 20;
+#endif
 
 	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
 	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
@@ -296,7 +296,7 @@ void init_LowPassCoefs(void)
 
 
 void process_cv_adc(void)
-{//takes about 3.4us to run, at -O0
+{//takes about 7us to run, at -O3
 
 	uint8_t i;
 	int32_t old_val, new_val;
@@ -334,12 +334,25 @@ void process_cv_adc(void)
 		{
 			cv_delta[i] = t;
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] - (MIN_CV_ADC_CHANGE[i]);
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i] - (MIN_CV_ADC_CHANGE[i]/2);
+			//bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
 		}
 
 		else if (t<-MIN_CV_ADC_CHANGE[i])
 		{
 			cv_delta[i] = t;
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] + (MIN_CV_ADC_CHANGE[i]);
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i] + (MIN_CV_ADC_CHANGE[i]/2);
+			//bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
+		}
+
+		//Additional bracketing for special-case of CV jack being near 0V
+		if (i==0 || i==1) //PITCH CV
+		{
+			if (bracketed_cvadc[i] > 2040 && bracketed_cvadc[i] < 2056)
+				bracketed_cvadc[i] = 2048;
 		}
 
 		//Store the useful value in prepared_cvadc (ToDo: just use bracketed_cvadc!)
@@ -398,8 +411,29 @@ void process_pot_adc(void)
 	}
 }
 
+//
+// Applies tracking comp for a bi-polar adc
+// Assumes 2048 is the center value
+//
+uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt)
+{
+	if (cv_adcval > 2048)
+	{
+		cv_adcval -= 2048;
+		cv_adcval = (float)cv_adcval * cal_amt;
+		cv_adcval += 2048;
+	}
+	else
+	{
+		cv_adcval = 2048 - cv_adcval;
+		cv_adcval = (float)cv_adcval * cal_amt;
+		cv_adcval = 2048 - cv_adcval;
 
-
+	}
+	if (cv_adcval > 4095) cv_adcval = 4095;
+	if (cv_adcval < 0) cv_adcval = 0;
+	return(cv_adcval);
+}
 
 void update_params(void)
 {
@@ -409,6 +443,7 @@ void update_params(void)
 	uint8_t new_val;
 	int32_t t_pitch_potadc;
 	float t_f;
+	uint32_t compensated_pitch_cv;
 
 	uint32_t trial_bank;
 	uint8_t samplenum, banknum;
@@ -416,6 +451,7 @@ void update_params(void)
 	ButtonKnobCombo *t_other_bkc; //pointer to another button/knob combo action (makes code more readable)
 
 	recording_enabled=1;
+	
 
 	//
 	// Edit mode
@@ -492,8 +528,10 @@ void update_params(void)
 		if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 		if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
+		//Pitch CV:
+		compensated_pitch_cv = apply_tracking_compensation(prepared_cvadc[PITCH1_CV+0], system_calibrations->tracking_comp[0]);
 
-		f_param[0][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[prepared_cvadc[PITCH_CV*2+0]];
+		f_param[0][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 		if (f_param[0][PITCH] > MAX_RS)
 			f_param[0][PITCH] = MAX_RS;
 
@@ -550,14 +588,16 @@ void update_params(void)
 			if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 			if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
-			if(flags[LatchVoltOctCV1+chan])
-				f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[voct_latch_value[chan]];
-
+			if(flags[LatchVoltOctCV1+chan]) 
+				compensated_pitch_cv = apply_tracking_compensation(voct_latch_value[chan], system_calibrations->tracking_comp[chan]);
 			else
-				f_param[chan][PITCH] = pitch_pot_cv[t_pitch_potadc] * voltoct[prepared_cvadc[PITCH_CV*2+chan]];
+				compensated_pitch_cv = apply_tracking_compensation(prepared_cvadc[PITCH1_CV+chan], system_calibrations->tracking_comp[chan]);
+
+			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 
 			if (f_param[chan][PITCH] > MAX_RS)
 			    f_param[chan][PITCH] = MAX_RS;
+
 
 			//
 			// SAMPLE POT + CV

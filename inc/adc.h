@@ -7,7 +7,6 @@
 
 #include <stm32f4xx.h>
 
-#define MIN_ADC_CHANGE 20
 
 enum PotADCs {
 	PITCH1_POT,
@@ -19,6 +18,7 @@ enum PotADCs {
 	SAMPLE1_POT,
 	SAMPLE2_POT,
 	RECSAMPLE_POT,
+
 	NUM_POT_ADCS
 };
 
@@ -31,6 +31,7 @@ enum CVADCs {
 	LENGTH2_CV,
 	SAMPLE1_CV,
 	SAMPLE2_CV,
+	
 	NUM_CV_ADCS
 };
 
