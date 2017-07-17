@@ -70,7 +70,7 @@ void init_rec_buff(void)
 
 void stop_recording(void)
 {
-	if (rec_state==RECORDING || rec_state==CREATING_FILE || rec_state==REC_PAUSED)
+	if (rec_state==RECORDING || rec_state==CREATING_FILE /* || rec_state==REC_PAUSED*/)
 	{
 		rec_state=CLOSING_FILE;
 	}
@@ -176,22 +176,36 @@ void create_new_recording(void)
 	sample_fname_now_recording[sz++] = 'v';
 	sample_fname_now_recording[sz++] = 0;
 
-	res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
-	if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_REC_OPEN_FAIL; check_errors(); return;}
+
 
 	create_waveheader(&whac.wh, &whac.fc);
 	create_chunk(ccDATA, 0, &whac.wc);
 
 	sz = sizeof(WaveHeaderAndChunk);
 
-	res = f_write(&recfil, &whac.wh, sz, &written);
-	if (res!=FR_OK)		{rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); return;}
-	if (sz!=written)	{rec_state=REC_OFF; g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return;}
+	//Try to create the tmp file and write to it, reloading the sd card if needed
+
+	res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
+	if (res==FR_OK)
+		res = f_write(&recfil, &whac.wh, sz, &written);
+
+	if (res!=FR_OK)
+	{
+		f_close(&recfil);
+		res = reload_sdcard();
+		if (res == FR_OK)
+		{
+			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
+			f_sync(&recfil);
+			res = f_write(&recfil, &whac.wh, sz, &written);
+			f_sync(&recfil);
+		}
+		else {f_close(&recfil); rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); return;}
+	}
+
+	if (sz!=written)	{f_close(&recfil); rec_state=REC_OFF; g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return;}
 
 	samplebytes_recorded = 0;
-
-	//f_close(&recfil);
-	f_sync(&recfil);
 
 	rec_state=RECORDING;
 
@@ -251,7 +265,7 @@ void write_buffer_to_storage(void)
 			{
 				buffer_lead = CB_distance(rec_buff, 0);
 
-				if (buffer_lead > WRITE_BLOCK_SIZE) //Error: comparing # samples to # bytes. Should be buffer_lead*SAMPLINGBYTES
+				if (buffer_lead > WRITE_BLOCK_SIZE) //FixMe: comparing # samples to # bytes. Should be buffer_lead*SAMPLINGBYTES
 				{
 
 					addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, WRITE_BLOCK_SIZE>>1, 0);
@@ -263,14 +277,12 @@ void write_buffer_to_storage(void)
 						f_sync(&recfil);
 						
 						if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
-						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
+						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
 						samplebytes_recorded += written;
 
 					}
-					else
-					{
-						rec_state = CLOSING_FILE;
-					}
+					else {g_error |= WRITE_BUFF_OVERRUN; check_errors();}
+						
 				}
 			}
 
@@ -362,15 +374,15 @@ void write_buffer_to_storage(void)
 
 
 		case (REC_OFF):
-			if (recfil.obj.fs!=0)
-			{
-				//rec_state = CLOSING_FILE;
-				f_close(&recfil);
-			}
+			// if (recfil.obj.fs!=0)
+			// {
+			// 	//rec_state = CLOSING_FILE;
+			// 	f_close(&recfil);
+			// }
 		break;
 
-		case (REC_PAUSED):
-		break;
+		// case (REC_PAUSED):
+		// break;
 
 	}
 

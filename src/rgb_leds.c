@@ -556,7 +556,7 @@ void update_ButtonLEDs(void)
 
 					if (rec_state==REC_OFF
 					|| rec_state==CLOSING_FILE
-					|| rec_state==REC_PAUSED) {
+					/*|| rec_state==REC_PAUSED*/) {
 						if (global_mode[MONITOR_RECORDING])	set_ButtonLED_byPalette(RecButtonLED, (tm_13 < 0x0800)? RED : OFF); //Off/paused/closing = flash red
 						else 								set_ButtonLED_byPalette(RecButtonLED, (tm_13 < 0x0800)? VIOLET : OFF); //Off/paused/closing = flash red
 

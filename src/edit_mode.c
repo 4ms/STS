@@ -657,7 +657,7 @@ void nudge_trim_size(Sample *s_sample, int32_t fine)
 	if (trimdelta<0)
 	{
 		trimdelta = -1 * trimdelta;
-		if (s_sample->inst_size > trimdelta)
+		if (s_sample->inst_size > (trimdelta + TS_MIN))
 			s_sample->inst_size -= trimdelta;
 		else
 			s_sample->inst_size = TS_MIN;

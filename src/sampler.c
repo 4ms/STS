@@ -431,6 +431,7 @@ void start_playing(uint8_t chan)
 	dbg_sample.sampleByteSize	= s_sample->sampleByteSize;
 	dbg_sample.sampleRate 		= s_sample->sampleRate;
 	dbg_sample.numChannels 		= s_sample->numChannels;
+	dbg_sample.startOfData 		= s_sample->startOfData;
 	dbg_sample.blockAlign 		= s_sample->blockAlign;
 	dbg_sample.PCM 				= s_sample->PCM;
 	dbg_sample.inst_start 		= s_sample->inst_start;
@@ -481,11 +482,12 @@ uint32_t calc_start_point(float start_param, Sample *sample)
 	zeropt = sample->inst_start;
 	inst_size = sample->inst_end - sample->inst_start;
 
-	//Determine the starting address
-	if (start_param < 0.002)			return(align_addr(zeropt, sample->blockAlign));
-	else if (start_param > 0.998)		return(align_addr( (zeropt + inst_size - (READ_BLOCK_SIZE*2)), sample->blockAlign )); //just play the last 32 blocks (~64k samples)
+	//If the sample size is smaller than two blocks, the start point is forced to the start
+	if (inst_size <= (READ_BLOCK_SIZE*2))	return(align_addr(zeropt, sample->blockAlign));
 
-	else								return(align_addr( (zeropt  +  ( (uint32_t)(start_param * (float)inst_size) )), sample->blockAlign ));
+	if (start_param < 0.002)				return(align_addr(zeropt, sample->blockAlign));
+	else if (start_param > 0.998)			return(align_addr( (zeropt + inst_size - (READ_BLOCK_SIZE*2)), sample->blockAlign )); //just play the last 32 blocks (~64k samples)
+	else									return(align_addr( (zeropt  +  ( (uint32_t)(start_param * (float)inst_size) )), sample->blockAlign ));
 
 
 }
@@ -748,7 +750,11 @@ void read_storage_to_buffer(void)
 			{
 
 				if (sample_file_curpos[chan] > s_sample->sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
+				{
 					g_error |= FILE_WAVEFORMATERR;							//Breakpoint
+					play_state[chan] = SILENT;
+					start_playing(chan);
+				}
 
 
 				else if (sample_file_curpos[chan] > s_sample->inst_end) //FixMe: Does this need a if (REV), as above?
