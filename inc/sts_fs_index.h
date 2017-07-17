@@ -14,6 +14,11 @@
 #define USE_INDEX_FILE  0
 #define ALL_BANKS MAX_NUM_BANKS
 
+#define	SAMPLE_SLOT 1
+#define	PLAY_START	2
+#define	PLAY_SIZE	3
+#define	PLAY_GAIN	4
+
 FRESULT write_sampleindex_file(void);
 uint8_t write_samplelist(void);
 uint8_t index_write_wrapper(void);
