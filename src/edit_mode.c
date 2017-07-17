@@ -190,7 +190,7 @@ uint8_t next_unassigned_sample(void)
 	FRESULT	res;
 	FIL 	temp_file;
 	uint8_t	i;
-	uint8_t	bank, orig_bank;
+	uint8_t	bank;
 	uint32_t max_folders_bailout=1024;
 
 	play_state[0]=SILENT;
