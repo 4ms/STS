@@ -150,7 +150,7 @@ void record_audio_to_buffer(int16_t *src)
 		if (overrun)
 		{
 			g_error |= WRITE_BUFF_OVERRUN;
-			rec_state=REC_PAUSED;
+			//rec_state=REC_PAUSED;
 		}
 	}
 
@@ -346,8 +346,6 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded & 0xFFFFFFF8;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded & 0xFFFFFFF8;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
-
-				//flags[RewriteIndex] = 1;
 
 				enable_bank(sample_bank_now_recording);
 
