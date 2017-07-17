@@ -381,8 +381,14 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		// Check if it's the end of the file
 		if (str_cmp(read_buffer, EOF_TAG))	break;
 
-		// Remove /n from buffer
+		// Unix only uses Line feed for newline: \n
+		// Windows uses carriage return + line feed for newline: \r\n
+
+		// Remove \n from buffer (mac)
 		read_buffer[str_len(read_buffer)-1]=0;
+
+		// Remove \r from end of buffer as needed (PC)
+		if(read_buffer[str_len(read_buffer)-1] == '\r')	read_buffer[str_len(read_buffer)-1]=0;
 
 		// tokenize at space if we're not trying to read_name 
 		// ... which is both [reading name] and [reading play  data] cases
@@ -520,6 +526,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 									// Or set it to 0?
 									// samples[cur_bank][cur_sample].filename[0]='\0';
 
+									// FixMe(H) if statement redundant with same statement l502?
 									if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK)
 										samples[cur_bank][cur_sample].file_found = 0;
 									
