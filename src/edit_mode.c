@@ -301,28 +301,18 @@ uint8_t next_unassigned_sample(void)
 
 		//See if the file already is assigned to a sample slot in any bank
 
-		//Shortcut: if the file is the original file, then don't bother searching for it
-		if (str_cmp(filepath, undo_sample.filename))
+		//FixMe: Why would we skip the undo file? If we go backwards from an assigned bank to the unassigned bank, we want to make sure we can load the original undo file
+		// if (str_cmp(filepath, undo_sample.filename))
+		// 	is_file_already_assigned = 1;
+		// else 
+		// {
+
+		is_file_already_assigned = 0;
+
+		bank=next_enabled_bank(MAX_NUM_BANKS);
+		if (find_filename_in_all_banks(bank, filepath) != 0xFF)
 			is_file_already_assigned = 1;
-		else 
-		{
-			//Cycle through all enabled banks
-			//See if the filepath matches any sample in any bank
-
-			is_file_already_assigned = 0;
-
-			bank=next_enabled_bank(MAX_NUM_BANKS);
-			if (find_filename_in_all_banks(bank, filepath) != 0xFF)
-				is_file_already_assigned = 1;
-
-			// orig_bank=bank;
-			// do{
-			// 	if (find_filename_in_bank(bank, filepath) != 0xFF)
-			// 		{is_file_already_assigned = 1; break;}
-
-			// 	bank=next_enabled_bank(bank);	
-			// } while(bank!=orig_bank);
-		}
+		// }
 
 		if (!is_file_already_assigned)
 		{
