@@ -42,7 +42,7 @@
 			40,40, //PITCH
 			20,20, //START
 			20,20, //LENGTH
-			10,10 //SAMPLE
+			30,30 //SAMPLE
 	};
 #endif
 
@@ -224,11 +224,14 @@ void init_LowPassCoefs(void)
 	POT_LPF_COEF[PITCH_POT*2] = 1.0-(1.0/t);
 	POT_LPF_COEF[PITCH_POT*2+1] = 1.0-(1.0/t);
 
+
 	POT_LPF_COEF[START_POT*2] = 1.0-(1.0/t);
 	POT_LPF_COEF[START_POT*2+1] = 1.0-(1.0/t);
 
 	POT_LPF_COEF[LENGTH_POT*2] = 1.0-(1.0/t);
 	POT_LPF_COEF[LENGTH_POT*2+1] = 1.0-(1.0/t);
+
+	t=50.0;
 
 	POT_LPF_COEF[SAMPLE_POT*2] = 1.0-(1.0/t);
 	POT_LPF_COEF[SAMPLE_POT*2+1] = 1.0-(1.0/t);
@@ -383,7 +386,6 @@ void process_pot_adc(void)
 {
 	uint8_t i;
 	int32_t t;
-	int32_t new_val;
 
 	static uint32_t track_moving_pot[NUM_POT_ADCS]={0,0,0,0,0,0,0,0,0};
 

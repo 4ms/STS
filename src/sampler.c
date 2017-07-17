@@ -326,7 +326,8 @@ void start_playing(uint8_t chan)
 		if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
 
 		res = create_linkmap(&fil[chan], chan);
-		if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+		if (res == FR_NOT_ENOUGH_CORE) {g_error |= FILE_CANNOT_CREATE_CLTBL;} //ToDo: Log this error
+		else if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
 		
 		file_loaded = 1;
 
@@ -511,7 +512,7 @@ uint32_t calc_play_length(float knob_pos, Sample *sample)
 	uint32_t seconds;
 
 	seconds  = sample->sampleRate * sample->blockAlign;
-	play_len = sample->inst_end - sample->inst_start; 	// as opposed to taking sample->play_len because that won't be clipped to the end of a sample file
+	play_len = sample->inst_end - sample->inst_start; 	// as opposed to taking sample->inst_size because that won't be clipped to the end of a sample file
 
 	// FixMe: Add plateau at the end of knob range to account for brackets and guarantee that 0% and 100% are achievable
 
@@ -750,7 +751,7 @@ void read_storage_to_buffer(void)
 					g_error |= FILE_WAVEFORMATERR;							//Breakpoint
 
 
-				else if (sample_file_curpos[chan] > s_sample->inst_end)
+				else if (sample_file_curpos[chan] > s_sample->inst_end) //FixMe: Does this need a if (REV), as above?
 				{
 					//if (i_param[chan][LOOPING])
 					//	flags[Play1But]=1;
@@ -975,6 +976,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 			 outL[i]=0;
 			 outR[i]=0;
 		}
+
+		// play_led_state[chan] = 0;
 	}
 	else
 	{
@@ -982,15 +985,56 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		banknum = sample_bank_now_playing[chan];
 		s_sample = &(samples[banknum][samplenum]);
 
-		//Read from SDRAM into out[]
+		//Calculate our actual resampling rate, based on the sample rate of the file being played
 
-		if (s_sample->sampleRate == BASE_SAMPLE_RATE)
-			rs = f_param[chan][PITCH];
-		else
-			rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE);
+		if (s_sample->sampleRate == BASE_SAMPLE_RATE)	rs = f_param[chan][PITCH];
+		else											rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE);
+
+
+		//
+		// See if we've played enough samples and should start fading down to stop playback
+		//	
+		if (play_state[chan] == PLAYING || play_state[chan] == PLAY_FADEUP || play_state[chan] == PLAYING_PERC)
+		{
+
+			//Amount play_buff[]->out changes with each audio block sent to the codec
+			resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * s_sample->numChannels * 2) * rs);
+
+			//Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
+			resampled_cache_size = (resampled_buffer_size * s_sample->sampleByteSize) >> 1;
+
+			//Find out where the audio output data is from the start of the cache
+			sample_file_playpos = map_buffer_to_cache(play_buff[chan]->out, s_sample->sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]); 
+
+			//See if we are about to surpass the calculated position in the file where we should end our sample
+			if (!i_param[chan][REV])
+			{
+				if ((sample_file_playpos + (resampled_cache_size*2)) >= sample_file_endpos[chan])	play_state[chan] = PLAY_FADEDOWN;
+			} else {
+				if (sample_file_playpos <= ((resampled_cache_size*2) + sample_file_endpos[chan]))	play_state[chan] = PLAY_FADEDOWN;
+			}
+
+			if (play_state[chan] != PLAY_FADEDOWN)
+			{
+				//Check if we are about to hit the end of the file (or buffer undderrun)
+				play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
+
+				if (play_buff_bufferedamt[chan] <= resampled_buffer_size)
+				{
+					//buffer underrun: tried to read too much out. Try to recover!
+					g_error |= READ_BUFF1_OVERRUN<<chan; //FixMe: this error is actually UNDERRUN, not OVERRUN
+					check_errors();
+
+					play_state[chan] = PREBUFFERING;
+				}
+			}
+		}
+
+
 		//
 		//Resample data read from the play_buff and store into out[]
 		//
+
 		
 		if (global_mode[STEREO_MODE])
 		{
@@ -1068,94 +1112,47 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				if ((play_state[chan]==RETRIG_FADEDOWN || i_param[chan][LOOPING]) && !flags[Play1TrigDelaying+chan])
 					flags[Play1But+chan] = 1;
 
-				//else
 				play_state[chan] = SILENT;
 
-				break;
+			break;
 
 			 case (PLAYING):
 			 case (PLAY_FADEUP):
-			 		if (play_state[chan] == PLAY_FADEUP) 
-			 		{
-						for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-						{
-							t_f = gain * (float)i / (float)HT16_CHAN_BUFF_LEN;
-
-							t_i32 = (float)outL[i] * t_f;
-							asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-							outL[i] = t_i32;
-
-							t_i32 = (float)outR[i] * t_f;
-							asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-							outR[i] = t_i32;
-						}
-					} 
-					else
+		 		if (play_state[chan] == PLAY_FADEUP) 
+		 		{
+					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
-						for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-						{
-							t_i32 = (float)outL[i] * gain;
-							asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-							outL[i] = t_i32;
+						t_f = gain * (float)i / (float)HT16_CHAN_BUFF_LEN;
 
-							t_i32 = (float)outR[i] * gain;
-							asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-							outR[i] = t_i32;
-						}
+						t_i32 = (float)outL[i] * t_f;
+						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+						outL[i] = t_i32;
 
-
+						t_i32 = (float)outR[i] * t_f;
+						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+						outR[i] = t_i32;
 					}
-
-
-					if (length>0.5) //Play a longer portion of the sample, and go to PLAY_FADEDOWN when done
+				} 
+				else
+				{
+					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
-	 					play_state[chan]=PLAYING;
+						t_i32 = (float)outL[i] * gain;
+						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+						outL[i] = t_i32;
 
-	 					//
-						// See if we've played enough samples and should start fading down to stop playback
-						//
-
-	 					//Amount play_buff[]->out changes with each audio block sent to the codec
-	 					resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * s_sample->numChannels * 2) * rs);
-
-	 					//Amount an imaginary pointer in the sample file would move forward with each audio block sent to the codec
-						resampled_cache_size = (resampled_buffer_size * s_sample->sampleByteSize) >> 1;
-
-						//Find out how far ahead our output data is from the start of the cache
-						sample_file_playpos = map_buffer_to_cache(play_buff[chan]->out, s_sample->sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]); 
-
-						//See if we are about to surpass the calculated position in the file where we should end our sample
-						if (!i_param[chan][REV])
-						{
-							if ((sample_file_playpos + (resampled_cache_size*2)) >= sample_file_endpos[chan])
-								play_state[chan] = PLAY_FADEDOWN;
-						} else {
-							if (sample_file_playpos <= ((resampled_cache_size*2) + sample_file_endpos[chan]))
-								play_state[chan] = PLAY_FADEDOWN;
-						}
-
-						if (play_state[chan] != PLAY_FADEDOWN)
-						{
-							//Check if we are about to hit the end of the file (or buffer undderrun)
-							play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
-
-							if (play_buff_bufferedamt[chan] <= resampled_buffer_size)
-							{
-
-								//buffer underrun: tried to read too much out. Try to recover!
-								g_error |= READ_BUFF1_OVERRUN<<chan;
-								check_errors();
-
-								play_state[chan] = PREBUFFERING;
-				
-							}
-
-						}
-
+						t_i32 = (float)outR[i] * gain;
+						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+						outR[i] = t_i32;
 					}
-					else
-						play_state[chan] = PLAYING_PERC;
-			 	 	break;
+				}
+
+				if (length<=0.5)
+					play_state[chan] 	= PLAYING_PERC;
+				else
+					play_state[chan]	= PLAYING;
+
+		 	 break;
 
 			 case (PLAYING_PERC):
 				decay_inc[chan] = 1.0f/((length)*20000.0f);
@@ -1204,11 +1201,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				}
 				break;
 
-			 case (SILENT):
-					play_led_state[chan] = 0;
-				break;
-
-			 default:
+			 default: //PREBUFFERING or SILENT do happen here
 				 break;
 
 		 }//switch play_state
