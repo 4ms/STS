@@ -333,7 +333,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	FRESULT 	res;
 	uint8_t		head_load;
 	char 		read_buffer[_MAX_LFN+1], folder_path[_MAX_LFN+2], file_name[_MAX_LFN+1], full_path[_MAX_LFN+1];
-	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, arm_data=0, loaded_header=0, read_name=0;
+	uint8_t		cur_bank=0, cur_sample=0, arm_bank=0, load_data=0, loaded_header=0, read_name=0;
 	uint32_t	num_buff=UINT32_MAX;
 	char 		token[_MAX_LFN+1];
 	//uint8_t		fopen_flag	  = 0;
@@ -381,12 +381,18 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		// Check if it's the end of the file
 		if (str_cmp(read_buffer, EOF_TAG))	break;
 
-		// Remove /n from buffer
+		// Unix only uses Line feed for newline: \n
+		// Windows uses carriage return + line feed for newline: \r\n
+
+		// Remove \n from buffer (mac)
 		read_buffer[str_len(read_buffer)-1]=0;
+
+		// Remove \r from end of buffer as needed (PC)
+		if(read_buffer[str_len(read_buffer)-1] == '\r')	read_buffer[str_len(read_buffer)-1]=0;
 
 		// tokenize at space if we're not trying to read_name 
 		// ... which is both [reading name] and [reading play  data] cases
-		if((read_name<1) && (arm_data==0)) str_tok(read_buffer,' ', token);
+		if((read_name<1) && (load_data==0)) str_tok(read_buffer,' ', token);
 		else str_cpy(token, read_buffer);
 
 		// While token isn't empty
@@ -451,15 +457,15 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 					// arm data loading
 					// arm data loading if line starts with '-'
 					// skips header info and extra lines otherwise
-					// if 		((read_buffer[0]=='-')&&(!arm_data))	{arm_data=1;}
+					// if 		((read_buffer[0]=='-')&&(!load_data))	{load_data=1;}
 					
 					// Process data if line starts with '-'
 					// skip lines that don't start with '-'					
 					if (read_buffer[0]=='-') {
-						if (!arm_data) {arm_data=1;}
+						if (!load_data) {load_data=1;}
 						// load header data from .wav file
 						// if the data loading has just been armed
-						if  (arm_data==1) 			
+						if  (load_data == SAMPLE_SLOT) 			
 						{
 							// Update sample bank number
 							cur_sample=num_buff-1;
@@ -508,10 +514,10 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 									f_close(&temp_wav_file);
 								}
 								else //exit if cur_bank and/or cur_sample are out of range
-									{f_close(&temp_wav_file); arm_data=0; token[0] = '\0'; read_name = 1; break;}
+									{f_close(&temp_wav_file); load_data=0; token[0] = '\0'; read_name = 1; break;}
 
 
-								// if information couldn't load, clear filename 
+								// if header information couldn't load, treat file as if it couldn'tbe found
 								if (head_load!=FR_OK)
 								{
 									// write empty filename to samples struct element
@@ -520,14 +526,15 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 									// Or set it to 0?
 									// samples[cur_bank][cur_sample].filename[0]='\0';
 
+									// FixMe(H) if statement redundant with same statement l502?
 									if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK)
 										samples[cur_bank][cur_sample].file_found = 0;
 									
-									// skip loading sample play information
-									arm_data=0; token[0] = '\0'; read_name = 1; break;						
+									// skip loading sample play information, and read next file
+									load_data=0; token[0] = '\0'; read_name = 1; break;						
 								}		
-								//FixMe: Should we have an 'else' here? Otherwise arm_data=1 after not loading a header
-								arm_data++; token[0] = '\0';
+								//FixMe: Should we have an 'else' here? Otherwise load_data=1 after not loading a header
+								load_data++; token[0] = '\0';
 							}
 
 							else if (res!=FR_OK) //file not found
@@ -543,24 +550,32 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 								}
 
 								// skip loading sample play information
-								arm_data=0; token[0] = '\0'; read_name = 1; break;						
+								load_data=0; token[0] = '\0'; read_name = 1; break;						
 
 							}
 						
 						}
 
-						// load sample play information from index file
-						// if data headed has been loaded
+						else if (load_data == PLAY_START)
+						{
+							if (num_buff > samples[cur_bank][cur_sample].sampleSize) {samples[cur_bank][cur_sample].inst_start= samples[cur_bank][cur_sample].sampleSize - 2;} // 2x samples min room after play start
+							else {samples[cur_bank][cur_sample].inst_start = num_buff;}
+							load_data++; token[0] = '\0';
+						}
 
-						// ToDo: make arm-data numbers #define so code is easier to read
-						// ToDo: Put limit on play start based on sample size - rewrite index if updated
-						else if (arm_data==2) 			{samples[cur_bank][cur_sample].inst_start=num_buff; 									arm_data++; token[0] = '\0';}
+						else if (load_data == PLAY_SIZE)
+						{
+							if ( num_buff < (samples[cur_bank][cur_sample].inst_start+2) ) {samples[cur_bank][cur_sample].inst_size = samples[cur_bank][cur_sample].inst_start +2;} // 2x samples min play lenght
+							else {samples[cur_bank][cur_sample].inst_size=num_buff;}
+							load_data++; token[0] = '\0';
+						}
 
-						// ToDo: Put limit on play size  based on sample size - rewrite index if updated
-						else if (arm_data==3) 			{samples[cur_bank][cur_sample].inst_size=num_buff; 										arm_data++; token[0] = '\0';}
-
-						// ToDo: Put limit on gain value 0 to 100 - rewrite index if updated					
-						else if (arm_data==4) 			{samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f; 								arm_data=0; token[0] = '\0'; read_name = 1; break;}
+						else if (load_data == PLAY_GAIN)
+						{
+							if(num_buff>100){num_buff = 100;}
+							samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f;
+							load_data=0; token[0] = '\0'; read_name = 1; break;
+						}
 					}
 					else	{ token[0] = '\0';} 
 				}
