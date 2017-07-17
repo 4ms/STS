@@ -326,7 +326,8 @@ void start_playing(uint8_t chan)
 		if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
 
 		res = create_linkmap(&fil[chan], chan);
-		if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+		if (res == FR_NOT_ENOUGH_CORE) {g_error |= FILE_CANNOT_CREATE_CLTBL;} //ToDo: Log this error
+		else if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
 		
 		file_loaded = 1;
 
@@ -511,7 +512,7 @@ uint32_t calc_play_length(float knob_pos, Sample *sample)
 	uint32_t seconds;
 
 	seconds  = sample->sampleRate * sample->blockAlign;
-	play_len = sample->inst_end - sample->inst_start; 	// as opposed to taking sample->play_len because that won't be clipped to the end of a sample file
+	play_len = sample->inst_end - sample->inst_start; 	// as opposed to taking sample->inst_size because that won't be clipped to the end of a sample file
 
 	// FixMe: Add plateau at the end of knob range to account for brackets and guarantee that 0% and 100% are achievable
 
@@ -750,7 +751,7 @@ void read_storage_to_buffer(void)
 					g_error |= FILE_WAVEFORMATERR;							//Breakpoint
 
 
-				else if (sample_file_curpos[chan] > s_sample->inst_end)
+				else if (sample_file_curpos[chan] > s_sample->inst_end) //FixMe: Does this need a if (REV), as above?
 				{
 					//if (i_param[chan][LOOPING])
 					//	flags[Play1But]=1;
