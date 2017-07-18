@@ -22,6 +22,11 @@
 #include "bank.h"
 #include "button_knob_combo.h"
 
+// PLAY_TRIG_DELAY / 44100Hz is the delay in sec from detecting a trigger to calling start_playing()
+// PLAY_TRIG_LATCH_PITCH_TIME is how long the PITCH CV is latched when a play trigger is received
+// This allows for a CV/gate sequencer to settle, and the internal LPF to settle, before using the new CV value
+// This reduces slew and "indecision" when a step is advanced on the sequencer
+
 #if X_FAST_ADC == 1
 	#define PLAY_TRIG_LATCH_PITCH_TIME 256 
 	#define PLAY_TRIG_DELAY 384
@@ -31,7 +36,7 @@
 			80,80, //PITCH
 			20,20, //START
 			20,20, //LENGTH
-			10,10 //SAMPLE
+			20,20  //SAMPLE
 	};
 #else
 	#define PLAY_TRIG_LATCH_PITCH_TIME 768 
@@ -42,7 +47,7 @@
 			40,40, //PITCH
 			20,20, //START
 			20,20, //LENGTH
-			30,30 //SAMPLE
+			20,20  //SAMPLE
 	};
 #endif
 
@@ -51,11 +56,9 @@
 //100 gives about 40ms slew
 
 
+//CV LPFs
 int32_t fir_lpf[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
 uint32_t fir_lpf_i[NUM_CV_ADCS];
-
-// delay in sec = # / 44100Hz
-// There is an additional delay before audio starts, 5.8ms - 11.6ms due to the codec needing to be pre-loaded
 
 
 extern float pitch_pot_lut[4096];
@@ -114,17 +117,14 @@ int16_t bracketed_cvadc[NUM_CV_ADCS];
 int16_t bracketed_potadc[NUM_POT_ADCS];
 
 
-int16_t prepared_cvadc[NUM_CV_ADCS];
-
-
 // #define PITCH_DELAY_BUFFER_SZ 1
 // int32_t delayed_pitch_cvadc_buffer[NUM_PLAY_CHAN][PITCH_DELAY_BUFFER_SZ];
 // uint32_t del_cv_i[NUM_PLAY_CHAN];
-
+//int16_t prepared_cvadc[NUM_CV_ADCS];
 
 
 //LPF of raw ADC values for calibration
-float smoothed_rawcvadc[NUM_CV_ADCS];
+//float smoothed_rawcvadc[NUM_CV_ADCS];
 int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
 
 //Change in pot since last process_adc
@@ -220,6 +220,7 @@ void init_LowPassCoefs(void)
 	POT_LPF_COEF[PITCH_POT*2] = 1.0-(1.0/t);
 	POT_LPF_COEF[PITCH_POT*2+1] = 1.0-(1.0/t);
 
+	t=50.0;
 
 	POT_LPF_COEF[START_POT*2] = 1.0-(1.0/t);
 	POT_LPF_COEF[START_POT*2+1] = 1.0-(1.0/t);
@@ -227,7 +228,6 @@ void init_LowPassCoefs(void)
 	POT_LPF_COEF[LENGTH_POT*2] = 1.0-(1.0/t);
 	POT_LPF_COEF[LENGTH_POT*2+1] = 1.0-(1.0/t);
 
-	t=50.0;
 
 	POT_LPF_COEF[SAMPLE_POT*2] = 1.0-(1.0/t);
 	POT_LPF_COEF[SAMPLE_POT*2+1] = 1.0-(1.0/t);
@@ -260,7 +260,6 @@ void init_LowPassCoefs(void)
 	for (i=0;i<NUM_CV_ADCS;i++)
 	{
 		smoothed_cvadc[i]		=0;
-		smoothed_rawcvadc[i]	=0;
 		bracketed_cvadc[i]	=0;
 		i_smoothed_cvadc[i]		=0x7FFF;
 		i_smoothed_rawcvadc[i]	=0x7FFF;
@@ -313,7 +312,12 @@ void process_cv_adc(void)
 		old_val = fir_lpf[i][fir_lpf_i[i]];
 
 		//Put in the new cv value (overwrite oldest value):
-		new_val 					= cvadc_buffer[i] + system_calibrations->cv_calibration_offset[i];
+		//Don't factor in the calibration offset if we're in calibration mode, or else we'll have a runaway feedback loop
+		if (global_mode[CALIBRATE])
+			new_val = cvadc_buffer[i];
+		else
+			new_val = cvadc_buffer[i] + system_calibrations->cv_calibration_offset[i];
+
 		fir_lpf[i][fir_lpf_i[i]] 	= new_val;
 
 		//Increment the index, wrapping around the whole buffer
@@ -326,6 +330,9 @@ void process_cv_adc(void)
 		i_smoothed_cvadc[i] = (int16_t)smoothed_cvadc[i];
 		if (i_smoothed_cvadc[i] < 0) i_smoothed_cvadc[i] = 0;
 		if (i_smoothed_cvadc[i] > 4095) i_smoothed_cvadc[i] = 4095;
+
+		//FixMe: rawcvadc is not needed (but test cv calibration before removing it, we may need to use a different LPF on it)
+		i_smoothed_rawcvadc[i] 	= i_smoothed_cvadc[i];
 
 		//Apply bracketing
 		t=i_smoothed_cvadc[i] - bracketed_cvadc[i];
@@ -350,21 +357,11 @@ void process_cv_adc(void)
 		//Additional bracketing for special-case of CV jack being near 0V
 		if (i==0 || i==1) //PITCH CV
 		{
-			if (bracketed_cvadc[i] > 2040 && bracketed_cvadc[i] < 2056)
+			if (bracketed_cvadc[i] > 2038 && bracketed_cvadc[i] < 2058)
 				bracketed_cvadc[i] = 2048;
 		}
 
-		//Store the useful value in prepared_cvadc (ToDo: just use bracketed_cvadc!)
-		prepared_cvadc[i] = bracketed_cvadc[i];
-
-		//Calculate the Calibration CV's (super well smoothed) if needed
-		if (global_mode[CALIBRATE])
-		{
-			smoothed_rawcvadc[i] = LowPassSmoothingFilter(smoothed_rawcvadc[i], (float)(cvadc_buffer[i]), RAWCV_LPF_COEF[i]);
-			i_smoothed_rawcvadc[i] = (int16_t)smoothed_rawcvadc[i];
-			if (i_smoothed_rawcvadc[i] < 0) i_smoothed_rawcvadc[i] = 0;
-			if (i_smoothed_rawcvadc[i] > 4095) i_smoothed_rawcvadc[i] = 4095;
-		}
+		
 
 		//Not using a delay buffer
 		//Set the final usable value to the oldest element in the delayed_ buffer
@@ -525,7 +522,7 @@ void update_params(void)
 		if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
 		//Pitch CV:
-		compensated_pitch_cv = apply_tracking_compensation(prepared_cvadc[PITCH1_CV+0], system_calibrations->tracking_comp[0]);
+		compensated_pitch_cv = apply_tracking_compensation(bracketed_cvadc[PITCH1_CV+0], system_calibrations->tracking_comp[0]);
 
 		f_param[0][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 		if (f_param[0][PITCH] > MAX_RS)
@@ -587,7 +584,7 @@ void update_params(void)
 			if(flags[LatchVoltOctCV1+chan]) 
 				compensated_pitch_cv = apply_tracking_compensation(voct_latch_value[chan], system_calibrations->tracking_comp[chan]);
 			else
-				compensated_pitch_cv = apply_tracking_compensation(prepared_cvadc[PITCH1_CV+chan], system_calibrations->tracking_comp[chan]);
+				compensated_pitch_cv = apply_tracking_compensation(bracketed_cvadc[PITCH1_CV+chan], system_calibrations->tracking_comp[chan]);
 
 			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 

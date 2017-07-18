@@ -18,7 +18,7 @@ extern uint8_t 				flags[NUM_FLAGS];
 extern uint32_t 			play_trig_timestamp[2];
 
 extern uint32_t				voct_latch_value[2];
-extern int16_t				prepared_cvadc[NUM_CV_ADCS];
+extern int16_t				bracketed_cvadc[NUM_CV_ADCS];
 enum PlayStates 			play_state[NUM_PLAY_CHAN];
 
 volatile uint32_t 			sys_tmr;
@@ -71,7 +71,7 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 						if (play_state[0] == PLAYING) 
 							play_state[0] = PLAY_FADEDOWN;
 
-						voct_latch_value[0]			= prepared_cvadc[0];
+						voct_latch_value[0]			= bracketed_cvadc[0];
 						flags[Play1TrigDelaying]	= 1;
 						play_trig_timestamp[0]		= sys_tmr;
 						break;
@@ -80,7 +80,7 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 						if (play_state[1] == PLAYING) 
 							play_state[1] = PLAY_FADEDOWN;
 
-						voct_latch_value[1]			= prepared_cvadc[1];
+						voct_latch_value[1]			= bracketed_cvadc[1];
 						flags[Play2TrigDelaying]	= 1;
 						play_trig_timestamp[1]		= sys_tmr;
 						break;
