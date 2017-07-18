@@ -282,7 +282,7 @@ uint8_t check_sampleindex_valid(char *indexfilename)
 	if (res != FR_OK) 						{return 0;}							//file can't open
 
 	//Verify it's a complete file, with EOF_TAG at the end
-	l = str_len(EOF_TAG);
+	l = str_len(EOF_TAG) + EOF_PAD;
 
 	res = f_lseek(&temp_file, f_size(&temp_file)-l);
 	if (res != FR_OK) 						{f_close(&temp_file); return 0;}	//can't seek to end: file/disk error
@@ -292,9 +292,8 @@ uint8_t check_sampleindex_valid(char *indexfilename)
 
 	if (br!=l) 								{f_close(&temp_file); return 0;}	//didn't read proper number of bytes: disk/read error
 
-	//Truncate ending \n or \r
-	readdata[br-1] = '\0';
-	if (!str_startswith(EOF_TAG, readdata)) {f_close(&temp_file); return 0;}	//no EOF_TAG found at end of file: index is incomplete
+	// Check for EOF_TAG within last read buffer
+	if (!str_found(readdata, EOF_TAG)) {f_close(&temp_file); return 0;}	//no EOF_TAG found at end of file: index is incomplete
 	
 	//Index file is ok
 	f_close(&temp_file);
@@ -566,6 +565,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 						else if (load_data == PLAY_SIZE)
 						{
 							if ( num_buff < (samples[cur_bank][cur_sample].inst_start+2) ) {samples[cur_bank][cur_sample].inst_size = samples[cur_bank][cur_sample].inst_start +2;} // 2x samples min play lenght
+							else if ( num_buff > samples[cur_bank][cur_sample].sampleSize){samples[cur_bank][cur_sample].inst_size = samples[cur_bank][cur_sample].sampleSize;}
 							else {samples[cur_bank][cur_sample].inst_size=num_buff;}
 							load_data++; token[0] = '\0';
 						}

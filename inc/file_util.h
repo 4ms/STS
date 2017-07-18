@@ -30,7 +30,9 @@ uint8_t 	str_cmp_nocase(char *a, char *b);
 uint8_t 	str_startswith(const char *string, const char *prefix);
 uint8_t 	str_startswith_nocase(const char *string, const char *prefix);
 char *		str_rstr_x(char *string, char splitchar, char *path);
-uint32_t str_pos(char needle, char *haystack);
+uint32_t 	str_pos(char needle, char *haystack);
+uint8_t 	str_found(char* str, char* find);
+
 
 
 #endif /* INC_FILE_UTIL_H_ */
