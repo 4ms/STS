@@ -512,7 +512,6 @@ uint32_t calc_play_length(float knob_pos, Sample *sample)
 	uint32_t seconds;
 
 	seconds  = sample->sampleRate * sample->blockAlign;
-	//FixMe(H): PITCH NEEDS TO BE TAKEN INTO ACCOUNT IN PLAY_LEN
 	play_len = sample->inst_end - sample->inst_start; 	// as opposed to taking sample->inst_size because that won't be clipped to the end of a sample file
 
 	// FixMe: Add plateau at the end of knob range to account for brackets and guarantee that 0% and 100% are achievable
