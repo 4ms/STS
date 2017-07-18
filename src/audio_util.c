@@ -21,6 +21,10 @@ uint32_t align_addr(uint32_t addr, uint32_t blockAlign)
 		t = addr / 6UL;
 		addr = t * 6UL;
 	}
+	else if (blockAlign == 3)	{
+		t = addr / 3UL;
+		addr = t * 3UL;
+	}
 	else
 		return 0;
 
