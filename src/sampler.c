@@ -1083,7 +1083,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 			sample_file_startpos[chan] = calc_stop_points(length, &samples[banknum][samplenum], sample_file_endpos[chan]);
 		else
 			sample_file_endpos[chan] = calc_stop_points(length, &samples[banknum][samplenum], sample_file_startpos[chan]);
-	
+		
 
 		gain = s_sample->inst_gain;
 
@@ -1111,7 +1111,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				play_led_state[chan] = 0;
 
 				end_out_ctr[chan] = (length>0.05)? 35 : ((length * 540) + 8);
-				play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+10);
+				play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+1);
 
 				//Start playing again if we're looking, or re-triggered
 				//Unless we faded down because of a play trigger
@@ -1190,7 +1190,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					//Flicker the Play LED and flag the End Out jack for emitting a pulse
 					//The PW is fixed unless the length is very short, in which case the PW is a percentage of the period
 					end_out_ctr[chan] = (length>0.05)? 35 : ((length * 540) + 8);
-					play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+10);
+					play_led_flicker_ctr[chan]=(length>0.3)? 75 : ((length * 216)+1);
 					play_led_state[chan] = 0;
 
 					if (i_param[chan][REV])
