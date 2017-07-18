@@ -95,9 +95,10 @@ enum Flags {
 	FindNextSampleToAssign, //45
 	SaveSystemSettings,
 	UndoSampleExists,
+	UndoSampleDiffers,
 	LoadBackupIndex,
-	LoadIndex,
-	LatchVoltOctCV1, //50
+	LoadIndex,				//50
+	LatchVoltOctCV1,
 	LatchVoltOctCV2, 
 	Play1TrigDelaying,
 	Play2TrigDelaying,

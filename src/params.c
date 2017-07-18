@@ -86,10 +86,6 @@ uint8_t flag_pot_changed[NUM_POT_ADCS];
 
 extern uint8_t recording_enabled;
 
-// extern uint8_t lock_start;
-// extern uint8_t lock_length;
-extern uint8_t scrubbed_in_edit;
-
 extern enum ButtonStates button_state[NUM_BUTTONS];
 volatile uint32_t 			sys_tmr;
 
@@ -474,7 +470,6 @@ void update_params(void)
 			flag_pot_changed[LENGTH_POT*2+1] = 0;
 			//pot_delta[LENGTH_POT*2+1] = 0;
 
-			scrubbed_in_edit = 1;
 			f_param[0][START] = 0.999f;
 			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;
@@ -494,7 +489,6 @@ void update_params(void)
 			flag_pot_changed[START_POT*2+0] = 0;
 			//pot_delta[START_POT*2+1] = 0;
 
-			scrubbed_in_edit = 1;
 			f_param[0][START] = 0.000f;
 			f_param[0][LENGTH] = 0.201f;
 			i_param[0][LOOPING] = 1;

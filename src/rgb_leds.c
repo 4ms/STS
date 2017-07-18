@@ -614,7 +614,7 @@ void update_ButtonLEDs(void)
 				else //chan==1
 				{
 					//Edit Mode: Rev2 flashes red/yellow if there's an undo available
-					if (flags[UndoSampleExists])
+					if (flags[UndoSampleDiffers])
 						set_ButtonLED_byPaletteFade(ButLEDnum, YELLOW, RED, tri_14);
 					else
 						set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
@@ -628,8 +628,6 @@ void update_ButtonLEDs(void)
 
 		}
 	}
-
-
 
 }
 

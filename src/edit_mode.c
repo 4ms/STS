@@ -56,6 +56,7 @@ void do_assignment(uint8_t direction)
 
 	if (enter_assignment_mode())
 	{
+
 		//Next sample:
 		if (direction==1)
 		{
@@ -101,8 +102,11 @@ void do_assignment(uint8_t direction)
 			}
 		}
 
+
 		if (found_sample)
 		{
+			flags[UndoSampleDiffers] = 1;
+
 			flags[ForceFileReload1] = 1;
 			flags[Play1Trig]		= 1;
 
@@ -127,7 +131,7 @@ uint8_t enter_assignment_mode(void)
 {
 	FRESULT res;
 
-	// Return 1 if we've already entered assignment_mode
+	// Return 1 immediately if we've already entered assignment_mode
 	if (global_mode[ASSIGN_MODE]) return 1;
 
 	//Enter assignment mode
@@ -139,17 +143,23 @@ uint8_t enter_assignment_mode(void)
 	if (res!=FR_OK) {exit_assignment_mode(); return(0);} //unable to enter assignment mode
 
 	//Make a copy of the current sample info, so we can undo our changes later
+	//FixMe: Can we remove this, since we already saved the undo state when we entered EDIT_MODE?
 	save_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
 
 	return 1; //success
 }
 
+//
+//This is typically called if we change sample or bank
+//
 void exit_assignment_mode(void)
 {		
-	global_mode[ASSIGN_MODE] = 0;
+	global_mode[ASSIGN_MODE]	= 0;
 	f_closedir(&root_dir);
 	f_closedir(&assign_dir);
-	flags[UndoSampleExists] = 0;
+
+	flags[UndoSampleExists]		= 0;
+	flags[UndoSampleDiffers]	= 0;
 }
 
 FRESULT init_unassigned_scan(Sample *s_sample)
@@ -410,14 +420,15 @@ void save_undo_state(uint8_t bank, uint8_t samplenum)
 	undo_sample.startOfData 	= samples[bank][samplenum].startOfData;
 	undo_sample.PCM 			= samples[bank][samplenum].PCM;
 
-	undo_sample.inst_size 		= samples[bank][samplenum].inst_size  ;//& 0xFFFFFFF8;
-	undo_sample.inst_start 		= samples[bank][samplenum].inst_start  ;//& 0xFFFFFFF8;
-	undo_sample.inst_end 		= samples[bank][samplenum].inst_end  ;//& 0xFFFFFFF8;
+	undo_sample.inst_size 		= samples[bank][samplenum].inst_size;
+	undo_sample.inst_start 		= samples[bank][samplenum].inst_start;
+	undo_sample.inst_end 		= samples[bank][samplenum].inst_end;
 
-	undo_banknum			= bank;
-	undo_samplenum 			= samplenum;
+	undo_banknum				= bank;
+	undo_samplenum 				= samplenum;
 
-	flags[UndoSampleExists] = 1;
+	flags[UndoSampleExists] 	= 1;
+	flags[UndoSampleDiffers] 	= 0;
 }
 
 //Restores sample[][] to the undo-state buffer
@@ -426,7 +437,7 @@ uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum)
 {
 	if (bank==undo_banknum && samplenum==undo_samplenum)
 	{
-		str_cpy(samples[undo_banknum][undo_samplenum].filename,  undo_sample.filename);
+		str_cpy(samples[undo_banknum][undo_samplenum].filename,   undo_sample.filename);
 		samples[undo_banknum][undo_samplenum].blockAlign 		= undo_sample.blockAlign;
 		samples[undo_banknum][undo_samplenum].numChannels 		= undo_sample.numChannels;
 		samples[undo_banknum][undo_samplenum].sampleByteSize 	= undo_sample.sampleByteSize;
@@ -435,15 +446,16 @@ uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum)
 		samples[undo_banknum][undo_samplenum].startOfData 		= undo_sample.startOfData;
 		samples[undo_banknum][undo_samplenum].PCM 				= undo_sample.PCM;
 
-		samples[undo_banknum][undo_samplenum].inst_size 		= undo_sample.inst_size  ;//& 0xFFFFFFF8;
-		samples[undo_banknum][undo_samplenum].inst_start 		= undo_sample.inst_start  ;//& 0xFFFFFFF8;
-		samples[undo_banknum][undo_samplenum].inst_end 			= undo_sample.inst_end  ;//& 0xFFFFFFF8;
+		samples[undo_banknum][undo_samplenum].inst_size 		= undo_sample.inst_size;
+		samples[undo_banknum][undo_samplenum].inst_start 		= undo_sample.inst_start;
+		samples[undo_banknum][undo_samplenum].inst_end 			= undo_sample.inst_end;
 
-		flags[ForceFileReload1] = 1;
-		flags[Play1Trig]		= 1;
-		flags[UndoSampleExists] = 0;
+		flags[ForceFileReload1] 	= 1;
+		flags[Play1Trig]			= 1;
+		flags[UndoSampleExists] 	= 0;
+		flags[UndoSampleDiffers]	= 0;
 
-		return(1); //ok
+		return(1); //undo restored successfully
 	} else return(0); //not in the right sample/bank to preform an undo
 }
 
@@ -459,6 +471,12 @@ void enter_edit_mode(void)
 		cached_play_state = 0;
 	else
 		cached_play_state = 1;
+
+
+	//Save an undo state unless we've already saved one for this bank/sample
+	
+	if (!flags[UndoSampleExists] || undo_banknum != i_param[0][BANK] || undo_samplenum != i_param[0][SAMPLE])
+		save_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
 }
 
 void exit_edit_mode(void)
@@ -494,9 +512,9 @@ void copy_sample(uint8_t dst_bank, uint8_t dst_sample, uint8_t src_bank, uint8_t
 	samples[dst_bank][dst_sample].startOfData 		= samples[src_bank][src_sample].startOfData;
 	samples[dst_bank][dst_sample].PCM 				= samples[src_bank][src_sample].PCM;
 
-	samples[dst_bank][dst_sample].inst_size 		= samples[src_bank][src_sample].inst_size  ;//& 0xFFFFFFF8;
-	samples[dst_bank][dst_sample].inst_start 		= samples[src_bank][src_sample].inst_start  ;//& 0xFFFFFFF8;
-	samples[dst_bank][dst_sample].inst_end 			= samples[src_bank][src_sample].inst_end  ;//& 0xFFFFFFF8;
+	samples[dst_bank][dst_sample].inst_size 		= samples[src_bank][src_sample].inst_size;
+	samples[dst_bank][dst_sample].inst_start 		= samples[src_bank][src_sample].inst_start;
+	samples[dst_bank][dst_sample].inst_end 			= samples[src_bank][src_sample].inst_end;
 }
 
 
@@ -509,38 +527,12 @@ void set_sample_gain(Sample *s_sample, float gain)
 
 	s_sample->inst_gain = gain;
 
+	flags[UndoSampleDiffers] = 1;
 }
 
-//sets the trim start point between 0 and 100ms before the end of the sample file
-// void set_sample_trim_start(Sample *s_sample, float coarse, float fine)
-// {
-// 	uint32_t trimstart;
-// 	int32_t fine_trim;
 
-// 	if (coarse >= 1.0f) 				trimstart = s_sample->sampleSize - 4420;
-// 	else if (coarse <= (1.0/4096.0))	trimstart = 0;
-// 	else 								trimstart = (s_sample->sampleSize - 4420) * coarse;
-
-// 	fine_trim = fine * s_sample->sampleRate * s_sample->blockAlign * 0.5; // +/- 500ms
-
-// 	if ((-1.0*fine_trim) > trimstart) trimstart = 0;
-// 	else trimstart += fine_trim;
-
-// 	s_sample->inst_start = align_addr(trimstart, s_sample->blockAlign);
-
-// 	//Clip inst_end to the sampleSize (but keep inst_size the same)
-// 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
-// 		s_sample->inst_end = s_sample->sampleSize;
-// 	else
-// 		s_sample->inst_end = s_sample->inst_start + s_sample->inst_size;
-
-// 	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
-
-// }
-
-#define TS_MIN 4412
-#define TSZC 10
-#define TSZF 1
+#define TRIM_MIN_SIZE 4412
+#define TRIM_FINE_ADJ_AMOUNT 1
 
 void nudge_trim_start(Sample *s_sample, int32_t fine)
 {
@@ -549,10 +541,13 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 	float sample_size_secs;
 	uint32_t samples_per_adc;
 
+	scrubbed_in_edit = 1;
+	flags[UndoSampleDiffers] = 1;
+
 	sample_size_secs = (float)s_sample->sampleSize / (float)(s_sample->sampleRate * s_sample->blockAlign); // Bytes / (samples/sec * bytes/sample)
 
-	if (sample_size_secs > TSZF)
-		samples_per_adc = (TSZF * s_sample->sampleRate * s_sample->blockAlign) >> 12;
+	if (sample_size_secs > TRIM_FINE_ADJ_AMOUNT)
+		samples_per_adc = (TRIM_FINE_ADJ_AMOUNT * s_sample->sampleRate * s_sample->blockAlign) >> 12;
 	else if (s_sample->sampleSize >= 32768)
 		samples_per_adc = s_sample->sampleSize >> 14;
 	else
@@ -592,29 +587,6 @@ void nudge_trim_start(Sample *s_sample, int32_t fine)
 
 
 
-// void set_sample_trim_size(Sample *s_sample, float coarse)
-// {
-// 	uint32_t trimsize;
-// 	int32_t fine_trim;
-
-
-// 	if (coarse >= 1.0f) 				trimsize = s_sample->sampleSize;
-// 	else if (coarse <= (1.0/4096.0))	trimsize = 4420;
-// 	else 								trimsize = (s_sample->sampleSize - 4420) * coarse + 4420;
-
-// 	s_sample->inst_size = align_addr(trimsize, s_sample->blockAlign);
-
-// 	//Set inst_end to start+size and clip it to the sampleSize
-// 	if ((s_sample->inst_start + s_sample->inst_size) > s_sample->sampleSize)
-// 		s_sample->inst_end = s_sample->sampleSize;
-// 	else
-// 		s_sample->inst_end = (s_sample->inst_start + s_sample->inst_size);
-
-// 	s_sample->inst_end = align_addr(s_sample->inst_end, s_sample->blockAlign);
-
-
-// }
-
 //
 //fine ranges from -4095 to +4095
 //
@@ -629,20 +601,13 @@ void nudge_trim_size(Sample *s_sample, int32_t fine)
 	float sample_size_secs;
 	uint32_t samples_per_adc;
 
+	scrubbed_in_edit = 1;
+	flags[UndoSampleDiffers] = 1;
+
 	sample_size_secs = (float)s_sample->sampleSize / (float)(s_sample->sampleRate * s_sample->blockAlign); // Bytes / (samples/sec * bytes/sample)
 
-	// if (sample_size_secs > TSZC)
-	// 	samples_per_adc = (TSZC * s_sample->sampleRate * s_sample->blockAlign) >> 12;
-	// else if (s_sample->sampleSize >= 8192)
-	// 	samples_per_adc = s_sample->sampleSize >> 12;
-	// else
-	// 	samples_per_adc = 1;
-
-	// trimdelta = samples_per_adc * coarse * coarse;
-	// if (coarse < 0) trimdelta *= -1;
-
-	if (sample_size_secs > TSZF)
-		samples_per_adc = (TSZF * s_sample->sampleRate * s_sample->blockAlign) >> 12;
+	if (sample_size_secs > TRIM_FINE_ADJ_AMOUNT)
+		samples_per_adc = (TRIM_FINE_ADJ_AMOUNT * s_sample->sampleRate * s_sample->blockAlign) >> 12;
 	else if (s_sample->sampleSize >= 32768)
 		samples_per_adc = s_sample->sampleSize >> 14;
 	else
@@ -651,16 +616,16 @@ void nudge_trim_size(Sample *s_sample, int32_t fine)
 	trimdelta = samples_per_adc * fine * fine;
 	if (fine < 0) trimdelta *= -1;
 
-	//clip ->inst_size+trimdelta to TS_MIN..inst_size
+	//clip ->inst_size+trimdelta to TRIM_MIN_SIZE..inst_size
 	//Is there a more efficient way of doing this?
 	//We don't want to convert ->sampleSize or ->instSize to an int, it must stay unsigned
 	if (trimdelta<0)
 	{
 		trimdelta = -1 * trimdelta;
-		if (s_sample->inst_size > (trimdelta + TS_MIN))
+		if (s_sample->inst_size > (trimdelta + TRIM_MIN_SIZE))
 			s_sample->inst_size -= trimdelta;
 		else
-			s_sample->inst_size = TS_MIN;
+			s_sample->inst_size = TRIM_MIN_SIZE;
 	}
 	else
 	{
