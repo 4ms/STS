@@ -443,3 +443,28 @@ uint32_t intToStr(uint32_t x, char *str, uint32_t d)
     return len;
 }
 
+// looks for 'find' string into 'str'
+// returns 1 if found, 0 otherwise
+uint8_t str_found(char* str, char* find)
+{
+    int len_str, len_find, i, j, flag;
+
+    len_str  = str_len(str);
+    len_find = str_len(find);
+
+    for (i = 0; i <= len_str - len_find; i++)
+    {
+        for (j = i; j < i + len_find; j++)
+        {
+            flag = 1;
+            if (str[j] != find[j - i])
+            {
+                flag = 0;
+                break;
+            }
+        }
+        if (flag) return(1);
+    }
+    return(0);
+}
+

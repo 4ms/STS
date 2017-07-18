@@ -22,7 +22,8 @@
 #define ERROR_LOG_FILE		"error-log.txt"
 #define SETTINGS_FILE		"settings.txt"
 
-#define EOF_TAG				"End of file\n"
+#define EOF_TAG				"End of file"
+#define EOF_PAD				10 				// number of characters that can be left after EOF_TAG
 
 FRESULT reload_sdcard(void);
 
