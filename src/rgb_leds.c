@@ -27,13 +27,13 @@ const uint32_t LED_PALETTE[NUM_LED_PALETTE][3]=
 		{930,	950,	900},	//WHITE
 		{1000,	0,		0},		//RED
 		{1000,	200,	0},		//ORANGE
-		{600,	500,	0},		//YELLOW
+		{700,	650,	0},		//YELLOW
 		{0,		600,	60},	//GREEN
-		{0,		560,	1000},	//CYAN (SKY BLUE)
+		{0,		560,	1000},	//CYAN
 		{0,		0,		1000},	//BLUE
-		{1000,	0,		1000},	//VIOLET (HOT PINK)
+		{1000,	0,		1000},	//MAGENTA
 		{410,   0,      1000}, 	//LAVENDER
-		{520,	180,	170},	//PINK (PEACH)
+		{150,	150,	200},	//PEARL
 
 		{0, 	280, 	150},  	//AQUA
 		{550, 	700, 	0}, 	//GREENER
@@ -201,7 +201,65 @@ void test_all_buttonLEDs(void)
 	}
 }
 
+uint32_t display_bank_blink(uint8_t ButLEDnum, uint8_t bank_to_display, uint32_t tmr)
+{
 
+	if (bank_to_display <= 9) //solid color, no blinks
+	{
+		set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1 );
+	}
+	else 
+	if (bank_to_display <= 19) //one blink
+	{
+		if (	tmr < 0x1000) set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else 				set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-10 );
+	}
+	else
+	if (bank_to_display <= 29) //two blinks
+	{
+		if 		(tmr < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-20 );
+		else if (tmr < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-20 );
+	}
+	else
+	if (bank_to_display <= 39) //three blinks
+	{
+		if 		(tmr < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
+		else if (tmr < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
+		else if (tmr < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
+	}
+	else
+	if (bank_to_display <= 49) //four blinks
+	{
+		if 		(tmr < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
+		else if (tmr < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
+		else if (tmr < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
+		else if (tmr < 0xA000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
+	}
+	else
+	if (bank_to_display <= 59) //five blinks
+	{
+		if 		(tmr < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
+		else if (tmr < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
+		else if (tmr < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
+		else if (tmr < 0xA000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else if (tmr < 0xC000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
+		else if (tmr < 0xD000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
+		else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
+	}
+
+}
 
 /*
  * update_ButtonLEDs()
@@ -250,6 +308,7 @@ void update_ButtonLEDs(void)
 		tri_13 = ((float)(tm_13 - 0x1000)) / 4096.0f;
 	else
 		tri_13 = ((float)(0x1000 - tm_13)) / 4096.0f;
+
 
 	for (ButLEDnum=0;ButLEDnum<NUM_RGBBUTTONS;ButLEDnum++)
 	{
@@ -307,36 +366,34 @@ void update_ButtonLEDs(void)
 			set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
 		}
 		else
+
 		//
 		// Normal functions:
 		//
 
 		//BANK lights
-		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED\
-			|| (ButLEDnum==Reverse1ButtonLED && global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE] && cur_assign_bank<MAX_NUM_BANKS && !flags[AssignedPrevBank] && !flags[AssignedNextSample]))
+		if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED)
 		{
 			if 		(ButLEDnum == Bank1ButtonLED) 	chan = 0;
 			else if (ButLEDnum == Bank2ButtonLED) 	chan = 1;
 			else if (ButLEDnum == RecBankButtonLED)	chan = 2;
-			else chan = 3;
 
 #ifdef DEBUG_SETBANK1RGB
 			if (chan==0 && global_mode[EDIT_MODE]) set_ButtonLED_byRGB(ButLEDnum, i_smoothed_potadc[0]/4, i_smoothed_potadc[1]/4, i_smoothed_potadc[2]/4);
 			else 
 #endif
-			if (chan==2 && global_mode[EDIT_MODE]) //REC button LED off when in Edit Mode
+			if (chan==2 && global_mode[EDIT_MODE]) //REC Bank button LED off when in Edit Mode
 			{
 				set_ButtonLED_byPalette(ButLEDnum, OFF);
 			}
 			else
-			if (chan<3 && flags[PlayBankHover1Changed + chan])
+			if (flags[PlayBankHover1Changed + chan])
 			{
 				flags[PlayBankHover1Changed + chan]--;
 				set_ButtonLED_byPalette(ButLEDnum, CYANER);
 			}
 			else
 			{
-				t = tm_16;
 				if (chan==2) //REC button
 				{
 					//Display bank hover value
@@ -345,12 +402,7 @@ void update_ButtonLEDs(void)
 					else
 						bank_to_display = i_param[2][BANK];
 				}
-				else
-				if (chan==3){ //Rev1 button in ASSIGN_MODE, looking for already assigned samples
-					//We display the current bank we're scanning on the Rev1 light
-					bank_to_display = cur_assign_bank;
-				}
-				else //chan must be 0 or 1 from here onwards:
+				else //chan must be 0 or 1:
 				if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
 					bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
 				else
@@ -359,60 +411,8 @@ void update_ButtonLEDs(void)
 				else
 					bank_to_display = i_param[chan][BANK];
 
-				if (bank_to_display <= 9) //solid color, no blinks
-				{
-					set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1 );
-				}
-				else 
-				if (bank_to_display <= 19) //one blink
-				{
-					if (	t < 0x1000) set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-10 );
-				}
-				else
-				if (bank_to_display <= 29) //two blinks
-				{
-					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-20 );
-					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-20 );
-				}
-				else
-				if (bank_to_display <= 39) //three blinks
-				{
-					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
-					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
-					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-30 );
-				}
-				else
-				if (bank_to_display <= 49) //four blinks
-				{
-					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
-					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
-					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
-					else if (t < 0xA000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-40 );
-				}
-				else
-				if (bank_to_display <= 59) //five blinks
-				{
-					if 		(t < 0x1000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x3000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
-					else if (t < 0x4000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x6000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
-					else if (t < 0x7000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0x9000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
-					else if (t < 0xA000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else if (t < 0xC000)  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
-					else if (t < 0xD000)  set_ButtonLED_byPalette(ButLEDnum, OFF);
-					else 				  set_ButtonLED_byPalette(ButLEDnum, bank_to_display+1-50 );
-				}
+				display_bank_blink(ButLEDnum, bank_to_display, tm_16);
+
 			}
 		}
 
@@ -423,7 +423,7 @@ void update_ButtonLEDs(void)
 
 			if (chan && global_mode[EDIT_MODE])
 			{
-				set_ButtonLED_byPaletteFade(ButLEDnum, WHITE, VIOLET, tri_14);
+				set_ButtonLED_byPaletteFade(ButLEDnum, WHITE, MAGENTA, tri_14);
 			}
 			else
 			if (flags[PlaySample1Changed_valid + chan]>1)
@@ -558,13 +558,13 @@ void update_ButtonLEDs(void)
 					|| rec_state==CLOSING_FILE
 					/*|| rec_state==REC_PAUSED*/) {
 						if (global_mode[MONITOR_RECORDING])	set_ButtonLED_byPalette(RecButtonLED, (tm_13 < 0x0800)? RED : OFF); //Off/paused/closing = flash red
-						else 								set_ButtonLED_byPalette(RecButtonLED, (tm_13 < 0x0800)? VIOLET : OFF); //Off/paused/closing = flash red
+						else 								set_ButtonLED_byPalette(RecButtonLED, (tm_13 < 0x0800)? MAGENTA : OFF); //Off/paused/closing = flash red
 
 
 
 					}else //recording
 						if (global_mode[MONITOR_RECORDING])	set_ButtonLED_byPalette(RecButtonLED, RED); //rec + mon = solid red
-						else 								set_ButtonLED_byPalette(RecButtonLED, VIOLET); //rec + no-mon = solid violet
+						else 								set_ButtonLED_byPalette(RecButtonLED, MAGENTA); //rec + no-mon = solid violet
 
 			}
 
@@ -579,6 +579,13 @@ void update_ButtonLEDs(void)
 			{
 				if (chan==0)
 				{
+					if (global_mode[ASSIGN_MODE] && (cur_assign_bank<MAX_NUM_BANKS) && (!flags[AssignedPrevBank]) && (!flags[AssignedNextSample]))
+					{
+						//Rev1 button in ASSIGN_MODE, looking for already assigned samples
+						//Display the current bank we're scanning on the Rev1 light
+						display_bank_blink(ButLEDnum, cur_assign_bank, tm_16);
+					}
+					else
 					//When we press Edit+Rev1,
 					//Flicker the Rev1 light White for forward motion
 					//And Red for backward motion

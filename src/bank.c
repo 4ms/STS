@@ -171,8 +171,8 @@ uint8_t bank_to_color_string(uint8_t bank, char *color)
 			break;
 
 		case 7:
-			str_cpy(color, "Violet");
-			return(6);
+			str_cpy(color, "Magenta");
+			return(7);
 			break;
 
 		case 8:
@@ -181,8 +181,8 @@ uint8_t bank_to_color_string(uint8_t bank, char *color)
 			break;
 
 		case 9:
-			str_cpy(color, "Pink");
-			return(4);
+			str_cpy(color, "Pearl");
+			return(5);
 			break;
 
 		default:

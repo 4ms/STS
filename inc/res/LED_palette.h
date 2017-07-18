@@ -11,7 +11,7 @@ enum LEDPalette{
 	GREEN,	//5
 	CYAN,	//6
 	BLUE,	//7
-	VIOLET,	//8
+	MAGENTA,//8
 	LAVENDER,//9
 	PINK,	//10
 
