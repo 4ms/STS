@@ -54,9 +54,17 @@ FRESULT write_sampleindex_file(void)
 
 		// backup index at boot
 		if (flags[BootBak])
-		{
+		{	
+			// compute path to boot backups
 			str_cat(bootbakpath, SYS_DIR_SLASH, SAMPLE_BOOTBAK_FILE);
+			
+			// delete existing boot backups
+			f_unlink(bootbakpath);
+			
+			// set boot backup to sample index, as found on the SD card
 			f_rename(path,bootbakpath);
+
+			// do not update boot backup file until next boot
 			flags[BootBak]=0;
 		}
 
