@@ -37,8 +37,8 @@ extern SystemCalibrations 	*system_calibrations;
 void clear_errors(void)
 {
 	g_error = 0;
-	SIGNALLED_OFF;
-	BUSYLED_OFF;
+	// SIGNALLED_OFF;
+	// BUSYLED_OFF;
 
 }
 void init_buttons(void)

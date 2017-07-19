@@ -44,7 +44,7 @@
 #define SDRAM_MODEREG_WRITEBURST_MODE_PROGRAMMED ((uint16_t)0x0000)
 #define SDRAM_MODEREG_WRITEBURST_MODE_SINGLE     ((uint16_t)0x0200)
 
-
+#define SDRAM_IS_BUSY	 ((FMC_Bank5_6->SDSR & FMC_FLAG_Busy) == FMC_FLAG_Busy)
 void FMC_Config(void);
 
 void SDRAM_Init(void);

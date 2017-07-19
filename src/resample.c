@@ -10,6 +10,7 @@
 #include "sampler.h"
 #include "params.h"
 #include "resample.h"
+#include "sdram_driver.h"
 
 #include "circular_buffer.h"
 
@@ -50,7 +51,9 @@ inline int16_t get_16b_sample_avg(uint32_t addr)
 	uint32_t rd;
 	int16_t a,b;
 
-	while((FMC_Bank5_6->SDSR & FMC_FLAG_Busy) == FMC_FLAG_Busy){;}
+	while(SDRAM_IS_BUSY){;}
+//	if (addr<SDRAM_BASE || addr>=(SDRAM_BASE+SDRAM_SIZE)) return(0);
+
 	rd = (*((uint32_t *)addr));
 
 	a = (int16_t)(rd >> 16);
@@ -61,14 +64,16 @@ inline int16_t get_16b_sample_avg(uint32_t addr)
 int16_t get_16b_sample_right(uint32_t addr);
 inline int16_t get_16b_sample_right(uint32_t addr)
 {
-	while((FMC_Bank5_6->SDSR & FMC_FLAG_Busy) == FMC_FLAG_Busy){;}
+	while(SDRAM_IS_BUSY){;}
+//	if (addr<SDRAM_BASE || addr>=(SDRAM_BASE+SDRAM_SIZE)) return(0);
 	return(*((int16_t *)(addr+2)));
 }
 
 int16_t get_16b_sample_left(uint32_t addr);
 inline int16_t get_16b_sample_left(uint32_t addr)
 {
-	while((FMC_Bank5_6->SDSR & FMC_FLAG_Busy) == FMC_FLAG_Busy){;}
+	while(SDRAM_IS_BUSY){;}
+//	if (addr<SDRAM_BASE || addr>=(SDRAM_BASE+SDRAM_SIZE)) return(0);
 	return(*((int16_t *)addr));
 }
 

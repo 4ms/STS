@@ -35,6 +35,9 @@ uint32_t map_cache_to_buffer(uint32_t cache_point, uint8_t sampleByteSize, uint3
 {
 	uint32_t p;
 
+	if (cache_point < cache_start)
+		return(b->min);//error condition
+
 	//Find how far ahead the cache_point is from the start of the cache
 	p = cache_point - cache_start;
 

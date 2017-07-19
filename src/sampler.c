@@ -63,7 +63,11 @@ extern uint32_t WATCH0;
 extern uint32_t WATCH1;
 extern uint32_t WATCH2;
 extern uint32_t WATCH3;
+Sample dbg_sample;
 
+//
+// Filesystem:
+//
 extern FATFS FatFs;
 
 //
@@ -78,15 +82,15 @@ extern uint8_t 	flags[NUM_FLAGS];
 extern enum 	g_Errors g_error;
 
 extern uint8_t 	play_led_state[NUM_PLAY_CHAN];
-//extern uint8_t clip_led_state[NUM_PLAY_CHAN];
 
+extern volatile uint32_t 	sys_tmr;
+uint32_t					last_play_start_tmr[NUM_PLAY_CHAN];
 
 uint8_t SAMPLINGBYTES=2;
 
 uint32_t end_out_ctr[NUM_PLAY_CHAN]={0,0};
 uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
 
-Sample dbg_sample;
 
 //
 // Memory
@@ -106,15 +110,16 @@ enum PlayStates play_state				[NUM_PLAY_CHAN]; //activity
 uint8_t			sample_num_now_playing	[NUM_PLAY_CHAN]; //sample_now_playing
 uint8_t			sample_bank_now_playing	[NUM_PLAY_CHAN]; //bank_now_playing
 
+//ToDo: make cache_* a struct
 uint32_t		cache_low				[NUM_PLAY_CHAN]; //file position address that corresponds to lowest position in file that's cached
 uint32_t		cache_high				[NUM_PLAY_CHAN]; //file position address that corresponds to highest position in file that's cached
 uint32_t		cache_size				[NUM_PLAY_CHAN]; //size in bytes of the cache (should always equal play_buff[]->size / 2 * sampleByteSize
 uint32_t		cache_map_pt			[NUM_PLAY_CHAN]; //address in play_buff[] that corresponds to cache_low
 
-//make this a struct
-uint32_t 		sample_file_startpos	[NUM_PLAY_CHAN];
-uint32_t		sample_file_endpos		[NUM_PLAY_CHAN];
-uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN];
+//ToDo: make this a struct
+uint32_t 		sample_file_startpos	[NUM_PLAY_CHAN]; //file position where we began playback. 
+uint32_t		sample_file_endpos		[NUM_PLAY_CHAN]; //file position where we will end playback. endpos > startpos when REV==0, endpos < startpos when REV==1
+uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN]; //current file position being read. This is always inc/decrementing from startpos towards endpos
 
 uint32_t 		play_buff_bufferedamt	[NUM_PLAY_CHAN];
 enum PlayLoadTriage play_load_triage;
@@ -123,13 +128,10 @@ enum PlayLoadTriage play_load_triage;
 #define goto_filepos(p)	f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + (p));\
 						if(fil[chan].fptr != samples[banknum][samplenum].startOfData + (p)) g_error|=LSEEK_FPTR_MISMATCH;
 
-//
-// Cross-fading:
-//
-uint32_t fade_queued_dest_read_addr[NUM_PLAY_CHAN];
-uint32_t fade_dest_read_addr[NUM_PLAY_CHAN];
-float read_fade_pos[NUM_PLAY_CHAN];
 
+//
+//PLAYING_PERC envelopes:
+//
 float decay_amp_i[NUM_PLAY_CHAN];
 float decay_inc[NUM_PLAY_CHAN]={0,0};
 
@@ -193,12 +195,15 @@ void audio_buffer_init(void)
 }
 
 
+
 void toggle_reverse(uint8_t chan)
 {
 	uint8_t samplenum, banknum;
 	uint32_t t;
 	FRESULT res;
 	enum PlayStates tplay_state;
+	uint32_t resampled_buffer_size, resampled_cache_size;
+	float rs;
 
 	if (play_state[chan] == PLAYING || play_state[chan]==PLAYING_PERC || play_state[chan] == PREBUFFERING || play_state[chan]==PLAY_FADEUP)
 	{
@@ -220,31 +225,60 @@ void toggle_reverse(uint8_t chan)
 	if (tplay_state == PREBUFFERING || tplay_state==PLAY_FADEUP || tplay_state==PLAYING)
 	{
 
-		//Check the cache position of play_buff[chan]->out, to see if it's a certain distance from sample_file_startpos[chan]
-		//If so, reverse direction (by keeping ->out the same)
-		//If not, play from the other end (by moving ->out to the opposite end) 
-		t = map_buffer_to_cache(play_buff[chan]->out, samples[banknum][samplenum].sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
+					//Check the cache position of play_buff[chan]->out, to see if it's a certain distance from sample_file_startpos[chan]
+					//If so, reverse direction (by keeping ->out the same)
+					//If not, play from the other end (by moving ->out to the opposite end) 
+					//t = map_buffer_to_cache(play_buff[chan]->out, samples[banknum][samplenum].sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
 
-		//Find distance ->out's cache position is from startpos[]
-		if (!i_param[chan][REV])
-		{ //currently going forward, so find distance ->out is ahead of startpos
-			if (t > sample_file_startpos[chan])
-				t = t - sample_file_startpos[chan];
-			else t=0;
-		}
-		else
-		{//currently going backwards, so find distance ->out is behind startpos
-			if (t < sample_file_startpos[chan])
-				t = sample_file_startpos[chan] - t;
-			else t=0;
-		}
+					//Find distance ->out's cache position is from startpos[]
+					//if (!i_param[chan][REV])
+					//{ 
+					//currently going forward, so find distance ->out is ahead of startpos
+					// 	if (t > sample_file_startpos[chan])
+					// 		t = t - sample_file_startpos[chan];
+					// 	else t=0;
+					// }
+					// else
+					// {//currently going backwards, so find distance ->out is behind startpos
+					// 	if (t < sample_file_startpos[chan])
+					// 		t = sample_file_startpos[chan] - t;
+					// 	else t=0;
+					// }
 
-		if (t <= READ_BLOCK_SIZE * 2)
+					// First, calculate the effective resampling rate
+					//rs = f_param[chan][PITCH] * (float)samples[banknum][samplenum].sampleRate / f_BASE_SAMPLE_RATE;
+
+					//Amount play_buff[]->out changes with each audio block sent to the codec
+					//resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * samples[banknum][samplenum].numChannels * 2) * rs);
+
+					//Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
+					//resampled_cache_size = (resampled_buffer_size/2) *samples[banknum][samplenum].sampleByteSize;
+					//if (t <= resampled_cache_size * 2)
+
+		// If we just started playing, and then we get a reverse flag a short time afterwards,
+		// then we should not just reverse direction, but instead play from the opposite end (sample_file_endpos).
+		// The reason for this can be shown in the following patch:
+		// If the user fires two triggers into Play and Rev, it should play the sample backwards. 
+		// Then if the user fires those triggers again, it should play the sample forwards.
+		// So let's say these two triggers are a little bit off (<100ms)
+		// (or perhaps they are the same trigger but we detect them at different times)
+		// For example if Rev was detected 20 milliseconds after Play, the Sampler would start playing 20 milliseconds of sound,
+		// then reverse and and play those 20 milliseconds of audio backwards, then stop, for a total of 40ms of audio, then silence until the next play trig.
+		// This is not the intended behavior of the user.
+		//
+		// To acheive the right behavior, we need to make a decision about how much difference between triggers is considered "simulataneous"
+		// We just estimate this at 100ms (ToDo: should this be longer or shorter? The QCDEXP has a min delay of 135ms, so it should be less than that)
+		//
+		if ((sys_tmr - last_play_start_tmr[chan]) < (f_BASE_SAMPLE_RATE*0.1)) //100ms
 		{
-			if (sample_file_endpos[chan] <= cache_high[chan])
+			// See if the endpos is within the cache,
+			// Then we can just play from that point
+			if ((sample_file_endpos[chan] >= cache_low[chan]) && (sample_file_endpos[chan] <= cache_high[chan]))
 				play_buff[chan]->out = map_cache_to_buffer(sample_file_endpos[chan], samples[banknum][samplenum].sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
 			else
 			{
+				//Otherwise we have to make a new cache, so run start_playing()
+				//And return from this function
 				if (i_param[chan][REV])	i_param[chan][REV] = 0;
 				else 					i_param[chan][REV] = 1;
 
@@ -296,7 +330,6 @@ void toggle_reverse(uint8_t chan)
 // start_playing()
 // Starts playing on a channel at the current param positions
 //
-
 
 void start_playing(uint8_t chan)
 {
@@ -415,6 +448,8 @@ void start_playing(uint8_t chan)
 		play_state[chan]=PREBUFFERING;
 	}
 
+	last_play_start_tmr[chan]	= sys_tmr;
+
 	flags[PlayBuff1_Discontinuity+chan] = 1;
 
 	if (i_param[chan][REV])	decay_amp_i[chan]=0.0;
@@ -438,7 +473,6 @@ void start_playing(uint8_t chan)
 	dbg_sample.inst_end 		= s_sample->inst_end;
 	dbg_sample.inst_size 		= s_sample->inst_size;
 	dbg_sample.inst_gain 		= s_sample->inst_gain;
-
 }
 
 
@@ -730,7 +764,7 @@ void read_storage_to_buffer(void)
 			//
 			// Calculate the amount to pre-buffer before we play:
 			//
-			pb_adjustment = f_param[chan][PITCH] * (float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE ;
+			pb_adjustment = f_param[chan][PITCH] * (float)s_sample->sampleRate / f_BASE_SAMPLE_RATE ;
 
 			//Calculate how many bytes we need to pre-load in our buffer
 			//
@@ -994,7 +1028,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		//Calculate our actual resampling rate, based on the sample rate of the file being played
 
 		if (s_sample->sampleRate == BASE_SAMPLE_RATE)	rs = f_param[chan][PITCH];
-		else											rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / (float)BASE_SAMPLE_RATE);
+		else											rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / f_BASE_SAMPLE_RATE);
 
 
 		//

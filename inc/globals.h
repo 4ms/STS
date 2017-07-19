@@ -35,6 +35,7 @@
 */
 
 #define BASE_SAMPLE_RATE 44100
+#define f_BASE_SAMPLE_RATE 44100.0 /*float version*/
 
 //Update the FW Version anytime FLASH RAM settings format is changed
 #define FW_MAJOR_VERSION 0

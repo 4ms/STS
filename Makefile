@@ -120,7 +120,6 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 #build/src/buttons.o: CFLAGS = $(C0FLAGS)
 #build/src/file_util.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
-#build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/drivers/fatfs_sd_sdio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/drivers/stm32f4_discovery_sdio_sd.o: CFLAGS = $(C0FLAGS)
