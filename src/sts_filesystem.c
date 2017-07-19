@@ -661,7 +661,6 @@ uint8_t load_all_banks(uint8_t force_reload)
 {
 	FRESULT res;
 	FRESULT queue_valid;
-	// uint8_t res_bak; // Unused variable
 
 	//Load the index file: (buttons are white)
 	flags[RewriteIndex]=WHITE;
@@ -689,8 +688,6 @@ uint8_t load_all_banks(uint8_t force_reload)
 		// Go through all sample slots in all banks that have file_found==0
 		// Look for a file to fill this slot
 		load_missing_files();
-
-
 	}
 
 	else //sampleindex file was not ok, or we requested to force a full reload from disk
@@ -718,10 +715,10 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 
 	// Write samples struct to index
-	// ... so sample info gets updated with latest .wave header content
+	// ... so sample info gets updated with latest .wav header content
 	// Buttons are red for index file, then orange for html file
 
-	flags[RewriteIndex]=RED; 
+	flags[RewriteIndex]=RED; // FIXME: this seems redundant w/ content of index_write_wrapper() which sets flag to RED
 
 	res = index_write_wrapper(); //the wrapper sets flags[RewriteIndex] to ORANGE during html file write
 
