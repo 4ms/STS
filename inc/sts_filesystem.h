@@ -13,13 +13,17 @@
 
 #define SYS_DIR 			"_STS.system"
 #define SYS_DIR_SLASH		"_STS.system/"
+
 #define TMP_DIR				"_tmp"
 #define TMP_DIR_SLASH		"_tmp/"
-#define SAMPLELIST_FILE		"sample_list.html"
+
+#define SAMPLELIST_FILE		"__Sample List__.html"
+
 #define SAMPLE_INDEX_FILE	"sample_index.dat"
 #define SAMPLE_BAK_FILE		"sample_index-bak.dat"
 #define SAMPLE_BOOTBAK_FILE	"sample_index_boot-bak.dat"
 #define RENAME_LOG_FILE		"renamed_folders.txt"
+
 #define RENAME_TMP_FILE		"sts-renaming-queue.tmp"
 #define ERROR_LOG_FILE		"error-log.txt"
 #define SETTINGS_FILE		"settings.txt"
