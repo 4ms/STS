@@ -286,7 +286,7 @@ void write_buffer_to_storage(void)
 
 
 	FRESULT res;
-	char path[_MAX_LFN];
+	char final_filepath[_MAX_LFN];
 
 
 	uint32_t sz;
@@ -340,13 +340,13 @@ void write_buffer_to_storage(void)
 						res = f_write(&recfil, rec_buff16, sz, &written);
 						f_sync(&recfil);
 						
-						if (res!=FR_OK)		{/*f_close(wavfil); rec_state=REC_OFF; */g_error |= FILE_WRITE_FAIL; check_errors();}
+						if (res!=FR_OK)		{if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;} g_error |= FILE_WRITE_FAIL; check_errors();break;}
 						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
 						samplebytes_recorded += written;
 
 						//Update the wav file size in the wav header
 						res = write_wav_size(&recfil, samplebytes_recorded);
-						if (res!=FR_OK)		{/*f_close(wavfil); rec_state=REC_OFF; */g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+						if (res!=FR_OK)		{if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;} g_error |= FILE_WRITE_FAIL; check_errors(); break;}
 
 
 					}
@@ -372,7 +372,8 @@ void write_buffer_to_storage(void)
 				{
 					res = f_write(&recfil, rec_buff16, buffer_lead, &written);
 					f_sync(&recfil);
-					if (res!=FR_OK)				{g_error |= FILE_WRITE_FAIL; check_errors();}
+
+					if (res!=FR_OK)				{if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;} g_error |= FILE_WRITE_FAIL; check_errors(); break;}
 					if (written!=buffer_lead)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
 
 					samplebytes_recorded += written;
@@ -394,7 +395,7 @@ void write_buffer_to_storage(void)
 				f_close(&recfil);
 
 				//Rename the tmp file as the proper file in the proper directory
-				res = new_filename(sample_bank_now_recording, sample_num_now_recording, path);
+				res = new_filename(sample_bank_now_recording, sample_num_now_recording, final_filepath);
 				if (res != FR_OK)
 				{
 					rec_state=REC_OFF;
@@ -402,9 +403,9 @@ void write_buffer_to_storage(void)
 				}
 				else
 				{
-					res = f_rename(sample_fname_now_recording, path);
+					res = f_rename(sample_fname_now_recording, final_filepath);
 					if (res==FR_OK)
-						str_cpy(sample_fname_now_recording, path);
+						str_cpy(sample_fname_now_recording, final_filepath);
 				}
 
 
