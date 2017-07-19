@@ -214,9 +214,12 @@ int main(void)
 	//Begin audio DMA
 	audio_buffer_init();
 
-	//Load all banks
-	init_banks();
- 
+	// request unaltered backup of index @ boot
+	flags[BootBak]=1; 
+    
+    //Load all banks
+	init_banks(); // calls load_all_banks which calls index_write_wrapper() w/	flags[RewriteIndex]=RED high
+
   	// Backup index file (unless we are booting for the first time)
     if (!do_factory_reset) backup_sampleindex_file();
 
@@ -228,7 +231,6 @@ int main(void)
 	delay();
 
 	init_SDIO_read_IRQ();
-	
 
 	//Main loop
 	//All routines accessing the SD card should run here
