@@ -44,7 +44,7 @@ uint32_t memory_read_32bword(uint32_t addr)
 
 	//addr &= 0xFFFFFFFE;	 // align to even addresses
 
-	while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+	while(SDRAM_IS_BUSY){;}
 
 	return (*((uint32_t *)addr));
 }
@@ -61,7 +61,7 @@ uint32_t memory_read_24bword(uint32_t addr)
 
 	//addr &= 0xFFFFFFFE;	 // align to even addresses
 
-	while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+	while(SDRAM_IS_BUSY){;}
 
 	return (*((uint32_t *)addr));
 }
@@ -88,7 +88,7 @@ uint32_t memory_read(uint32_t *addr, uint8_t channel, int32_t *rd_buff, uint32_t
 		// even addresses only
 		*addr = (*addr & 0xFFFFFFFE);
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		if (*addr==stop_at_addr)	num_filled=1;
 		else if (num_filled)		num_filled++;
@@ -127,7 +127,7 @@ uint32_t memory_read16(uint32_t *addr, uint8_t channel, int16_t *rd_buff, uint32
 		// even addresses only
 		*addr = (*addr & 0xFFFFFFFE);
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		if (*addr==stop_at_addr)	num_filled=1;
 		else if (num_filled)		num_filled++;
@@ -151,7 +151,7 @@ uint32_t memory_read16_cbin(CircularBuffer* b, int16_t *rd_buff, uint32_t num_sa
 
 	for (i=0;i<num_samples;i++)
 	{
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		if (b->out==b->in)			num_filled=1;
 		else if (num_filled)		num_filled++;
@@ -176,7 +176,7 @@ uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samp
 	for (i=0;i<num_samples;i++)
 	{
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		if (b->out==b->in)			num_filled=1;
 		else if (num_filled)		num_filled++;
@@ -215,7 +215,7 @@ uint32_t memory_write_24as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_b
 	{
 		*((int16_t *)b->in) = (int16_t)(wr_buff[i+2]<<8 | wr_buff[i+1]);
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		CB_offset_in_address(b, 2, decrement);
 	}
@@ -244,7 +244,7 @@ uint32_t memory_write_32ias16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_
 	{
 		*((int16_t *)b->in) = (int16_t)(wr_buff[i+3]<<8 | wr_buff[i+2]);
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		CB_offset_in_address(b, 2, decrement);
 	}
@@ -275,7 +275,7 @@ uint32_t memory_write_32fas16(CircularBuffer* b, float *wr_buff, uint32_t num_fl
 		else if (wr_buff[i] <= -1.0) 	*((int16_t *)b->in) = -32768;
 		else 							*((int16_t *)b->in) = (int16_t)(wr_buff[i]*32767.0);
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		CB_offset_in_address(b, 2, decrement);
 	}
@@ -308,7 +308,7 @@ uint32_t memory_write32_cb(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_sa
 	{
 		*((uint32_t *)b->in) = wr_buff[i];
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		CB_offset_in_address(b, 4, decrement);
 	}
@@ -339,7 +339,7 @@ uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_sam
 
 		*((int16_t *)b->in) = wr_buff[i];
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		CB_offset_in_address(b, 2, decrement);
 
@@ -367,7 +367,7 @@ uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, ui
 
 	for (i=0;i<num_samples;i++){
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		//Enforce valid addr range
 		if ((addr[channel]<SDRAM_BASE) || (addr[channel] > (SDRAM_BASE + SDRAM_SIZE)))
@@ -384,7 +384,7 @@ uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, ui
 
 		mix = ((float)wr_buff[i] * fade) + ((float)rd * (1.0-fade));
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		if (SAMPLINGBYTES==2)
 			*((int16_t *)addr[channel]) = mix;
@@ -414,7 +414,7 @@ uint32_t RAM_test(void){
 		if (i & 0x80000) 	PLAYLED1_ON;
 		else 				SIGNALLED_ON;
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		if (i & 0x80000) 	PLAYLED1_OFF;
 		else				SIGNALLED_OFF;
@@ -433,7 +433,7 @@ uint32_t RAM_test(void){
 		if (i & 0x80000) 	PLAYLED2_ON;
 		else 				BUSYLED_ON;
 
-		while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+		while(SDRAM_IS_BUSY){;}
 
 		if (i & 0x80000) 	PLAYLED2_OFF;
 		else				BUSYLED_OFF;

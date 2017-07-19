@@ -291,7 +291,7 @@ void FMC_Config(void){
   FMC_SDRAMCommandStructure.FMC_AutoRefreshNumber      = 1;
   FMC_SDRAMCommandStructure.FMC_ModeRegisterDefinition = 0;
   /* Wait until the SDRAM controller is ready */
-  while((FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET) && (timeout > 0))
+  while((SDRAM_IS_BUSY) && (timeout > 0))
   {
     timeout--;
   }
@@ -312,7 +312,7 @@ void FMC_Config(void){
 
   /* Wait until the SDRAM controller is ready */
   timeout = SDRAM_TIMEOUT;
-  while((FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET) && (timeout > 0))
+  while((SDRAM_IS_BUSY) && (timeout > 0))
   {
     timeout--;
   }
@@ -328,7 +328,7 @@ void FMC_Config(void){
 
   /* Wait until the SDRAM controller is ready */
   timeout = SDRAM_TIMEOUT;
-  while((FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET) && (timeout > 0))
+  while((SDRAM_IS_BUSY) && (timeout > 0))
   {
     timeout--;
   }
@@ -351,7 +351,7 @@ void FMC_Config(void){
 
   /* Wait until the SDRAM controller is ready */
   timeout = SDRAM_TIMEOUT;
-  while((FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET) && (timeout > 0))
+  while((SDRAM_IS_BUSY) && (timeout > 0))
   {
     timeout--;
   }
@@ -367,7 +367,7 @@ void FMC_Config(void){
 
   /* Wait until the SDRAM controller is ready */
   timeout = SDRAM_TIMEOUT;
-  while((FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET) && (timeout > 0))
+  while((SDRAM_IS_BUSY) && (timeout > 0))
   {
     timeout--;
   }
