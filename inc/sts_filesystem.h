@@ -13,6 +13,8 @@
 
 #define SYS_DIR 			"_STS.system"
 #define SYS_DIR_SLASH		"_STS.system/"
+#define TMP_DIR				"_tmp"
+#define TMP_DIR_SLASH		"_tmp/"
 #define SAMPLELIST_FILE		"sample_list.html"
 #define SAMPLE_INDEX_FILE	"sample_index.dat"
 #define SAMPLE_BAK_FILE		"sample_index-bak.dat"

@@ -25,6 +25,7 @@ void record_audio_to_buffer(int16_t *src);
 void write_buffer_to_storage(void);
 void init_rec_buff(void);
 void create_new_recording(void);
+FRESULT write_wav_size(FIL *wavfil, uint32_t samplebytes_recorded);
 
 
 #endif /* INC_WAV_RECORDING_H_ */

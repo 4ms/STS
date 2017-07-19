@@ -3,6 +3,7 @@
 #include "wavefmt.h"
 #include "timekeeper.h"
 #include "audio_sdram.h"
+#include "sdram_driver.h"
 #include "ff.h"
 #include "sampler.h"
 #include "circular_buffer.h"
@@ -126,7 +127,7 @@ void record_audio_to_buffer(int16_t *src)
 				*((int16_t *)rec_buff->in) = *src++; // + system_calibrations->codec_adc_calibration_dcoffset[i&1];
 				dummy=*src++; //ignore bottom bits
 
-				while(FMC_GetFlagStatus(FMC_Bank2_SDRAM, FMC_FLAG_Busy) != RESET){;}
+				while(SDRAM_IS_BUSY){;}
 
 				CB_offset_in_address(rec_buff, 2, 0);
 
@@ -165,17 +166,43 @@ void create_new_recording(void)
 	FRESULT res;
 	WaveHeaderAndChunk whac;
 	uint32_t written;
+	DIR dir;
 
-	//Make a file with a temp name (tmp-XXXXX.wav)
-	sz=4;
-	str_cpy(sample_fname_now_recording, "tmp-");
+	//Make a file with a temp name (tmp-XXXXX.wav), inside the temp dir
+
+	//Open the temp directory
+	res = f_opendir(&dir, TMP_DIR);
+
+	//If it doesn't exist, create it
+	if (res==FR_NO_PATH) res = f_mkdir(TMP_DIR);
+
+	//If we got an error opening or creating a dir
+	//try reloading the SDCard, then opening the dir (and creating if needed)
+	if (res!=FR_OK)
+	{
+		res = reload_sdcard();
+		if (res==FR_OK)
+		{
+			res = f_opendir(&dir, TMP_DIR);
+			if (res==FR_NO_PATH) res = f_mkdir(TMP_DIR);
+		}
+	}
+
+
+	//If we just can't open or create the tmp dir, just put it in the root dir
+	if (res!=FR_OK)
+		str_cpy(sample_fname_now_recording, "tmp-");
+	
+	else
+		str_cat(sample_fname_now_recording, TMP_DIR_SLASH, "tmp-");
+
+	sz = str_len(sample_fname_now_recording);
 	sz += intToStr(sys_tmr, &(sample_fname_now_recording[sz]), 0);
 	sample_fname_now_recording[sz++] = '.';
 	sample_fname_now_recording[sz++] = 'w';
 	sample_fname_now_recording[sz++] = 'a';
 	sample_fname_now_recording[sz++] = 'v';
 	sample_fname_now_recording[sz++] = 0;
-
 
 
 	create_waveheader(&whac.wh, &whac.fc);
@@ -211,17 +238,54 @@ void create_new_recording(void)
 
 }
 
+FRESULT write_wav_size(FIL *wavfil, uint32_t wav_data_bytes)
+{
+	uint32_t data;
+	uint32_t orig_pos;
+	uint32_t written;
+	FRESULT res;
+
+	//cache the original file position
+	orig_pos = f_tell(wavfil);
+
+	 //file size - 8
+	data = wav_data_bytes + sizeof(WaveHeader) + sizeof(WaveChunk) - 8;
+	res = f_lseek(wavfil, 4);
+	if (res==FR_OK)
+	{
+		res = f_write(wavfil, &data, 4, &written);
+		f_sync(wavfil);
+	}
+
+	if (res!=FR_OK) {g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
+	if (written!=4)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
+
+	//data chunk size
+	data = wav_data_bytes;
+	res = f_lseek(wavfil, 40);
+	if (res==FR_OK)
+	{
+		res = f_write(wavfil, &data, 4, &written);
+		f_sync(wavfil);
+	}
+
+	if (res!=FR_OK) {g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
+	if (written!=4)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
+
+	//restore the original file position
+	res = f_lseek(wavfil, orig_pos);
+	return(res);
+
+}
+
 void write_buffer_to_storage(void)
 {
 	uint32_t buffer_lead;
 	uint32_t addr_exceeded;
 	uint32_t written;
-	uint32_t data[1];
-	//uint32_t samplenum;
-	//uint32_t chan;
+
 
 	FRESULT res;
-	//DIR dir;
 	char path[_MAX_LFN];
 
 
@@ -276,9 +340,14 @@ void write_buffer_to_storage(void)
 						res = f_write(&recfil, rec_buff16, sz, &written);
 						f_sync(&recfil);
 						
-						if (res!=FR_OK)		{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+						if (res!=FR_OK)		{/*f_close(wavfil); rec_state=REC_OFF; */g_error |= FILE_WRITE_FAIL; check_errors();}
 						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
 						samplebytes_recorded += written;
+
+						//Update the wav file size in the wav header
+						res = write_wav_size(&recfil, samplebytes_recorded);
+						if (res!=FR_OK)		{/*f_close(wavfil); rec_state=REC_OFF; */g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+
 
 					}
 					else {g_error |= WRITE_BUFF_OVERRUN; check_errors();}
@@ -290,7 +359,6 @@ void write_buffer_to_storage(void)
 
 		case (CLOSING_FILE):
 			//See if we have more in the buffer to write
-			//buffer_lead = diff_wrap(rec_buff->in, rec_buff->out,  rec_buff->wrapping, MEM_SIZE);
 			buffer_lead = CB_distance(rec_buff, 0);
 
 			if (buffer_lead)
@@ -304,10 +372,13 @@ void write_buffer_to_storage(void)
 				{
 					res = f_write(&recfil, rec_buff16, buffer_lead, &written);
 					f_sync(&recfil);
-					if (res!=FR_OK)				{g_error |= FILE_WRITE_FAIL; check_errors(); break;}
-					if (written!=buffer_lead)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); break;}
+					if (res!=FR_OK)				{g_error |= FILE_WRITE_FAIL; check_errors();}
+					if (written!=buffer_lead)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
 
 					samplebytes_recorded += written;
+					//Update the wav file size in the wav header
+					res = write_wav_size(&recfil, samplebytes_recorded);
+					if (res!=FR_OK)		{f_close(&recfil); rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); break;}
 
 				}
 				else
@@ -316,21 +387,13 @@ void write_buffer_to_storage(void)
 					check_errors();
 				}
 			}
-			else //Write the file size into the header, and close the file
+			else 
 			{
-
-				 //file size - 8
-				data[0] = samplebytes_recorded+sizeof(WaveHeader)+sizeof(WaveChunk)-8;
-				res = f_lseek(&recfil, 4);
-				res = f_write(&recfil, data, 4, &written);
-				f_sync(&recfil);
-
-				//data chunk size
-				data[0] = samplebytes_recorded;
-				res = f_lseek(&recfil, 40);
-				res = f_write(&recfil, data, 4, &written);
+				//Write the file size into the header, and close the file
+				res = write_wav_size(&recfil, samplebytes_recorded);
 				f_close(&recfil);
 
+				//Rename the tmp file as the proper file in the proper directory
 				res = new_filename(sample_bank_now_recording, sample_num_now_recording, path);
 				if (res != FR_OK)
 				{
@@ -353,6 +416,7 @@ void write_buffer_to_storage(void)
 				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign = 4;
 				samples[sample_bank_now_recording][sample_num_now_recording].startOfData = 44;
 				samples[sample_bank_now_recording][sample_num_now_recording].PCM = 1;
+				samples[sample_bank_now_recording][sample_num_now_recording].file_found = 1;
 
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_start = 0;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded & 0xFFFFFFF8;
