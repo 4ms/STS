@@ -16,7 +16,7 @@
 #define SAMPLELIST_FILE		"sample_list.html"
 #define SAMPLE_INDEX_FILE	"sample_index.dat"
 #define SAMPLE_BAK_FILE		"sample_index-bak.dat"
-#define SAMPLE_BAK0_FILE	"sample_index-bak0.dat"
+#define SAMPLE_BOOTBAK_FILE	"sample_index_boot-bak.dat"
 #define RENAME_LOG_FILE		"renamed_folders.txt"
 #define RENAME_TMP_FILE		"sts-renaming-queue.tmp"
 #define ERROR_LOG_FILE		"error-log.txt"

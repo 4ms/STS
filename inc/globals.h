@@ -48,22 +48,22 @@
 #define FIRST_PRODUCTION_FW_MINOR_VERSION 1
 
 enum Flags {
-	PlaySample1Changed, //0
+	PlaySample1Changed, 	//0
 	PlaySample2Changed,
 	PlayBank1Changed,
 	PlayBank2Changed,
 	RecSampleChanged,
-	RecBankChanged, //5
+	RecBankChanged, 		//5
 	Play1But,
 	Play2But,
 	RecTrig,
 	Rev1Trig,
-	Rev2Trig, //10
+	Rev2Trig, 				//10
 	PlayBuff1_Discontinuity,
 	PlayBuff2_Discontinuity,
 	ToggleMonitor,
 	ToggleLooping1,
-	ToggleLooping2, //15
+	ToggleLooping2, 		//15
 	PlaySample1Changed_valid,
 	PlaySample2Changed_valid,
 	PlaySample1Changed_empty,
@@ -73,22 +73,22 @@ enum Flags {
 	ForceFileReload2,
 	AssignModeRefused,
 	AssigningEmptySample,
-	TimeToReadStorage, //25
+	TimeToReadStorage, 		//25
 	Play1Trig,
 	Play2Trig,
 	StereoModeTurningOn,
 	StereoModeTurningOff,
-	SkipProcessButtons, //30
+	SkipProcessButtons, 	//30
 	ViewBlinkBank1,
 	ViewBlinkBank2,
 	PlayBankHover1Changed,
 	PlayBankHover2Changed,
-	RecBankHoverChanged, //35
+	RecBankHoverChanged, 	//35
 	RevertSample,
 	RevertBank1,
 	RevertBank2,
 	RevertAll,
-	RewriteIndex, //40
+	RewriteIndex, 			//40
 	RewriteIndexFail,
 	RewriteIndexSucess,
 	AssignedNextSample,
@@ -103,6 +103,7 @@ enum Flags {
 	LatchVoltOctCV2, 
 	Play1TrigDelaying,
 	Play2TrigDelaying,
+	BootBak,				// 55
 
 	NUM_FLAGS
 };

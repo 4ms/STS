@@ -34,7 +34,7 @@ FRESULT write_sampleindex_file(void)
 	char 		b_color[11];
 	char 		bank_path[_MAX_LFN+1];
 	char 		filename_ptr[_MAX_LFN+1];
-	char 		path[_MAX_LFN+1];
+	char 		path[_MAX_LFN+1], bootbakpath[_MAX_LFN+1];
 
 	// CREATE INDEX FILE
 	// previous index files are replaced
@@ -48,11 +48,31 @@ FRESULT write_sampleindex_file(void)
 
 	// WRITE SAMPLES DATA TO INDEX FILE
 	else {
-		// create sample.index file
-		// ... and its pointer &temp_file
+
+		// file index path
 		str_cat(path, SYS_DIR_SLASH,SAMPLE_INDEX_FILE);
+
+		// backup index at boot
+		if (flags[BootBak])
+		{	
+			// compute path to boot backups
+			str_cat(bootbakpath, SYS_DIR_SLASH, SAMPLE_BOOTBAK_FILE);
+			
+			// delete existing boot backups
+			f_unlink(bootbakpath);
+			
+			// set boot backup to sample index, as found on the SD card
+			f_rename(path,bootbakpath);
+
+			// do not update boot backup file until next boot
+			flags[BootBak]=0;
+		}
+
+		// (re)create sample.index file
+		// ... and its pointer &temp_file
 		res = f_open(&temp_file, path, FA_WRITE | FA_CREATE_ALWAYS); 
 		if (res != FR_OK) return(res); 
+
 
 		// For each bank
 		for (i=0; i<MAX_NUM_BANKS; i++)
@@ -229,24 +249,26 @@ FRESULT backup_sampleindex_file(void)
 	FIL 		indexfile, backupindex;
 	FRESULT		res_index, res_bak;
 	char 		read_buff[512];
-	uint32_t 	bytes_read;
-	uint32_t 	bytes_written;
+	uint32_t 	bytes_read, bytes_written;
 	char		idx_full_path[_MAX_LFN+1];
 	char		bak_full_path[_MAX_LFN+1];
 
-	// Open index and backup files
+	// Open index
 	str_cat(idx_full_path, SYS_DIR_SLASH, SAMPLE_INDEX_FILE);
 	res_index  = f_open(&indexfile, idx_full_path, FA_READ);
 	if(res_index!=FR_OK) {f_close(&indexfile);   return (res_index);}
 
+	// Open Backup file
 	str_cat(bak_full_path, SYS_DIR_SLASH, SAMPLE_BAK_FILE);	
 	res_bak = f_open(&backupindex, bak_full_path, FA_WRITE | FA_CREATE_ALWAYS);
 	if(res_bak!=FR_OK) {f_close(&indexfile);f_close(&backupindex); return (res_bak);}
 
 	while(1)
 	{
+		// Read index file
 		f_read(&indexfile, read_buff, 512, &bytes_read);
 
+		// Write into backup file
 		f_write(&backupindex, read_buff, bytes_read, &bytes_written);
 		f_sync(&backupindex);
 
@@ -256,6 +278,7 @@ FRESULT backup_sampleindex_file(void)
 			f_close(&backupindex);
 			return (FR_INT_ERR); // ToDo: there should be a way to report this error more accurately
 		}
+	
 		if (f_eof(&indexfile))
 		{
 			f_close(&indexfile);
