@@ -3616,15 +3616,18 @@ FRESULT f_write (
 				}
 				if (clst == 0) break;		/* Could not allocate a new cluster (disk full) */
 				if (clst == 1) ABORT(fs, FR_INT_ERR);
-				if (clst == 0xFFFFFFFF) ABORT(fs, FR_DISK_ERR);
+				if (clst == 0xFFFFFFFF)
+					ABORT(fs, FR_DISK_ERR);
 				fp->clust = clst;			/* Update current cluster */
 				if (fp->obj.sclust == 0) fp->obj.sclust = clst;	/* Set start cluster if the first write */
 			}
 #if _FS_TINY
-			if (fs->winsect == fp->sect && sync_window(fs) != FR_OK) ABORT(fs, FR_DISK_ERR);	/* Write-back sector cache */
+			if (fs->winsect == fp->sect && sync_window(fs) != FR_OK)
+				ABORT(fs, FR_DISK_ERR);	/* Write-back sector cache */
 #else
 			if (fp->flag & FA_DIRTY) {		/* Write-back sector cache */
-				if (disk_write(fs->drv, fp->buf, fp->sect, 1) != RES_OK) ABORT(fs, FR_DISK_ERR);
+				if (disk_write(fs->drv, fp->buf, fp->sect, 1) != RES_OK)
+					ABORT(fs, FR_DISK_ERR);
 				fp->flag &= (BYTE)~FA_DIRTY;
 			}
 #endif
@@ -3636,7 +3639,8 @@ FRESULT f_write (
 				if (csect + cc > fs->csize) {	/* Clip at cluster boundary */
 					cc = fs->csize - csect;
 				}
-				if (disk_write(fs->drv, wbuff, sect, cc) != RES_OK) ABORT(fs, FR_DISK_ERR);
+				if (disk_write(fs->drv, wbuff, sect, cc) != RES_OK)
+					ABORT(fs, FR_DISK_ERR);
 #if _FS_MINIMIZE <= 2
 #if _FS_TINY
 				if (fs->winsect - sect < cc) {	/* Refill sector cache if it gets invalidated by the direct write */
@@ -3655,7 +3659,8 @@ FRESULT f_write (
 			}
 #if _FS_TINY
 			if (fp->fptr >= fp->obj.objsize) {	/* Avoid silly cache filling on the growing edge */
-				if (sync_window(fs) != FR_OK) ABORT(fs, FR_DISK_ERR);
+				if (sync_window(fs) != FR_OK)
+					ABORT(fs, FR_DISK_ERR);
 				fs->winsect = sect;
 			}
 #else
@@ -3670,7 +3675,8 @@ FRESULT f_write (
 		wcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
 		if (wcnt > btw) wcnt = btw;					/* Clip it by btw if needed */
 #if _FS_TINY
-		if (move_window(fs, fp->sect) != FR_OK) ABORT(fs, FR_DISK_ERR);	/* Move sector window */
+		if (move_window(fs, fp->sect) != FR_OK)
+			ABORT(fs, FR_DISK_ERR);	/* Move sector window */
 		mem_cpy(fs->win + fp->fptr % SS(fs), wbuff, wcnt);	/* Fit data to the sector */
 		fs->wflag = 1;
 #else
@@ -4082,6 +4088,10 @@ FRESULT f_lseek (
 //was:
 //			if (ifptr > 0 &&
 //				(ofs - 1) / bcs >= (ifptr - 1) / bcs) {	/* When seek to same or following cluster, */
+
+//has been suggested to change to: http://elm-chan.org/fsw/ff/bd/?show=2964
+//			if (ifptr > 0 &&
+//			    ((ofs - 1) & ~(FSIZE_t)(bcs - 1)) >= ((ifptr - 1) & ~(FSIZE_t)(bcs - 1))) { /* When seek to same or following cluster, */
 
 				fp->fptr = (ifptr - 1) & ~(FSIZE_t)(bcs - 1);	/* start from the current cluster */
 				ofs -= fp->fptr;

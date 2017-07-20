@@ -81,13 +81,12 @@ DRESULT disk_ioctl (BYTE pdrv, BYTE cmd, void* buff);
 #define CT_BLOCK	0x08		/* Block addressing */
 
 
-DSTATUS TM_FATFS_SD_SDIO_disk_status(void);
-DRESULT TM_FATFS_SD_SDIO_disk_read(BYTE *buff, DWORD sector, UINT count);
-DRESULT TM_FATFS_SD_SDIO_disk_write(const BYTE *buff, DWORD sector, UINT count);
-DRESULT TM_FATFS_SD_SDIO_disk_ioctl(BYTE cmd, void *buff);
-DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void);
+DSTATUS sdio_disk_status(void);
+DRESULT sdio_disk_write(const BYTE *buff, DWORD sector, UINT count);
+DRESULT sdio_disk_ioctl(BYTE cmd, void *buff);
+DSTATUS sdio_disk_initialize(void);
 
-DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count);
+DRESULT sdio_disk_read(BYTE *data, DWORD addr, UINT count);
 
 
 #ifdef __cplusplus

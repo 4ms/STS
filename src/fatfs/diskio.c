@@ -53,7 +53,7 @@ DSTATUS disk_initialize (
 	if (accessing) return 99;
 	BUSYLED_ON;
 	accessing |= (1<<0);
-	res = TM_FATFS_SD_SDIO_disk_initialize();
+	res = sdio_disk_initialize();
 	accessing &= ~(1<<0);
 	BUSYLED_OFF;
 
@@ -73,7 +73,7 @@ DSTATUS disk_status (
 //
 //	if (accessing) return 99;
 //	accessing |= (1<<1);
-//	res = TM_FATFS_SD_SDIO_disk_status();
+//	res = sdio_disk_status();
 //	accessing &= ~(1<<1);
 //
 //	return res;
@@ -104,7 +104,7 @@ DRESULT disk_read (
 	}
 	BUSYLED_ON;
 	accessing |= (1<<2);
-	res = DG_disk_read(buff,sector,count);
+	res = sdio_disk_read(buff,sector,count);
 	accessing &= ~(1<<2);
 	BUSYLED_OFF;
 
@@ -132,6 +132,9 @@ DRESULT disk_write (
 		return RES_PARERR;
 	}
 	
+	if (sector == 0) //<8192?
+		return RES_PARERR;
+
 	while (accessing)
 	{
 		if (timeout--==0)
@@ -139,7 +142,7 @@ DRESULT disk_write (
 	}
 	BUSYLED_ON;
 	accessing |= (1<<3);
-	res = TM_FATFS_SD_SDIO_disk_write(buff,sector,count);
+	res = sdio_disk_write(buff,sector,count);
 	accessing &= ~(1<<3);
 	BUSYLED_OFF;
 	
@@ -161,7 +164,7 @@ DRESULT disk_ioctl (
 
 	if (accessing) return 99;
 	accessing |= (1<<4);
-	res = TM_FATFS_SD_SDIO_disk_ioctl(cmd, buff);
+	res = sdio_disk_ioctl(cmd, buff);
 	accessing &= ~(1<<4);
 
 	return res;
@@ -184,20 +187,32 @@ __weak DWORD get_fattime(void) {
 }
 
 
-static volatile DSTATUS TM_FATFS_SD_SDIO_Stat = STA_NOINIT;	/* Physical drive status */
+static volatile DSTATUS sdio_status = STA_NOINIT;	/* Physical drive status */
 
-#define BLOCK_SIZE            512
+#define BLOCK_SIZE            		512
 
-uint8_t TM_FATFS_SDIO_WriteEnabled(void) {
+#define FATFS_USE_DETECT_PIN 		0
+//#define FATFS_USE_DETECT_PIN_PORT
+//#define FATFS_USE_DETECT_PIN_PIN
+
+#define FATFS_USE_WRITEPROTECT_PIN 	0
+//#define FATFS_USE_WRITEPROTECT_PIN_PORT
+//#define FATFS_USE_WRITEPROTECT_PIN_PIN
+
+
+uint8_t sdio_write_enabled(void) {
 #if FATFS_USE_WRITEPROTECT_PIN > 0
 	return !((FATFS_USE_WRITEPROTECT_PIN_PORT)->IDR & (FATFS_USE_WRITEPROTECT_PIN_PIN));
-//	return !TM_GPIO_GetInputPinValue(FATFS_USE_WRITEPROTECT_PIN_PORT, FATFS_USE_WRITEPROTECT_PIN_PIN);
 #else
 	return 1;
 #endif
 }
 
-DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void) {
+
+//
+// sdio_disk_initialize()
+//
+DSTATUS sdio_disk_initialize(void) {
 	NVIC_InitTypeDef NVIC_InitStructure;
 	GPIO_InitTypeDef gpio;
 	GPIO_StructInit(&gpio);
@@ -205,7 +220,6 @@ DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void) {
 
 	/* Detect pin */
 #if FATFS_USE_DETECT_PIN > 0
-	//TM_GPIO_Init(FATFS_USE_DETECT_PIN_PORT, FATFS_USE_DETECT_PIN_PIN, GPIO_Mode_IN, GPIO_OType_PP, GPIO_PuPd_UP, GPIO_Low_Speed);
 	gpio.GPIO_Mode = GPIO_Mode_IN;
 	gpio.GPIO_Speed = GPIO_Speed_2MHz;
 	gpio.GPIO_PuPd = GPIO_PuPd_UP;
@@ -215,7 +229,6 @@ DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void) {
 
 	/* Write protect pin */
 #if FATFS_USE_WRITEPROTECT_PIN > 0
-	//TM_GPIO_Init(FATFS_USE_WRITEPROTECT_PIN_PORT, FATFS_USE_WRITEPROTECT_PIN_PIN, GPIO_Mode_IN, GPIO_OType_PP, GPIO_PuPd_UP, GPIO_Low_Speed);
 	gpio.GPIO_Mode = GPIO_Mode_IN;
 	gpio.GPIO_Speed = GPIO_Speed_2MHz;
 	gpio.GPIO_PuPd = GPIO_PuPd_UP;
@@ -238,44 +251,46 @@ DSTATUS TM_FATFS_SD_SDIO_disk_initialize(void) {
 	SD_LowLevel_Init();
 
 	//Check disk initialized
-	if (SD_Init() == SD_OK) {
-		TM_FATFS_SD_SDIO_Stat &= ~STA_NOINIT;	/* Clear STA_NOINIT flag */
-	} else {
-		TM_FATFS_SD_SDIO_Stat |= STA_NOINIT;
-	}
+	if (SD_Init() == SD_OK)	sdio_status &= ~STA_NOINIT;
+	else 					sdio_status |= STA_NOINIT;
+	
 	//Check write protected
-	if (!TM_FATFS_SDIO_WriteEnabled()) {
-		TM_FATFS_SD_SDIO_Stat |= STA_PROTECT;
-	} else {
-		TM_FATFS_SD_SDIO_Stat &= ~STA_PROTECT;
-	}
-
-	return TM_FATFS_SD_SDIO_Stat;
+#if FATFS_USE_WRITEPROTECT_PIN > 0
+	if (!sdio_write_enabled())	sdio_status |= STA_PROTECT;
+	else 
+#endif
+								sdio_status &= ~STA_PROTECT;
+	
+	return sdio_status;
 }
 
-DSTATUS TM_FATFS_SD_SDIO_disk_status(void) {
-	if (SD_Detect() != SD_PRESENT) { //always returns SD_PRESENT
-		return STA_NOINIT;			//never
+//
+// sdio_disk_status()
+//
+DSTATUS sdio_disk_status(void) {
+	if (SD_Detect() != SD_PRESENT) {
+		return STA_NOINIT;
 	}
 
-	if (!TM_FATFS_SDIO_WriteEnabled()) { //always returns 1
-		TM_FATFS_SD_SDIO_Stat |= STA_PROTECT; //never
-	} else {
-		TM_FATFS_SD_SDIO_Stat &= ~STA_PROTECT;
-	}
+#if FATFS_USE_WRITEPROTECT_PIN > 0
+	if (!sdio_write_enabled())	sdio_status |= STA_PROTECT;
+	else 
+#endif
+								sdio_status &= ~STA_PROTECT;
 
-	return TM_FATFS_SD_SDIO_Stat;
+	return sdio_status;
 }
 
-DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
+
+//
+// sdio_disk_read()
+//
+DRESULT sdio_disk_read(BYTE *data, DWORD addr, UINT count)
 {
-	SD_Error err=0;
-	//uint16_t i;
-	//int16_t a, b,c;
+	SD_Error 		err=0;
 	SDTransferState State;
 
-
-	err = SD_ReadMultiBlocksFIXED(data, addr, 512, count);
+	err = SD_ReadMultiBlocksFIXED(data, addr, BLOCK_SIZE, count);
 
 	if (err==SD_OK)
 	{
@@ -285,119 +300,59 @@ DRESULT DG_disk_read(BYTE *data, DWORD addr, UINT count)
 		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY);
 
 		if ((State == SD_TRANSFER_ERROR) || (err != SD_OK))
-		{
 			return RES_ERROR;
-
-		} else {
-
+		else
 			return RES_OK;
-		}
-
-
-	}
-	else
-	{
-		return(err);
 	}
 
 	return(err);
 }
 
-// DRESULT TM_FATFS_SD_SDIO_disk_read(BYTE *buff, DWORD sector, UINT count) {
-// 	SD_Error Status = SD_OK;
+//
+// sdio_disk_write()
+//
+DRESULT sdio_disk_write(const BYTE *buff, DWORD sector, UINT count)
+{
+	SD_Error 		err = 0;
+	SDTransferState State;
 
-// 	if ((TM_FATFS_SD_SDIO_Stat & STA_NOINIT)) {
-// 		return RES_NOTRDY;
-// 	}
-
-// 	if ((DWORD)buff & 3) {
-// 		DRESULT res = RES_OK;
-// 		DWORD scratch[BLOCK_SIZE / 4];
-
-// 		while (count--) {
-// 			res = TM_FATFS_SD_SDIO_disk_read((void *)scratch, sector++, 1);
-
-// 			if (res != RES_OK) {
-// 				break;
-// 			}
-
-// 			memcpy(buff, scratch, BLOCK_SIZE);
-
-// 			buff += BLOCK_SIZE;
-// 		}
-
-// 		return res;
-// 	}
-
-// //	Status = SD_ReadMultiBlocks(buff, sector << 9, BLOCK_SIZE, count);
-// 	Status = SD_ReadMultiBlocksFIXED(buff, sector << 9, BLOCK_SIZE, count);
-
-// 	if (Status == SD_OK) {
-// 		SDTransferState State;
-
-// 		Status = SD_WaitReadOperation();
-
-// 		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY);
-
-// 		if ((State == SD_TRANSFER_ERROR) || (Status != SD_OK)) {
-// 			return RES_ERROR;
-// 		} else {
-// 			return RES_OK;
-// 		}
-// 	} else {
-// 		return RES_ERROR;
-// 	}
-// }
-
-DRESULT TM_FATFS_SD_SDIO_disk_write(const BYTE *buff, DWORD sector, UINT count) {
-	SD_Error Status = SD_OK;
-
-	if (!TM_FATFS_SDIO_WriteEnabled()) {
+#if FATFS_USE_WRITEPROTECT_PIN > 0
+	if (!sdio_write_enabled()) {
 		return RES_WRPRT;
 	}
+#endif
 
+#if FATFS_USE_DETECT_PIN > 0
 	if (SD_Detect() != SD_PRESENT) {
 		return RES_NOTRDY;
 	}
+#endif
 
-	if ((DWORD)buff & 3) {
-		DRESULT res = RES_OK;
-		DWORD scratch[BLOCK_SIZE / 4];
+//	err = SD_WriteMultiBlocksFIXED((uint8_t *)buff, sector << 9, BLOCK_SIZE, count);
+	err = SD_WriteMultiBlocksFIXED((uint8_t *)buff, sector, BLOCK_SIZE, count);
 
-		while (count--) {
-			memcpy(scratch, buff, BLOCK_SIZE);
-			res = TM_FATFS_SD_SDIO_disk_write((void *)scratch, sector++, 1);
+	if (err == SD_OK) {
 
-			if (res != RES_OK) {
-				break;
-			}
-
-			buff += BLOCK_SIZE;
-		}
-
-		return(res);
-	}
-
-	Status = SD_WriteMultiBlocks((uint8_t *)buff, sector << 9, BLOCK_SIZE, count); // 4GB Compliant
-
-	if (Status == SD_OK) {
-		SDTransferState State;
-
-		Status = SD_WaitWriteOperation(); // Check if the Transfer is finished
+		err = SD_WaitWriteOperation();
 
 		while ((State = SD_GetStatus()) == SD_TRANSFER_BUSY); // BUSY, OK (DONE), ERROR (FAIL)
 
-		if ((State == SD_TRANSFER_ERROR) || (Status != SD_OK)) {
+		if ((State == SD_TRANSFER_ERROR) || (err != SD_OK))
 			return RES_ERROR;
-		} else {
+		else
 			return RES_OK;
-		}
-	} else {
-		return RES_ERROR;
 	}
+		
+	return(err);
 }
 
-DRESULT TM_FATFS_SD_SDIO_disk_ioctl(BYTE cmd, void *buff) {
+
+//
+// sdio_disk_ioctl()
+//
+DRESULT sdio_disk_ioctl(BYTE cmd, void *buff) {
+	uint32_t timeout=0xFFFFFFFF;
+
 	switch (cmd) {
 		case GET_SECTOR_SIZE :     // Get R/W sector size (WORD)
 			*(WORD *) buff = 512;
@@ -409,6 +364,11 @@ DRESULT TM_FATFS_SD_SDIO_disk_ioctl(BYTE cmd, void *buff) {
 			*(DWORD *) buff = 4096; //2GB x 1024MB/GB x 1024B/MB / 512B/sector
 		break;
 		case CTRL_SYNC :
+			while (accessing & (1<<3)){ //wait until bit 3 goes low, indicating a write operation is done
+				if (!timeout--)
+					return(RES_NOTRDY);
+			}
+		break;
 //		case CTRL_ERASE_SECTOR :
 		case CTRL_TRIM :
 		break;
