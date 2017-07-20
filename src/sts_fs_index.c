@@ -405,13 +405,13 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		// Windows uses carriage return + line feed for newline: \r\n
 
 		// Remove \n from buffer (mac)
-		read_buffer[str_len(read_buffer)-1]=0;
+		if(read_buffer[str_len(read_buffer)-1] == '\n') read_buffer[str_len(read_buffer)-1]=0;
 
 		// Remove \r from end of buffer as needed (PC)
 		if(read_buffer[str_len(read_buffer)-1] == '\r')	read_buffer[str_len(read_buffer)-1]=0;
 
 		// Check if it's the end of the file
-		if (str_cmp(read_buffer, EOF_TAG))	break;
+		if (str_found(read_buffer, EOF_TAG))	break;
 
 		// tokenize at space if we're not trying to read_name 
 		// ... which is both [reading name] and [reading play  data] cases
