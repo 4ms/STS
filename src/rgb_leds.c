@@ -579,18 +579,10 @@ void update_ButtonLEDs(void)
 			{
 				if (chan==0)
 				{
-					if (global_mode[ASSIGN_MODE] && (cur_assign_bank<MAX_NUM_BANKS) && (!flags[AssignedPrevBank]) && (!flags[AssignedNextSample]))
-					{
-						//Rev1 button in ASSIGN_MODE, looking for already assigned samples
-						//Display the current bank we're scanning on the Rev1 light
-						display_bank_blink(ButLEDnum, cur_assign_bank, tm_16);
-					}
-					else
 					//When we press Edit+Rev1,
 					//Flicker the Rev1 light White for forward motion
 					//And Red for backward motion
 					//But-- if we're on a Red or White bank, then flicker it off
-
 					if (flags[AssignedNextSample])
 					{
 						set_ButtonLED_byPalette(ButLEDnum, ((cur_assign_bank%10)==(WHITE-1)) ? OFF: WHITE);
@@ -604,15 +596,24 @@ void update_ButtonLEDs(void)
 					}
 					else
 
-					// Reverse light during assignment of unassigned samples:
-					// Flicker the bank base color rapidly if scanning unassigned samples in the folder
+					// Reverse light during assignment: shows bank we're assigning from
+					//
 					if (global_mode[ASSIGN_MODE])
-					{ 
+					{
+						if (cur_assign_bank<MAX_NUM_BANKS)
+							// When we're looking for already assigned samples
+							// display the current bank we're scanning on the Rev1 light
+							display_bank_blink(ButLEDnum, cur_assign_bank, tm_16);
+						else
+							// When we're scanning unassigned samples:
+							// Flicker the bank base color rapidly if scanning unassigned samples in the folder
 						if (cur_assign_state==ASSIGN_UNUSED_IN_FOLDER)
 							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10)+1, tri_13);
+
+							// Flicker dim red/white if we're scanning unsassigned samples outside of the sample's folder
 						else
 						if (cur_assign_state==ASSIGN_UNUSED_IN_FS || cur_assign_state==ASSIGN_UNUSED_IN_ROOT)
-							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, DIM_WHITE, tri_13);
+							set_ButtonLED_byPaletteFade(ButLEDnum, DIM_RED, DIM_WHITE, tri_13);
 					}
 					else
 						//Edit Mode, but not Assignment mode --> bank's base color
