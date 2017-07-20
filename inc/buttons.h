@@ -34,6 +34,7 @@
 		!BANKRECBUT \
 		)
 
+//Rev1/2 + Bank1/2 Rec/RecBank at boot
 #define RAMTEST_BUTTONS (\
 		REV1BUT &&\
 		REV2BUT &&\
@@ -42,6 +43,7 @@
 		BANKRECBUT &&\
 		RECBUT)
 
+//Rev1/2 + Bank1/2 Rec/RecBank
 #define ENTER_CALIBRATE_BUTTONS (\
 		PLAY1BUT &&\
 		PLAY2BUT &&\
@@ -57,6 +59,17 @@
 		PLAY2BUT &&\
 		BANK1BUT &&\
 		BANK2BUT &&\
+		!RECBUT &&\
+		!BANKRECBUT &&\
+		!EDIT_BUTTON \
+		)
+
+//Play1 + Bank1 at boot
+#define TEST_LED_BUTTONS (\
+		PLAY1BUT &&\
+		!PLAY2BUT &&\
+		BANK1BUT &&\
+		!BANK2BUT &&\
 		!RECBUT &&\
 		!BANKRECBUT &&\
 		!EDIT_BUTTON \
