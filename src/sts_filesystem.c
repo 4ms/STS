@@ -351,6 +351,7 @@ uint8_t load_banks_by_default_colors(void)
 	{
 		bank_to_color(bank, bankname);
 
+		// Color
 		if (load_bank_from_disk((samples[bank]), bankname))
 		{
 			enable_bank(bank); 
@@ -358,6 +359,7 @@ uint8_t load_banks_by_default_colors(void)
 		}
 		else 
 		{
+			// COLOR
 			str_to_upper(bankname, bankname_case);
 			if (load_bank_from_disk((samples[bank]), bankname_case))
 			{
@@ -366,6 +368,7 @@ uint8_t load_banks_by_default_colors(void)
 			}
 			else
 			{
+				// color
 				str_to_lower(bankname, bankname_case);
 				if (load_bank_from_disk((samples[bank]), bankname_case))
 				{
@@ -379,6 +382,27 @@ uint8_t load_banks_by_default_colors(void)
 	return(banks_loaded);
 }
 
+// uint8_t load_banks_by_default_colors(void)
+// {
+// 	uint8_t bank;
+// 	char bankname[_MAX_LFN];
+// 	uint8_t banks_loaded;
+
+// 	banks_loaded=0;
+// 	for (bank=0;bank<MAX_NUM_BANKS;bank++)
+// 	{
+// 		bank_to_color(bank, bankname);
+
+// 		if (load_bank_from_disk((samples[bank]), bankname))
+// 		{
+// 			enable_bank(bank); 
+// 			banks_loaded++;
+// 		}
+// 		else 
+// 			disable_bank(bank);
+// 	}
+// 	return(banks_loaded);
+// }
 
 uint8_t load_banks_by_color_prefix(void)
 {
@@ -401,36 +425,37 @@ uint8_t load_banks_by_color_prefix(void)
 
 	while (1)
 	{
-		//Find the next directory in the root folder
+		// Find the next directory in the root folder
 		res = get_next_dir(&rootdir, "", foldername);
 
 		if (res != FR_OK) break; //no more directories, exit the while loop
 
 		test_path_loaded = 0;
 
-		//Check if folder contains any .wav files
+		// Check if folder contains any .wav files
 		res = f_opendir(&testdir, foldername);
 		if (res!=FR_OK) continue;
 		if (find_next_ext_in_dir(&testdir, ".wav", default_bankname) != FR_OK) continue;
 
-		//See if the folder we found is a default bank name
-		//This would mean it's already loaded (with load_banks_by_default_colors())
+		// See if the folder we found is a default bank name
+		// This would mean it's already loaded (with load_banks_by_default_colors())
 		if (color_to_bank(foldername) < MAX_NUM_BANKS)
 			test_path_loaded=1;
 
-		//Go through all the numbered bank names (Red-1, Pink-1, etc...)
-		//see if the folder we found has a numbered bank name as a prefix
-		//This finds things like "Red-3 - TV Clips" (but not "Red - Movie Clips")
+		// Go through all the numbered bank names (Red-1, Pink-1, etc...)
+		// see if the folder we found has a numbered bank name as a prefix
+		// This finds things like "Red-3 - TV Clips" (but not "Red - Movie Clips")
+		// color-number fodlername
 		for (bank=10;(!test_path_loaded && bank<MAX_NUM_BANKS);bank++)
 		{
 			bank_to_color(bank, default_bankname);
 
 			if (str_startswith_nocase(foldername, default_bankname))
 			{
-				//Make sure the bank is not already being used
+				// Make sure the bank is not already being used
 				if (!is_bank_enabled(bank))
 				{
-					//...and if not, then try to load it as a bank
+					// ...and if not, then try to load it as a bank
 					if (load_bank_from_disk((samples[bank]), foldername))
 					{
 						enable_bank(bank);
@@ -556,7 +581,7 @@ uint8_t load_banks_with_noncolors(void)
 		for (bank=0;bank<10;bank++)
 		{
 			bank_to_color(bank, default_bankname);
-			if (str_startswith(foldername, default_bankname))
+			if (str_startswith_nocase(foldername, default_bankname))
 			{
 				test_path_loaded = 1;
 				break;
