@@ -33,6 +33,8 @@ main.c
 #include "edit_mode.h"
 #include "system_settings.h"
 
+#define HAS_BOOTLOADER
+
 uint32_t WATCH0;
 uint32_t WATCH1;
 uint32_t WATCH2;
@@ -91,18 +93,12 @@ int main(void)
 	uint32_t valid_fw_version;
 	FRESULT res;
 
-	
-	//
-	// Bootloader:
-	//
-	if (check_bootloader_keys())
-		JumpTo(0x08000000);
-	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
+	SD_DeInit();
 
-	//
-	// No bootloader:
-	//
-	// NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
+
+	#ifndef HAS_BOOTLOADER
+	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
+	#endif
 
 	TRACE_init();
 	//ITM_Init(6000000);
@@ -113,6 +109,12 @@ int main(void)
 	DeInit_I2SDMA();
 	delay();
 
+	#ifdef HAS_BOOTLOADER
+	if (check_bootloader_keys())
+		JumpTo(0x08000000);
+	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
+	#endif
+
     //Initialize digital in/out pins
     init_dig_inouts();
  // test_dig_inouts();
@@ -121,8 +123,7 @@ int main(void)
 
 	//Initialize SDRAM memory
 	SDRAM_Init();
-	if (RAMTEST_BUTTONS)
-		RAM_startup_test();
+	if (RAMTEST_BUTTONS) RAM_startup_test();
 	delay();
 
 
@@ -138,10 +139,11 @@ int main(void)
 	reload_sdcard();
 
 	//Turn on the lights
-	LEDDriver_Init(2);
+	LEDDriver_Init(2); //2 = # of LED driver chips
 	LEDDRIVER_OUTPUTENABLE_ON;
-	if (PLAY2BUT && BANK2BUT) test_all_buttonLEDs();
 
+	if (TEST_LED_BUTTONS) test_all_buttonLEDs();
+	
 	init_buttonLEDs();
 	init_ButtonLED_IRQ();
 	init_LED_PWM_IRQ();
@@ -168,6 +170,7 @@ int main(void)
 	
 	//Read the FLASH memory for user params, system calibration settings, etc
 	valid_fw_version = load_flash_params();
+
 
 	//Check for calibration buttons on boot
 	if (ENTER_CALIBRATE_BUTTONS)
