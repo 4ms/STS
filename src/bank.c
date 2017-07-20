@@ -244,7 +244,7 @@ uint8_t color_to_bank(char *color)
 		bank_to_color(i, b_color);
 
 		// compare current bank color with input bank color
-		if (str_cmp(color, b_color))
+		if (str_cmp_nocase(color, b_color))
 		{
 			// ... and return bank number if there's a match
 			return(i);

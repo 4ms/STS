@@ -343,7 +343,7 @@ void load_new_folders(void)
 uint8_t load_banks_by_default_colors(void)
 {
 	uint8_t bank;
-	char bankname[_MAX_LFN];
+	char 	bankname[_MAX_LFN], bankname_case[_MAX_LFN];
 	uint8_t banks_loaded;
 
 	banks_loaded=0;
@@ -357,7 +357,24 @@ uint8_t load_banks_by_default_colors(void)
 			banks_loaded++;
 		}
 		else 
-			disable_bank(bank);
+		{
+			str_to_upper(bankname, bankname_case);
+			if (load_bank_from_disk((samples[bank]), bankname_case))
+			{
+				enable_bank(bank); 
+				banks_loaded++;
+			}
+			else
+			{
+				str_to_lower(bankname, bankname_case);
+				if (load_bank_from_disk((samples[bank]), bankname_case))
+				{
+					enable_bank(bank); 
+					banks_loaded++;
+				}				
+				else{disable_bank(bank);}
+			}
+		}
 	}
 	return(banks_loaded);
 }
@@ -408,7 +425,7 @@ uint8_t load_banks_by_color_prefix(void)
 		{
 			bank_to_color(bank, default_bankname);
 
-			if (str_startswith(foldername, default_bankname))
+			if (str_startswith_nocase(foldername, default_bankname))
 			{
 				//Make sure the bank is not already being used
 				if (!is_bank_enabled(bank))
@@ -435,7 +452,7 @@ uint8_t load_banks_by_color_prefix(void)
 		{
 			existing_prefix_len = bank_to_color(bank, default_bankname);
 
-			if (str_startswith(foldername, default_bankname))
+			if (str_startswith_nocase(foldername, default_bankname))
 			{
 				//We found a prefix for this folder
 				//If the base color name bank is still empty, load it there...

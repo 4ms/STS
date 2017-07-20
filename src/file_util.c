@@ -340,6 +340,26 @@ char upper(char a)
   else return(a);
 }
 
+//Converts upper case characters to lowercase
+//returns everything else untouched
+char lower(char a)
+{
+  if (a>='A' && a<='Z') return(a - 'A' + 'a');
+  else return(a);
+}
+
+void str_to_upper(char* str_in, char* str_up)
+{
+  while(*str_in!=0){*str_up++ = upper(*str_in++);}
+  *str_up++=0;
+}
+
+void str_to_lower(char* str_in, char* str_lo)
+{
+  while(*str_in!=0){*str_lo++ = lower(*str_in++);}
+  *str_lo++=0;
+}
+
 //Compare strings a and b
 //Return 1 if the same, 0 if not
 //Case insensitive
