@@ -299,7 +299,7 @@ void Button_Debounce_IRQHandler(void)
 								}
 							break;
 
-							// Load file from SD to bank
+							// Edit + Next File
 							case Rev1:
 								if (global_mode[EDIT_MODE])
 								{
@@ -382,7 +382,7 @@ void Button_Debounce_IRQHandler(void)
 								{
 
 									case Rev1:
-										if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
+										if(global_mode[EDIT_MODE])
 										{
 											//Go to previous assignment bank
 											flags[FindNextSampleToAssign] = 2;
