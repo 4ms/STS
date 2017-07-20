@@ -6,8 +6,8 @@ main.c
 #include <stm32f4xx.h>
 #include "globals.h"
 
-#include <sampler.h>
-#include <sdram_driver.h>
+#include "sampler.h"
+#include "sdram_driver.h"
 
 #include "audio_sdcard.h"
 #include "audio_sdram.h"
@@ -32,6 +32,7 @@ main.c
 #include "sts_filesystem.h"
 #include "edit_mode.h"
 #include "system_settings.h"
+#include "stm32f4_discovery_sdio_sd.h"
 
 #define HAS_BOOTLOADER
 
@@ -95,6 +96,7 @@ int main(void)
 
 	SD_DeInit();
 
+	LEDDRIVER_OUTPUTENABLE_OFF;
 
 	#ifndef HAS_BOOTLOADER
 	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
@@ -117,9 +119,13 @@ int main(void)
 
     //Initialize digital in/out pins
     init_dig_inouts();
- // test_dig_inouts();
-	init_timekeeper();
+ 	//test_dig_inouts();
 
+    //Turn on middle lights, for debugging
+	SIGNALLED_ON;
+	BUSYLED_ON;
+
+	init_timekeeper();
 
 	//Initialize SDRAM memory
 	SDRAM_Init();
@@ -132,7 +138,7 @@ int main(void)
 	while(timeout_boot--){;}
 	PLAYLED1_OFF;
 
-
+    //Turn off middle lights, for debugging
 	SIGNALLED_OFF;
 	BUSYLED_OFF;
 
@@ -140,7 +146,7 @@ int main(void)
 
 	//Turn on the lights
 	LEDDriver_Init(2); //2 = # of LED driver chips
-	LEDDRIVER_OUTPUTENABLE_ON;
+	all_buttonLEDs_off();
 
 	if (TEST_LED_BUTTONS) test_all_buttonLEDs();
 	
@@ -185,6 +191,7 @@ int main(void)
     	|| (	(system_calibrations->major_firmware_version == FIRST_PRODUCTION_FW_MAJOR_VERSION) \
     	 	&& 	 system_calibrations->minor_firmware_version <= FIRST_PRODUCTION_FW_MINOR_VERSION)	) 
     {
+    	LEDDRIVER_OUTPUTENABLE_ON; //turn on for RAM Test
     	if (RAM_test()==0)
     	{
     		global_mode[CALIBRATE] = 1;
@@ -199,6 +206,8 @@ int main(void)
    	if ( 	system_calibrations->major_firmware_version != FW_MAJOR_VERSION
    		|| 	system_calibrations->minor_firmware_version != FW_MINOR_VERSION	)
     {
+    	LEDDRIVER_OUTPUTENABLE_ON; //turn on for flash writing
+
     	copy_system_calibrations_into_staging();
     	set_firmware_version();
     	write_all_system_calibrations_to_FLASH();
@@ -220,6 +229,9 @@ int main(void)
 	// request unaltered backup of index @ boot
 	flags[BootBak]=1; 
     
+    //Turn on button LEDs for bank loading
+    LEDDRIVER_OUTPUTENABLE_ON;
+
     //Load all banks
 	init_banks(); // calls load_all_banks which calls index_write_wrapper() w/	flags[RewriteIndex]=RED high
 

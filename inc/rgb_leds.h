@@ -36,6 +36,8 @@ void display_one_ButtonLED(uint8_t ButtonLED_number);
 void display_all_ButtonLEDs(void);
 
 void test_all_buttonLEDs(void);
+void all_buttonLEDs_off(void);
+
 void update_one_ButtonLED(uint8_t ButtonLED_number);
 void update_all_ButtonLEDs(void);
 

@@ -170,7 +170,14 @@ void display_all_ButtonLEDs(void)
 
 }
 
-
+void all_buttonLEDs_off(void)
+{
+	uint8_t j;
+	for (j=0;j<8;j++)
+	{
+		LEDDriver_setRGBLED(j,0 );
+	}
+}
 /*
  * test_all_buttonLEDs()
  *
@@ -181,6 +188,8 @@ void test_all_buttonLEDs(void)
 {
 	uint8_t i, j;
 	float t=0.0f;
+
+	LEDDRIVER_OUTPUTENABLE_ON;
 
 	for (j=0;j<8;j++)
 	{
