@@ -264,6 +264,7 @@ uint8_t next_bank(uint8_t bank)
 uint8_t next_enabled_bank(uint8_t bank) 
 {
 	uint8_t orig_bank=bank;
+	if (orig_bank>=MAX_NUM_BANKS) orig_bank = MAX_NUM_BANKS-1; //otherwise we will have an infinite loop
 
 	do{
 		bank++;
@@ -303,8 +304,8 @@ uint8_t next_disabled_bank(uint8_t bank)
 	if (orig_bank>=MAX_NUM_BANKS) orig_bank = MAX_NUM_BANKS-1; //otherwise we will have an infinite loop
 	do{
 		bank++;
-		if (bank==orig_bank) return(0); //no banks are disabled -->> bail out and return the first bank
 		if (bank >= MAX_NUM_BANKS)	bank = 0;
+		if (bank==orig_bank) return(0); //no banks are disabled -->> bail out and return the first bank
 	} while(bank_status[bank]);
 
 	return (bank);
