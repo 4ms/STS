@@ -52,6 +52,7 @@ DIR root_dir;
 void do_assignment(uint8_t direction)
 {
 	uint8_t found_sample=0;
+	uint8_t first_filled_slot, i;
 	FRESULT res;
 
 	if (enter_assignment_mode())
@@ -72,14 +73,36 @@ void do_assignment(uint8_t direction)
 		//Previous bank:
 		else if (direction==2)
 		{
-			// If we're at the beginning of the bank,
-			// Go to the previous bank
-			if (cur_assign_sample==0)
+			// Change bank if necessary
+			// or if we're not at the beginning of the bank,
+			// just go to the beginning of the bank
+
+			// If we're at the beginning of the unassigned scan,
+			// go to the last enabled bank 
+			if (cur_assign_bank==0xFF && cur_assign_sample==0)
+			{
+				f_closedir(&root_dir);
+				f_closedir(&assign_dir);
 				cur_assign_bank = prev_enabled_bank_0xFF(cur_assign_bank);
+			}
 
-			//Now, go to the beginning of the bank we're in:
+			// If we're in a normal bank,
+			// The the beginning of the bank is defined as the first filled slot (not slot 0)
+			// So, check if we're on the first filled slot, and go back a bank
+			else
+			if (cur_assign_bank<0xFF)
+			{
+				first_filled_slot = cur_assign_sample;
+				for (i=0; i<NUM_SAMPLES_PER_BANK; i++)
+					{if (is_wav(samples[cur_assign_bank][i].filename)){first_filled_slot=i;	break;}}
 
-			//Unassigned 'bank': initialize properly
+				if (cur_assign_sample <= first_filled_slot)
+					cur_assign_bank = prev_enabled_bank_0xFF(cur_assign_bank);
+			}
+
+			// Go to the beginning of the bank we're in
+
+			// Unassigned 'bank'
 			if (cur_assign_bank == 0xFF)
 			{
 				res = init_unassigned_scan(&undo_sample);
@@ -89,12 +112,9 @@ void do_assignment(uint8_t direction)
 				found_sample = next_unassigned_sample();
 			}
 
-			//Assigned bank: de-init unassigned 'bank', and initialize
+			//Assigned bank
 			else
 			{
-				f_closedir(&root_dir);
-				f_closedir(&assign_dir);
-
 				cur_assign_sample = -1; //will wrap around to 0 when we first call next_assigned_sample()
 				cur_assign_state = ASSIGN_USED;
 
@@ -170,15 +190,29 @@ FRESULT init_unassigned_scan(Sample *s_sample)
 	cur_assign_bank = 0xFF;
 	cur_assign_sample = -1;
 
-	//Start with the current sample's folder
-	cur_assign_state = ASSIGN_UNUSED_IN_FOLDER;
 
-	//Get the folder path from the samples's filename
+	if (is_wav(s_sample->filename))
+	{
+		//s_sample is a wav file, so this means we're assigning an already filled slot
 
-	if (str_split(s_sample->filename, '/', cur_assign_bank_path, tmp))
-		cur_assign_bank_path[str_len(cur_assign_bank_path)-1]='\0'; //remove trailing slash
+		//Get the folder path from the samples's filename
+		if (str_split(s_sample->filename, '/', cur_assign_bank_path, tmp))
+			cur_assign_bank_path[str_len(cur_assign_bank_path)-1]='\0'; //remove trailing slash
+		else
+			cur_assign_bank_path[0]='\0'; //filename contained no slash: use root dir
+
+		//Start with the current sample's folder
+		cur_assign_state = ASSIGN_UNUSED_IN_FOLDER;
+	}
 	else
-		cur_assign_bank_path[0]='\0'; //filename contained no slash: use root dir
+	{
+		//s_sample is not a wav file, so this means we are assigning a blank slot
+
+		//Skip the current sample's folder and start with the root dir
+		cur_assign_state = ASSIGN_UNUSED_IN_ROOT;
+		cur_assign_bank_path[0]='\0'; //root
+
+	}
 
 	//Verify the folder exists and can be opened
 	//Leave it open, so we can browse it with next_unassigned_sample
@@ -231,7 +265,12 @@ uint8_t next_unassigned_sample(void)
 				//Close the assign_dir
 				f_closedir(&assign_dir);
 
-				cur_assign_state=ASSIGN_UNUSED_IN_ROOT;
+				// If our bank path isn't already root, then try scanning root
+				// Otherwise skip root and scan the folders in root
+				if (cur_assign_bank_path[0]!='\0')
+					cur_assign_state = ASSIGN_UNUSED_IN_ROOT;
+				else
+					cur_assign_state = ASSIGN_UNUSED_IN_FS;
 			} 
 			
 			if (cur_assign_state==ASSIGN_UNUSED_IN_FS || cur_assign_state==ASSIGN_UNUSED_IN_ROOT)
