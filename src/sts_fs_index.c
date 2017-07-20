@@ -400,8 +400,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		// Read next line
 		f_gets(read_buffer, _MAX_LFN+1, &temp_file);
 
-		// Check if it's the end of the file
-		if (str_cmp(read_buffer, EOF_TAG))	break;
 
 		// Unix only uses Line feed for newline: \n
 		// Windows uses carriage return + line feed for newline: \r\n
@@ -411,6 +409,9 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 		// Remove \r from end of buffer as needed (PC)
 		if(read_buffer[str_len(read_buffer)-1] == '\r')	read_buffer[str_len(read_buffer)-1]=0;
+
+		// Check if it's the end of the file
+		if (str_cmp(read_buffer, EOF_TAG))	break;
 
 		// tokenize at space if we're not trying to read_name 
 		// ... which is both [reading name] and [reading play  data] cases
