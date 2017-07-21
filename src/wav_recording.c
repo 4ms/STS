@@ -105,7 +105,7 @@ void record_audio_to_buffer(int16_t *src)
 	int32_t dummy;
 
 	//
-	// Dump BUFF_LEN samples of the rx buffer from codec (src) into t_buff
+	// Dump HT16_BUFF_LEN samples of the rx buffer from codec (src) into t_buff
 	// Then write t_buff to sdram at rec_buff
 	//
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
@@ -151,7 +151,7 @@ void record_audio_to_buffer(int16_t *src)
 		if (overrun)
 		{
 			g_error |= WRITE_BUFF_OVERRUN;
-			//rec_state=REC_PAUSED;
+			check_errors();
 		}
 	}
 
