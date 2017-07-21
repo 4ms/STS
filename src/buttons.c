@@ -284,7 +284,7 @@ void Button_Debounce_IRQHandler(void)
 									i_param[REC][BANK] = bank_color + (bank_blink*10);
 
 									//range check, but should not be neccessary
-									if (i_param[REC][BANK] >= (MAX_NUM_BANKS-1))	i_param[REC][BANK]=0;
+									if (i_param[REC][BANK] >= MAX_NUM_BANKS)	i_param[REC][BANK]=0;
 								}
 
 								flags[RecBankChanged] = 1;
