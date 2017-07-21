@@ -134,6 +134,7 @@ FRESULT write_sampleindex_file(void)
 		f_printf(&temp_file, "Timestamp: %d\n", get_fattime());
 
 		f_printf(&temp_file, EOF_TAG);
+		f_printf(&temp_file, "\n"); //text editors report an error if file does not end in newline
 
 			// timestamp  ((uint32_t)(2016 - 1980) 	<< 25)
 					// 	| ((uint32_t)month 			<< 21)
