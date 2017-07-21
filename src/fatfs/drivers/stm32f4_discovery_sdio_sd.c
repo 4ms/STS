@@ -1302,66 +1302,66 @@ SD_Error SD_ReadBlock(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize)
   * @param  NumberOfBlocks: number of blocks to be read.
   * @retval SD_Error: SD Card Error code.
   */
-SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
-{
-  SD_Error errorstatus = SD_OK;
-  TransferError = SD_OK;
-  TransferEnd = 0;
-  StopCondition = 1;
+// SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
+// {
+//   SD_Error errorstatus = SD_OK;
+//   TransferError = SD_OK;
+//   TransferEnd = 0;
+//   StopCondition = 1;
 	
-  SDIO->DCTRL = 0x0;
+//   SDIO->DCTRL = 0x0;
 
-  if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
-  {
-    BlockSize = 512;
-    ReadAddr /= 512;
-  }
+//   if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
+//   {
+//     BlockSize = 512;
+//     ReadAddr /= 512;
+//   }
 
-  /*!< Set Block Size for Card */
-  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
-  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
-  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
+//   /*!< Set Block Size for Card */
+//   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
+//   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
+//   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+//   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+//   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+//   SDIO_SendCommand(&SDIO_CmdInitStructure);
 
-  errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
+//   errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
 
-  if (SD_OK != errorstatus)
-  {
-    return(errorstatus);
-  }
+//   if (SD_OK != errorstatus)
+//   {
+//     return(errorstatus);
+//   }
 
-  SDIO_DataInitStructure.SDIO_DataTimeOut = SD_DATATIMEOUT;
-  SDIO_DataInitStructure.SDIO_DataLength = NumberOfBlocks * BlockSize;
-  SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
-  SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToSDIO;
-  SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
-  SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
-  SDIO_DataConfig(&SDIO_DataInitStructure);
+//   SDIO_DataInitStructure.SDIO_DataTimeOut = SD_DATATIMEOUT;
+//   SDIO_DataInitStructure.SDIO_DataLength = NumberOfBlocks * BlockSize;
+//   SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
+//   SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToSDIO;
+//   SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
+//   SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
+//   SDIO_DataConfig(&SDIO_DataInitStructure);
 
-  /*!< Send CMD18 READ_MULT_BLOCK with argument data address */
-  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)ReadAddr;
-  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_READ_MULT_BLOCK;
-  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
+//   /*!< Send CMD18 READ_MULT_BLOCK with argument data address */
+//   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)ReadAddr;
+//   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_READ_MULT_BLOCK;
+//   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+//   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+//   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+//   SDIO_SendCommand(&SDIO_CmdInitStructure);
 
-  errorstatus = CmdResp1Error(SD_CMD_READ_MULT_BLOCK);
+//   errorstatus = CmdResp1Error(SD_CMD_READ_MULT_BLOCK);
 
-  if (errorstatus != SD_OK)
-  {
-    return(errorstatus);
-  }
+//   if (errorstatus != SD_OK)
+//   {
+//     return(errorstatus);
+//   }
 
-  SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
-  SDIO_DMACmd(ENABLE);
-  SD_LowLevel_DMA_RxConfig((uint32_t *)readbuff, (NumberOfBlocks * BlockSize));
+//   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
+//   SDIO_DMACmd(ENABLE);
+//   SD_LowLevel_DMA_RxConfig((uint32_t *)readbuff, (NumberOfBlocks * BlockSize));
 
 
-  return(errorstatus);
-}
+//   return(errorstatus);
+// }
 
 // FIXED Version where ReadAddr is in BLOCKS NOT BYTES, permits SDHC media >4GB
 // FIX #2: readbuff is not interpretted as a uint32_t *, so it doesn't have to be aligned
@@ -1607,6 +1607,7 @@ SD_Error SD_WriteBlock(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSiz
 #elif defined (SD_DMA_MODE)
   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
   SD_LowLevel_DMA_TxConfig((uint32_t *)writebuff, BlockSize);
+  //ToDo: Add SD_LowLevel_DMA_TxConfigFIXED();
   SDIO_DMACmd(ENABLE);
 #endif
 
@@ -1628,97 +1629,97 @@ SD_Error SD_WriteBlock(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSiz
   * @param  NumberOfBlocks: number of blocks to be written.
   * @retval SD_Error: SD Card Error code.
   */
-SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
-{
-  SD_Error errorstatus = SD_OK;
+// SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
+// {
+//   SD_Error errorstatus = SD_OK;
 
-  TransferError = SD_OK;
-  TransferEnd = 0;
-  StopCondition = 1;
+//   TransferError = SD_OK;
+//   TransferEnd = 0;
+//   StopCondition = 1;
 
-  SDIO->DCTRL = 0x0;
+//   SDIO->DCTRL = 0x0;
 
-  if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
-  {
-    BlockSize = 512;
-    WriteAddr /= 512;
-  }
+//   if (CardType == SDIO_HIGH_CAPACITY_SD_CARD)
+//   {
+//     BlockSize = 512;
+//     WriteAddr /= 512;
+//   }
 
-  /* Set Block Size for Card */
-  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
-  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
-  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
+//   /* Set Block Size for Card */
+//   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) BlockSize;
+//   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCKLEN;
+//   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+//   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+//   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+//   SDIO_SendCommand(&SDIO_CmdInitStructure);
 
-  errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
+//   errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
 
-  if (SD_OK != errorstatus)
-  {
-    return(errorstatus);
-  }
+//   if (SD_OK != errorstatus)
+//   {
+//     return(errorstatus);
+//   }
 
-  /*!< To improve performance */
-  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) (RCA << 16);
-  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_APP_CMD;
-  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
-
-
-  errorstatus = CmdResp1Error(SD_CMD_APP_CMD);
-
-  if (errorstatus != SD_OK)
-  {
-    return(errorstatus);
-  }
-  /*!< To improve performance */
-  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)NumberOfBlocks;
-  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCK_COUNT;
-  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
-
-  errorstatus = CmdResp1Error(SD_CMD_SET_BLOCK_COUNT);
-
-  if (errorstatus != SD_OK)
-  {
-    return(errorstatus);
-  }
+//   /*!< To improve performance */
+//   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) (RCA << 16);
+//   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_APP_CMD;
+//   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+//   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+//   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+//   SDIO_SendCommand(&SDIO_CmdInitStructure);
 
 
-  /*!< Send CMD25 WRITE_MULT_BLOCK with argument data address */
-  SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)WriteAddr;
-  SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_WRITE_MULT_BLOCK;
-  SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
-  SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
-  SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
-  SDIO_SendCommand(&SDIO_CmdInitStructure);
+//   errorstatus = CmdResp1Error(SD_CMD_APP_CMD);
 
-  errorstatus = CmdResp1Error(SD_CMD_WRITE_MULT_BLOCK);
+//   if (errorstatus != SD_OK)
+//   {
+//     return(errorstatus);
+//   }
+//   /*!< To improve performance */
+//   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)NumberOfBlocks;
+//   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCK_COUNT;
+//   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+//   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+//   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+//   SDIO_SendCommand(&SDIO_CmdInitStructure);
 
-  if (SD_OK != errorstatus)
-  {
-    return(errorstatus);
-  }
+//   errorstatus = CmdResp1Error(SD_CMD_SET_BLOCK_COUNT);
 
-  SDIO_DataInitStructure.SDIO_DataTimeOut = SD_DATATIMEOUT;
-  SDIO_DataInitStructure.SDIO_DataLength = NumberOfBlocks * BlockSize;
-  SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
-  SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToCard;
-  SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
-  SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
-  SDIO_DataConfig(&SDIO_DataInitStructure);
+//   if (errorstatus != SD_OK)
+//   {
+//     return(errorstatus);
+//   }
 
-  SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
-  SDIO_DMACmd(ENABLE);
-  SD_LowLevel_DMA_TxConfig((uint32_t *)writebuff, (NumberOfBlocks * BlockSize));
 
-  return(errorstatus);
-}
+//   /*!< Send CMD25 WRITE_MULT_BLOCK with argument data address */
+//   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)WriteAddr;
+//   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_WRITE_MULT_BLOCK;
+//   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
+//   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
+//   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+//   SDIO_SendCommand(&SDIO_CmdInitStructure);
+
+//   errorstatus = CmdResp1Error(SD_CMD_WRITE_MULT_BLOCK);
+
+//   if (SD_OK != errorstatus)
+//   {
+//     return(errorstatus);
+//   }
+
+//   SDIO_DataInitStructure.SDIO_DataTimeOut = SD_DATATIMEOUT;
+//   SDIO_DataInitStructure.SDIO_DataLength = NumberOfBlocks * BlockSize;
+//   SDIO_DataInitStructure.SDIO_DataBlockSize = (uint32_t) 9 << 4;
+//   SDIO_DataInitStructure.SDIO_TransferDir = SDIO_TransferDir_ToCard;
+//   SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
+//   SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
+//   SDIO_DataConfig(&SDIO_DataInitStructure);
+
+//   SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND | SDIO_IT_RXOVERR | SDIO_IT_STBITERR, ENABLE);
+//   SDIO_DMACmd(ENABLE);
+//   SD_LowLevel_DMA_TxConfig((uint32_t *)writebuff, (NumberOfBlocks * BlockSize));
+
+//   return(errorstatus);
+// }
 
 // FIXED Version where WriteAddr is in BLOCKS NOT BYTES, permits SDHC media >4GB
 
@@ -1789,6 +1790,7 @@ SD_Error SD_WriteMultiBlocksFIXED(uint8_t *writebuff, uint32_t WriteAddr, uint32
   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
+  //ToDo: Exit here if SDIO_CmdInitStructure.SDIO_Argument is invalid (==0, or perhaps <8192)
   SDIO_SendCommand(&SDIO_CmdInitStructure);
 
   errorstatus = CmdResp1Error(SD_CMD_WRITE_MULT_BLOCK);
