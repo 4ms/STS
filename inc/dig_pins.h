@@ -106,8 +106,6 @@
 #define ENDOUT2_ON ENDOUT2_GPIO->BSRRL = ENDOUT2_pin
 #define ENDOUT2_OFF ENDOUT2_GPIO->BSRRH = ENDOUT2_pin
 
-#define ENDOUT_TRIG_TIME 960 /*20ms*/
-
 //LEDs (direct control)
 #define PLAYLED1_pin GPIO_Pin_11
 #define PLAYLED1_GPIO GPIOA

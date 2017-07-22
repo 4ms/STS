@@ -34,19 +34,23 @@ enum PlayLoadTriage{
 #define SDIO_read_TIM TIM7
 
 
+//44.1k/16b/stereo@ pitch=1.0: the time from the first block read to the first sample of audio outputted:
+//(This is addition to the delay from the Trigger jack to the first block being read, around 16ms)
+//BASE_BUFFER_THRESHOLD/READ_BLOCK_SIZE
+//6144/16384: 13ms
+//3072/16384: 9ms
+//1536/16384: 6ms
+//6144/8192: 13ms
+//3072/8192: 9ms
+//1536/8192: 7ms
 
-//#define PRE_BUFF_SIZE (8192*3) /*0x6000*/
-//#define ACTIVE_BUFF_SIZE (8192*64) /* measured gaps of about 32 blocks, so this is twice enough */
-//#define ACTIVE_BUFF_SIZE (8192*16)
-#define BASE_BUFFER_THRESHOLD (6144) /* 512*12 */
-//#define BASE_BUFFER_THRESHOLD (3072) /* 512*6: divided by 2 because we now account for pitch*/
+//#define BASE_BUFFER_THRESHOLD (6144)
+#define BASE_BUFFER_THRESHOLD (3072)
+//#define BASE_BUFFER_THRESHOLD (1536)
 
-//96k, blockalign=4 (32-bit float mono), Pitch 1.0 --> ~42ms from trigger to playback
-//96k, blockalign=4 (32-bit float mono), Pitch 4.0 --> ~144ms
-//96k, blockalign=4 (16-bit stereo), Pitch 4.0 --> 144ms (and not enough! we get buffer underrun)
-//96k, blockalign=4 (16-bit stereo), Pitch 1.0 --> 144ms (and not enough! we get buffer underrun)
+#define READ_BLOCK_SIZE 8192
+//#define READ_BLOCK_SIZE 16384
 
-//44.1k, blockalign=6 (24-bit stereo), Pitch 4.0 --> 100ms (and not enough! we get buffer underrun)
 
 #define MAX_RS 20 /* over 4 octaves at 44.1k */
 //#define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)

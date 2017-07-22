@@ -167,11 +167,6 @@ enum g_Errors{
 
 #define REC (NUM_ALL_CHAN-1) /* =2 a shortcut to the REC channel */
 
-#define TRIG_TIME 400
-
-//#define READ_BLOCK_SIZE 8192
-#define READ_BLOCK_SIZE 9216
-
 
 //About 45ms delay
 #define delay()						\

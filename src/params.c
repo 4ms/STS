@@ -23,20 +23,22 @@
 #include "button_knob_combo.h"
 
 // PLAY_TRIG_DELAY / 44100Hz is the delay in sec from detecting a trigger to calling start_playing()
+// This is required to let Sample CV settle (due to the hardware LPF).
+//
 // PLAY_TRIG_LATCH_PITCH_TIME is how long the PITCH CV is latched when a play trigger is received
 // This allows for a CV/gate sequencer to settle, and the internal LPF to settle, before using the new CV value
 // This reduces slew and "indecision" when a step is advanced on the sequencer
 
 #if X_FAST_ADC == 1
 	#define PLAY_TRIG_LATCH_PITCH_TIME 256 
-	#define PLAY_TRIG_DELAY 530
+	#define PLAY_TRIG_DELAY 480
 
 	#define MAX_FIR_LPF_SIZE 80
 	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
 			80,80, //PITCH
 			20,20, //START
 			20,20, //LENGTH
-			5,5  //SAMPLE
+			1,1  //SAMPLE
 	};
 #else
 	#define PLAY_TRIG_LATCH_PITCH_TIME 768 
@@ -98,8 +100,8 @@ float POT_LPF_COEF[NUM_POT_ADCS];
 
 float RAWCV_LPF_COEF[NUM_CV_ADCS];
 
-int32_t MIN_POT_ADC_CHANGE[NUM_POT_ADCS];
-int32_t MIN_CV_ADC_CHANGE[NUM_CV_ADCS];
+int32_t POT_BRACKET[NUM_POT_ADCS];
+int32_t CV_BRACKET[NUM_CV_ADCS];
 
 // Latched 1voct values
 uint32_t voct_latch_value[2];
@@ -199,21 +201,21 @@ void init_LowPassCoefs(void)
 	RAWCV_LPF_COEF[SAMPLE_CV*2+1] = 1.0-(1.0/t);
 
 #if X_FAST_ADC == 1
-	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 5;
-	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 5;
+	CV_BRACKET[PITCH_CV*2] = 5;
+	CV_BRACKET[PITCH_CV*2+1] = 5;
 #else
-	MIN_CV_ADC_CHANGE[PITCH_CV*2] = 20;
-	MIN_CV_ADC_CHANGE[PITCH_CV*2+1] = 20;
+	CV_BRACKET[PITCH_CV*2] = 20;
+	CV_BRACKET[PITCH_CV*2+1] = 20;
 #endif
 
-	MIN_CV_ADC_CHANGE[START_CV*2] = 20;
-	MIN_CV_ADC_CHANGE[START_CV*2+1] = 20;
+	CV_BRACKET[START_CV*2] = 20;
+	CV_BRACKET[START_CV*2+1] = 20;
 
-	MIN_CV_ADC_CHANGE[LENGTH_CV*2] = 20;
-	MIN_CV_ADC_CHANGE[LENGTH_CV*2+1] = 20;
+	CV_BRACKET[LENGTH_CV*2] = 20;
+	CV_BRACKET[LENGTH_CV*2+1] = 20;
 
-	MIN_CV_ADC_CHANGE[SAMPLE_CV*2] = 1;
-	MIN_CV_ADC_CHANGE[SAMPLE_CV*2+1] = 1;
+	CV_BRACKET[SAMPLE_CV*2] = 40;
+	CV_BRACKET[SAMPLE_CV*2+1] = 40;
 
 	t=20.0; //50.0 = about 100ms to turn a knob fully
 
@@ -236,19 +238,19 @@ void init_LowPassCoefs(void)
 
 
 
-	MIN_POT_ADC_CHANGE[PITCH_POT*2] = 15;
-	MIN_POT_ADC_CHANGE[PITCH_POT*2+1] = 15;
+	POT_BRACKET[PITCH_POT*2] = 15;
+	POT_BRACKET[PITCH_POT*2+1] = 15;
 
-	MIN_POT_ADC_CHANGE[START_POT*2] = 20;
-	MIN_POT_ADC_CHANGE[START_POT*2+1] = 20;
+	POT_BRACKET[START_POT*2] = 20;
+	POT_BRACKET[START_POT*2+1] = 20;
 
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2] = 20;
-	MIN_POT_ADC_CHANGE[LENGTH_POT*2+1] = 20;
+	POT_BRACKET[LENGTH_POT*2] = 20;
+	POT_BRACKET[LENGTH_POT*2+1] = 20;
 
-	MIN_POT_ADC_CHANGE[SAMPLE_POT*2] = 60;
-	MIN_POT_ADC_CHANGE[SAMPLE_POT*2+1] = 60;
+	POT_BRACKET[SAMPLE_POT*2] = 60;
+	POT_BRACKET[SAMPLE_POT*2+1] = 60;
 
-	MIN_POT_ADC_CHANGE[RECSAMPLE_POT] = 60;
+	POT_BRACKET[RECSAMPLE_POT] = 60;
 
 	for (i=0;i<NUM_POT_ADCS;i++)
 	{
@@ -336,20 +338,20 @@ void process_cv_adc(void)
 
 		//Apply bracketing
 		t=i_smoothed_cvadc[i] - bracketed_cvadc[i];
-		if (t>MIN_CV_ADC_CHANGE[i])
+		if (t>CV_BRACKET[i])
 		{
 			cv_delta[i] = t;
-			bracketed_cvadc[i] = i_smoothed_cvadc[i] - (MIN_CV_ADC_CHANGE[i]);
-			//bracketed_cvadc[i] = i_smoothed_cvadc[i] - (MIN_CV_ADC_CHANGE[i]/2);
+			bracketed_cvadc[i] = i_smoothed_cvadc[i] - (CV_BRACKET[i]);
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i] - (CV_BRACKET[i]/2);
 			//bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
 			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
 		}
 
-		else if (t<-MIN_CV_ADC_CHANGE[i])
+		else if (t<-CV_BRACKET[i])
 		{
 			cv_delta[i] = t;
-			bracketed_cvadc[i] = i_smoothed_cvadc[i] + (MIN_CV_ADC_CHANGE[i]);
-			//bracketed_cvadc[i] = i_smoothed_cvadc[i] + (MIN_CV_ADC_CHANGE[i]/2);
+			bracketed_cvadc[i] = i_smoothed_cvadc[i] + (CV_BRACKET[i]);
+			//bracketed_cvadc[i] = i_smoothed_cvadc[i] + (CV_BRACKET[i]/2);
 			//bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
 			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
 		}
@@ -393,7 +395,7 @@ void process_pot_adc(void)
 		i_smoothed_potadc[i] = (int16_t)smoothed_potadc[i];
 
 		t=i_smoothed_potadc[i] - bracketed_potadc[i];
-		if ((t>MIN_POT_ADC_CHANGE[i]) || (t<-MIN_POT_ADC_CHANGE[i]))
+		if ((t>POT_BRACKET[i]) || (t<-POT_BRACKET[i]))
 			track_moving_pot[i]=250;
 
 		if (track_moving_pot[i])

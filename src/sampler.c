@@ -222,37 +222,6 @@ void toggle_reverse(uint8_t chan)
 	//So we actually want to make it play from the end of the sample rather than reverse direction from the current spot
 	if (tplay_state == PREBUFFERING || tplay_state==PLAY_FADEUP || tplay_state==PLAYING)
 	{
-
-					//Check the cache position of play_buff[chan]->out, to see if it's a certain distance from sample_file_startpos[chan]
-					//If so, reverse direction (by keeping ->out the same)
-					//If not, play from the other end (by moving ->out to the opposite end) 
-					//t = map_buffer_to_cache(play_buff[chan]->out, samples[banknum][samplenum].sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
-
-					//Find distance ->out's cache position is from startpos[]
-					//if (!i_param[chan][REV])
-					//{ 
-					//currently going forward, so find distance ->out is ahead of startpos
-					// 	if (t > sample_file_startpos[chan])
-					// 		t = t - sample_file_startpos[chan];
-					// 	else t=0;
-					// }
-					// else
-					// {//currently going backwards, so find distance ->out is behind startpos
-					// 	if (t < sample_file_startpos[chan])
-					// 		t = sample_file_startpos[chan] - t;
-					// 	else t=0;
-					// }
-
-					// First, calculate the effective resampling rate
-					//rs = f_param[chan][PITCH] * (float)samples[banknum][samplenum].sampleRate / f_BASE_SAMPLE_RATE;
-
-					//Amount play_buff[]->out changes with each audio block sent to the codec
-					//resampled_buffer_size = (uint32_t)((HT16_CHAN_BUFF_LEN * samples[banknum][samplenum].numChannels * 2) * rs);
-
-					//Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
-					//resampled_cache_size = (resampled_buffer_size/2) *samples[banknum][samplenum].sampleByteSize;
-					//if (t <= resampled_cache_size * 2)
-
 		// If we just started playing, and then we get a reverse flag a short time afterwards,
 		// then we should not just reverse direction, but instead play from the opposite end (sample_file_endpos).
 		// The reason for this can be shown in the following patch:
@@ -613,84 +582,49 @@ void check_change_bank(uint8_t chan)
 
 void check_change_sample(void)
 {
-	if (flags[PlaySample1Changed])
+	uint8_t chan;
+
+	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
-		flags[PlaySample1Changed]=0;
-
-		if (samples[ i_param[0][BANK] ][ i_param[0][SAMPLE] ].filename[0] == 0) //no file: fadedown or remain silent
+		if (flags[PlaySample1Changed+chan])
 		{
-			//No sample in this slot:
-			//Set the sample empty flag to 1 (dim) only if it's 0
-			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
-			if (flags[PlaySample1Changed_empty]==0)
-				flags[PlaySample1Changed_empty] = 1;
+			flags[PlaySample1Changed+chan]=0;
 
-			flags[PlaySample1Changed_valid] = 0;
-	
+			if (samples[ i_param[chan][BANK] ][ i_param[chan][SAMPLE] ].filename[0] == 0) //no file: fadedown or remain silent
+			{
+				//No sample in this slot:
+				//Set the sample empty flag to 1 (dim) only if it's 0
+				//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
+				if (flags[PlaySample1Changed_empty+chan]==0)
+					flags[PlaySample1Changed_empty+chan] = 1;
 
-			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
-				play_state[0] = PLAY_FADEDOWN;
+				flags[PlaySample1Changed_valid+chan] = 0;
+		
+
+				if (play_state[chan] != SILENT && play_state[chan]!=PREBUFFERING)
+					play_state[chan] = PLAY_FADEDOWN;
+				else
+					play_state[chan] = SILENT;
+			}
 			else
-				play_state[0] = SILENT;
+			{
+				//Sample found in this slot:
+				//Set the sample valid flag to 1 (dim) only if it's 0
+				//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
+				if (flags[PlaySample1Changed_valid+chan]==0)
+					flags[PlaySample1Changed_valid+chan] = 1;
 
-			// if (global_mode[EDIT_MODE])
-			// 	flags[AssigningEmptySample] = 1;
+				flags[PlaySample1Changed_empty+chan] = 0;
 
-		}
-		else
-		{
-			//Sample found in this slot:
-			//Set the sample valid flag to 1 (dim) only if it's 0
-			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
-			if (flags[PlaySample1Changed_valid]==0)
-				flags[PlaySample1Changed_valid] = 1;
-			flags[PlaySample1Changed_empty] = 0;
+				if (play_state[chan] == SILENT && i_param[chan][LOOPING])
+					flags[Play1But]=1;
 
-			if (play_state[0] == SILENT && i_param[0][LOOPING])
-				flags[Play1But]=1;
+				if (play_state[chan] != SILENT && play_state[chan] != PREBUFFERING)
+					play_state[chan] = PLAY_FADEDOWN;
 
-			if (play_state[0] != SILENT && play_state[0]!=PREBUFFERING)
-				play_state[0] = PLAY_FADEDOWN;
+				//ToDo: set play_state[chan] to PRELOAD, so we start loading the new sample as soon as we change to it
 
-			// if (global_mode[EDIT_MODE])
-			// 	flags[AssigningEmptySample] = 0;
-		}
-
-	}
-
-	if (flags[PlaySample2Changed]){
-		flags[PlaySample2Changed]=0;
-		//can_restart[1] = 0;
-
-		if (samples[ i_param[1][BANK] ][ i_param[1][SAMPLE] ].filename[0] == 0 )
-		{
-			//No sample in this slot:
-			//Set the sample empty flag to 1 (dim) only if it's 0
-			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
-			if (flags[PlaySample2Changed_empty]==0)
-				flags[PlaySample2Changed_empty] = 1;
-			flags[PlaySample2Changed_valid] = 0;
-
-			if (play_state[1] != SILENT && play_state[1]!=PREBUFFERING)
-				play_state[1] = PLAY_FADEDOWN;
-			else
-				play_state[1] = SILENT;
-		}
-		else
-		{
-			//Sample found in this slot:
-			//Set the sample valid flag to 1 (dim) only if it's 0
-			//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
-			if (flags[PlaySample2Changed_valid]==0)
-				flags[PlaySample2Changed_valid] = 1;
-			flags[PlaySample2Changed_empty] = 0;
-
-			if (play_state[1] == SILENT && i_param[1][LOOPING])
-				flags[Play2But]=1;
-
-			if (play_state[1] != SILENT && play_state[1]!=PREBUFFERING)
-				play_state[1] = PLAY_FADEDOWN;
-
+			}
 		}
 	}
 }
@@ -767,8 +701,8 @@ void read_storage_to_buffer(void)
 			//Calculate how many bytes we need to pre-load in our buffer
 			//
 			//Note of interest: blockAlign already includes numChannels, so we essentially square it in the calc below.
-			//Why? ...because we plow through the bytes in play_buff twice as fast if it's stereo,
-			//and since it takes twice as long to load stereo data,
+			//The reason is that we plow through the bytes in play_buff twice as fast if it's stereo,
+			//and since it takes twice as long to load stereo data from the sd card,
 			//we have to preload four times as much data (2^2) vs (1^1)
 			//
 			pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign * s_sample->numChannels) * pb_adjustment);
@@ -811,9 +745,7 @@ void read_storage_to_buffer(void)
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 						//else align rd to 24
-
 						res = f_read(&fil[chan], (uint8_t *)tmp_buff_u32, rd, &br);
-
 						if (res != FR_OK) 
 						{
 							g_error |= FILE_READ_FAIL_1 << chan; 
@@ -876,7 +808,6 @@ void read_storage_to_buffer(void)
 
 							is_buffered_to_file_end[chan] = 1;
 						}
-
 
 						//Read one block forward
 						t_fptr=f_tell(&fil[chan]);
