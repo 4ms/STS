@@ -328,8 +328,12 @@ void update_ButtonLEDs(void)
 
 		// Writing index
 		if (flags[RewriteIndex])
-		{
-			set_ButtonLED_byPalette(ButLEDnum, flags[RewriteIndex]);
+		{	
+			if (ButLEDnum!=Play1ButtonLED && ButLEDnum!=Play2ButtonLED)
+				set_ButtonLED_byPalette(ButLEDnum, flags[RewriteIndex]);
+			else
+				set_ButtonLED_byPalette(ButLEDnum, OFF);
+
 		}
 		else
 

@@ -704,8 +704,8 @@ uint8_t load_all_banks(uint8_t force_reload)
 	FRESULT res;
 	FRESULT queue_valid;
 
-	//Load the index file: (buttons are white)
-	flags[RewriteIndex]=WHITE;
+	//Load the index file:
+	flags[RewriteIndex]=YELLOW;
 
 	//Load the index file, marking files found or not found with samples[][].file_found = 1/0;
 	if (!force_reload)
@@ -718,7 +718,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 	if (!force_reload) //sampleindex file was ok
 	{	
 		//Look for new folders and missing files: (buttons are yellow)
-		flags[RewriteIndex]=YELLOW;
+		flags[RewriteIndex]=ORANGE;
 
 		// Update the list of banks that are enabled
 		// Banks with no file_found will be disabled (but filenames will be preserved, for use in load_missing_files)
@@ -736,7 +736,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 	{
 
 		// Ignore index and create new banks from disk: (buttons are blue)
-		flags[RewriteIndex]=BLUE;
+		flags[RewriteIndex]=WHITE;
 
 		//initialize the renaming queue
 		queue_valid = clear_renaming_queue();
@@ -759,8 +759,6 @@ uint8_t load_all_banks(uint8_t force_reload)
 	// Write samples struct to index
 	// ... so sample info gets updated with latest .wav header content
 	// Buttons are red for index file, then orange for html file
-
-	flags[RewriteIndex]=RED; // FIXME: this seems redundant w/ content of index_write_wrapper() which sets flag to RED
 
 	res = index_write_wrapper(); //the wrapper sets flags[RewriteIndex] to ORANGE during html file write
 

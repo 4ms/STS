@@ -19,6 +19,8 @@ uint8_t 					bank_status[MAX_NUM_BANKS];
 extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 extern uint8_t 				flags[NUM_FLAGS];
 
+//FIL			temp_file1, temp_file2;
+
 // extern enum g_Errors g_error;
 // extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 // enum PlayStates play_state				[NUM_PLAY_CHAN];
@@ -165,13 +167,13 @@ uint8_t index_write_wrapper(void){
 	FRESULT res;
 	uint8_t	html_res;
 
-	// WRITE INDEX FILE (buttons are red)
-	flags[RewriteIndex]=RED;
+	// WRITE INDEX FILE
+	flags[RewriteIndex]=MAGENTA;
 	res = write_sampleindex_file();
 	if (res!=FR_OK) return(1);
 
-	// WRITE SAMPLE LIST HTML FILE (buttons are orange)
-	flags[RewriteIndex]=ORANGE;
+	// WRITE SAMPLE LIST HTML FILE
+	flags[RewriteIndex]=LAVENDER;
 	html_res = write_samplelist();
 	return (html_res);
 }
