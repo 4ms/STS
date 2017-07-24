@@ -73,29 +73,31 @@ extern FATFS FatFs;
 //
 // System-wide parameters, flags, modes, states
 //
-extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
-extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+extern float 				f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
+extern uint8_t				i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
-extern uint8_t 	global_mode[NUM_GLOBAL_MODES];
+extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 
-extern uint8_t 	flags[NUM_FLAGS];
-extern enum 	g_Errors g_error;
+extern uint8_t 				flags[NUM_FLAGS];
+extern enum 				g_Errors g_error;
 
-extern uint8_t 	play_led_state[NUM_PLAY_CHAN];
+extern uint8_t 				play_led_state[NUM_PLAY_CHAN];
 
 extern volatile uint32_t 	sys_tmr;
 uint32_t					last_play_start_tmr[NUM_PLAY_CHAN];
 
-uint8_t SAMPLINGBYTES=2;
+uint8_t 					SAMPLINGBYTES=2;
 
-uint32_t end_out_ctr[NUM_PLAY_CHAN]={0,0};
-uint32_t play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
+uint32_t 					end_out_ctr[NUM_PLAY_CHAN]={0,0};
+uint32_t 					play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
 
 
 //
 // Memory
 //
 extern const uint32_t AUDIO_MEM_BASE[4];
+
+uint32_t tmp_buff_u32[READ_BLOCK_SIZE>>2];
 
 //
 // SDRAM buffer addresses for playing from sdcard
@@ -630,7 +632,6 @@ void check_change_sample(void)
 }
 
 
-uint32_t tmp_buff_u32[READ_BLOCK_SIZE>>2];
 
 void read_storage_to_buffer(void)
 {

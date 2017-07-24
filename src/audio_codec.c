@@ -20,8 +20,8 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 void process_audio_block_codec(int16_t *src, int16_t *dst)
 {
-	int32_t outL[2][HT16_CHAN_BUFF_LEN];
-	int32_t outR[2][HT16_CHAN_BUFF_LEN];
+	CCMDATA static int32_t outL[2][HT16_CHAN_BUFF_LEN];
+	CCMDATA static int32_t outR[2][HT16_CHAN_BUFF_LEN];
 	uint16_t i;
 	int32_t t_i32;
 

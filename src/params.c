@@ -59,12 +59,12 @@
 
 
 //CV LPFs
-int32_t fir_lpf[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
-uint32_t fir_lpf_i[NUM_CV_ADCS];
+CCMDATA int32_t 	fir_lpf		[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
+uint32_t 			fir_lpf_i	[NUM_CV_ADCS];
 
 
-extern float pitch_pot_lut[4096];
-const float voltoct[4096];
+extern const float	pitch_pot_lut[4096];
+extern const float 	voltoct[4096];
 
 
 extern enum PlayStates play_state[NUM_PLAY_CHAN];
