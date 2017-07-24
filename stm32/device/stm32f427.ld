@@ -1,23 +1,45 @@
 /*
-Default linker script for STM32F4xx_1024K_192K
+Linker script for STM32F4xx_1024K_192K
+Modified and commented by: Dan Green <danngreen1@gmail.com>
 */
 
 ENTRY(Reset_Handler)
 
-/* If we were to have the stack live in normal RAM, we would define _estack like this:
-_estack = 0x20020000;
-*/
-
 /*
+If we were to have the stack live in normal RAM,
+we would define _estack like this:
+_estack = 0x20020000;
+
 To have the stack live in CCMRAM, we do this:
 _estack = 0x10010000;
 
 This allows DMA transfers to/from regular RAM at the same time
 the main code uses the stack for local variables
+This creates a memory map like this:
+
+CCMRAM:
+0x10010000  [---Initial Stack Pointer--]
+..........  [   ~~~  stack space ~~~   ]
+..........  [ |                        ]
+..........  [ |   stack ptr moves      ]
+..........  [ v   downwards            ]
+..........  [--------------------------]
+..........  [   ~~~ heap space  ~~~    ]
+..........  [   ~~~  (min 256B) ~~~    ]
+..........  [--------------------------]
+..........  [   ~~~ space for      ~~~ ]
+..........  [   ~~~ CCMRAM defined ~~~ ]
+..........  [   ~~~ globals        ~~~ ]
+0x10000000  [--------------------------]
+
+Note: STM32F4xx chips cannot do DMA transfers to/from CCMRAM,
+so all DMA buffers must be allocated in normal RAM.
+If a buffer is not declared global or static, it will be allocated in the stack,
+and if the stack is in CCMRAM, the DMA transfer will hang and never complete
 */
 
 
-_estack = 0x10010000;
+_estack = 0x20020000;
 
 /*
 The heap is used for dynamically allocated variables, such as with f_printf() 
@@ -34,24 +56,7 @@ We also can assign some globals to CCMRAM by defining them with __attribute__ ((
 
 _Min_Stack_Size = 0x1000;
 
-/* This creates a memory map like this:
 
-CCMRAM:
-0x10010000  [   Initial Stack Pointer  ]
-..........  [   ~~~  stack space ~~~   ]
-..........  [   ~~~    (min 4k)  ~~~   ]
-..........  [ |                        ]
-..........  [ | stack moves downwards  ]
-..........  [ v                        ]
-..........  [--------------------------]
-..........  [   ~~~ heap space  ~~~    ]
-..........  [   ~~~  (min 256B) ~~~    ]
-..........  [--------------------------]
-..........  [   ~~~ space for      ~~~ ]
-..........  [   ~~~ CCMRAM defined ~~~ ]
-..........  [   ~~~ globals        ~~~ ]
-0x10000000  [--------------------------]
-*/
 
 MEMORY
 {
@@ -117,16 +122,6 @@ SECTIONS
   
   PROVIDE ( end = _ebss );
   PROVIDE ( _end = _ebss );
-
-  
-  /* CCM section, vars must be located here explicitly */
-  /* Example: int foo __attribute__ ((section (".ccmdata"))); */
-  .ccmdata (NOLOAD) :
-  {
-    . = ALIGN(16);
-    *(.ccmdata)
-    . = ALIGN(16);
-  } >CCMRAM
  
    ._user_heap_stack :
   {
@@ -136,7 +131,17 @@ SECTIONS
     . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
     . = ALIGN(16);
+  } >RAM
+  
+  /* CCM section, vars must be located here explicitly */
+  /* Example: int foo __attribute__ ((section (".ccmdata"))); */
+  .ccmdata (NOLOAD) :
+  {
+    . = ALIGN(16);
+    *(.ccmdata)
+    . = ALIGN(16);
   } >CCMRAM
+
 
  /*
   DISCARD :

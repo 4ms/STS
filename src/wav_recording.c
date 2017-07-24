@@ -45,7 +45,7 @@ CircularBuffer srec_buff;
 CircularBuffer* rec_buff;
 
 //temporary SRAM buffer for storing received audio data until it can be written to SD-Card
-int16_t 		rec_buff16[WRITE_BLOCK_SIZE>>1] CCMDATA;
+int16_t 		rec_buff16[WRITE_BLOCK_SIZE>>1];
 
 enum RecStates	rec_state;
 uint32_t		samplebytes_recorded;

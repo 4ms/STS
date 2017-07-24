@@ -97,7 +97,7 @@ uint32_t 					play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
 //
 extern const uint32_t AUDIO_MEM_BASE[4];
 
-uint32_t tmp_buff_u32[READ_BLOCK_SIZE>>2] CCMDATA;
+uint32_t tmp_buff_u32[READ_BLOCK_SIZE>>2];
 
 //
 // SDRAM buffer addresses for playing from sdcard

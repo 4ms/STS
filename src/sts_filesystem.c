@@ -38,7 +38,7 @@ extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 extern FATFS 				FatFs;
 
 
-Sample		test_bank[NUM_SAMPLES_PER_BANK];
+CCMDATA Sample				test_bank[NUM_SAMPLES_PER_BANK];
 
 
 FRESULT check_sys_dir(void)

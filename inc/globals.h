@@ -185,8 +185,8 @@ do {							\
 } while (0)
 
 
-//#define CCMDATA __attribute__ ((section (".ccmdata")))
-#define CCMDATA
+#define CCMDATA __attribute__ ((section (".ccmdata")))
+//#define CCMDATA
 
 void check_errors(void);
 

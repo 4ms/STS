@@ -47,8 +47,8 @@ FRESULT reload_sample_file(FIL *fil, Sample *s_sample)
 //
 // Create a fast-lookup table (linkmap)
 //
-#define SZ_TBL 64
-DWORD chan_clmt[NUM_PLAY_CHAN][SZ_TBL];
+#define SZ_TBL 256
+CCMDATA DWORD chan_clmt[NUM_PLAY_CHAN][SZ_TBL];
 
 FRESULT create_linkmap(FIL *fil, uint8_t chan)
 {
