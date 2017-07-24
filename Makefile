@@ -47,8 +47,10 @@ AS = $(ARCH)-as
 OBJCPY = $(ARCH)-objcopy
 OBJDMP = $(ARCH)-objdump
 GDB = $(ARCH)-gdb
+SZ = $(ARCH)-size
 
- 	
+SZOPTS = -d
+
 C0FLAGS  = -O0 -g -Wall
 C0FLAGS += -mlittle-endian -mthumb 
 C0FLAGS +=  -I. -DARM_MATH_CM4 -D'__FPU_PRESENT=1'  $(INCLUDES)  -DUSE_STDPERIPH_DRIVER
@@ -84,9 +86,10 @@ CFLAGS = -O3 -g2 -fno-tree-loop-distribute-patterns -fno-schedule-insns  -fno-sc
 
 
 CFLAGS += -mlittle-endian -mthumb 
-CFLAGS +=  -I. -DARM_MATH_CM4 -D'__FPU_PRESENT=1'  $(INCLUDES)  -DUSE_STDPERIPH_DRIVER
+CFLAGS += -I. -DARM_MATH_CM4 -D'__FPU_PRESENT=1'  $(INCLUDES)  -DUSE_STDPERIPH_DRIVER
 CFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard
-CFLAGS +=  -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion 
+CFLAGS += -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion 
+CFLAGS += -fstack-usage -fstack-check
 #CFLAGS += --specs=rdimon.specs -lgcc -lc -lm -lrdimon
 
 AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4 
@@ -131,8 +134,10 @@ $(BIN): $(ELF)
 	$(OBJDMP) -x --syms $< > $(addsuffix .dmp, $(basename $<))
 	ls -l $@ $<
 
+
 $(HEX): $(ELF)
 	$(OBJCPY) --output-target=ihex $< $@
+	$(SZ) $(SZOPTS) $(ELF)
 
 $(ELF): $(OBJECTS) 
 	$(LD) $(LFLAGS) -o $@ $(OBJECTS)
