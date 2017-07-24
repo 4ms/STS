@@ -17,24 +17,23 @@
 #include "calibration.h"
 #include "sts_fs_index.h"
 
-extern volatile uint32_t sys_tmr;
-extern enum g_Errors g_error;
+extern volatile uint32_t 		sys_tmr;
+extern enum g_Errors 			g_error;
 
-extern const uint32_t AUDIO_MEM_BASE[4];
-extern uint8_t SAMPLINGBYTES;
+extern const uint32_t 			AUDIO_MEM_BASE[4];
+extern uint8_t 					SAMPLINGBYTES;
 
-extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-extern uint8_t	global_mode[NUM_GLOBAL_MODES];
+extern uint8_t					i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+extern uint8_t					global_mode[NUM_GLOBAL_MODES];
 
-extern uint8_t 	flags[NUM_FLAGS];
+extern uint8_t 					flags[NUM_FLAGS];
 
-extern enum PlayLoadTriage play_load_triage;
+extern enum PlayLoadTriage 		play_load_triage;
 
-extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+extern Sample 					samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-extern SystemCalibrations *system_calibrations;
+extern SystemCalibrations 		*system_calibrations;
 
-//#define WRITE_BLOCK_SIZE 8192
 #define WRITE_BLOCK_SIZE 8192
 
 //
@@ -44,6 +43,9 @@ extern SystemCalibrations *system_calibrations;
 
 CircularBuffer srec_buff;
 CircularBuffer* rec_buff;
+
+//temporary SRAM buffer for storing received audio data until it can be written to SD-Card
+int16_t 		rec_buff16[WRITE_BLOCK_SIZE>>1] CCMDATA;
 
 enum RecStates	rec_state;
 uint32_t		samplebytes_recorded;
@@ -158,7 +160,6 @@ void record_audio_to_buffer(int16_t *src)
 }
 
 
-int16_t rec_buff16[WRITE_BLOCK_SIZE>>1]; //4096 elements
 
 void create_new_recording(void)
 {
