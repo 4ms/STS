@@ -355,7 +355,7 @@ void assert_failed(uint8_t* file, uint32_t line)
 /* exception handlers - so we know what's failing */
 void NMI_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
@@ -375,7 +375,7 @@ void HardFault_Handler(void)
 	dfsr=SCB->DFSR;
 	cfsr=SCB->CFSR;
 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 
 	if (foobar){
 		return;
@@ -386,37 +386,37 @@ void HardFault_Handler(void)
 
 void MemManage_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void BusFault_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void UsageFault_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void SVC_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void DebugMon_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void PendSV_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 #endif
