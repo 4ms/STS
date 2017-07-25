@@ -86,6 +86,18 @@ void JumpTo(uint32_t address) {
   application();
 }
 
+void deinit_all(void);
+void deinit_all(void)
+{
+	f_mount(0, "", 0);
+	SD_DeInit();
+	Deinit_CV_ADC();
+	Deinit_Pot_ADC();
+	Codec_Deinit();
+	DeInit_I2S_Clock();
+	DeInit_I2SDMA();
+	deinit_dig_inouts();
+}
 
 int main(void)
 {
@@ -217,6 +229,7 @@ int main(void)
 	system_calibrations->tracking_comp[0]=1.025;
 	system_calibrations->tracking_comp[1]=1.034;
 
+	flags[SystemModeButtonsDown] = 0;
 
     //Begin reading inputs
     init_buttons();
@@ -240,8 +253,8 @@ int main(void)
 
 	Start_I2SDMA();
 
-	set_default_system_settings();
-	read_system_settings();
+	set_default_user_settings();
+	read_user_settings();
 
 	delay();
 
@@ -270,7 +283,7 @@ int main(void)
 		if (flags[SaveSystemSettings])
 		{
 			flags[SaveSystemSettings] = 0;
-			save_system_settings();
+			save_user_settings();
 		}
 
 		process_mode_flags();
@@ -292,13 +305,16 @@ int main(void)
 			flags[ForceFileReload2] 	= 1;
 		}
 
-		// if (flags[LoadIndex])
-		// {
-		// 	load_sampleindex_file(USE_INDEX_FILE, flags[LoadIndex] - 1);
-		// 	flags[LoadIndex] 			= 0;
-		// 	flags[ForceFileReload1] 	= 1;
-		// 	flags[ForceFileReload2] 	= 1;
-		// }
+		if (flags[ShutdownAndBootload])
+		{
+			flags[ShutdownAndBootload] = 0;
+			deinit_all();
+
+			//JumpTo(0x08000000);
+			//NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
+			*((uint32_t *)(0x2001FFF0)) = 0x2BE0D411;
+			NVIC_SystemReset();
+		}
 
     	if (do_factory_reset)
     		if (!(--do_factory_reset))
@@ -328,7 +344,7 @@ void assert_failed(uint8_t* file, uint32_t line)
 { 
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-	JumpTo(0x08008000);
+	//JumpTo(0x08008000);
 
   /* Infinite loop */
   while (1)
@@ -341,68 +357,70 @@ void assert_failed(uint8_t* file, uint32_t line)
 /* exception handlers - so we know what's failing */
 void NMI_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void HardFault_Handler(void)
 { 
-	volatile uint8_t foobar;
-	uint32_t hfsr,dfsr,afsr,bfar,mmfar,cfsr;
+	NVIC_SystemReset();
 
-	volatile uint8_t pause=1;
+	// volatile uint8_t foobar;
+	//uint32_t hfsr,dfsr,afsr,bfar,mmfar,cfsr;
 
-	foobar=0;
-	mmfar=SCB->MMFAR;
-	bfar=SCB->BFAR;
+	// volatile uint8_t pause=1;
 
-	hfsr=SCB->HFSR;
-	afsr=SCB->AFSR;
-	dfsr=SCB->DFSR;
-	cfsr=SCB->CFSR;
+	// foobar=1;
+	// mmfar=SCB->MMFAR;
+	// bfar=SCB->BFAR;
 
-	//JumpTo(0x08008000);
+	// hfsr=SCB->HFSR;
+	// afsr=SCB->AFSR;
+	// dfsr=SCB->DFSR;
+	// cfsr=SCB->CFSR;
 
-	if (foobar){
-		return;
-	} else {
-		while(pause){};
-	}
+
+	// if (foobar){
+	// 	return;
+	// } else {
+	// 	while(pause){};
+	// }
+
 }
 
 void MemManage_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void BusFault_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void UsageFault_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void SVC_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void DebugMon_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 
 void PendSV_Handler(void)
 { 
-	//JumpTo(0x08008000);
+	NVIC_SystemReset();
 	while(1){};
 }
 #endif
