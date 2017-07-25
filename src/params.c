@@ -21,6 +21,7 @@
 #include "calibration.h"
 #include "bank.h"
 #include "button_knob_combo.h"
+#include "system_settings.h"
 
 // PLAY_TRIG_DELAY / 44100Hz is the delay in sec from detecting a trigger to calling start_playing()
 // This is required to let Sample CV settle (due to the hardware LPF).
@@ -173,7 +174,7 @@ void init_params(void)
 void init_modes(void)
 {
 	global_mode[CALIBRATE] = 0;
-	global_mode[SYSTEM_SETTINGS] = 0;
+	global_mode[SYSTEM_MODE] = 0;
 	global_mode[MONITOR_RECORDING] = 0;
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[EDIT_MODE] = 0;
@@ -802,132 +803,129 @@ void update_params(void)
 void process_mode_flags(void)
 {
 
-	if (!disable_mode_changes)
+	if (flags[Rev1Trig])
 	{
-		if (flags[Rev1Trig])
+		flags[Rev1Trig]=0;
+		toggle_reverse(0);
+	}
+	if (flags[Rev2Trig])
+	{
+		flags[Rev2Trig]=0;
+		toggle_reverse(1);
+	}
+
+	if (flags[Play1But])
+	{
+		flags[Play1But]=0;
+		toggle_playing(0);
+	}
+	if (flags[Play2But])
+	{
+		flags[Play2But]=0;
+		toggle_playing(1);
+	}
+
+	if (flags[Play1TrigDelaying])
+	{
+		if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_LATCH_PITCH_TIME)
+			flags[LatchVoltOctCV1] = 0;
+		else
+			flags[LatchVoltOctCV1] = 1;
+
+		if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_DELAY) 
 		{
-			flags[Rev1Trig]=0;
-			toggle_reverse(0);
+			flags[Play1Trig] 			= 1;
+			flags[Play1TrigDelaying]	= 0;
+			flags[LatchVoltOctCV1] 		= 0;		
+			DEBUG3_OFF;
 		}
-		if (flags[Rev2Trig])
+	}
+	if (flags[Play1Trig])
+	{
+		start_playing(0);
+		flags[Play1Trig]	= 0;
+	}
+
+
+
+	if (flags[Play2TrigDelaying])
+	{
+		if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_LATCH_PITCH_TIME)
+			flags[LatchVoltOctCV2] = 0;
+		else
+			flags[LatchVoltOctCV2] = 1;
+
+		if ((sys_tmr - play_trig_timestamp[1]) > PLAY_TRIG_DELAY)
 		{
-			flags[Rev2Trig]=0;
-			toggle_reverse(1);
+			flags[Play2Trig] 			= 1;
+			flags[Play2TrigDelaying]	= 0;
+			flags[LatchVoltOctCV2]		= 0;
 		}
+	}
+	if (flags[Play2Trig])
+	{
+		start_playing(1);
+		flags[Play2Trig]	 = 0;
+		flags[LatchVoltOctCV2] = 0;		
+	}
 
-		if (flags[Play1But])
+	if (flags[RecTrig]==1)
+	{
+		flags[RecTrig]=0;
+		toggle_recording();
+	}
+
+	if (flags[ToggleMonitor])
+	{
+		flags[ToggleMonitor] = 0;
+
+		if (global_mode[ENABLE_RECORDING] && global_mode[MONITOR_RECORDING])
 		{
-			flags[Play1But]=0;
-			toggle_playing(0);
+			global_mode[ENABLE_RECORDING] = 0;
+			global_mode[MONITOR_RECORDING] = 0;
+			stop_recording();
 		}
-		if (flags[Play2But])
+		else
 		{
-			flags[Play2But]=0;
-			toggle_playing(1);
+			global_mode[ENABLE_RECORDING] = 1;
+			global_mode[MONITOR_RECORDING] = 1;
+			i_param[0][LOOPING] = 0;
+			i_param[1][LOOPING] = 0;
 		}
+	}
 
-		if (flags[Play1TrigDelaying])
+
+	if (flags[ToggleLooping1])
+	{
+		flags[ToggleLooping1] = 0;
+
+		if (i_param[0][LOOPING])
 		{
-			if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_LATCH_PITCH_TIME)
-				flags[LatchVoltOctCV1] = 0;
-			else
-				flags[LatchVoltOctCV1] = 1;
-
-			if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_DELAY) 
-			{
-				flags[Play1Trig] 			= 1;
-				flags[Play1TrigDelaying]	= 0;
-				flags[LatchVoltOctCV1] 		= 0;		
-				DEBUG3_OFF;
-			}
+			i_param[0][LOOPING] = 0;
 		}
-		if (flags[Play1Trig])
+		else
 		{
-			start_playing(0);
-			flags[Play1Trig]	= 0;
-		}
-
-
-
-		if (flags[Play2TrigDelaying])
-		{
-			if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_LATCH_PITCH_TIME)
-				flags[LatchVoltOctCV2] = 0;
-			else
-				flags[LatchVoltOctCV2] = 1;
-
-			if ((sys_tmr - play_trig_timestamp[1]) > PLAY_TRIG_DELAY)
-			{
-				flags[Play2Trig] 			= 1;
-				flags[Play2TrigDelaying]	= 0;
-				flags[LatchVoltOctCV2]		= 0;
-			}
-		}
-		if (flags[Play2Trig])
-		{
-			start_playing(1);
-			flags[Play2Trig]	 = 0;
-			flags[LatchVoltOctCV2] = 0;		
-		}
-
-		if (flags[RecTrig]==1)
-		{
-			flags[RecTrig]=0;
-			toggle_recording();
-		}
-
-		if (flags[ToggleMonitor])
-		{
-			flags[ToggleMonitor] = 0;
-
-			if (global_mode[ENABLE_RECORDING] && global_mode[MONITOR_RECORDING])
-			{
-				global_mode[ENABLE_RECORDING] = 0;
-				global_mode[MONITOR_RECORDING] = 0;
-				stop_recording();
-			}
-			else
-			{
-				global_mode[ENABLE_RECORDING] = 1;
-				global_mode[MONITOR_RECORDING] = 1;
-				i_param[0][LOOPING] = 0;
-				i_param[1][LOOPING] = 0;
-			}
-		}
-
-
-		if (flags[ToggleLooping1])
-		{
-			flags[ToggleLooping1] = 0;
-
-			if (i_param[0][LOOPING])
-			{
-				i_param[0][LOOPING] = 0;
-			}
-			else
-			{
-				i_param[0][LOOPING] = 1;
-				if (play_state[0] == SILENT) 
-					flags[Play1But] = 1;
-			}
-
-
+			i_param[0][LOOPING] = 1;
+			if (play_state[0] == SILENT) 
+				flags[Play1But] = 1;
 		}
 
-		if (flags[ToggleLooping2])
-		{
-			flags[ToggleLooping2] = 0;
 
-			if (i_param[1][LOOPING])
-			{
-				i_param[1][LOOPING] = 0;
-			}
-			else
-			{
-				i_param[1][LOOPING] = 1;
-				if (play_state[1] == SILENT) 
-					flags[Play2But] = 1;
-			}
+	}
+
+	if (flags[ToggleLooping2])
+	{
+		flags[ToggleLooping2] = 0;
+
+		if (i_param[1][LOOPING])
+		{
+			i_param[1][LOOPING] = 0;
+		}
+		else
+		{
+			i_param[1][LOOPING] = 1;
+			if (play_state[1] == SILENT) 
+				flags[Play2But] = 1;
 		}
 	}
 }
@@ -971,18 +969,13 @@ void adc_param_update_IRQHandler(void)
 			update_calibrate_leds();
 		}
 		else
-			update_params();
-
-		//process_mode_flags();
-
-		if (global_mode[SYSTEM_SETTINGS])
+		if (global_mode[SYSTEM_MODE])
 		{
-			//update_system_settings();
-			//update_system_settings_leds();
+			update_system_mode();
+			update_system_mode_leds();
 		}
-
-
-		//check_entering_system_mode();
+		else
+			update_params();
 
 
 		TIM_ClearITPendingBit(TIM9, TIM_IT_Update);

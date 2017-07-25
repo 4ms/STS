@@ -12,6 +12,8 @@
 #include "system_settings.h"
 #include "sampler.h"
 #include "res/LED_palette.h"
+#include "wav_recording.h"
+#include "flash_user.h"
 
 extern ButtonKnobCombo 		g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
@@ -33,6 +35,7 @@ extern uint8_t 				bank_status[MAX_NUM_BANKS];
 extern enum 				PlayStates play_state[NUM_PLAY_CHAN];
 
 extern SystemCalibrations 	*system_calibrations;
+extern enum RecStates	rec_state;
 
 void clear_errors(void)
 {
@@ -155,21 +158,9 @@ void Button_Debounce_IRQHandler(void)
 							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state = COMBO_INACTIVE;
 						break;
 
-						case Rec:
-							if (global_mode[EDIT_MODE])
-							{
-								if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
-								if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
-							}
-						break;
 
 						case RecBank:
-							if (global_mode[EDIT_MODE])
-							{
-								if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
-								if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
-							}
-							else
+							if (!global_mode[EDIT_MODE])
 							{
 								//Store the pot values.
 								//We use this to determine if the pot has moved while the Bank button is down
@@ -252,42 +243,58 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 							case Rec:
-								if (button_state[Rec]<SHORT_PRESSED)
-									flags[RecTrig]=1;
+								if (global_mode[EDIT_MODE])
+								{
+									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
+									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
+								}
+								else
+								{
+									if (button_state[Rec]<SHORT_PRESSED)
+										flags[RecTrig]=1;
+								}
 							break;
 
 							case RecBank:
-								//See if there was a combo button+knob happening
-
-								//this a short-hand version for the combo, just to make code more readable:
-								t_bkc = &g_button_knob_combo[bkc_RecBank][bkc_RecSample];
-								if (t_bkc->combo_state == COMBO_ACTIVE)
+								if (global_mode[EDIT_MODE])
 								{
-									//Change our combo state to inactive
-									//Note: unlike Bank1 and Bank2, we do not latch Rec Sample value after RecBank is released
-									t_bkc->combo_state = COMBO_INACTIVE;
-
-									//Set the rec bank parameter to the hover value
-									i_param[REC][BANK] = t_bkc->hover_value;
-
-									combo_was_active = 1;
+									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
+									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
 								}
-
-								else
-								//No combo, so just increment the Rec Bank color, but not blink
+								else 
 								{
-									bank_blink = get_bank_blink_digit(i_param[REC][BANK]);
-									bank_color = get_bank_color_digit(i_param[REC][BANK]);
-									bank_color++;
-									if (bank_color>=10) bank_color=0;
+									//See if there was a combo button+knob happening
 
-									i_param[REC][BANK] = bank_color + (bank_blink*10);
+									//this a short-hand version for the combo, just to make code more readable:
+									t_bkc = &g_button_knob_combo[bkc_RecBank][bkc_RecSample];
+									if (t_bkc->combo_state == COMBO_ACTIVE)
+									{
+										//Change our combo state to inactive
+										//Note: unlike Bank1 and Bank2, we do not latch Rec Sample value after RecBank is released
+										t_bkc->combo_state = COMBO_INACTIVE;
 
-									//range check, but should not be neccessary
-									if (i_param[REC][BANK] >= MAX_NUM_BANKS)	i_param[REC][BANK]=0;
+										//Set the rec bank parameter to the hover value
+										i_param[REC][BANK] = t_bkc->hover_value;
+
+										combo_was_active = 1;
+									}
+
+									else
+									//No combo, so just increment the Rec Bank color, but not blink
+									{
+										bank_blink = get_bank_blink_digit(i_param[REC][BANK]);
+										bank_color = get_bank_color_digit(i_param[REC][BANK]);
+										bank_color++;
+										if (bank_color>=10) bank_color=0;
+
+										i_param[REC][BANK] = bank_color + (bank_blink*10);
+
+										//range check, but should not be neccessary
+										if (i_param[REC][BANK] >= MAX_NUM_BANKS)	i_param[REC][BANK]=0;
+									}
+
+									flags[RecBankChanged] = 1;
 								}
-
-								flags[RecBankChanged] = 1;
 							break;
 
 							case Play1:
@@ -349,10 +356,10 @@ void Button_Debounce_IRQHandler(void)
 			{
 				if (long_press[i] != 0xFFFFFFFF) //already detected, ignore
 				{
-					//FixMe: This will roll over if elapsed_time>1
-					if (long_press[i] != 0xFFFFFFFE) //prevent roll-over if holding down for a REALLY long time
+					if (long_press[i] < (0xFFFFFFFF - elapsed_time)) //prevent roll-over if holding down for a REALLY long time
 						long_press[i]+=elapsed_time;
-
+					else
+						long_press[i] = 0xFFFFFFFE;
 
 					if (long_press[i] > LONG_PRESSED) {
 
@@ -365,7 +372,6 @@ void Button_Debounce_IRQHandler(void)
 								switch (i)
 								{
 					
-
 									default:
 										break;
 								}
@@ -382,16 +388,19 @@ void Button_Debounce_IRQHandler(void)
 								{
 
 									case Rev1:
-										if(global_mode[EDIT_MODE])
+										if (button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
-											//Go to previous assignment bank
-											flags[FindNextSampleToAssign] = 2;
+											if(global_mode[EDIT_MODE])
+											{
+												//Go to previous assignment bank
+												flags[FindNextSampleToAssign] = 2;
 
-											//Disable the Rev1 button from doing anything until it's released
-											button_state[Rev1] = UP;
+												//Disable the Rev1 button from doing anything until it's released
+												button_state[Rev1] = UP;
 
-											//Make the prev-bank action repeat at faster rate
-											long_press[Rev1] = MED_PRESS_REPEAT;
+												//Make the prev-bank action repeat at faster rate
+												long_press[Rev1] = MED_PRESS_REPEAT;
+											}
 										}
 										break;
 
@@ -415,35 +424,33 @@ void Button_Debounce_IRQHandler(void)
 										break;
 
 									case Play1:
-										if (global_mode[EDIT_MODE])
+										if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
-											check_enabled_banks();
-											flags[RewriteIndex] = WHITE;
-											flags[SkipProcessButtons]	= 2;
+											if (global_mode[EDIT_MODE])
+											{
+												check_enabled_banks();
+												flags[RewriteIndex] 		= WHITE;
+												flags[SkipProcessButtons] 	= 2;
+												save_flash_params(0);
+											}
+											else
+												flags[ToggleLooping1] 		= 1;
 										}
-										else if (button_state[Rev1] == UP)
-											flags[ToggleLooping1] = 1;
 										break;
 
 									case Play2:
-										if (global_mode[EDIT_MODE])
+										if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
-											copy_sample(i_param[1][BANK], i_param[1][SAMPLE], i_param[0][BANK], i_param[0][SAMPLE]);
-											flags[ForceFileReload2] = 1;
-											flags[SkipProcessButtons]	= 2;
+											if (global_mode[EDIT_MODE])
+											{
+												copy_sample(i_param[1][BANK], i_param[1][SAMPLE], i_param[0][BANK], i_param[0][SAMPLE]);
+												flags[ForceFileReload2] 	= 1;
+												flags[SkipProcessButtons]	= 2;
+											}
+											else
+												flags[ToggleLooping2] 		= 1;
 										}
-										else if (button_state[Rev1] == UP)
-											flags[ToggleLooping2] = 1;
 										break;
-
-									// case Rev1:
-									// 	if(global_mode[ASSIGN_MODE] && global_mode[EDIT_MODE])
-									// 	{
-									// 		//Previous assignment bank
-									// 		flags[FindNextSampleToAssign] = 2;
-									// 		flags[SkipProcessButtons]	= 2;
-									// 	}
-									// 	break;
 
 									default:
 										break;
@@ -469,50 +476,92 @@ void Button_Debounce_IRQHandler(void)
 
 			if (global_mode[EDIT_MODE])
 			{
-				//
-				//Medium press with Edit + Rev2 + one Bank button: reload bank from the saved index file
-				//(not the backup-- this is because we want to undo changes since we booted, 
-				//not since the last time we booted)
-				//Restores just this bank to the state it was on boot 
-				//
-				if (button_state[Bank1]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank2]==UP)
+				if (button_state[Rev1] == UP && button_state[Play1] == UP && button_state[Play2] == UP && button_state[Rec] == UP && button_state[RecBank] == UP)
 				{
-					flags[LoadBackupIndex] = i_param[0][BANK]+1;
-					flags[RevertBank1]=200;
-	
-					flags[SkipProcessButtons] = 2;
-					flags[UndoSampleExists] = 0;
-					play_state[0] = SILENT;
-					play_state[1] = SILENT;
-				}
+					//
+					//Medium press with Edit + Rev2 + one Bank button: reload bank from the saved index file
+					//(not the backup-- this is because we want to undo changes since we booted, 
+					//not since the last time we booted)
+					//Restores just this bank to the state it was on boot 
+					//
+					if (button_state[Bank1]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank2]==UP)
+					{
+						flags[LoadBackupIndex] = i_param[0][BANK]+1;
+						flags[RevertBank1]=200;
 		
-				if (button_state[Bank2]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank1]==UP)
-				{
-					flags[LoadBackupIndex] = i_param[1][BANK]+1;
-					flags[RevertBank2]=200;
+						flags[SkipProcessButtons] = 2;
+						flags[UndoSampleExists] = 0;
+						play_state[0] = SILENT;
+						play_state[1] = SILENT;
+					}
+			
+					if (button_state[Bank2]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Bank1]==UP)
+					{
+						flags[LoadBackupIndex] = i_param[1][BANK]+1;
+						flags[RevertBank2]=200;
 
-					flags[SkipProcessButtons] = 2;
-					flags[UndoSampleExists] = 0;
-					play_state[0] = SILENT;
-					play_state[1] = SILENT;
+						flags[SkipProcessButtons] = 2;
+						flags[UndoSampleExists] = 0;
+						play_state[0] = SILENT;
+						play_state[1] = SILENT;
+					}
+
+					//
+					//Long press with Edit + Rev2 + both bank buttons
+					//Reload all banks from the backup index file
+					//Restores the entire sampler to the state it was on boot 
+					//
+
+					if (button_state[Bank1]>=LONG_PRESSED && button_state[Bank2]>=LONG_PRESSED && button_state[Rev2]>=LONG_PRESSED)
+					{
+						flags[LoadBackupIndex] = ALL_BANKS + 1;
+						flags[RevertAll]=255;
+
+						flags[SkipProcessButtons] = 2;
+						flags[UndoSampleExists] = 0;
+						play_state[0] = SILENT;
+						play_state[1] = SILENT;
+					}
 				}
 
-				//
-				//Long press with Edit + Rev2 + both bank buttons
-				//Reload all banks from the backup index file
-				//Restores the entire sampler to the state it was on boot 
-				//
-
-				if (button_state[Bank1]>=LONG_PRESSED && button_state[Bank2]>=LONG_PRESSED && button_state[Rev2]>=LONG_PRESSED)
+				if (!global_mode[SYSTEM_MODE])
 				{
-					flags[LoadBackupIndex] = ALL_BANKS + 1;
-					flags[RevertAll]=255;
-
-					flags[SkipProcessButtons] = 2;
-					flags[UndoSampleExists] = 0;
-					play_state[0] = SILENT;
-					play_state[1] = SILENT;
+					// All buttons down except Bank1, Bank2, for LONG PRESS, and we're not recording, we enter System Mode
+					if (button_state[Rev1]>=LONG_PRESSED && button_state[Rev2]>=LONG_PRESSED && button_state[Play1]>=LONG_PRESSED && button_state[Play2]>=LONG_PRESSED && button_state[Rec]>=LONG_PRESSED && button_state[RecBank]>=LONG_PRESSED)
+					{
+						if (rec_state==REC_OFF)
+						{
+							enter_system_mode();
+							flags[SkipProcessButtons] = 1;
+						}
+					}
 				}
+				// else
+				// {
+				// 	// Holding down for MED PRESS: exit and save
+				// 	if (button_state[Rev1]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Play1]>=MED_PRESSED && button_state[Play2]>=MED_PRESSED && button_state[Rec]>=MED_PRESSED && button_state[RecBank]>=MED_PRESSED)
+				// 	{
+				// 		exit_system_mode(1); //save
+				// 		flags[SkipProcessButtons] = 2;
+				// 	}
+
+				// 	//If buttons were tapped but not held down long, then exit
+				// 	//First, detect they were pressed...
+				// 	if (button_state[Rev1]>=DOWN && button_state[Rev2]>=DOWN && button_state[Play1]>=DOWN && button_state[Play2]>=DOWN && button_state[Rec]>=DOWN && button_state[RecBank]>=DOWN)
+				// 	{
+				// 		flags[SystemModeButtonsDown] = 1;
+				// 	}
+				// 	else
+				// 	{
+				// 		//...Next, if we already detected them as pressed down, but they're not now, exit without saving
+				// 		if (flags[SystemModeButtonsDown])
+				// 		{
+				// 			exit_system_mode(0); //don't save
+				// 		}
+				// 		flags[SystemModeButtonsDown] = 0;
+				// 	}
+				// }
+
 			}
 			else //not EDIT_MODE
 			{

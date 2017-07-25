@@ -11,16 +11,15 @@
 #include <stm32f4xx.h>
 #include "ff.h"
 
-void check_entering_system_mode(void);
-void update_system_settings(void);
-void set_default_system_settings(void);
+void enter_system_mode(void);
+void exit_system_mode(uint8_t do_save);
+void update_system_mode(void);
+void update_system_mode_leds(void);
+void update_system_mode_button_leds(void);
 
-void update_system_settings_button_leds(void);
-void update_system_settings_leds(void);
-void update_system_settings(void);
-
-FRESULT save_system_settings(void);
-FRESULT read_system_settings(void);
+void set_default_user_settings(void);
+FRESULT save_user_settings(void);
+FRESULT read_user_settings(void);
 
 
 #endif /* SYSTEM_SETTINGS_H_ */

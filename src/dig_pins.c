@@ -65,6 +65,12 @@ void test_noise(void)
 
 }
 
+void deinit_dig_inouts(void)
+{
+	RCC_AHB1PeriphClockCmd(ALL_GPIO_RCC, DISABLE);
+	RCC_DeInit();
+
+}
 void init_dig_inouts(void){
 	GPIO_InitTypeDef gpio;
 	GPIO_StructInit(&gpio);

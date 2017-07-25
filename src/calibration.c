@@ -11,6 +11,7 @@
 #include "params.h"
 #include "rgb_leds.h"
 #include "flash_user.h"
+#include "res/LED_palette.h"
 
 SystemCalibrations s_user_params;
 SystemCalibrations *system_calibrations = &s_user_params;
@@ -95,16 +96,16 @@ void update_calibration(void)
 	//or the hardware is faulty
 	//Use the PLAY light to show if we detect a non-centered calibrated value
 	t = bracketed_potadc[PITCH_POT*2] + system_calibrations->pitch_pot_detent_offset[0];
-	if (t > 2079 || t < 2010)		playbut1_color = 2; //red: out of pitch=1.0 range
-	else if (t > 2069 || t < 2020)	playbut1_color = 4; //yellow: warning, close to edge
-	else if (t > 2058 || t < 2038)	playbut1_color = 5; //green: ok: more than 10 from center
-	else 							playbut1_color = 1; //white: within 10 of center 
+	if (t > 2079 || t < 2010)		playbut1_color = RED; 		//red: out of pitch=1.0 range
+	else if (t > 2069 || t < 2020)	playbut1_color = YELLOW; 	//yellow: warning, close to edge
+	else if (t > 2058 || t < 2038)	playbut1_color = GREEN;		//green: ok: more than 10 from center
+	else 							playbut1_color = WHITE; 	//white: within 10 of center 
 
 	t = bracketed_potadc[PITCH_POT*2+1] + system_calibrations->pitch_pot_detent_offset[1];
-	if (t > 2079 || t < 2010)		playbut2_color = 2; //red: out of pitch=1.0 range
-	else if (t > 2069 || t < 2020)	playbut2_color = 4; //yellow: warning, close to edge
-	else if (t > 2058 || t < 2038)	playbut2_color = 5; //green: ok: more than 10 from center
-	else 							playbut2_color = 1; //white: within 10 of center 
+	if (t > 2079 || t < 2010)		playbut2_color = RED; 		//red: out of pitch=1.0 range
+	else if (t > 2069 || t < 2020)	playbut2_color = YELLOW; 	//yellow: warning, close to edge
+	else if (t > 2058 || t < 2038)	playbut2_color = GREEN;		//green: ok: more than 10 from center
+	else 							playbut2_color = WHITE; 	//white: within 10 of center 
 
 	//Chan 1 Audio Out DC offset
 	if (REV1BUT)
@@ -182,12 +183,12 @@ void update_calibration_button_leds(void)
 	set_ButtonLED_byPalette(Play1ButtonLED, playbut1_color);
 	set_ButtonLED_byPalette(Play2ButtonLED, playbut2_color);
 
-	set_ButtonLED_byPalette(RecBankButtonLED, 9);
-	set_ButtonLED_byPalette(RecButtonLED, 9);
-	set_ButtonLED_byPalette(Reverse1ButtonLED, 9);
-	set_ButtonLED_byPalette(Bank1ButtonLED, 9);
-	set_ButtonLED_byPalette(Bank2ButtonLED, 9);
-	set_ButtonLED_byPalette(Reverse2ButtonLED, 9);
+	set_ButtonLED_byPalette(RecBankButtonLED, LAVENDER);
+	set_ButtonLED_byPalette(RecButtonLED, LAVENDER);
+	set_ButtonLED_byPalette(Reverse1ButtonLED, LAVENDER);
+	set_ButtonLED_byPalette(Bank1ButtonLED, LAVENDER);
+	set_ButtonLED_byPalette(Bank2ButtonLED, LAVENDER);
+	set_ButtonLED_byPalette(Reverse2ButtonLED, LAVENDER);
 
 }
 

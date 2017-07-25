@@ -9,7 +9,7 @@
 #define BUTTONS_H_
 #include <stm32f4xx.h>
 
-
+//Play1 + Rec + Edit at boot
 #define BOOTLOADER_BUTTONS (\
 		PLAY1BUT && \
 		RECBUT &&\
@@ -22,28 +22,32 @@
 		!REV2BUT\
 		)
 
-#define ENTER_SYSMODE_BUTTONS (\
+//All buttons except Banks, during runtime
+#define SYSMODE_BUTTONS (\
 		REV1BUT &&\
 		REV2BUT &&\
-		BANK1BUT &&\
-		BANK2BUT &&\
+			!BANK1BUT &&\
+			!BANK2BUT &&\
 		PLAY1BUT &&\
 		PLAY2BUT &&\
-		!EDIT_BUTTON &&\
-		!RECBUT &&\
-		!BANKRECBUT \
+		EDIT_BUTTON &&\
+		RECBUT &&\
+		BANKRECBUT \
 		)
 
-//Rev1/2 + Bank1/2 Rec/RecBank at boot
+//Rev's + Bank's + Rec's at boot
 #define RAMTEST_BUTTONS (\
 		REV1BUT &&\
 		REV2BUT &&\
 		BANK1BUT &&\
 		BANK2BUT &&\
 		BANKRECBUT &&\
-		RECBUT)
+		RECBUT &\
+		!PLAY1BUT &&\
+		!PLAY2BUT \
+		)
 
-//Rev1/2 + Bank1/2 Rec/RecBank
+//Play's + Rec's at boot
 #define ENTER_CALIBRATE_BUTTONS (\
 		PLAY1BUT &&\
 		PLAY2BUT &&\
@@ -54,6 +58,7 @@
 		!BANK2BUT \
 		)
 
+//Play's + Banks's during cal mode
 #define SAVE_CALIBRATE_BUTTONS (\
 		PLAY1BUT &&\
 		PLAY2BUT &&\

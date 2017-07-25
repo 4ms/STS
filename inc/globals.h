@@ -104,6 +104,8 @@ enum Flags {
 	Play1TrigDelaying,
 	Play2TrigDelaying,
 	BootBak,				// 55
+	SystemModeButtonsDown,
+	ShutdownAndBootload,
 
 	NUM_FLAGS
 };

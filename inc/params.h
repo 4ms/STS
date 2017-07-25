@@ -77,8 +77,8 @@ enum Stereo_Modes{
 //
 enum GlobalModes
 {
-	CALIBRATE,
-	SYSTEM_SETTINGS,
+	CALIBRATE, //calibration at the factory
+	SYSTEM_MODE,
 	MONITOR_RECORDING,
 	ENABLE_RECORDING,
 	EDIT_MODE,

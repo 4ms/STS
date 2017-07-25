@@ -12,64 +12,168 @@
 #include "system_settings.h"
 #include "file_util.h"
 #include "sts_filesystem.h"
+#include "rgb_leds.h"
+#include "res/LED_palette.h"
+#include "sampler.h"
 
-extern float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
+extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
+extern volatile uint32_t 	sys_tmr;
+extern uint8_t 				flags[NUM_FLAGS];
+extern enum PlayStates 		play_state[NUM_PLAY_CHAN];
 
-//extern uint32_t flash_firmware_version;
 
 
-uint8_t disable_mode_changes=0;
-
-void set_default_system_settings(void)
+void enter_system_mode(void)
 {
+	global_mode[SYSTEM_MODE] = 1;
+	play_state[0] = SILENT;
+	play_state[1] = SILENT;
 }
 
-
-void check_entering_system_mode(void)
+void exit_system_mode(uint8_t do_save)
 {
 
-	static int32_t ctr=0;
-
-	if (ENTER_SYSMODE_BUTTONS)
+	if (do_save)
 	{
-		if (ctr==-1) //waiting for button release
-		{
-//			LED_PINGBUT_ON;
-		}
-		else ctr+=40;
-
-		if (ctr>100000)
-		{
-			if (global_mode[SYSTEM_SETTINGS] == 0)
-			{
-				global_mode[SYSTEM_SETTINGS] = 1;
-				global_mode[CALIBRATE] = 0;
-				ctr=-1;
-			}
-			else
-			{
-				save_flash_params(10); //flash lights 10 times
-				global_mode[SYSTEM_SETTINGS] = 0;
-				ctr=-1;
-				disable_mode_changes=0;
-			}
-		}
+		save_flash_params(5);
+//		save_user_settings(); //not needed for now, since we don't have anything in the user settings file that we change in system mode
 	}
+	global_mode[SYSTEM_MODE] = 0;
+}
+
+#define INITIAL_BUTTONS_DOWN -1
+
+void update_system_mode(void)
+{
+	static int32_t sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
+	static int32_t bootloader_buttons_down=0;
+	static uint32_t last_sys_tmr=0;
+	uint32_t elapsed_time;
+
+	if (sys_tmr < last_sys_tmr) //then sys_tmr wrapped from 0xFFFFFFFF to 0x00000000
+		elapsed_time = (0xFFFFFFFF - last_sys_tmr) + sys_tmr;
 	else
-	{
-		if ((ctr>1000) && (ctr<=100000) && (global_mode[SYSTEM_SETTINGS] == 1)) //released buttons too early ==> cancel (exit without save)
-		{
-			global_mode[SYSTEM_SETTINGS] = 0;
-			disable_mode_changes=0;
+		elapsed_time = (sys_tmr - last_sys_tmr);
+	last_sys_tmr = sys_tmr;
 
+
+	if (sysmode_buttons_down != INITIAL_BUTTONS_DOWN)
+	{
+		//
+		// Do system mode stuff here: check buttons/pots to set various parameters
+		//
+	}
+
+
+	if (BOOTLOADER_BUTTONS)
+	{
+		bootloader_buttons_down += elapsed_time;
+		
+		if (bootloader_buttons_down > (44100*5))
+		{
+			flags[ShutdownAndBootload] = 1;
+			global_mode[SYSTEM_MODE] = 0;
 		}
-		ctr=0;
+	} else
+		bootloader_buttons_down=0;
+
+
+	if (SYSMODE_BUTTONS)
+	{
+		if (sysmode_buttons_down!=INITIAL_BUTTONS_DOWN)
+		{
+			sysmode_buttons_down += elapsed_time;
+			//Hold buttons down for a while ==> save and exit
+			if (sysmode_buttons_down > (44100 * 3))
+			{
+				//Save and Exit
+				exit_system_mode(1);
+
+				//Reset state for the next time we enter system mode
+				sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
+
+				 //indicate we're ready to pass over control of buttons once all buttons are released
+				flags[SkipProcessButtons] = 2;
+			}
+		}
+	} else
+	{
+		//Release buttons too early ===> cancel (exit without saving)
+		if (sysmode_buttons_down > 10 && sysmode_buttons_down < (44100 * 3))
+		{
+			//Exit without saving
+			exit_system_mode(1);
+
+			//Reset state for the next time we enter system mode
+			sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
+
+			 //indicate we're ready to pass over control of buttons once all buttons are released
+			flags[SkipProcessButtons] = 2;
+		}
+		//buttons were detected up, exit the INITIAL_BUTTONS_DOWN state
+		else
+			sysmode_buttons_down = 0;
 	}
 
 }
 
-FRESULT save_system_settings(void)
+void update_system_mode_leds(void)
+{
+	uint32_t tm;
+
+	tm = (sys_tmr & ((1<<14) | (1<<13))) >> 13;
+	if (tm==0b00)
+	{
+		PLAYLED1_ON;
+		SIGNALLED_OFF;
+		BUSYLED_OFF;
+		PLAYLED2_OFF;
+	}	else
+	if (tm==0b01)
+	{
+		PLAYLED1_OFF;
+		SIGNALLED_ON;
+		BUSYLED_OFF;
+		PLAYLED2_OFF;
+	}	else
+	if (tm==0b10)
+	{
+		PLAYLED1_OFF;
+		SIGNALLED_OFF;
+		BUSYLED_ON;
+		PLAYLED2_OFF;
+	}	else
+	{
+		PLAYLED1_OFF;
+		SIGNALLED_OFF;
+		BUSYLED_OFF;
+		PLAYLED2_ON;
+	}
+}
+
+void update_system_mode_button_leds(void)
+{
+	set_ButtonLED_byPalette(Play1ButtonLED, WHITE);
+	set_ButtonLED_byPalette(Play2ButtonLED, WHITE);
+
+	set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
+	set_ButtonLED_byPalette(RecButtonLED, ORANGE);
+	set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);
+	set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE);
+	set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE);
+	set_ButtonLED_byPalette(Reverse2ButtonLED, ORANGE);
+}
+
+
+/* user_settings.c */
+
+void set_default_user_settings(void)
+{
+	global_mode[STEREO_MODE] = 0;
+}
+
+
+FRESULT save_user_settings(void)
 {
 	FRESULT 	res;
 	char		filepath[_MAX_LFN];
@@ -105,7 +209,7 @@ FRESULT save_system_settings(void)
 	return (res);
 }
 
-FRESULT read_system_settings(void)
+FRESULT read_user_settings(void)
 {
 	FRESULT 	res;
 	char		filepath[_MAX_LFN];
@@ -186,23 +290,5 @@ FRESULT read_system_settings(void)
 		res = f_close(&settings_file);
 	}
 	return (res);
-}
-
-void update_system_settings(void)
-{
-
-
-
-}
-
-void update_system_settings_button_leds(void)
-{
-
-
-}
-
-void update_system_settings_leds(void)
-{
-
 }
 

@@ -103,13 +103,14 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 #vpath %.c src
 
 # compile unoptimized: 
-# build/src/main.o: CFLAGS = $(C0FLAGS)
-# build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS) 
-# build/src/file_util.o: CFLAGS = $(C0FLAGS)
+build/src/main.o: CFLAGS = $(C0FLAGS)
+#build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS) 
+#build/src/file_util.o: CFLAGS = $(C0FLAGS)
 #build/src/wavefmt.o: CFLAGS = $(C0FLAGS)
+#build/src/sample_file.o: CFLAGS = $(C0FLAGS)
 #build/src/resample.o: CFLAGS = $(C0FLAGS)
-#build/src/sampler.o: CFLAGS = $(C0FLAGS)
-#build/src/params.o: CFLAGS = $(C0FLAGS)
+build/src/sampler.o: CFLAGS = $(C0FLAGS)
+build/src/params.o: CFLAGS = $(C0FLAGS)
 #build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
 #build/src/flash_user.o: CFLAGS = $(C0FLAGS)
 #build/src/calibration.o: CFLAGS = $(C0FLAGS)
@@ -126,6 +127,7 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 #build/src/fatfs/drivers/fatfs_sd_sdio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
 #build/src/fatfs/drivers/stm32f4_discovery_sdio_sd.o: CFLAGS = $(C0FLAGS)
+build/src/system_settings.o: CFLAGS = $(C0FLAGS)
 
 all: Makefile $(BIN) $(HEX)
 

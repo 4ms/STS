@@ -13,6 +13,7 @@
 #include "button_knob_combo.h"
 #include "res/LED_palette.h"
 #include "edit_mode.h"
+#include "system_settings.h"
 
 #define BIG_PLAY_BUTTONS
 #define FROSTED_BUTTONS
@@ -661,6 +662,9 @@ void ButtonLED_IRQHandler(void)
 	{
 		if (global_mode[CALIBRATE])
 			update_calibration_button_leds();
+		else
+		if (global_mode[SYSTEM_MODE])
+			update_system_mode_button_leds();
 		else
 			update_ButtonLEDs();
 
