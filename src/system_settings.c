@@ -72,6 +72,17 @@ void update_system_mode(void)
 		if (bootloader_buttons_down > (44100*5))
 		{
 			flags[ShutdownAndBootload] = 1;
+
+			set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
+			set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+			set_ButtonLED_byPalette(RecBankButtonLED, OFF);
+			set_ButtonLED_byPalette(RecButtonLED, OFF);
+			set_ButtonLED_byPalette(Reverse1ButtonLED, YELLOW);
+			set_ButtonLED_byPalette(Bank1ButtonLED, OFF);
+			set_ButtonLED_byPalette(Bank2ButtonLED, OFF);
+			set_ButtonLED_byPalette(Reverse2ButtonLED, OFF);
+			display_all_ButtonLEDs();
+
 			global_mode[SYSTEM_MODE] = 0;
 		}
 	} else
@@ -153,15 +164,17 @@ void update_system_mode_leds(void)
 
 void update_system_mode_button_leds(void)
 {
-	set_ButtonLED_byPalette(Play1ButtonLED, WHITE);
-	set_ButtonLED_byPalette(Play2ButtonLED, WHITE);
-
-	set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
-	set_ButtonLED_byPalette(RecButtonLED, ORANGE);
-	set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);
-	set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE);
-	set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE);
-	set_ButtonLED_byPalette(Reverse2ButtonLED, ORANGE);
+	if (flags[ShutdownAndBootload] != 1)
+	{
+		set_ButtonLED_byPalette(Play1ButtonLED, WHITE);
+		set_ButtonLED_byPalette(Play2ButtonLED, WHITE);
+		set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
+		set_ButtonLED_byPalette(RecButtonLED, ORANGE);
+		set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);
+		set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE);
+		set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE);
+		set_ButtonLED_byPalette(Reverse2ButtonLED, ORANGE);
+	}
 }
 
 

@@ -309,8 +309,10 @@ int main(void)
 		{
 			flags[ShutdownAndBootload] = 0;
 			deinit_all();
+
 			//JumpTo(0x08000000);
-			NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
+			//NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
+			*((uint32_t *)(0x2001FFF0)) = 0x2BE0D411;
 			NVIC_SystemReset();
 		}
 
@@ -361,27 +363,29 @@ void NMI_Handler(void)
 
 void HardFault_Handler(void)
 { 
-	volatile uint8_t foobar;
-	uint32_t hfsr,dfsr,afsr,bfar,mmfar,cfsr;
-
-	volatile uint8_t pause=1;
-
-	foobar=0;
-	mmfar=SCB->MMFAR;
-	bfar=SCB->BFAR;
-
-	hfsr=SCB->HFSR;
-	afsr=SCB->AFSR;
-	dfsr=SCB->DFSR;
-	cfsr=SCB->CFSR;
-
 	NVIC_SystemReset();
 
-	if (foobar){
-		return;
-	} else {
-		while(pause){};
-	}
+	// volatile uint8_t foobar;
+	//uint32_t hfsr,dfsr,afsr,bfar,mmfar,cfsr;
+
+	// volatile uint8_t pause=1;
+
+	// foobar=1;
+	// mmfar=SCB->MMFAR;
+	// bfar=SCB->BFAR;
+
+	// hfsr=SCB->HFSR;
+	// afsr=SCB->AFSR;
+	// dfsr=SCB->DFSR;
+	// cfsr=SCB->CFSR;
+
+
+	// if (foobar){
+	// 	return;
+	// } else {
+	// 	while(pause){};
+	// }
+
 }
 
 void MemManage_Handler(void)

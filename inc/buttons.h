@@ -9,17 +9,17 @@
 #define BUTTONS_H_
 #include <stm32f4xx.h>
 
-//Play1 + Rec + Edit at boot
+//Bank's + Rec's at boot, or in Sys Mode
 #define BOOTLOADER_BUTTONS (\
-		PLAY1BUT && \
+			!PLAY1BUT && \
 		RECBUT &&\
-		EDIT_BUTTON &&\
-		!REV1BUT &&\
-		!BANK1BUT && \
-		!BANKRECBUT &&\
-		!PLAY2BUT && \
-		!BANK2BUT && \
-		!REV2BUT\
+			!EDIT_BUTTON &&\
+			!REV1BUT &&\
+		BANK1BUT && \
+		BANKRECBUT &&\
+			!PLAY2BUT && \
+		BANK2BUT && \
+			!REV2BUT\
 		)
 
 //All buttons except Banks, during runtime
