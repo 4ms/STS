@@ -170,7 +170,7 @@ void init_params(void)
 
 }
 
-//initializes modes that aren't read from flash ram
+//initializes modes that aren't read from flash ram or disk
 void init_modes(void)
 {
 	global_mode[CALIBRATE] = 0;

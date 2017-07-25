@@ -65,9 +65,6 @@ void factory_reset(void)
 		while(1) blink_all_lights(200); //error: did not auto-calibrate!
 	}
 
-	//if we didn't fail, then just continue in CALIBRATE mode
-	//but with the LED_PWM disabled
-
 }
 
 uint32_t load_flash_params(void)

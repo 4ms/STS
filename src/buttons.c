@@ -35,7 +35,7 @@ extern uint8_t 				bank_status[MAX_NUM_BANKS];
 extern enum 				PlayStates play_state[NUM_PLAY_CHAN];
 
 extern SystemCalibrations 	*system_calibrations;
-extern enum RecStates	rec_state;
+extern enum RecStates		rec_state;
 
 void clear_errors(void)
 {
