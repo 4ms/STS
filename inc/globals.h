@@ -144,20 +144,7 @@ enum g_Errors{
 
 
 };
-/*
-#define OUT_OF_MEM 1
-#define OUT_OF_SAMPLES 2
-#define SPIERROR_1 4
-#define SPIERROR_2 8
-#define DMA_OVR_ERROR 16
-#define sFLASH_BAD_ID 32
-#define WRITE_BUFF_OVERRUN 64
-#define READ_BUFF1_OVERRUN 128
-#define READ_BUFF2_OVERRUN 256
-#define READ_MEM_ERROR 512
-#define WRITE_SDCARD_ERROR 1024
-#define WRITE_BUFF_UNDERRUN 2048
-*/
+
 
 //Number of channels
 #define NUM_PLAY_CHAN 2

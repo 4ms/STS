@@ -27,7 +27,7 @@ inline void safe_inc_play_addr(CircularBuffer* buf, uint8_t blockAlign, uint8_t 
 	{
 		buf->out +=blockAlign;
 
-		if (buf->out > buf->max) //This will not work if buf->max==0xFFFFFFFF, but luckily this is never the case with the STS!
+		if (buf->out >= buf->max) //This will not work if buf->max==0xFFFFFFFF, but luckily this is never the case with the STS!
 		{
 			buf->wrapping=0;
 			buf->out-=buf->size;
