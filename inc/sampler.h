@@ -22,6 +22,8 @@ enum PlayStates {
 	PLAYING_PERC,
 	PLAY_FADEDOWN,
 	RETRIG_FADEDOWN,
+	PLAYING_PERC_FADEDOWN,
+	PAD_SILENCE,
 	HOLD
 
 };
@@ -71,8 +73,7 @@ void check_change_sample(void);
 //uint8_t preload_sample(uint32_t samplenum, FIL* sample_file);
 
 uint32_t calc_start_point(float start_param, Sample *sample);
-uint32_t calc_stop_points(float length, Sample *sample, uint32_t startpos);
-uint32_t calc_play_length(float length, Sample *sample);
+uint32_t calc_stop_point(float length_param, float resample_param, Sample *sample, uint32_t startpos);
 
 
 void clear_is_buffered_to_file_end(uint8_t chan);

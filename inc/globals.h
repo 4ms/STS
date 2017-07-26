@@ -23,8 +23,8 @@
 #else
 	#define codec_BUFF_LEN 2048
 #endif
-#define HT16_BUFF_LEN (codec_BUFF_LEN>>2)
-#define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) 
+#define HT16_BUFF_LEN (codec_BUFF_LEN>>2)		/*256*/
+#define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) 	/*128*/
 
 /* @codec_BUFF_LEN2048:
  * 2048 bytes per DMA transfer

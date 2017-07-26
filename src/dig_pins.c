@@ -127,10 +127,6 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = PLAYLED2_pin;	GPIO_Init(PLAYLED2_GPIO, &gpio);
 	gpio.GPIO_Pin = SIGNALLED_pin;	GPIO_Init(SIGNALLED_GPIO, &gpio);
 	gpio.GPIO_Pin = BUSYLED_pin;	GPIO_Init(BUSYLED_GPIO, &gpio);
-
-	//Line Switch
-	gpio.GPIO_Pin = LINESWITCH_pin;	GPIO_Init(LINESWITCH_GPIO, &gpio);
-	LINESWITCH_OFF;
 	
 	PLAYLED1_OFF;
 	PLAYLED2_OFF;
