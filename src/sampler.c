@@ -1050,7 +1050,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 		//Calculate length and where to stop playing
 		length = f_param[chan][LENGTH];
-		gain = s_sample->inst_gain;
+		gain = s_sample->inst_gain * f_param[chan][VOLUME];
 
 		//Update the start/endpos based on the length parameter
 		//Update the play_time (used to calculate led flicker and END OUT pulse width

@@ -29,6 +29,7 @@ enum f_ChannelParams{
 	PITCH,
 	START,
 	LENGTH,
+	VOLUME,
 	NUM_F_PARAMS
 };
 

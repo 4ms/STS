@@ -17,6 +17,9 @@ enum ButtonKnobCombo_Buttons{
 
 	bkc_Edit,
 
+	bkc_Reverse1,
+	bkc_Reverse2,
+
 	NUM_BUTTON_KNOB_COMBO_BUTTONS
 };
 
@@ -26,6 +29,7 @@ enum ButtonKnobCombo_Knobs{
 	bkc_RecSample,
 
 	bkc_Length2,
+	bkc_StartPos1,
 	bkc_StartPos2,
 
 	NUM_BUTTON_KNOB_COMBO_KNOBS

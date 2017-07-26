@@ -141,12 +141,11 @@ void init_params(void)
 {
 	uint32_t chan,i;
 
-	//set_default_calibration_values();
-
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++){
 		f_param[chan][PITCH] 	= 1.0;
 		f_param[chan][START] 	= 0.0;
 		f_param[chan][LENGTH] 	= 1.0;
+		f_param[chan][VOLUME] 	= 1.0;
 
 		i_param[chan][BANK] 	= 0;
 		i_param[chan][SAMPLE] 	= 0;
@@ -607,12 +606,13 @@ void update_params(void)
 		//
 		if (button_state[Bank1 + chan] >= DOWN)
 		{
-			//Go through both the knobs
+			//Go through both the knobs: bkc_Sample1 and bkc_Sample2
 			//
-			for (knob = 0; knob < 2 /*NUM_BUTTON_KNOB_COMBO_KNOBS*/; knob++) //FixMe: This is not portable, it only works because we have Sample1 and Sample2 in the start of the bkc array
+			knob = bkc_Sample1;
+			while(knob==bkc_Sample1 || knob==bkc_Sample2)
 			{
-				t_this_bkc 	= &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + knob];
-				t_other_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1 + 1-knob];
+				t_this_bkc 	= &g_button_knob_combo[chan==0? bkc_Bank1 : bkc_Bank2][knob==0? bkc_Sample1 : bkc_Sample2];
+				t_other_bkc = &g_button_knob_combo[chan==0? bkc_Bank1 : bkc_Bank2][knob==0? bkc_Sample2 : bkc_Sample1];
 
 				new_val = detent_num(bracketed_potadc[SAMPLE1_POT + knob]);
 
@@ -623,8 +623,8 @@ void update_params(void)
 				{
 					//Calcuate the (tentative) new bank, based on the new_val and the current hover_value
 					//
-					if (knob==0) trial_bank = new_val + (get_bank_blink_digit(t_this_bkc->hover_value) * 10);
-					if (knob==1) trial_bank = get_bank_color_digit(t_this_bkc->hover_value) + (new_val*10);
+					if (knob==bkc_Sample1) trial_bank = new_val + (get_bank_blink_digit(t_this_bkc->hover_value) * 10);
+					if (knob==bkc_Sample2) trial_bank = get_bank_color_digit(t_this_bkc->hover_value) + (new_val*10);
 
 					//If the new bank is enabled (contains samples) then update the hover_value
 					//
@@ -657,6 +657,9 @@ void update_params(void)
 						t_other_bkc->hover_value = i_param[chan][BANK];
 					}
 				}
+
+				if (knob==bkc_Sample1) knob = bkc_Sample2;
+				else break;
 			}
 		}
 
@@ -664,8 +667,8 @@ void update_params(void)
 		//
 		//If we're not doing a button+knob combo, just change the sample
 		//
-		t_this_bkc 	= &g_button_knob_combo[bkc_Bank1][bkc_Sample1 + chan];
-		t_other_bkc = &g_button_knob_combo[bkc_Bank2][bkc_Sample1 + chan];
+		t_this_bkc 	= &g_button_knob_combo[bkc_Bank1][knob==0? bkc_Sample1 : bkc_Sample2];
+		t_other_bkc = &g_button_knob_combo[bkc_Bank2][knob==0? bkc_Sample1 : bkc_Sample2];
 		t_edit_bkc 	= &g_button_knob_combo[bkc_Edit][bkc_Sample2];
 
 		if (t_this_bkc->combo_state != COMBO_ACTIVE	&&	t_other_bkc->combo_state != COMBO_ACTIVE)
@@ -726,6 +729,23 @@ void update_params(void)
 				}
 			}
 		}
+
+		//
+		// Volume
+		//
+		if (chan==CHAN1)	t_this_bkc = &g_button_knob_combo[bkc_Reverse1][bkc_StartPos1];
+		else				t_this_bkc = &g_button_knob_combo[bkc_Reverse2][bkc_StartPos2];
+
+		if (t_this_bkc->combo_state == COMBO_ACTIVE)
+		{
+			f_param[chan][VOLUME] = bracketed_potadc[START1_POT + chan] / 4096.0;
+		}
+
+		//Inactive the combo alt feature if the StartPos pot moves while the Rev button is up
+		if (button_state[Rev1+chan] == UP && flag_pot_changed[START1_POT+chan])
+			t_this_bkc->combo_state = COMBO_INACTIVE;
+
+
 
 	} //for chan
 
