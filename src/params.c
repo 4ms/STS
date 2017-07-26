@@ -32,7 +32,7 @@
 
 #if X_FAST_ADC == 1
 	#define PLAY_TRIG_LATCH_PITCH_TIME 256 
-	#define PLAY_TRIG_DELAY 480
+	#define PLAY_TRIG_DELAY 520
 
 	#define MAX_FIR_LPF_SIZE 80
 	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
@@ -217,8 +217,8 @@ void init_LowPassCoefs(void)
 	CV_BRACKET[LENGTH1_CV] = 20;
 	CV_BRACKET[LENGTH2_CV] = 20;
 
-	CV_BRACKET[SAMPLE1_CV] = 40;
-	CV_BRACKET[SAMPLE2_CV] = 40;
+	CV_BRACKET[SAMPLE1_CV] = 20;
+	CV_BRACKET[SAMPLE2_CV] = 20;
 
 	t=20.0; //50.0 = about 100ms to turn a knob fully
 
@@ -524,7 +524,6 @@ void update_params(void)
 	} //if  EDIT_MODE
 	else
 	{
-
 		//Check if pots moved with Edit Mode off
 		//Unlatch and inactivate the combo mode
 		//
@@ -536,8 +535,9 @@ void update_params(void)
 
 		if (flag_pot_changed[SAMPLE2_POT])
 			g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state = COMBO_INACTIVE;
-
 	}
+
+
 
 	for (chan=0;chan<2;chan++)
 	{
@@ -689,9 +689,9 @@ void update_params(void)
 
 			//Use the latched pot value for channel 2 when in Edit Mode
 			if (t_edit_bkc->combo_state!=COMBO_INACTIVE && chan==CHAN2)
-				new_val = detent_num( t_edit_bkc->latched_value + bracketed_cvadc[SAMPLE2_CV] );
+				new_val = detent_num_antihys( t_edit_bkc->latched_value + bracketed_cvadc[SAMPLE2_CV], old_val );
 			else
-				new_val = detent_num( bracketed_potadc[SAMPLE1_POT+chan] + bracketed_cvadc[SAMPLE1_CV+chan] );
+				new_val = detent_num_antihys( bracketed_potadc[SAMPLE1_POT+chan] + bracketed_cvadc[SAMPLE1_CV+chan], old_val );
 
 			if (old_val != new_val)
 			{
@@ -956,6 +956,33 @@ uint8_t detent_num(uint16_t adc_val)
 		return(9);
 }
 
+//const uint16_t detent_tops[10] = {212, 625, 1131, 1562, 1995, 2475, 2825, 3355, 3840, 4095};
+#define DETENT_MIN_DEPTH 40
+
+uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
+{
+	uint8_t raw_detent;
+	int16_t lower_adc_bound, upper_adc_bound;
+
+	raw_detent = detent_num(adc_val);
+
+	if (raw_detent > cur_detent)
+	{
+		lower_adc_bound = (int16_t)adc_val - DETENT_MIN_DEPTH;
+		if (detent_num(lower_adc_bound) == raw_detent)
+			return(raw_detent);
+	}
+	else
+	if (cur_detent > raw_detent)
+	{
+		upper_adc_bound = (int16_t)adc_val + DETENT_MIN_DEPTH;
+
+		if (detent_num(upper_adc_bound) == raw_detent)
+			return(raw_detent);
+	}
+
+	return cur_detent;
+}
 
 void adc_param_update_IRQHandler(void)
 {

@@ -110,6 +110,7 @@ void init_params(void);
 void init_modes(void);
 
 uint8_t detent_num(uint16_t adc_val);
+uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent);
 
 #define adc_param_update_IRQHandler TIM1_BRK_TIM9_IRQHandler
 void adc_param_update_IRQHandler(void);
