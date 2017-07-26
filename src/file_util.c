@@ -82,42 +82,54 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
     return (0xFD); //should not reach here, error
 }
 
-// FRESULT find_next_ext_in_dir_alpha(DIR* dir, const char *ext, char *fname)
-// {
-//     FRESULT res;
-//     FILINFO fno;
-//     uint32_t i;
-//     char lowest_filename[_MAX_LFN+1];
+FRESULT find_next_ext_in_dir_alpha(DIR* dir, const char *ext, char *fname)
+{
+    FRESULT res;
+    FILINFO fno;
+    uint32_t i;
 
-//     fname[0]      = 0;    // null string
-//     fno.fname[0]  = 'a';  // enables while loop
+    uint8_t file;
+    char    firstf_name[_MAX_LFN+1];
+    uint32_t firstf_num=0xFFFF;
+    uint8_t used_files[255]={0};
 
-//     // Loop through dir content
-//     while(fno.fname[0] != 0) {
+    fname[0]      = 0;    // null string
+    fno.fname[0]  = 'a';  // enables while loop
 
-//         res = f_readdir(dir, &fno);
+    // Loop through dir content
+    while(fno.fname[0] != 0) {
 
-//         if (res!=FR_OK)         return(res);                      // filesystem error
-//         if (fno.fname[0] == 0)  {fname[0]=0; break}               // no more files found -> exit loop
-//         if (fno.fname[0] == '.') continue;                        // ignore files starting with a .
-//         i = str_len(fno.fname); if (i==0xFFFFFFFF) return (0xFE); // invalid file name 
+        res = f_readdir(dir, &fno);                               // next file in firectory
+        if (res!=FR_OK)         return(res);                      // filesystem error
+        if (fno.fname[0] == 0)  {fname[0]=0; break;}               // no more files found -> exit loop
+        if (fno.fname[0] == '.') continue;                        // ignore files starting with a .
+        i = str_len(fno.fname); if (i==0xFFFFFFFF) return (0xFE); // invalid file name 
 
-//         // check for extension at the end of filename
-//         if (         fno.fname[i-4]  == ext[0] \
-//             && upper(fno.fname[i-3]) == upper(ext[1]) \
-//             && upper(fno.fname[i-2]) == upper(ext[2]) \
-//             && upper(fno.fname[i-1]) == upper(ext[3]) \
-//           )
-//         {
+        // check for extension at the end of filename
+        if (         fno.fname[i-4]  == ext[0] \
+            && upper(fno.fname[i-3]) == upper(ext[1]) \
+            && upper(fno.fname[i-2]) == upper(ext[2]) \
+            && upper(fno.fname[i-1]) == upper(ext[3]) \
+          )
+        {
+            file++;                                                              // update the file number for file found
+            if(!used_files[file] && str_cmp_alpha(firstf_name, fno.fname) > 0)   // if file found hasn't been used and it comes first alphabetically
+            {
+              firstf_num = file;
+              str_cpy(firstf_name, fno.fname);
+            }
+            //str_cpy(fname, fno.fname);
+            // return(FR_OK);
+        }
+    }
+    // if no more files available
+    if (firstf_num==0xFFFF) return(1); // FIXME: returned value should reflect that no more files available
+    
+    str_cpy(fname, firstf_name);  // use first asphabetical name
+    used_files[firstf_num]=1;     // mark file as used
 
-//             str_cpy(lowest_filename, fno.fname);
-//             //str_cpy(fname, fno.fname);
-//             // return(FR_OK);
-//         }
-//     }
-
-//     return (0xFD); //should not reach here, error
-// }
+    return (FR_OK); //should not reach here, error
+}
 
 
 //FRESULT scan_files (
