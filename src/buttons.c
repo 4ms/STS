@@ -237,8 +237,8 @@ void Button_Debounce_IRQHandler(void)
 								flags[PlayBank1Changed + chan] = 1;
 
 								//Exit assignment mode (if we were in it)
-								if (chan==0)
-									exit_assignment_mode();
+								//if (chan==0)
+									//exit_assignment_mode();
 								
 							break;
 
@@ -601,7 +601,7 @@ void Button_Debounce_IRQHandler(void)
 						button_state[RecBank] 	= UP;
 
 						//Exit assignment mode (if we were in it)
-						exit_assignment_mode();
+						//exit_assignment_mode();
 					}
 					if (button_state[Bank2] >= SHORT_PRESSED && button_state[Bank1] == UP)
 					{

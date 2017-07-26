@@ -12,6 +12,9 @@
 #include "bank.h"
 #include "sample_file.h"
 #include "sts_fs_index.h"
+#include "adc.h"
+#include "button_knob_combo.h"
+
 
 
 
@@ -32,6 +35,9 @@ uint8_t 				cached_play_state;
 uint8_t 				scrubbed_in_edit;
 
 
+int16_t 				editmode_latched_potadc[NUM_POT_ADCS];
+extern int16_t 			bracketed_potadc[NUM_POT_ADCS];
+
 extern enum 			g_Errors g_error;
 extern uint8_t			i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern uint8_t 			flags[NUM_FLAGS];
@@ -39,6 +45,8 @@ extern uint8_t 			global_mode[NUM_GLOBAL_MODES];
 
 extern Sample 			samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 extern enum 			PlayStates play_state[NUM_PLAY_CHAN];
+
+extern ButtonKnobCombo 	g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
 DIR root_dir;
 
@@ -498,8 +506,42 @@ uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum)
 	} else return(0); //not in the right sample/bank to preform an undo
 }
 
+
+
+
+
 void enter_edit_mode(void)
 {
+	uint8_t i;
+
+	//If we enter edit mode with a different sample than we last entered assignment mode (based on the undo sample value)
+	//then we need to exit assignment mode.
+	//This means that once we enter asisgnment mode with a certain sample, we will stay in assignment mode
+	//until we press Edit on a different sample 
+	if (i_param[0][SAMPLE] != undo_samplenum || i_param[0][BANK] != undo_banknum)
+		exit_assignment_mode();
+
+	// Latch pot values, so we can do alternative functions with the pots without distupting the original value
+	// Only latched values for channel 2 Sample, Length, and StartPos are used
+
+	if (g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state 	== COMBO_INACTIVE)
+	{
+		g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state 	= COMBO_ACTIVE;
+		g_button_knob_combo[bkc_Edit][bkc_Sample2].latched_value = bracketed_potadc[SAMPLE2_POT];
+	}
+
+	if (g_button_knob_combo[bkc_Edit][bkc_Length2].combo_state 	== COMBO_INACTIVE)
+	{
+		g_button_knob_combo[bkc_Edit][bkc_Length2].combo_state 	= COMBO_ACTIVE;
+		g_button_knob_combo[bkc_Edit][bkc_Length2].latched_value = bracketed_potadc[LENGTH2_POT];
+	}
+
+	if (g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state == COMBO_INACTIVE)
+	{
+		g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state = COMBO_ACTIVE;
+		g_button_knob_combo[bkc_Edit][bkc_StartPos2].latched_value = bracketed_potadc[START2_POT];
+	}
+
 	global_mode[EDIT_MODE] = 1;
 	scrubbed_in_edit = 0;
 
@@ -520,6 +562,12 @@ void enter_edit_mode(void)
 
 void exit_edit_mode(void)
 {
+
+	//Continue latching the pot values
+	//This remains latched until pot is moved
+	g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state 		= COMBO_LATCHED;
+	g_button_knob_combo[bkc_Edit][bkc_Length2].combo_state 		= COMBO_LATCHED;
+	g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state 	= COMBO_LATCHED;
 
 	global_mode[EDIT_MODE] = 0;
 

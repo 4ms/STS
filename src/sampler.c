@@ -378,17 +378,16 @@ void start_playing(uint8_t chan)
 		if (play_buff[chan]->out < play_buff[chan]->in)	play_buff[chan]->wrapping = 0;
 		else											play_buff[chan]->wrapping = 1;
 
-		if (f_param[chan][LENGTH] < 0.5 && i_param[chan][REV])	play_state[chan] = PLAYING_PERC;
+		if (f_param[chan][LENGTH] <= 0.5 && i_param[chan][REV])	play_state[chan] = PLAYING_PERC;
 		else													play_state[chan] = PLAY_FADEUP;
-
 
 	}
 	else //...otherwise, start buffering from scratch
 	{
 		CB_init(play_buff[chan], i_param[chan][REV]);
 
-		if (i_param[chan][REV])
-			play_buff[chan]->in = play_buff[chan]->max - ((READ_BLOCK_SIZE * 2) / s_sample->sampleByteSize);
+		// if (i_param[chan][REV])
+		// 	play_buff[chan]->in = play_buff[chan]->max - ((READ_BLOCK_SIZE * 2) / s_sample->sampleByteSize);
 
 		//Reload the sample file (important to do, in case card has been removed)
 		if (!file_loaded)
@@ -910,10 +909,8 @@ void read_storage_to_buffer(void)
 			//Check if we've prebuffered enough to start playing
 			if ((is_buffered_to_file_end[chan] || play_buff_bufferedamt[chan] >= pre_buff_size) && play_state[chan] == PREBUFFERING)
 			{
-				if (f_param[chan][LENGTH] <= 0.5 && i_param[chan][REV])
-					play_state[chan] = PLAYING_PERC;
-				else
-					play_state[chan] = PLAY_FADEUP;
+				if (f_param[chan][LENGTH] <= 0.5 && i_param[chan][REV])	play_state[chan] = PLAYING_PERC;
+				else													play_state[chan] = PLAY_FADEUP;
 
 			}
 
@@ -1075,8 +1072,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 			 case (PLAY_FADEDOWN):
 			 case (RETRIG_FADEDOWN):
-DEBUG1_ON;
-DEBUG2_ON;
+//DEBUG1_ON;
+//DEBUG2_ON;
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
@@ -1104,16 +1101,16 @@ DEBUG2_ON;
 					flags[Play1But+chan] = 1;
 
 				play_state[chan] = SILENT;
-DEBUG2_OFF;
-DEBUG1_OFF;
+//DEBUG2_OFF;
+//DEBUG1_OFF;
 			break;
 
 			 case (PLAYING):
 			 case (PLAY_FADEUP):
-DEBUG3_ON;
-DEBUG2_ON;
 		 		if (play_state[chan] == PLAY_FADEUP) 
 		 		{
+//DEBUG3_ON;
+//DEBUG2_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						t_f = gain * (float)i / (float)HT16_CHAN_BUFF_LEN;
@@ -1126,9 +1123,13 @@ DEBUG2_ON;
 						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 						outR[i] = t_i32;
 					}
+//DEBUG3_OFF;
+//DEBUG2_OFF;
 				} 
 				else
 				{
+//DEBUG3_ON;
+//DEBUG1_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						t_i32 = (float)outL[i] * gain;
@@ -1139,14 +1140,14 @@ DEBUG2_ON;
 						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 						outR[i] = t_i32;
 					}
+//DEBUG3_OFF;
+//DEBUG1_OFF;
 				}
 
 				if (length<=0.5)
 					play_state[chan] 	= PLAYING_PERC;
 				else
 					play_state[chan]	= PLAYING;
-DEBUG3_OFF;
-DEBUG2_OFF;
 
 		 	 break;
 
@@ -1158,7 +1159,7 @@ DEBUG2_OFF;
 
 		 		if (play_state[chan]==PLAYING_PERC) 
 		 		{
-		 			DEBUG3_ON;
+//DEBUG3_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
@@ -1178,7 +1179,7 @@ DEBUG2_OFF;
 						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 						outR[i] = t_i32;
 					}
-					DEBUG3_OFF;
+//DEBUG3_OFF;
 				} else
 
 				// Fade down to silence before going to PAD_SILENCE mode or ending the playback
@@ -1186,7 +1187,7 @@ DEBUG2_OFF;
 				//
 		 		if (play_state[chan]==PLAYING_PERC_FADEDOWN) 
 		 		{
-		 			DEBUG2_ON;
+//DEBUG2_ON;
 
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
@@ -1207,7 +1208,7 @@ DEBUG2_OFF;
 						outR[i] = t_i32;
 					}
 					play_state[chan]=PAD_SILENCE;
-					DEBUG2_OFF;
+//DEBUG2_OFF;
 				}
 				else
 
@@ -1215,7 +1216,7 @@ DEBUG2_OFF;
 				//
 				if (play_state[chan]==PAD_SILENCE)
 				{
-					DEBUG1_ON;
+//DEBUG1_ON;
 					if (i_param[chan][REV])	decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
 					else					decay_amp_i[chan] -= HT16_CHAN_BUFF_LEN * decay_inc[chan];
 
@@ -1224,7 +1225,7 @@ DEBUG2_OFF;
 						outL[i] = 0;
 						outR[i] = 0;
 					}
-					DEBUG1_OFF;
+//DEBUG1_OFF;
 				}
 
 				//After fading up to full amplitude in a reverse percussive playback, 

@@ -155,7 +155,8 @@ enum g_Errors{
 #define MAX_NUM_BANKS 60
 
 #define REC (NUM_ALL_CHAN-1) /* =2 a shortcut to the REC channel */
-
+#define CHAN1 0
+#define CHAN2 1
 
 //About 45ms delay
 #define delay()						\

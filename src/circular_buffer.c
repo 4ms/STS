@@ -144,16 +144,16 @@ void CB_init(CircularBuffer *b, uint8_t rev)
 {
 	b->wrapping = 0;
 
-	if (rev)
-	{
-		b->in 	= b->max;
-		b->out 	= b->max;
-	}
-	else
-	{
+	// if (rev)
+	// {
+	// 	b->in 	= b->max;
+	// 	b->out 	= b->max;
+	// }
+	// else
+	// {
 		b->in 	= b->min;
 		b->out 	= b->min;
-	}
+	// }
 
 }
 
