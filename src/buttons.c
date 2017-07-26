@@ -149,8 +149,12 @@ void Button_Debounce_IRQHandler(void)
 
 							//Store the pot values.
 							//We use this to determine if the pot has moved while the Bank button is down
-							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].latched_value = bracketed_potadc[SAMPLE_POT*2];
-							g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].latched_value = bracketed_potadc[SAMPLE_POT*2 + 1];
+							t_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1];
+							if (t_bkc->combo_state == COMBO_INACTIVE)	t_bkc->latched_value = bracketed_potadc[SAMPLE1_POT];
+
+							t_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2];
+							if (t_bkc->combo_state == COMBO_INACTIVE)	t_bkc->latched_value = bracketed_potadc[SAMPLE2_POT];
+
 
 							//Reset the combo_state.
 							//We have to detect the knob as moving to make the combo ACTIVE
@@ -211,7 +215,7 @@ void Button_Debounce_IRQHandler(void)
 									{
 										//Latch the pot+CV value
 										//This allows us to keep using this value until either the pot or CV changes
-										t_bkc->latched_value = bracketed_potadc[SAMPLE_POT*2 + knob] + bracketed_cvadc[SAMPLE_CV*2 + knob];
+										//t_bkc->latched_value = bracketed_potadc[SAMPLE_POT*2 + knob] + bracketed_cvadc[SAMPLE_CV*2 + knob];
 
 										//Change our combo state to latched
 										t_bkc->combo_state = COMBO_LATCHED;
