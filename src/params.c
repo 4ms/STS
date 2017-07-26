@@ -446,6 +446,7 @@ void update_params(void)
 	int32_t t_pitch_potadc;
 	float t_f;
 	uint32_t compensated_pitch_cv;
+	uint16_t sample_pot;
 
 	uint32_t trial_bank;
 	uint8_t samplenum, banknum;
@@ -600,9 +601,10 @@ void update_params(void)
 
 
 
+		// 
+		// Change bank with Bank + Sample combo
 		//
-		//Button-Knob combo: Bank + Sample
-		//Holding Bank X's button while turning a Sample knob changes channel X's bank
+		// Holding Bank X's button while turning a Sample knob changes channel X's bank
 		//
 		if (button_state[Bank1 + chan] >= DOWN)
 		{
@@ -663,70 +665,85 @@ void update_params(void)
 			}
 		}
 
+		//
+		// Update combo Bank+Sample pot's latch status 
+		//
+		//The combo to latch is the other channel's Bank button with this channel's Sample knob
+		//because:
+		//this Bank + this Sample changes this bank, so it's ok to not latch sample value
+		//other Bank + other Sample changes the other bank, same reason as above
+		//this Bank + other Sample will be handled in this for loop
+		if (chan==CHAN1) 
+		{	
+			t_this_bkc 	= &g_button_knob_combo[bkc_Bank2][bkc_Sample1];
+			t_other_bkc = &g_button_knob_combo[bkc_Bank1][bkc_Sample1];
+		}
+		else				
+		{
+			t_this_bkc 	= &g_button_knob_combo[bkc_Bank1][bkc_Sample2];
+			t_other_bkc = &g_button_knob_combo[bkc_Bank2][bkc_Sample2];
+		}
 
+
+		if (t_this_bkc->combo_state == COMBO_LATCHED && flag_pot_changed[SAMPLE1_POT+chan])
+			t_this_bkc->combo_state = COMBO_INACTIVE;
+
+		if (t_other_bkc->combo_state == COMBO_LATCHED && flag_pot_changed[SAMPLE1_POT+chan])
+			t_other_bkc->combo_state = COMBO_INACTIVE;
+
+
+		if (t_this_bkc->combo_state == COMBO_INACTIVE && t_other_bkc->combo_state == COMBO_INACTIVE)
+			sample_pot = bracketed_potadc[SAMPLE1_POT+chan];
+		else
+		{
+			if (t_this_bkc->combo_state != COMBO_INACTIVE)
+				sample_pot = t_this_bkc->latched_value;
+			else
+				sample_pot = t_other_bkc->latched_value;
+		}
+
+
+		// Sample Pot+CV
 		//
-		//If we're not doing a button+knob combo, just change the sample
+		// Sample knob: If we're not doing a button+knob combo, just change the sample
 		//
-		t_this_bkc 	= &g_button_knob_combo[bkc_Bank1][knob==0? bkc_Sample1 : bkc_Sample2];
-		t_other_bkc = &g_button_knob_combo[bkc_Bank2][knob==0? bkc_Sample1 : bkc_Sample2];
+
+
 		t_edit_bkc 	= &g_button_knob_combo[bkc_Edit][bkc_Sample2];
 
-		if (t_this_bkc->combo_state != COMBO_ACTIVE	&&	t_other_bkc->combo_state != COMBO_ACTIVE)
+
+		old_val = i_param[chan][SAMPLE];
+
+		//Use the latched pot value for channel 2 when latched from Edit Mode
+		if (t_edit_bkc->combo_state != COMBO_INACTIVE && chan==CHAN2)
+			new_val = detent_num_antihys( t_edit_bkc->latched_value + bracketed_cvadc[SAMPLE2_CV], old_val );
+		else
+			new_val = detent_num_antihys( sample_pot + bracketed_cvadc[SAMPLE1_CV+chan], old_val );
+
+		if (old_val != new_val)
 		{
+			//The knob has moved to a new detent (without the a Bank button down)
 
-			//See if we need to update the sample by comparing the old value to the new value
+			//Update the sample parameter
+			i_param[chan][SAMPLE] = new_val;
+
+			flags[PlaySample1Changed + chan] = 1;
+
 			//
-			//If we recently ended a combo motion, use the latched value of the pot for the old value
-			//Otherwise use the actual sample param
+			//Set a flag to initiate a bright flash on the Play button
 			//
-			if (t_this_bkc->combo_state == COMBO_LATCHED)
-				old_val = detent_num(t_this_bkc->latched_value);
-
-			else
-			if (t_other_bkc->combo_state == COMBO_LATCHED)
-				old_val = detent_num(t_other_bkc->latched_value);
-
-			else
-				old_val = i_param[chan][SAMPLE];
-
-
-			//Use the latched pot value for channel 2 when in Edit Mode
-			if (t_edit_bkc->combo_state!=COMBO_INACTIVE && chan==CHAN2)
-				new_val = detent_num_antihys( t_edit_bkc->latched_value + bracketed_cvadc[SAMPLE2_CV], old_val );
-			else
-				new_val = detent_num_antihys( bracketed_potadc[SAMPLE1_POT+chan] + bracketed_cvadc[SAMPLE1_CV+chan], old_val );
-
-			if (old_val != new_val)
+			//We first have to know if there is a sample in the new place,
+			//by seeing if there is a non-blank filename
+			//
+			if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
 			{
-				//The knob has moved to a new detent (without the a Bank button down)
-
-				//
-				//Inactivate the combo motion
-				// 
-				t_this_bkc->combo_state = COMBO_INACTIVE;
-				t_other_bkc->combo_state = COMBO_INACTIVE;
-
-				//Update the sample parameter
-				i_param[chan][SAMPLE] = new_val;
-
-				flags[PlaySample1Changed + chan] = 1;
-
-				//
-				//Set a flag to initiate a bright flash on the Play button
-				//
-				//We first have to know if there is a sample in the new place,
-				//by seeing if there is a non-blank filename
-				//
-				if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
-				{
-					flags[PlaySample1Changed_empty + chan] = 6;
-					flags[PlaySample1Changed_valid + chan] = 0;
-				}
-				else
-				{
-					flags[PlaySample1Changed_empty + chan] = 0;
-					flags[PlaySample1Changed_valid + chan] = 6;
-				}
+				flags[PlaySample1Changed_empty + chan] = 6;
+				flags[PlaySample1Changed_valid + chan] = 0;
+			}
+			else
+			{
+				flags[PlaySample1Changed_empty + chan] = 0;
+				flags[PlaySample1Changed_valid + chan] = 6;
 			}
 		}
 
