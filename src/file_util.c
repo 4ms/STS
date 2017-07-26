@@ -82,6 +82,43 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
     return (0xFD); //should not reach here, error
 }
 
+// FRESULT find_next_ext_in_dir_alpha(DIR* dir, const char *ext, char *fname)
+// {
+//     FRESULT res;
+//     FILINFO fno;
+//     uint32_t i;
+//     char lowest_filename[_MAX_LFN+1];
+
+//     fname[0]      = 0;    // null string
+//     fno.fname[0]  = 'a';  // enables while loop
+
+//     // Loop through dir content
+//     while(fno.fname[0] != 0) {
+
+//         res = f_readdir(dir, &fno);
+
+//         if (res!=FR_OK)         return(res);                      // filesystem error
+//         if (fno.fname[0] == 0)  {fname[0]=0; break}               // no more files found -> exit loop
+//         if (fno.fname[0] == '.') continue;                        // ignore files starting with a .
+//         i = str_len(fno.fname); if (i==0xFFFFFFFF) return (0xFE); // invalid file name 
+
+//         // check for extension at the end of filename
+//         if (         fno.fname[i-4]  == ext[0] \
+//             && upper(fno.fname[i-3]) == upper(ext[1]) \
+//             && upper(fno.fname[i-2]) == upper(ext[2]) \
+//             && upper(fno.fname[i-1]) == upper(ext[3]) \
+//           )
+//         {
+
+//             str_cpy(lowest_filename, fno.fname);
+//             //str_cpy(fname, fno.fname);
+//             // return(FR_OK);
+//         }
+//     }
+
+//     return (0xFD); //should not reach here, error
+// }
+
 
 //FRESULT scan_files (
 //    char* path        /* Start node to be scanned (***also used as work area***) */
@@ -378,12 +415,36 @@ uint8_t str_cmp_nocase(char *a, char *b)
 //Return 1 if the same, 0 if not
 uint8_t str_cmp(char *a, char *b)
 {
-	while(*a!=0)
-		if (*b++ != *a++) return(0);
+  while(*a!=0)
+    if (*b++ != *a++) return(0);
 
-	if (*a!=*b) return(0); //strings must be the same length
+  if (*a!=*b) return(0); //strings must be the same length
 
-	return(1);
+  return(1);
+}
+
+//Compare strings a and b alphabetically
+//  - upper case first
+//  - shorter strings first
+// 0  if  b == a  (strings are the same)
+// > 0 if b < a   (b first alphabetically)
+// < 0 if b > a   (a is fist alphabetically)
+int str_cmp_alpha(char *a, char *b)
+{
+  int count=0;
+
+  // compare alphabetically
+	while((*a!=0) && (*b!=0))
+  {
+		count = *a++ - *b++;
+    if (count!=0) return(count);
+  }
+
+  // check lenght (if strings seem to be the same)
+  if     (str_len(b)<str_len(a)){count++;}
+	else if(str_len(b)>str_len(a)){count--;}
+
+	return(count);
 }
 
 //Returns 1 if string begins with (or is equal to) prefix
