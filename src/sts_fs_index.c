@@ -75,6 +75,9 @@ FRESULT write_sampleindex_file(void)
 		res = f_open(&temp_file, path, FA_WRITE | FA_CREATE_ALWAYS); 
 		if (res != FR_OK) return(res); 
 
+		// write firmware version
+		f_printf(&temp_file, "Firmware Version: %d.%d\n\n",FW_MAJOR_VERSION, FW_MINOR_VERSION);
+		f_sync(&temp_file);
 
 		// For each bank
 		for (i=0; i<MAX_NUM_BANKS; i++)
@@ -197,7 +200,7 @@ uint8_t write_samplelist(void)
 	f_sync(&temp_file);
 
 	// WRITE 'SAMPLES' INFO TO SAMPLE LIST
-	f_printf(&temp_file, "<!DOCTYPE html>\n<html>\n<body style=\"padding-left: 100px; background-color:#F8F9FD;\">\n<br><h1>SAMPLE LIST</h1><br>\n");
+	f_printf(&temp_file, "<!DOCTYPE html>\n<html>\n<body style=\"padding-left: 100px; background-color:#F8F9FD;\">\n<br>Firmware Version: %d.%d<br>\n<h1>SAMPLE LIST</h1><br>\n",FW_MAJOR_VERSION,FW_MINOR_VERSION);
 	f_sync(&temp_file);
 
 	// For each bank
