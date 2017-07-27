@@ -67,8 +67,6 @@ void init_rec_buff(void)
 	rec_buff->max		= AUDIO_MEM_BASE[REC_CHAN] + MEM_SIZE;
 	rec_buff->size		= MEM_SIZE;
 	rec_buff->wrapping	= 0;
-
-
 }
 
 void stop_recording(void)
@@ -160,7 +158,7 @@ void record_audio_to_buffer(int16_t *src)
 }
 
 
-
+// creates file and writes headerchunk to it
 void create_new_recording(void)
 {
 	uint32_t sz;
