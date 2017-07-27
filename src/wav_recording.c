@@ -34,7 +34,18 @@ extern Sample 					samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 extern SystemCalibrations 		*system_calibrations;
 
-#define WRITE_BLOCK_SIZE 8192
+#define WRITE_BLOCK_SIZE 	8192
+
+// MAX_REC_SAMPLES = Maximum bytes of sample data
+// WAV file specification limits sample data to 4GB = 0xFFFFFFFF Bytes
+//
+// Assuming our rec buffer is full, we should stop recording when we reach 4GB - (Size of SDRAM Record Buffer)
+// Then we shorten this by two WRITE_BLOCK_SIZEs just to be safe
+// Note: the wav file itself can exceed 4GB, just the 'data' chunk size must be <=4GB 
+//
+#define MAX_REC_SAMPLES 	(0xFFFFFFFF - MEM_SIZE - (WRITE_BLOCK_SIZE*2))
+
+//#define MAX_REC_SAMPLES 	(0x00A17FC0)  /*DEBUGGING: about 1 minute*/
 
 //
 // SDRAM buffer address for recording to sdcard
@@ -73,7 +84,7 @@ void init_rec_buff(void)
 
 void stop_recording(void)
 {
-	if (rec_state==RECORDING || rec_state==CREATING_FILE /* || rec_state==REC_PAUSED*/)
+	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
 		rec_state=CLOSING_FILE;
 	}
@@ -349,6 +360,11 @@ void write_buffer_to_storage(void)
 						res = write_wav_size(&recfil, samplebytes_recorded);
 						if (res!=FR_OK)		{if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;} g_error |= FILE_WRITE_FAIL; check_errors(); break;}
 
+						//Stop recording in this file, if we are close the maximum
+						//Then we will start recording again in a new file --there is a ~20ms gap between files
+						//
+						if (samplebytes_recorded >= MAX_REC_SAMPLES)
+							rec_state = CLOSING_FILE_TO_REC_AGAIN;
 
 					}
 					else {g_error |= WRITE_BUFF_OVERRUN; check_errors();}
@@ -359,6 +375,7 @@ void write_buffer_to_storage(void)
 		break;
 
 		case (CLOSING_FILE):
+		case (CLOSING_FILE_TO_REC_AGAIN):
 			//See if we have more in the buffer to write
 			buffer_lead = CB_distance(rec_buff, 0);
 
@@ -433,7 +450,11 @@ void write_buffer_to_storage(void)
 				flags[ForceFileReload1] = 1;
 				flags[ForceFileReload2] = 1;
 
-				rec_state=REC_OFF;
+				if (rec_state == CLOSING_FILE)
+					rec_state = REC_OFF;
+
+				else if (rec_state == CLOSING_FILE_TO_REC_AGAIN)
+					rec_state = CREATING_FILE;
 			}
 
 		break;
