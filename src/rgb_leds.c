@@ -40,7 +40,10 @@ const uint32_t LED_PALETTE[NUM_LED_PALETTE][3]=
 		{550, 	700, 	0}, 	//GREENER
 		{200, 	800, 	1000}, 	//CYANER
 		{100, 	100, 	100}, 	//DIM_WHITE
-		{50, 	0, 		0} 		//DIM_RED
+		{50, 	0, 		0}, 	//DIM_RED
+		{150, 	0, 		0}	 	//MED_RED
+
+
 };
 
 
@@ -519,7 +522,7 @@ void update_ButtonLEDs(void)
 					//Sample slot empty
 					if (flags[PlaySample1Changed_empty + chan])
 					{
-						if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, RED );
+						if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, MED_RED );
 						else							set_ButtonLED_byPalette(ButLEDnum, DIM_RED );
 					}
 					//Sample found

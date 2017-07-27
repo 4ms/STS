@@ -20,6 +20,7 @@ enum LEDPalette{
 	CYANER,
 	DIM_WHITE,
 	DIM_RED,
+	MED_RED,
 
 	NUM_LED_PALETTE
 };
