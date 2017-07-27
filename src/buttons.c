@@ -451,9 +451,12 @@ void Button_Debounce_IRQHandler(void)
 							{
 								switch (i)
 								{
+									//Short-press REC: Enable/disable recording, or Toggle monitoring
 									case Rec:
-										flags[ToggleMonitor] = 1;
-										//enable_recording=1;
+										if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Play1]==UP && button_state[Play2]==UP && button_state[RecBank]==UP)
+										{
+											flags[ToggleMonitor] = 1;
+										}
 										break;
 
 									case Play1:
@@ -569,37 +572,11 @@ void Button_Debounce_IRQHandler(void)
 						}
 					}
 				}
-				// else
-				// {
-				// 	// Holding down for MED PRESS: exit and save
-				// 	if (button_state[Rev1]>=MED_PRESSED && button_state[Rev2]>=MED_PRESSED && button_state[Play1]>=MED_PRESSED && button_state[Play2]>=MED_PRESSED && button_state[Rec]>=MED_PRESSED && button_state[RecBank]>=MED_PRESSED)
-				// 	{
-				// 		exit_system_mode(1); //save
-				// 		flags[SkipProcessButtons] = 2;
-				// 	}
-
-				// 	//If buttons were tapped but not held down long, then exit
-				// 	//First, detect they were pressed...
-				// 	if (button_state[Rev1]>=DOWN && button_state[Rev2]>=DOWN && button_state[Play1]>=DOWN && button_state[Play2]>=DOWN && button_state[Rec]>=DOWN && button_state[RecBank]>=DOWN)
-				// 	{
-				// 		flags[SystemModeButtonsDown] = 1;
-				// 	}
-				// 	else
-				// 	{
-				// 		//...Next, if we already detected them as pressed down, but they're not now, exit without saving
-				// 		if (flags[SystemModeButtonsDown])
-				// 		{
-				// 			exit_system_mode(0); //don't save
-				// 		}
-				// 		flags[SystemModeButtonsDown] = 0;
-				// 	}
-				// }
-
 			}
 			else //not EDIT_MODE
 			{
 				//Both bank buttons --> Stereo Mode toggle
-				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED && button_state[RecBank] == UP)
+				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED && button_state[RecBank] == UP && button_state[Play1] == UP && button_state[Play2] == UP)
 				{
 					if (global_mode[STEREO_MODE] == 1)
 					{
