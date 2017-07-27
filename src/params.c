@@ -653,9 +653,7 @@ void update_params(void)
 				//Activate it when we detect the knob was turned to a new detent
 				else
 				{
-					old_val = detent_num(this_bank_bkc->latched_value);
-
-					if (new_val != old_val)
+					if (flag_pot_changed[SAMPLE1_POT + knob])
 					{
 						this_bank_bkc->combo_state = COMBO_ACTIVE;
 

@@ -149,6 +149,8 @@ void Button_Debounce_IRQHandler(void)
 							// (don't latch if it's already latched, this allows us to release and resume pressing the button without changing the latch value)
 							// Reset combo state
 							// We have to detect the knob as moving to make the combo ACTIVE
+
+							//Sample pot channel 1:
 							t_bkc = &g_button_knob_combo[i==Bank1? bkc_Bank1 : bkc_Bank2][bkc_Sample1];
 
 							if (t_bkc->combo_state == COMBO_INACTIVE)
@@ -156,12 +158,13 @@ void Button_Debounce_IRQHandler(void)
 
 							t_bkc->combo_state = COMBO_INACTIVE;
 
+							//Sample pot channel 2:
 							t_bkc = &g_button_knob_combo[i==Bank1? bkc_Bank1 : bkc_Bank2][bkc_Sample2];
 
 							if (t_bkc->combo_state == COMBO_INACTIVE)
 								t_bkc->latched_value = bracketed_potadc[SAMPLE2_POT];
 
-								t_bkc->combo_state = COMBO_INACTIVE;
+							t_bkc->combo_state = COMBO_INACTIVE;
 						break;
 
 
