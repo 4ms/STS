@@ -242,7 +242,12 @@ void create_new_recording(void)
 		else {f_close(&recfil); rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); return;}
 	}
 
-	if (sz!=written)	{f_close(&recfil); rec_state=REC_OFF; g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return;}
+	if (sz!=written)	{
+		f_close(&recfil);
+		rec_state=REC_OFF;
+		g_error |= FILE_UNEXPECTEDEOF_WRITE;
+		check_errors();
+		return;}
 
 	samplebytes_recorded = 0;
 
@@ -269,8 +274,8 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t wav_data_bytes)
 		f_sync(wavfil);
 	}
 
-	if (res!=FR_OK) {g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
-	if (written!=4)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
+	if (res!=FR_OK) {		g_error |= FILE_WRITE_FAIL; check_errors(); }
+	if (written!=4)	{		g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
 
 	//data chunk size
 	data = wav_data_bytes;
@@ -281,8 +286,8 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t wav_data_bytes)
 		f_sync(wavfil);
 	}
 
-	if (res!=FR_OK) {g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
-	if (written!=4)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
+	if (res!=FR_OK) {		g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
+	if (written!=4)	{		g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
 
 	//restore the original file position
 	res = f_lseek(wavfil, orig_pos);
@@ -352,13 +357,20 @@ void write_buffer_to_storage(void)
 						res = f_write(&recfil, rec_buff16, sz, &written);
 						f_sync(&recfil);
 						
-						if (res!=FR_OK)		{if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;} g_error |= FILE_WRITE_FAIL; check_errors();break;}
-						if (sz!=written)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+						if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
+											g_error |= FILE_WRITE_FAIL; check_errors();
+											break;}
+						if (sz!=written){	if (g_error & FILE_UNEXPECTEDEOF_WRITE) {f_close(&recfil); rec_state=REC_OFF;}
+											g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+
 						samplebytes_recorded += written;
 
 						//Update the wav file size in the wav header
 						res = write_wav_size(&recfil, samplebytes_recorded);
-						if (res!=FR_OK)		{if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;} g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+
+						if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
+											g_error |= FILE_WRITE_FAIL; check_errors();
+											break;}
 
 						//Stop recording in this file, if we are close the maximum
 						//Then we will start recording again in a new file --there is a ~20ms gap between files
@@ -367,7 +379,9 @@ void write_buffer_to_storage(void)
 							rec_state = CLOSING_FILE_TO_REC_AGAIN;
 
 					}
-					else {g_error |= WRITE_BUFF_OVERRUN; check_errors();}
+					else {
+						g_error |= WRITE_BUFF_OVERRUN;
+						check_errors();}
 						
 				}
 			}
@@ -391,13 +405,18 @@ void write_buffer_to_storage(void)
 					res = f_write(&recfil, rec_buff16, buffer_lead, &written);
 					f_sync(&recfil);
 
-					if (res!=FR_OK)				{if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;} g_error |= FILE_WRITE_FAIL; check_errors(); break;}
-					if (written!=buffer_lead)	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+					if (res!=FR_OK)	{				if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
+													g_error |= FILE_WRITE_FAIL; check_errors();
+													break;}
+					if (written!=buffer_lead){		if (g_error & FILE_UNEXPECTEDEOF_WRITE) {f_close(&recfil); rec_state=REC_OFF;}
+													g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
 
 					samplebytes_recorded += written;
 					//Update the wav file size in the wav header
 					res = write_wav_size(&recfil, samplebytes_recorded);
-					if (res!=FR_OK)		{f_close(&recfil); rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); break;}
+					if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
+													g_error |= FILE_WRITE_FAIL; check_errors();
+													break;}
 
 				}
 				else
