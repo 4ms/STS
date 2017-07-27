@@ -59,6 +59,7 @@ typedef struct ButtonKnobCombo{
 	uint32_t 			latched_value;
 	enum ComboStates 	combo_state;
 	uint32_t			hover_value;
+	uint8_t				value_crossed;
 
 } ButtonKnobCombo;
 

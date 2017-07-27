@@ -145,41 +145,61 @@ void Button_Debounce_IRQHandler(void)
 
 						case Bank1:
 						case Bank2:
-							chan = i - Bank1;
+							// Latch the pot values if the combo is inactive
+							// (don't latch if it's already latched, this allows us to release and resume pressing the button without changing the latch value)
+							// Reset combo state
+							// We have to detect the knob as moving to make the combo ACTIVE
+							t_bkc = &g_button_knob_combo[i==Bank1? bkc_Bank1 : bkc_Bank2][bkc_Sample1];
 
-							//Store the pot values.
-							//We use this to determine if the pot has moved while the Bank button is down
-							t_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1];
-							if (t_bkc->combo_state == COMBO_INACTIVE)	t_bkc->latched_value = bracketed_potadc[SAMPLE1_POT];
+							if (t_bkc->combo_state == COMBO_INACTIVE)
+								t_bkc->latched_value = bracketed_potadc[SAMPLE1_POT];
 
-							t_bkc = &g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2];
-							if (t_bkc->combo_state == COMBO_INACTIVE)	t_bkc->latched_value = bracketed_potadc[SAMPLE2_POT];
+							t_bkc->combo_state = COMBO_INACTIVE;
 
+							t_bkc = &g_button_knob_combo[i==Bank1? bkc_Bank1 : bkc_Bank2][bkc_Sample2];
 
-							//Reset the combo_state.
-							//We have to detect the knob as moving to make the combo ACTIVE
-							g_button_knob_combo[chan==0? bkc_Bank1 : bkc_Bank2][bkc_Sample1].combo_state = COMBO_INACTIVE;
-							g_button_knob_combo[chan==0? bkc_Bank1 : bkc_Bank2][bkc_Sample2].combo_state = COMBO_INACTIVE;
+							if (t_bkc->combo_state == COMBO_INACTIVE)
+								t_bkc->latched_value = bracketed_potadc[SAMPLE2_POT];
+
+								t_bkc->combo_state = COMBO_INACTIVE;
 						break;
 
 
 						case RecBank:
 							if (!global_mode[EDIT_MODE])
 							{
-								//Store the pot values.
-								//We use this to determine if the pot has moved while the Bank button is down
-								g_button_knob_combo[bkc_RecBank][bkc_RecSample].latched_value = bracketed_potadc[RECSAMPLE_POT];
-
-								//Reset the combo_state.
+								//Latch the pot value and reset combo state
 								//We have to detect the knob as moving to make the combo ACTIVE
+								g_button_knob_combo[bkc_RecBank][bkc_RecSample].latched_value = bracketed_potadc[RECSAMPLE_POT];
 								g_button_knob_combo[bkc_RecBank][bkc_RecSample].combo_state = COMBO_INACTIVE;
 							}
 						break;
 
 						case Rev1:
+							if (!global_mode[EDIT_MODE])
+							{
+								// Latch the pot values if the combo is inactive
+								// (don't latch if it's already latched, this allows us to release and resume pressing the button without changing the latch value)
+								// We have to detect the knob as moving to make the combo ACTIVE
+								if (g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state == COMBO_INACTIVE)
+									g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].latched_value = bracketed_potadc[START1_POT];
+								
+								g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state = COMBO_INACTIVE;
+							}
 							break;
 
 						case Rev2:
+							if (!global_mode[EDIT_MODE])
+							{
+								// Latch the pot values if the combo is inactive
+								// (don't latch if it's already latched, this allows us to release and resume pressing the button without changing the latch value)
+								// We have to detect the knob as moving to make the combo ACTIVE
+								if (g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state == COMBO_INACTIVE)
+									g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].latched_value = bracketed_potadc[START2_POT];
+
+								g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state = COMBO_INACTIVE;
+							}
+
 							break;
 
 						case Edit:
@@ -319,6 +339,9 @@ void Button_Debounce_IRQHandler(void)
 										flags[FindNextSampleToAssign] = 1;
 								}
 								else
+								if (g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state == COMBO_ACTIVE)
+									g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state = COMBO_LATCHED;
+								else
 									flags[Rev1Trig]=1;
 				
 
@@ -330,6 +353,9 @@ void Button_Debounce_IRQHandler(void)
 								{
 									restore_undo_state(i_param[0][BANK], i_param[0][SAMPLE]);
 								}
+								else
+								if (g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state == COMBO_ACTIVE)
+									g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state = COMBO_LATCHED;
 								else
 									flags[Rev2Trig]=1;
 
