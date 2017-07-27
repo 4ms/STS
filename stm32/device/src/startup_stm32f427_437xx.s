@@ -71,6 +71,8 @@ defined in linker script */
   .type  Reset_Handler, %function
 Reset_Handler:  
 /* Determine if we should run the main application or the bootloader */
+/* Note: this doesnt seem to get run... perhaps calling NVIC_SystemReset() from main() */
+/*       actually jumps back to 0x08000000 */
   ldr   r0, =0x2001FFF0
   ldr   r1, =0xBADDCAFE
   ldr   r2, [r0, #0]

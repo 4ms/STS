@@ -81,15 +81,6 @@ uint8_t check_bootloader_keys(void)
 
 }
 
-typedef void (*EntryPoint)(void);
-
-void JumpTo(uint32_t address) {
-  uint32_t application_address = *(__IO uint32_t*)(address + 4);
-  EntryPoint application = (EntryPoint)(application_address);
-  __set_MSP(*(__IO uint32_t*)address);
-  application();
-}
-
 void deinit_all(void);
 void deinit_all(void)
 {
@@ -345,7 +336,6 @@ void assert_failed(uint8_t* file, uint32_t line)
 { 
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-	//JumpTo(0x08008000);
 
   /* Infinite loop */
   while (1)
