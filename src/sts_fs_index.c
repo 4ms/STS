@@ -200,7 +200,10 @@ uint8_t write_samplelist(void)
 	f_sync(&temp_file);
 
 	// WRITE 'SAMPLES' INFO TO SAMPLE LIST
-	f_printf(&temp_file, "<!DOCTYPE html>\n<html>\n<body style=\"padding-left: 100px; background-color:#F8F9FD;\">\n<br>Firmware Version: %d.%d<br>\n<h1>SAMPLE LIST</h1><br>\n",FW_MAJOR_VERSION,FW_MINOR_VERSION);
+	// f_printf(&temp_file, "<!DOCTYPE html>\n<html>\n<body style=\"padding-left: 100px; background-color:#F8F9FD;\">\n<br>Firmware Version: %d.%d<br>\n<h1>SAMPLE LIST</h1><br>\n",FW_MAJOR_VERSION,FW_MINOR_VERSION);
+	f_printf(&temp_file, "<!DOCTYPE html>\n<html>\n\
+<head>\n<style type=\"text/css\">\n@media print\n{\n   div{page-break-inside: avoid;}\n   body {font-size:7pt;}\n   h2 {font-size:11pt;}\n   h1 {font-size:13pt;}\n}\n</style>\n</head>\n\
+<body style=\"padding-left: 100px; background-color:#F8F9FD;\">\n<br>Firmware Version: %d.%d<br>\n<h1>SAMPLE LIST</h1><br>\n",FW_MAJOR_VERSION,FW_MINOR_VERSION);
 	f_sync(&temp_file);
 
 	// For each bank
@@ -219,7 +222,7 @@ uint8_t write_samplelist(void)
 			// Print bank name to file
 			bank_to_color(i, b_color);
 			if (i>0) {f_printf(&temp_file, "<br>\n");f_sync(&temp_file);}
-	 		f_printf(&temp_file, "<h2>%s</h2>\n<table>\n", b_color);
+	 		f_printf(&temp_file, "\n<div>\n<h2>%s</h2>\n<table>\n", b_color);
 			f_sync(&temp_file);
 
 			// Print sample name to sample list, for each sample in bank
@@ -233,7 +236,7 @@ uint8_t write_samplelist(void)
 				f_sync(&temp_file);
 			} 
 			
-			f_printf(&temp_file, "</table><br>\n");
+			f_printf(&temp_file, "</table><br>\n</div>\n");
 			f_sync(&temp_file);
 		}
 	}
