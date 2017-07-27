@@ -277,6 +277,43 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t wav_data_bytes)
 
 }
 
+// Writes comment and firmware in info Chunk + id3 tag
+// ToDo: This only works for firmware versions 0.0 to 9.9
+FRESULT write_wav_info_chunk(FIL *wavfil){
+
+	char* 		fileinfo;
+	char  		fileinfo_tmp[600];
+	char  		version_tmp[2];
+	uint32_t 	written;
+	FRESULT 	res;
+
+	fileinfo = fileinfo_tmp;
+
+	// WAV info chunk
+	// INFOICMT,[...]firmware v
+	// str_cat(fileinfo, "494E464F 49434D54 2C000000 5265636F 72646564 206F6E20 6120346D 73205374 6572656F 20547269 67676572 65642053 616D706C 65720000 49534654 40000000 346D7320 53746572 656F2054 72696767 65726564 2053616D 706C6572 20666972 6D776172 6520763", FW_MAJOR_VERSION);
+	intToStr(FW_MAJOR_VERSION, version_tmp, 1);
+	str_cat(fileinfo, "494E464F 49434D54 2C000000 5265636F 72646564 206F6E20 6120346D 73205374 6572656F 20547269 67676572 65642053 616D706C 65720000 49534654 40000000 346D7320 53746572 656F2054 72696767 65726564 2053616D 706C6572 20666972 6D776172 6520763", version_tmp);
+	str_cat(fileinfo, fileinfo, "2E3"); //'.'
+	intToStr(FW_MINOR_VERSION, version_tmp, 1);
+	str_cat(fileinfo, fileinfo, version_tmp);
+
+	// iD3 tag
+	// (libsndfile-1.0.24)id3[...]id3[...]firmware v
+	str_cat(fileinfo, fileinfo, "20286C69 62736E64 66696C65 2D312E30 2E323429 00006964 33208200 00004944 33030000 00000077 54585858 00000034 00000053 6F667477 61726500 346D7320 53746572 656F2054 72696767 65726564 2053616D 706C6572 20666972 6D776172 6520763");
+	intToStr(FW_MAJOR_VERSION, version_tmp, 1);
+	str_cat(fileinfo, fileinfo, version_tmp);
+	str_cat(fileinfo, fileinfo, "2E3"); //'.'
+	intToStr(FW_MINOR_VERSION, version_tmp, 1);
+	str_cat(fileinfo, fileinfo, version_tmp);
+
+	//COMM[...]Sampler
+	str_cat(fileinfo, fileinfo, "434F4D4D 0000002F 00000000 00000052 65636F72 64656420 6F6E2061 20346D73 20537465 72656F20 54726967 67657265 64205361 6D706C65 7200");
+
+	res = f_write(wavfil, fileinfo, sizeof(fileinfo), &written);
+	return(res);
+}
+
 void write_buffer_to_storage(void)
 {
 	uint32_t buffer_lead;
@@ -391,7 +428,13 @@ void write_buffer_to_storage(void)
 			{
 				//Write the file size into the header, and close the file
 				res = write_wav_size(&recfil, samplebytes_recorded);
+
+				// Write comment and Firmware chunks at bottom of wav file
+				// after data chunk (write_wav_size() puts us back there)
+				res = write_wav_info_chunk(&recfil);
+				
 				f_close(&recfil);
+
 
 				//Rename the tmp file as the proper file in the proper directory
 				res = new_filename(sample_bank_now_recording, sample_num_now_recording, final_filepath);

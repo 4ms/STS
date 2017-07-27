@@ -21,6 +21,7 @@ enum RecStates {
 void stop_recording(void);
 void toggle_recording(void);
 void record_audio_to_buffer(int16_t *src);
+FRESULT write_wav_info_chunk(FIL *wavfil);
 void write_buffer_to_storage(void);
 void init_rec_buff(void);
 void create_new_recording(void);
