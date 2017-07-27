@@ -469,7 +469,6 @@ void update_params(void)
 		//
 		// Trim Size 
 		// 
-
 		if (flag_pot_changed[LENGTH2_POT])
 		{
 			nudge_trim_size(&samples[banknum][samplenum], pot_delta[LENGTH2_POT]);
@@ -482,14 +481,12 @@ void update_params(void)
 			i_param[0][LOOPING] = 1;
 			i_param[0][REV] = 0;
 			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
-
 		}
 		
 
 		//
 		// Trim Start
 		// 
-
 		if (flag_pot_changed[START2_POT])
 		{
 			nudge_trim_start(&samples[banknum][samplenum], pot_delta[START2_POT]);
@@ -509,7 +506,6 @@ void update_params(void)
 		// 0.1x when pot is at 0%
 		// 1x when pot is at 50%
 		// 5x when pot is at 100%
-		// CV jack is disabled
 		//
 		if (flag_pot_changed[SAMPLE2_POT])
 		{
@@ -522,7 +518,8 @@ void update_params(void)
 			set_sample_gain(&samples[banknum][samplenum], t_f);
 		}
 
-	} //if  EDIT_MODE
+	}//if  EDIT_MODE
+
 	else
 	{
 		//Check if pots moved with Edit Mode off
@@ -546,7 +543,7 @@ void update_params(void)
 		// LENGTH POT + CV
 		//
 
-		//In Edit Mode, don't update channel 1 normally (
+		//In Edit Mode, don't update channel 1's START and LENGTH normally, they are controlled by the Trim settings
 		if (!(global_mode[EDIT_MODE] && chan==CHAN1))
 		{
 			edit_bkc 	= &g_button_knob_combo[bkc_Edit][bkc_Length2];

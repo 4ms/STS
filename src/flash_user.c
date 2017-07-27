@@ -24,8 +24,6 @@ extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
 
 #define FLASH_ADDR_userparams 0x08004000
 
-#define FLASH_SYMBOL_bankfilled 0x01
-#define FLASH_SYMBOL_startupoffset 0xAA
 #define FLASH_SYMBOL_firmwareoffset 0xAA550000
 
 

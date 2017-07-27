@@ -36,6 +36,10 @@ main.c
 
 #define HAS_BOOTLOADER
 
+//These must match what's in startup_stm32f4xx.s:
+#define BOOTLOADER_MAGIC_CODE 0xBADDCAFE
+#define BOOTLOADER_MAGIC_ADDRESS *((uint32_t *)(0x2001FFF0))
+
 uint32_t WATCH0;
 uint32_t WATCH1;
 uint32_t WATCH2;
@@ -125,7 +129,10 @@ int main(void)
 
 	#ifdef HAS_BOOTLOADER
 	if (check_bootloader_keys())
-		JumpTo(0x08000000);
+	{
+		BOOTLOADER_MAGIC_ADDRESS = BOOTLOADER_MAGIC_CODE;
+		NVIC_SystemReset();
+	}
 	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
 	#endif
 
@@ -306,9 +313,7 @@ int main(void)
 			flags[ShutdownAndBootload] = 0;
 			deinit_all();
 
-			//JumpTo(0x08000000);
-			//NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
-			*((uint32_t *)(0x2001FFF0)) = 0x2BE0D411;
+			BOOTLOADER_MAGIC_ADDRESS = BOOTLOADER_MAGIC_CODE;
 			NVIC_SystemReset();
 		}
 
