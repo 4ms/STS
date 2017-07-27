@@ -50,8 +50,11 @@ enum PlayLoadTriage{
 #define BASE_BUFFER_THRESHOLD (3072)
 //#define BASE_BUFFER_THRESHOLD (1536)
 
-#define READ_BLOCK_SIZE 8192
-//#define READ_BLOCK_SIZE 16384
+//READ_BLOCK_SIZE must be a multiple of all possible sample file block sizes
+//1(8m), 2(16m), 3(24m), 4(32m), 6(24s), 8(32s) ---> 24 is the lowest value
+//It also should be a multiple of 512, since the SD Card is arranged by 512 byte sectors 
+//9216 = 512 * 18 = 24 * 384
+#define READ_BLOCK_SIZE 9216
 
 
 #define MAX_RS 20 /* over 4 octaves at 44.1k */

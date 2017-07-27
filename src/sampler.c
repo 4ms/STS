@@ -1,34 +1,5 @@
 /*
  * sampler.c
-
-//Is reversing while PREBUFFERING working? Line 341
- */
-
-/* Improvements:
- *
- * Use structs:
- * -params (combine i_param + f_param)
- * -adc_value: uint16_t raw_val, uint16_t i_smoothed_val, float smoothed_val;
- *
- *
-ToDo: Allow (in system mode?) a selection of length param modes:
- 1) Playback time is fixed, as if an EG->VCA is applied to output and LENGTH controls the decay time
-			PITCH and REV do not change playback time
-
- 2) Fixed sound clip:
-	  (define points in sample file to not read past and set fully_buffered[]=1 when reaching those points)
-    2a) Stop point(s) are set by LENGTH: so it stops at a certain point (# of samples in file) ahead of the startpos and/or behind startpos (limited by the beginning/end of the sample file of course)
-    2b) Stop point #1 is set by LENGTH and Stop point #2 is the start point (identical to 2a if startpos is 0). So if you hit reverse while playing, it stops where you started, never goes before that.
-			PITCH and REV change the playback time
-
- 3) LENGTH sets total number of samples to play (total fwd and rev)
-	  (keep track of # addr of play_buff[]->out are read when resampling, whether fwd or rev)
- 			PITCH changes playback time, REV does not
-		So at a constant PITCH, we can get a constant playback time even if we're toggling REV to get different effects
-
- 4) ???
-			PITCH does not change playback time, REV does??
- *
  */
 
 
@@ -844,7 +815,7 @@ void read_storage_to_buffer(void)
 						// Write raw file data into buffer
 						//
 						if (s_sample->sampleByteSize == 2) //16bit
-							err = memory_write32_cb(play_buff[chan], tmp_buff_u32, rd>>2, 0); 
+							err = memory_write_16as16(play_buff[chan], tmp_buff_u32, rd>>2, 0); 
 
 						else
 						if (s_sample->sampleByteSize == 3) //24bit
