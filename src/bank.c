@@ -26,27 +26,6 @@ void copy_bank(Sample *dst, Sample *src)
 	p_src = (uint8_t *)(src);
 	for (i=0;i<(sizeof(Sample)*NUM_SAMPLES_PER_BANK);i++)
 		*p_dst++ = *p_src++;
-
-
-	// for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
-	// {
-	// 		str_cpy(dst[i].filename,  src[i].filename);
-	// 		dst[i].blockAlign 		= src[i].blockAlign;
-	// 		dst[i].numChannels 		= src[i].numChannels;
-	// 		dst[i].sampleByteSize 	= src[i].sampleByteSize;
-	// 		dst[i].sampleRate 		= src[i].sampleRate;
-	// 		dst[i].sampleSize 		= src[i].sampleSize;
-	// 		dst[i].startOfData 		= src[i].startOfData;
-	// 		dst[i].PCM 				= src[i].PCM;
-
-	// 		dst[i].inst_size 		= src[i].inst_size  ;//& 0xFFFFFFF8;
-	// 		dst[i].inst_start 		= src[i].inst_start  ;//& 0xFFFFFFF8;
-	// 		dst[i].inst_end 		= src[i].inst_end  ;//& 0xFFFFFFF8;
-
-	// 		dst[i].file_found 		= src[i].file_found  ;
-
-	// }
-
 }
 
 

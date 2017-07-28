@@ -166,6 +166,7 @@ void load_missing_files(void)
 								//Set the filename (full path)
 								str_cpy(samples[bank][samplenum].filename, fullpath);
 								samples[bank][samplenum].file_found = 1;
+								enable_bank(bank); 
 							}
 						}
 						f_close(&temp_file);
