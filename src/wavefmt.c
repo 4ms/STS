@@ -20,6 +20,7 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 			&&	(
 					(		fmt_chunk.audioFormat	== 0x0001	//PCM format and 16/24-bit
 					&& (	fmt_chunk.bitsPerSample	== 16 	
+						||	fmt_chunk.bitsPerSample	== 8 
 						||	fmt_chunk.bitsPerSample	== 24
 						||	fmt_chunk.bitsPerSample	== 32
 						)

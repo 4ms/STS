@@ -38,13 +38,12 @@
 #define REC_CHAN 2
 
 void memory_clear(uint8_t channel);
-uint32_t memory_read_32bword(uint32_t addr);
 
 uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samples, uint8_t decrement);
-
 uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement);
-uint32_t memory_write_16as16(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_samples, uint8_t decrement);
 
+uint32_t memory_write_8as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement);
+uint32_t memory_write_16as16(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_words, uint8_t decrement);
 uint32_t memory_write_24as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement);
 uint32_t memory_write_32ias16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement);
 uint32_t memory_write_32fas16(CircularBuffer* b, float *wr_buff, uint32_t num_floats, uint8_t decrement);

@@ -21,49 +21,12 @@ const uint32_t AUDIO_MEM_BASE[4] = {SDRAM_BASE, SDRAM_BASE + MEM_SIZE, SDRAM_BAS
 extern uint8_t SAMPLINGBYTES;
 
 
-
-
 void memory_clear(uint8_t channel)
 {
 	uint32_t i;
-
 	//Takes 700ms to clear the channel buffer in 32-bit chunks, roughly 83ns per write
 	for(i = AUDIO_MEM_BASE[channel]; i < (AUDIO_MEM_BASE[channel] + MEM_SIZE); i += 4)
 			*((uint32_t *)i) = 0x00000000;
-
-}
-
-//
-// Reads a 32-bit word
-//
-uint32_t memory_read_32bword(uint32_t addr)
-{
-	// Enforce valid addr range
-	if ((addr<SDRAM_BASE) || (addr > (SDRAM_BASE + SDRAM_SIZE)))
-		return 0;
-
-	//addr &= 0xFFFFFFFE;	 // align to even addresses
-
-	while(SDRAM_IS_BUSY){;}
-
-	return (*((uint32_t *)addr));
-}
-
-
-//
-// Reads a 32-bit word
-//
-uint32_t memory_read_24bword(uint32_t addr)
-{
-	// Enforce valid addr range
-	if ((addr<SDRAM_BASE) || (addr > (SDRAM_BASE + SDRAM_SIZE)))
-		return 0;
-
-	//addr &= 0xFFFFFFFE;	 // align to even addresses
-
-	while(SDRAM_IS_BUSY){;}
-
-	return (*((uint32_t *)addr));
 }
 
 
@@ -92,13 +55,43 @@ uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samp
 
 
 
+//Grab 16-bit ints and write them into play_buff as 16-bit ints
+//num_words should be the number of 32-bit words to read from wr_buff (bytes>>2)
+uint32_t memory_write_16as16(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_words, uint8_t decrement)
+{
+	uint32_t i;
+	uint8_t heads_crossed=0;
+	uint8_t start_polarity, end_polarity, start_wrap, end_wrap;
 
+	//b->in = (b->in & 0xFFFFFFFE);
 
-/*
-//
-// Reads from SDRAM memory starting at address addr[channel], for a length of num_samples words (16 or 32, depending on SAMPLINGBYTES)
-//
-*/
+	//better way of detecting head-crossing:
+	start_polarity = (b->in < b->out) ? 0 : 1;
+	start_wrap = b->wrapping;
+
+	for (i=0;i<num_words;i++)
+	{
+		*((uint32_t *)b->in) = wr_buff[i];
+
+		while(SDRAM_IS_BUSY){;}
+
+		CB_offset_in_address(b, 4, decrement);
+	}
+
+	end_polarity = (b->in < b->out) ? 0 : 1;
+	end_wrap = b->wrapping; //0 or 1
+
+	//start_polarity + end_polarity  is (0/2 if no change, 1 if change)
+	//start_wrap + end_wrap is (0/2 if no change, 1 if change)
+	//Thus the sum of all four is even unless just polarity or just wrap changes (but not both)
+
+	if ((end_wrap + start_wrap + start_polarity + end_polarity) & 0b01) //if (sum is odd)
+		return(1); //warning: in pointer and out pointer crossed
+	else
+		return(0); //pointers did not cross
+
+}
+
 
 //Grab 24-bit words and write them into play_buff as 16-bit values
 uint32_t memory_write_24as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement)
@@ -189,35 +182,28 @@ uint32_t memory_write_32fas16(CircularBuffer* b, float *wr_buff, uint32_t num_fl
 
 }
 
-
-//Grab 16-bit ints and write them into play_buff as 16-bit ints
-uint32_t memory_write_16as16(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_samples, uint8_t decrement)
+//Grab 8-bit ints from wr_buff and write them into play_buff as 16-bit ints
+uint32_t memory_write_8as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement)
 {
 	uint32_t i;
 	uint8_t heads_crossed=0;
 	uint8_t start_polarity, end_polarity, start_wrap, end_wrap;
 
-	//b->in = (b->in & 0xFFFFFFFE);
-
-	//better way of detecting head-crossing:
+	//setup to detect head-crossing:
 	start_polarity = (b->in < b->out) ? 0 : 1;
 	start_wrap = b->wrapping;
 
-	for (i=0;i<num_samples;i++)
+	for (i=0;i<num_bytes;i++)
 	{
-		*((uint32_t *)b->in) = wr_buff[i];
+		*((int16_t *)b->in) = ((int16_t)(wr_buff[i])-128)*256;
 
 		while(SDRAM_IS_BUSY){;}
 
-		CB_offset_in_address(b, 4, decrement);
+		CB_offset_in_address(b, 2, decrement);
 	}
 
 	end_polarity = (b->in < b->out) ? 0 : 1;
 	end_wrap = b->wrapping; //0 or 1
-
-	//start_polarity + end_polarity  is (0/2 if no change, 1 if change)
-	//start_wrap + end_wrap is (0/2 if no change, 1 if change)
-	//Thus the sum of all four is even unless just polarity or just wrap changes (but not both)
 
 	if ((end_wrap + start_wrap + start_polarity + end_polarity) & 0b01) //if (sum is odd)
 		return(1); //warning: in pointer and out pointer crossed
@@ -225,6 +211,7 @@ uint32_t memory_write_16as16(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_
 		return(0); //pointers did not cross
 
 }
+
 
 uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement)
 {

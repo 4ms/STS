@@ -815,12 +815,17 @@ void read_storage_to_buffer(void)
 						// Write raw file data into buffer
 						//
 						if (s_sample->sampleByteSize == 2) //16bit
-							err = memory_write_16as16(play_buff[chan], tmp_buff_u32, rd>>2, 0); 
+							err = memory_write_16as16(play_buff[chan], tmp_buff_u32, rd>>2, 0);
 
 						else
 						if (s_sample->sampleByteSize == 3) //24bit
 						{
 							err = memory_write_24as16(play_buff[chan], (uint8_t *)tmp_buff_u32, rd, 0); //rd must be a multiple of 3
+						} 
+						else
+						if (s_sample->sampleByteSize == 1) //8bit
+						{
+							err = memory_write_8as16(play_buff[chan], (uint8_t *)tmp_buff_u32, rd, 0);
 						} 
 						else
 						if (s_sample->sampleByteSize == 4 && s_sample->PCM == 3) //32-bit float
