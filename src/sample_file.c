@@ -197,6 +197,8 @@ void clear_sample_header(Sample *s_sample)
 	s_sample->startOfData = 0;
 	s_sample->PCM = 0;
 
+	s_sample->file_found = 0;
+
 	s_sample->inst_start = 0;
 	s_sample->inst_end = 0;
 	s_sample->inst_size = 0;

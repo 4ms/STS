@@ -54,7 +54,7 @@ void copy_bank(Sample *dst, Sample *src)
 // Copy bank+40 to bank+50, bank+40 to bank+40, etc...
 // The goal is to open up bank#=bank so we can place a new set of files in there
 // FixMe: This must be changed manually if MAX_NUM_BANKS changes
-uint8_t bump_down_banks(uint8_t bank)
+void bump_down_banks(uint8_t bank)
 {
 	uint8_t t_bank;
 

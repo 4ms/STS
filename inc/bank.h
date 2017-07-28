@@ -11,7 +11,7 @@
 #include "ff.h"
 #include "sample_file.h"
 
-uint8_t bump_down_banks(uint8_t bank);
+void bump_down_banks(uint8_t bank);
 
 void copy_bank(Sample *dst, Sample *src);
 
