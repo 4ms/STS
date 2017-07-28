@@ -624,7 +624,7 @@ void update_ButtonLEDs(void)
 						else
 							// When we're scanning unassigned samples:
 							// Flicker the bank base color rapidly if scanning unassigned samples in the folder
-						if (cur_assign_state==ASSIGN_UNUSED_IN_FOLDER)
+						if (cur_assign_state==ASSIGN_IN_FOLDER)
 							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10)+1, tri_13);
 
 							// Flicker dim red/white if we're scanning unsassigned samples outside of the sample's folder

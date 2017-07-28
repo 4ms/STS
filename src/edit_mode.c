@@ -210,7 +210,7 @@ FRESULT init_unassigned_scan(Sample *s_sample)
 			cur_assign_bank_path[0]='\0'; //filename contained no slash: use root dir
 
 		//Start with the current sample's folder
-		cur_assign_state = ASSIGN_UNUSED_IN_FOLDER;
+		cur_assign_state = ASSIGN_IN_FOLDER;
 	}
 	else
 	{
@@ -265,7 +265,7 @@ uint8_t next_unassigned_sample(void)
 
 		if (res==0xFF) //no more .wav files found
 		{
-			if (cur_assign_state==ASSIGN_UNUSED_IN_FOLDER)
+			if (cur_assign_state==ASSIGN_IN_FOLDER)
 			{
 				//We hit the end of the original sample's folder: 
 				//Go through the entire filesystem
@@ -366,10 +366,14 @@ uint8_t next_unassigned_sample(void)
 
 		is_file_already_assigned = 0;
 
-		bank=next_enabled_bank(MAX_NUM_BANKS);
-		if (find_filename_in_all_banks(bank, filepath) != 0xFF)
-			is_file_already_assigned = 1;
-		// }
+		//Skip this file if it's already assigned somewhere
+		//...except if we're looking in our folder, then we actually want to go through the whole folder, assigned or not
+		if (cur_assign_state!=ASSIGN_IN_FOLDER)
+		{
+			bank=next_enabled_bank(MAX_NUM_BANKS);
+			if (find_filename_in_all_banks(bank, filepath) != 0xFF)
+				is_file_already_assigned = 1;
+		}
 
 		if (!is_file_already_assigned)
 		{

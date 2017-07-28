@@ -12,7 +12,7 @@
 
 enum AssignmentStates{
 	ASSIGN_OFF,
-	ASSIGN_UNUSED_IN_FOLDER,
+	ASSIGN_IN_FOLDER,
 	ASSIGN_UNUSED_IN_ROOT,
 	ASSIGN_UNUSED_IN_FS,
 	ASSIGN_USED,
@@ -35,8 +35,6 @@ void init_assigned_scan(void);
 
 void copy_sample(uint8_t dst_bank, uint8_t dst_sample, uint8_t src_bank, uint8_t src_sample);
 
-// void set_sample_trim_start(Sample *s_sample, float coarse, float fine);
-// void set_sample_trim_size(Sample *s_sample, float coarse);
 void nudge_trim_start(Sample *s_sample, int32_t fine);
 void nudge_trim_size(Sample *s_sample, int32_t fine);
 void set_sample_gain(Sample *s_sample, float gain);
