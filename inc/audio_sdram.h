@@ -25,6 +25,12 @@
 
 //#define MEM_SIZE (SDRAM_SIZE>>2) /* 0x02000000 / 4 = 0x00800000 */
 #define MEM_SIZE 0x600000
+//#define MEM_SIZE 0xAAAAAA //this would be closest to a max buffer size, equal sizes for play and record
+//#define MEM_SIZE 0xAAAA98 //this would be the largest size that's a multiple of 24
+//#define MEM_SIZE 0xAAA000 //this would be the largest size that's a multiple of 24 and ends in 000 (8192 B unsued)
+//#define MEM_SIZE 0x900000 //this would be the largest size that's a multiple of 24 and ends in 00000. (5 MB unused)
+
+
 
 //Play buffer 1: 0xD0000000 - 0xD05FFFFF
 //Play buffer 2: 0xD0600000 - 0xD0BFFFFF

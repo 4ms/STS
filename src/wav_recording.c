@@ -34,6 +34,8 @@ extern Sample 					samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 extern SystemCalibrations 		*system_calibrations;
 
+// uint32_t WATCH_REC_BUFF;
+
 #define WRITE_BLOCK_SIZE 	8192
 
 // MAX_REC_SAMPLES = Maximum bytes of sample data
@@ -123,6 +125,10 @@ void record_audio_to_buffer(int16_t *src)
 	//
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
+		// WATCH_REC_BUFF = CB_distance(rec_buff, 0);
+		// if (WATCH_REC_BUFF < 8192)
+		// 	DEBUG3_ON;
+		
 		overrun = 0;
 
 		for (i=0; i<HT16_BUFF_LEN; i++)
