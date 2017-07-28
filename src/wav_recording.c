@@ -57,7 +57,7 @@ extern SystemCalibrations 		*system_calibrations;
 CircularBuffer srec_buff;
 CircularBuffer* rec_buff;
 
-//temporary SRAM buffer for storing received audio data until it can be written to SD-Card
+//temporary SRAM buffer for storing received audio data until it can be written to SDRAM
 int16_t 		rec_buff16[WRITE_BLOCK_SIZE>>1];
 
 enum RecStates	rec_state;
@@ -114,22 +114,20 @@ void record_audio_to_buffer(int16_t *src)
 {
 	uint32_t i;
 	uint32_t overrun;
-
-	//convenience vars:
-	//uint16_t topbyte, bottombyte;
 	int32_t dummy;
 
-	//
-	// Dump HT16_BUFF_LEN samples of the rx buffer from codec (src) into t_buff
-	// Then write t_buff to sdram at rec_buff
-	//
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
 		// WATCH_REC_BUFF = CB_distance(rec_buff, 0);
 		// if (WATCH_REC_BUFF < 8192)
 		// 	DEBUG3_ON;
-		
+
 		overrun = 0;
+
+		//
+		// Dump HT16_BUFF_LEN samples of the rx buffer from codec (src) into t_buff
+		// Then write t_buff to sdram at rec_buff
+		//
 
 		for (i=0; i<HT16_BUFF_LEN; i++)
 		{

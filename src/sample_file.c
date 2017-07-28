@@ -169,8 +169,8 @@ uint8_t load_sample_header(Sample *s_sample, FIL *sample_file)
 						else 	s_sample->PCM 		= fmt_chunk.audioFormat;
 
 						s_sample->file_found 		= 1;
-						s_sample->inst_end 			= s_sample->sampleSize ;//& 0xFFFFFFF8;
-						s_sample->inst_size 		= s_sample->sampleSize ;//& 0xFFFFFFF8;
+						s_sample->inst_end 			= s_sample->sampleSize;
+						s_sample->inst_size 		= s_sample->sampleSize;
 						s_sample->inst_start 		= 0;
 						s_sample->inst_gain 		= 1.0;
 
