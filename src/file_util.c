@@ -436,31 +436,41 @@ uint32_t intToStr(uint32_t x, char *str, uint32_t d)
 	uint32_t len;
 	char temp;
 
-    while (x)
+    if (x>0)
     {
-        str[i++] = (x%10) + '0';
-        x = x/10;
+      while (x)
+      {
+          str[i++] = (x%10) + '0';
+          x = x/10;
+      }
+
+      // If number of digits required is more, then
+      // add 0s at the beginning
+      while (i < d)
+          str[i++] = '0';
+
+      len=i;
+
+      x = i-1;
+      i = 0;
+      while (i<x)
+      {
+          temp = str[i];
+          str[i] = str[x];
+          str[x] = temp;
+          i++; x--;
+      }
+
+      str[len] = '\0';
+      return len;
     }
-
-    // If number of digits required is more, then
-    // add 0s at the beginning
-    while (i < d)
-        str[i++] = '0';
-
-    len=i;
-
-    x = i-1;
-    i = 0;
-    while (i<x)
-    {
-        temp = str[i];
-        str[i] = str[x];
-        str[x] = temp;
-        i++; x--;
+      
+    else  // if integer == 0;
+    { 
+      str[0]='0';
+      str[1]='\0';
+      return 1;
     }
-
-    str[len] = '\0';
-    return len;
 }
 
 // looks for 'find' string into 'str'
