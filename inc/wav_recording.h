@@ -7,6 +7,8 @@
 
 #ifndef INC_WAV_RECORDING_H_
 #define INC_WAV_RECORDING_H_
+#define	WAV_COMMENT 	"Recorded on a 4ms Stereo Triggered Sampler" // goes into wav info chunk and id3 tag
+#define	WAV_SOFTWARE 	"4ms Stereo Triggered Sampler firmware v"	 //	goes into wav info chunk and id3 tag
 
 #include <stm32f4xx.h>
 

@@ -279,39 +279,99 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t wav_data_bytes)
 
 // Writes comment and firmware in info Chunk + id3 tag
 // ToDo: This only works for firmware versions 0.0 to 9.9
+// firmware tag limited to 80 char
 FRESULT write_wav_info_chunk(FIL *wavfil){
 
-	char* 		fileinfo;
-	char  		fileinfo_tmp[600];
-	char  		version_tmp[2];
 	uint32_t 	written;
 	FRESULT 	res;
+	uint8_t		chunkttl_len = 4;
+	uint8_t 	strlencar = str_len("a");
+	uint8_t 	pad;
+	uint8_t 	num;
+	uint32_t 	num32;
+	// uint8_t		backtrack_amt;
+	// uint32_t 	headpos;
+	char		firmware[_MAX_LFN+1];
+	char 		temp_a[_MAX_LFN+1];
 
-	fileinfo = fileinfo_tmp;
+	// format firmware version string with version info
+	intToStr(0, temp_a, num);
+	str_cat(firmware, WAV_SOFTWARE, temp_a);
+	str_cat(firmware, firmware, ".");
+	intToStr(FW_MINOR_VERSION, temp_a, num);
+	str_cat(firmware, firmware, temp_a);
 
-	// WAV info chunk
-	// INFOICMT,[...]firmware v
-	// str_cat(fileinfo, "494E464F 49434D54 2C000000 5265636F 72646564 206F6E20 6120346D 73205374 6572656F 20547269 67676572 65642053 616D706C 65720000 49534654 40000000 346D7320 53746572 656F2054 72696767 65726564 2053616D 706C6572 20666972 6D776172 6520763", FW_MAJOR_VERSION);
-	intToStr(FW_MAJOR_VERSION, version_tmp, 1);
-	str_cat(fileinfo, "494E464F 49434D54 2C000000 5265636F 72646564 206F6E20 6120346D 73205374 6572656F 20547269 67676572 65642053 616D706C 65720000 49534654 40000000 346D7320 53746572 656F2054 72696767 65726564 2053616D 706C6572 20666972 6D776172 6520763", version_tmp);
-	str_cat(fileinfo, fileinfo, "2E3"); //'.'
-	intToStr(FW_MINOR_VERSION, version_tmp, 1);
-	str_cat(fileinfo, fileinfo, version_tmp);
+	struct Chunk{
+		// char   title[4];
+		uint32_t len;
+		uint32_t padlen;
+	};
 
-	// iD3 tag
-	// (libsndfile-1.0.24)id3[...]id3[...]firmware v
-	str_cat(fileinfo, fileinfo, "20286C69 62736E64 66696C65 2D312E30 2E323429 00006964 33208200 00004944 33030000 00000077 54585858 00000034 00000053 6F667477 61726500 346D7320 53746572 656F2054 72696767 65726564 2053616D 706C6572 20666972 6D776172 6520763");
-	intToStr(FW_MAJOR_VERSION, version_tmp, 1);
-	str_cat(fileinfo, fileinfo, version_tmp);
-	str_cat(fileinfo, fileinfo, "2E3"); //'.'
-	intToStr(FW_MINOR_VERSION, version_tmp, 1);
-	str_cat(fileinfo, fileinfo, version_tmp);
+	struct Chunk list_ck, comment_ck, firmware_ck;
 
-	//COMM[...]Sampler
-	str_cat(fileinfo, fileinfo, "434F4D4D 0000002F 00000000 00000052 65636F72 64656420 6F6E2061 20346D73 20537465 72656F20 54726967 67657265 64205361 6D706C65 7200");
+	// COMPUTE CHUNK LENGHTS
+	// comment
+	comment_ck.len = str_len(WAV_COMMENT);
+	if(comment_ck.len%4) comment_ck.padlen = 4 - (comment_ck.len%4);
+	
+	// firmware
+	firmware_ck.len = str_len(firmware);
+	if ((firmware_ck.len)%4) firmware_ck.padlen = 4 - (firmware_ck.len%4);
+	// backtrack_amt = str_len(WAV_SOFTWARE)%4; 
 
-	res = f_write(wavfil, fileinfo, sizeof(fileinfo), &written);
-	return(res);
+	// list
+	list_ck.len = comment_ck.len + comment_ck.padlen + firmware_ck.len + firmware_ck.padlen + 3*chunkttl_len + 2*chunkttl_len; // 3x: INFO ICMT ISFT  2x: lenght entry, after title
+
+	//WRITE DATA TO WAV FILE
+	res = f_write(wavfil, "LIST", chunkttl_len, &written);
+	if (res!=FR_OK) return(res);
+	if (written!=chunkttl_len) return(FR_INT_ERR);
+
+	res = f_write(wavfil, &list_ck.len, chunkttl_len, &written);
+	if (res!=FR_OK) return(res);
+	if (written!=chunkttl_len) return(FR_INT_ERR);
+
+	res = f_write(wavfil, "INFOICMT", chunkttl_len*2, &written);
+	if (res!=FR_OK) return(res);
+	if (written!=chunkttl_len*2) return(FR_INT_ERR);
+
+	num32 = comment_ck.len + comment_ck.padlen;
+	res = f_write(wavfil, &num32, sizeof(num32), &written);
+	if (res!=FR_OK) return(res);
+	if (written!=sizeof(num32)) return(FR_INT_ERR);
+
+	res = f_write(wavfil, WAV_COMMENT, comment_ck.len, &written);
+	if (res!=FR_OK) return(res);
+	if (written!=comment_ck.len) return(FR_INT_ERR);	
+
+	for (pad=0; pad < comment_ck.padlen; pad++) 
+	{
+		res = f_write(wavfil, 0, 1, &written);
+		if (res!=FR_OK) return(res);
+		if (written!=1) return(FR_INT_ERR);
+	}
+
+	res = f_write(wavfil, "ISFT", chunkttl_len, &written);
+	if (res!=FR_OK) return(res);
+	if (written!=chunkttl_len) return(FR_INT_ERR);
+
+	num32 = firmware_ck.len + firmware_ck.padlen;
+	res = f_write(wavfil, &num32, sizeof(num32), &written);
+	if (res!=FR_OK) return(res);
+	if (written!=sizeof(num32)) return(FR_INT_ERR);
+
+	res = f_write(wavfil,  &firmware, firmware_ck.len, &written);
+	if (res!=FR_OK) return(res);
+	if (written!=sizeof(WAV_SOFTWARE)) return(FR_INT_ERR);
+
+	for (pad=0; pad < firmware_ck.padlen; pad++) 
+	{
+		res = f_write(wavfil, 0, 1, &written);
+		if (res!=FR_OK) return(res);
+		if (written!=1) return(FR_INT_ERR);		
+	}
+
+	return(FR_OK);
 }
 
 void write_buffer_to_storage(void)
