@@ -305,20 +305,16 @@ FRESULT write_wav_info_chunk(FIL *wavfil){
 	uint32_t 	written;
 	FRESULT 	res;
 	uint8_t		chunkttl_len = 4;
-	uint8_t 	strlencar = str_len("a");
-	uint8_t 	pad;
-	uint8_t 	num;
 	uint32_t 	num32;
-	// uint8_t		backtrack_amt;
-	// uint32_t 	headpos;
 	char		firmware[_MAX_LFN+1];
 	char 		temp_a[_MAX_LFN+1];
+	uint8_t		pad_zeros[4]={0,0,0,0};
 
 	// format firmware version string with version info
-	intToStr(0, temp_a, num);
+	intToStr(FW_MAJOR_VERSION, temp_a, 1);
 	str_cat(firmware, WAV_SOFTWARE, temp_a);
 	str_cat(firmware, firmware, ".");
-	intToStr(FW_MINOR_VERSION, temp_a, num);
+	intToStr(FW_MINOR_VERSION, temp_a, 1);
 	str_cat(firmware, firmware, temp_a);
 
 	struct Chunk{
@@ -337,7 +333,6 @@ FRESULT write_wav_info_chunk(FIL *wavfil){
 	// firmware
 	firmware_ck.len = str_len(firmware);
 	if ((firmware_ck.len)%4) firmware_ck.padlen = 4 - (firmware_ck.len%4);
-	// backtrack_amt = str_len(WAV_SOFTWARE)%4; 
 
 	// list
 	list_ck.len = comment_ck.len + comment_ck.padlen + firmware_ck.len + firmware_ck.padlen + 3*chunkttl_len + 2*chunkttl_len; // 3x: INFO ICMT ISFT  2x: lenght entry, after title
@@ -364,12 +359,16 @@ FRESULT write_wav_info_chunk(FIL *wavfil){
 	if (res!=FR_OK) return(res);
 	if (written!=comment_ck.len) return(FR_INT_ERR);	
 
-	for (pad=0; pad < comment_ck.padlen; pad++) 
-	{
-		res = f_write(wavfil, 0, 1, &written);
-		if (res!=FR_OK) return(res);
-		if (written!=1) return(FR_INT_ERR);
-	}
+	// for (pad=0; pad < comment_ck.padlen; pad++) 
+	// {
+	// 	res = f_write(wavfil, 0, 1, &written);
+	// 	if (res!=FR_OK) return(res);
+	// 	if (written!=1) return(FR_INT_ERR);
+	// }
+
+	res = f_write(wavfil, &pad_zeros, comment_ck.padlen, &written);
+	if (res!=FR_OK) return(res);
+	if (written!=comment_ck.padlen) return(FR_INT_ERR);
 
 	res = f_write(wavfil, "ISFT", chunkttl_len, &written);
 	if (res!=FR_OK) return(res);
@@ -382,14 +381,18 @@ FRESULT write_wav_info_chunk(FIL *wavfil){
 
 	res = f_write(wavfil,  &firmware, firmware_ck.len, &written);
 	if (res!=FR_OK) return(res);
-	if (written!=sizeof(WAV_SOFTWARE)) return(FR_INT_ERR);
+	if (written!=firmware_ck.len) return(FR_INT_ERR);
 
-	for (pad=0; pad < firmware_ck.padlen; pad++) 
-	{
-		res = f_write(wavfil, 0, 1, &written);
-		if (res!=FR_OK) return(res);
-		if (written!=1) return(FR_INT_ERR);		
-	}
+	// for (pad=0; pad < firmware_ck.padlen; pad++) 
+	// {
+	// 	res = f_write(wavfil, 0, 1, &written);
+	// 	if (res!=FR_OK) return(res);
+	// 	if (written!=1) return(FR_INT_ERR);		
+	// }
+
+	res = f_write(wavfil, &pad_zeros, firmware_ck.padlen, &written);
+	if (res!=FR_OK) return(res);
+	if (written!=firmware_ck.padlen) return(FR_INT_ERR);
 
 	return(FR_OK);
 }
@@ -533,6 +536,7 @@ void write_buffer_to_storage(void)
 				// after data chunk (write_wav_size() puts us back there)
 				res = write_wav_info_chunk(&recfil);
 				
+				//ToDo: handle errors from writing info chunk
 				f_close(&recfil);
 
 
