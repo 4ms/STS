@@ -1,7 +1,10 @@
 #include <string.h>
 #include "globals.h"
 #include "file_util.h"
+#include "sts_filesystem.h"
 #include "ff.h"
+
+extern uint8_t  used_from_folder[MAX_FILES_IN_FOLDER];
 
 //Returns the next directory in the parent_dir
 //
@@ -82,16 +85,24 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
     return (0xFD); //should not reach here, error
 }
 
+// find_next_ext_in_dir_alpha()
+// - finds next file in folder alphabetically
+// - sets fname as the filename for that file
+// - Returns FRESULT representing whether a file was available or not, and the reason if not.
+// - files that are already assigned are kept track of in the global array used_from_folder[MAX_FILES_IN_FOLDER]
+// - used_from_folder needs to be initalized at every new search
+// - ToDo: this initialization could be perfomed internally by setting 4th ipnut variable to 0 or 1.
+//   ... 1 being clear used_from_folder array
 FRESULT find_next_ext_in_dir_alpha(DIR* dir, const char *ext, char *fname)
 {
     FRESULT res;
     FILINFO fno;
     uint32_t i;
 
-    uint8_t file;
     char    firstf_name[_MAX_LFN+1];
     uint32_t firstf_num=0xFFFF;
-    uint8_t used_files[255]={0};
+
+    uint32_t fnum=0;
 
     fname[0]      = 0;    // null string
     fno.fname[0]  = 'a';  // enables while loop
@@ -110,25 +121,27 @@ FRESULT find_next_ext_in_dir_alpha(DIR* dir, const char *ext, char *fname)
             && upper(fno.fname[i-3]) == upper(ext[1]) \
             && upper(fno.fname[i-2]) == upper(ext[2]) \
             && upper(fno.fname[i-1]) == upper(ext[3]) \
-          )
+           )
         {
-            file++;                                                              // update the file number for file found
-            if(!used_files[file] && str_cmp_alpha(firstf_name, fno.fname) > 0)   // if file found hasn't been used and it comes first alphabetically
+            fnum++;
+            if (used_from_folder[fnum]){continue;}
+            else
             {
-              firstf_num = file;
-              str_cpy(firstf_name, fno.fname);
+              if (str_len(fno.fname) > (_MAX_LFN - 2)) {used_from_folder[fnum]=1; continue;}    // if filename is too long: Mark as 'used' and look for next file
+              if((str_cmp_alpha(firstf_name, fno.fname) > 0))                                   // if found file hasn't been used and it comes first alphabetically
+              {
+                firstf_num=fnum;
+                str_cpy(firstf_name, fno.fname);
+              }
             }
-            //str_cpy(fname, fno.fname);
-            // return(FR_OK);
         }
     }
-    // if no more files available
-    if (firstf_num==0xFFFF) return(1); // FIXME: returned value should reflect that no more files available
     
-    str_cpy(fname, firstf_name);  // use first asphabetical name
-    used_files[firstf_num]=1;     // mark file as used
-
-    return (FR_OK); //should not reach here, error
+    if (firstf_num==0xFFFF) return(NO_MORE_AVAILABLE_FILES); // if no more files available: return accordingly    
+    
+    str_cpy(fname, firstf_name);                   // use first filename found alphabetically
+    used_from_folder[firstf_num]=1;                // mark file as found
+    return (FR_OK);                                // return accoridngly
 }
 
 
