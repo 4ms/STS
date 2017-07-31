@@ -50,7 +50,7 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 void create_waveheader(WaveHeader *w, WaveFmtChunk *f)
 {
 	w->RIFFId		= ccRIFF;
-	w->fileSize 	= sizeof(WaveHeader) + sizeof(WaveFmtChunk) - 8; //filesize - 8, for now we let this be the size of the wave header - 8
+	w->fileSize 	= sizeof(WaveHeaderAndChunk) - 8; //size of file, minus 8 for 'RIFFsize'
 	w->WAVEId 		= ccWAVE;
 
 	f->fmtId 		= ccFMT;

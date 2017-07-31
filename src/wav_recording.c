@@ -155,6 +155,7 @@ void record_audio_to_buffer(int16_t *src)
 			// 	bottombyte		= (uint16_t)(*src++);
 			// 	tmp_buff16[i*2] 	= (topbyte << 16) + (uint16_t)bottombyte;
 
+
 			// 	topbyte 		= (uint16_t)(*src++);
 			// 	bottombyte 		= (uint16_t)(*src++);
 			// 	tmp_buff16[i*2+1] = (topbyte << 16) + (uint16_t)bottombyte;
@@ -226,7 +227,7 @@ void create_new_recording(void)
 
 	//Try to create the tmp file and write to it, reloading the sd card if needed
 
-	res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
+	res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW | FA_READ);
 	if (res==FR_OK)
 		res = f_write(&recfil, &whac.wh, sz, &written);
 
@@ -257,7 +258,7 @@ void create_new_recording(void)
 
 }
 
-FRESULT write_wav_size(FIL *wavfil, uint32_t wav_data_bytes)
+FRESULT write_wav_chunk_size(FIL *wavfil, uint32_t file_position, uint32_t chunk_bytes)
 {
 	uint32_t data;
 	uint32_t orig_pos;
@@ -267,21 +268,9 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t wav_data_bytes)
 	//cache the original file position
 	orig_pos = f_tell(wavfil);
 
-	 //file size - 8
-	data = wav_data_bytes + sizeof(WaveHeader) + sizeof(WaveChunk) - 8;
-	res = f_lseek(wavfil, 4);
-	if (res==FR_OK)
-	{
-		res = f_write(wavfil, &data, 4, &written);
-		f_sync(wavfil);
-	}
-
-	if (res!=FR_OK) {		g_error |= FILE_WRITE_FAIL; check_errors(); }
-	if (written!=4)	{		g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
-
 	//data chunk size
-	data = wav_data_bytes;
-	res = f_lseek(wavfil, 40);
+	data = chunk_bytes;
+	res = f_lseek(wavfil, file_position);
 	if (res==FR_OK)
 	{
 		res = f_write(wavfil, &data, 4, &written);
@@ -294,13 +283,13 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t wav_data_bytes)
 	//restore the original file position
 	res = f_lseek(wavfil, orig_pos);
 	return(res);
-
 }
 
 // Writes comment and firmware in info Chunk + id3 tag
 // ToDo: This only works for firmware versions 0.0 to 9.9
 // firmware tag limited to 80 char
-FRESULT write_wav_info_chunk(FIL *wavfil){
+FRESULT write_wav_info_chunk(FIL *wavfil, uint32_t *total_written)
+{
 
 	uint32_t 	written;
 	FRESULT 	res;
@@ -337,62 +326,62 @@ FRESULT write_wav_info_chunk(FIL *wavfil){
 	// list
 	list_ck.len = comment_ck.len + comment_ck.padlen + firmware_ck.len + firmware_ck.padlen + 3*chunkttl_len + 2*chunkttl_len; // 3x: INFO ICMT ISFT  2x: lenght entry, after title
 
+	*total_written = 0;
+
 	//WRITE DATA TO WAV FILE
 	res = f_write(wavfil, "LIST", chunkttl_len, &written);
 	if (res!=FR_OK) return(res);
 	if (written!=chunkttl_len) return(FR_INT_ERR);
+	*total_written += written;
 
 	res = f_write(wavfil, &list_ck.len, chunkttl_len, &written);
 	if (res!=FR_OK) return(res);
 	if (written!=chunkttl_len) return(FR_INT_ERR);
+	*total_written += written;
 
 	res = f_write(wavfil, "INFOICMT", chunkttl_len*2, &written);
 	if (res!=FR_OK) return(res);
 	if (written!=chunkttl_len*2) return(FR_INT_ERR);
+	*total_written += written;
 
 	num32 = comment_ck.len + comment_ck.padlen;
 	res = f_write(wavfil, &num32, sizeof(num32), &written);
 	if (res!=FR_OK) return(res);
 	if (written!=sizeof(num32)) return(FR_INT_ERR);
+	*total_written += written;
 
 	res = f_write(wavfil, WAV_COMMENT, comment_ck.len, &written);
 	if (res!=FR_OK) return(res);
 	if (written!=comment_ck.len) return(FR_INT_ERR);	
-
-	// for (pad=0; pad < comment_ck.padlen; pad++) 
-	// {
-	// 	res = f_write(wavfil, 0, 1, &written);
-	// 	if (res!=FR_OK) return(res);
-	// 	if (written!=1) return(FR_INT_ERR);
-	// }
+	*total_written += written;
 
 	res = f_write(wavfil, &pad_zeros, comment_ck.padlen, &written);
 	if (res!=FR_OK) return(res);
 	if (written!=comment_ck.padlen) return(FR_INT_ERR);
+	*total_written += written;
 
 	res = f_write(wavfil, "ISFT", chunkttl_len, &written);
 	if (res!=FR_OK) return(res);
 	if (written!=chunkttl_len) return(FR_INT_ERR);
+	*total_written += written;
 
 	num32 = firmware_ck.len + firmware_ck.padlen;
 	res = f_write(wavfil, &num32, sizeof(num32), &written);
 	if (res!=FR_OK) return(res);
 	if (written!=sizeof(num32)) return(FR_INT_ERR);
+	*total_written += written;
 
 	res = f_write(wavfil,  &firmware, firmware_ck.len, &written);
 	if (res!=FR_OK) return(res);
 	if (written!=firmware_ck.len) return(FR_INT_ERR);
-
-	// for (pad=0; pad < firmware_ck.padlen; pad++) 
-	// {
-	// 	res = f_write(wavfil, 0, 1, &written);
-	// 	if (res!=FR_OK) return(res);
-	// 	if (written!=1) return(FR_INT_ERR);		
-	// }
+	*total_written += written;
 
 	res = f_write(wavfil, &pad_zeros, firmware_ck.padlen, &written);
 	if (res!=FR_OK) return(res);
 	if (written!=firmware_ck.padlen) return(FR_INT_ERR);
+	*total_written += written;
+
+	f_sync(wavfil);
 
 	return(FR_OK);
 }
@@ -468,7 +457,8 @@ void write_buffer_to_storage(void)
 						samplebytes_recorded += written;
 
 						//Update the wav file size in the wav header
-						res = write_wav_size(&recfil, samplebytes_recorded);
+						res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
+						res = write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
 
 						if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
 											g_error |= FILE_WRITE_FAIL; check_errors();
@@ -515,7 +505,9 @@ void write_buffer_to_storage(void)
 
 					samplebytes_recorded += written;
 					//Update the wav file size in the wav header
-					res = write_wav_size(&recfil, samplebytes_recorded);
+					res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
+					res |= write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
+
 					if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
 													g_error |= FILE_WRITE_FAIL; check_errors();
 													break;}
@@ -530,13 +522,24 @@ void write_buffer_to_storage(void)
 			else 
 			{
 				//Write the file size into the header, and close the file
-				res = write_wav_size(&recfil, samplebytes_recorded);
+				res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
+				if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
+												g_error |= FILE_WRITE_FAIL; check_errors();
+												break;}
 
 				// Write comment and Firmware chunks at bottom of wav file
 				// after data chunk (write_wav_size() puts us back there)
-				res = write_wav_info_chunk(&recfil);
-				
-				//ToDo: handle errors from writing info chunk
+				res = write_wav_info_chunk(&recfil, &written);
+				if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
+												g_error |= FILE_WRITE_FAIL; check_errors();
+												break;}
+
+				//Write new file size (sum of all chunks, minus 8)
+				res = write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + written + sizeof(WaveHeaderAndChunk) - 8);
+				if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
+												g_error |= FILE_WRITE_FAIL; check_errors();
+												break;}
+	
 				f_close(&recfil);
 
 
