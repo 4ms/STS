@@ -589,23 +589,24 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 						}
 
 						else if (load_data == PLAY_START)
-						{
-							if (num_buff > samples[cur_bank][cur_sample].sampleSize) {samples[cur_bank][cur_sample].inst_start= samples[cur_bank][cur_sample].sampleSize - 2;} // 2x samples min room after play start
-							else {samples[cur_bank][cur_sample].inst_start = num_buff;}
+						{	
+							// if start pos is invalid (greater than the sampleSize), set it to the default value of 0
+							if (num_buff > samples[cur_bank][cur_sample].sampleSize) 		samples[cur_bank][cur_sample].inst_start = 0;
+							else 															samples[cur_bank][cur_sample].inst_start = num_buff;
 							load_data++; token[0] = '\0';
 						}
 
 						else if (load_data == PLAY_SIZE)
-						{
-							if ( num_buff < (samples[cur_bank][cur_sample].inst_start+2) ) {samples[cur_bank][cur_sample].inst_size = samples[cur_bank][cur_sample].inst_start +2;} // 2x samples min play lenght
-							else if ( num_buff > samples[cur_bank][cur_sample].sampleSize){samples[cur_bank][cur_sample].inst_size = samples[cur_bank][cur_sample].sampleSize;}
-							else {samples[cur_bank][cur_sample].inst_size=num_buff;}
+						{	
+							//if play size is too short (<2ms @ 44kHz) or too long, set it to the default value of sampleSize
+							if ( (num_buff < 88) || (num_buff > samples[cur_bank][cur_sample].sampleSize))	samples[cur_bank][cur_sample].inst_size = samples[cur_bank][cur_sample].sampleSize;
+							else 																			samples[cur_bank][cur_sample].inst_size = num_buff;
 							load_data++; token[0] = '\0';
 						}
 
 						else if (load_data == PLAY_GAIN)
 						{
-							if(num_buff>100){num_buff = 100;}
+							if(num_buff<10 || num_buff>500){num_buff = 100;} //if gain is invalid (<10% or >500%)
 							samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f;
 							load_data=0; token[0] = '\0'; read_name = 1; break;
 						}
@@ -635,20 +636,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 					 ||  skip_cur_bank
 			    )
 			{
-			// should be the same as commented section below since
-			// && has precedence over ||
-			/*
-			if  (	!loaded_header &&
-					!(  (str_cmp(token,"--------------------") && !arm_bank)	||
-						(!str_cmp(token,"--------------------") &&  arm_bank)	||
-						(str_cmp(token,"--------------------") &&  arm_bank)	||
-						(str_cmp(token, "path:")) 
-					 )
-					 ||  skip_cur_bank
-			    )
-			{
-			*/
-
 				token[0]='\0';
 			}	
 		}
@@ -657,11 +644,6 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 	// close sample index file
 	f_close(&temp_file);
 
-	// //  rewrite sample index as needed
-	// if(rewrite_index)
-	// {
-	// 	// write_sampleindex_file();
-	// }
 
 	// Assign samples in SD card to (previously empty) sample index
 	return(force_reload);	// OK if at least a sample was loaded
