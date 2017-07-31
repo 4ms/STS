@@ -307,17 +307,17 @@ void Button_Debounce_IRQHandler(void)
 									}
 
 									else
-									//No combo, so just increment the Rec Bank color, but not blink
+									//No combo, so just increment the Rec Bank
 									{
-										bank_blink = get_bank_blink_digit(i_param[REC][BANK]);
-										bank_color = get_bank_color_digit(i_param[REC][BANK]);
-										bank_color++;
-										if (bank_color>=10) bank_color=0;
+										// bank_blink = get_bank_blink_digit(i_param[REC][BANK]);
+										// bank_color = get_bank_color_digit(i_param[REC][BANK]);
+										// bank_color++;
+										// if (bank_color>=10) bank_color=0;
 
-										i_param[REC][BANK] = bank_color + (bank_blink*10);
+										// i_param[REC][BANK] = bank_color + (bank_blink*10);
 
-										//range check, but should not be neccessary
-										if (i_param[REC][BANK] >= MAX_NUM_BANKS)	i_param[REC][BANK]=0;
+										if (i_param[REC][BANK]==(MAX_NUM_BANKS-1)) 	i_param[REC][BANK] = 0;
+										else 										i_param[REC][BANK]++; 
 									}
 
 									flags[RecBankChanged] = 1;
