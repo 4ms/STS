@@ -141,17 +141,77 @@ void load_missing_files(void)
 				{
 					while (!samples[bank][samplenum].file_found)
 					{
+						// TODO: USE BINARY AND BINARY MASKS TO SAVE UP SRAM WHEN KEEPING TRACK OF UNUSED FILES 01010001...
+
+									// FIND FILE IN FOLDER ALPHABETICALLY
+									// all_files_in_folder_used=0;
+									// file_in_folder=0;
+									// while(!all_files_in_folder_used)
+										// 	res = find next file in directory alphabetically
+
+										// 	if (res==0xFF)        // if no more files in folder, check if all files are used
+											// total=0;
+											// for (i = 0; i<file_in_folder; i++)
+											// 		if(used_from_folder[i])total++;
+											// if (total == file_in_folder) {all_files_in_folder_used=1;}
+
+										//	else if (str_len(filename) > (_MAX_LFN - path_len - 2)) 
+											// file_in_folder number++;
+											// used_from_folder[file_in_folder]=1;
+											// continue; //Skip if filename is too long, can't use it
+									
+										//	else
+											// 	file_in_folder number++;
+											// 	if(used_from_folder[file_in_folder] {move on to next file}
+											//	else
+													// assign file to sample slot;
+													// used_from_folder[file_in_folder]=1;
+													// move on to next file
+
+
+						// FIND IN TREE ALPHABETICALLY
+						// all_files_in_tree_used=0;
+						// file_in_folder=0;
+						// while(!all_files_in_tree_used)
+							// 	res = find next file in tree alphabetically
+
+							// 	if (res==0xFF)        // if no more files in folder, check if all files are used
+								// total=0;
+								// for (i = 0; i<file_in_tree; i++)
+								// 		if(used_from_tree[i])total++;
+								// if (total == file_in_tree) {all_files_in_folder_used=1;}
+
+							//	else if (str_len(filename) > (_MAX_LFN - path_len - 2)) 
+								// file_in_tree number++;
+								// used_from_tree[file_in_tree]=1;
+								// continue; //Skip if filename is too long, can't use it
+
+							//	else
+								// 	file_in_tree number++;
+								// 	if(used_from_tree[file_in_tree] {move on to next file}
+								//	else
+										// assign file to sample slot;
+										// used_from_tree[file_in_tree]=1;
+										// move on to next file
+
+
+
 						//Find first .wav file in directory
 						res = find_next_ext_in_dir(&testdir, ".wav", filename);
+
+
 						if (res!=FR_OK) break; 		//Stop if no more files found in directory
 						if (str_len(filename) > (_MAX_LFN - path_len - 2)) continue; //Skip if filename is too long, can't use it
 
 						//Append filename onto path
 						str_cat(fullpath, path, filename);
 
+
 						//Check if this file is being used in any bank
 						//Skip it if it's used (unused returns 0xFF)
-						if (find_filename_in_all_banks(0, fullpath) != 0xFF) continue; 
+						if (find_filename_in_all_banks(0, fullpath) != 0xFF) continue; // FixMe (H) this could be if (find_filename_in_all_banks(bank, fullpath) != 0xFF) - to save cpu
+
+						// ToDo (H): if there are still empty slots, go through unused files again and grab the ones that are not used in the current bank (v.s. all banks)
 
 						//Open the file
 						res = f_open(&temp_file, fullpath, FA_READ);
@@ -160,6 +220,12 @@ void load_missing_files(void)
 						{
 							//Load the sample header info into samples[][]
 							res = load_sample_header(&(samples[bank][samplenum]), &temp_file);
+
+
+
+							// add value of file_in_folder to used_from_folder array
+
+
 
 							if (res==FR_OK)
 							{
