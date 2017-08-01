@@ -15,11 +15,13 @@
 #include "rgb_leds.h"
 #include "res/LED_palette.h"
 #include "sampler.h"
+#include "buttons.h"
 
 extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 extern volatile uint32_t 	sys_tmr;
 extern uint8_t 				flags[NUM_FLAGS];
 extern enum PlayStates 		play_state[NUM_PLAY_CHAN];
+enum ButtonStates 			button_state[NUM_BUTTONS];
 
 
 
@@ -36,7 +38,7 @@ void exit_system_mode(uint8_t do_save)
 	if (do_save)
 	{
 		save_flash_params(5);
-//		save_user_settings(); //not needed for now, since we don't have anything in the user settings file that we change in system mode
+		flags[SaveSystemSettings] = 1;
 	}
 	global_mode[SYSTEM_MODE] = 0;
 }
@@ -47,8 +49,13 @@ void update_system_mode(void)
 {
 	static int32_t sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
 	static int32_t bootloader_buttons_down=0;
+	static uint8_t button_armed[NUM_BUTTONS];
+
 	static uint32_t last_sys_tmr=0;
+
+	static uint8_t  undo_rec_24bits;
 	uint32_t elapsed_time;
+
 
 	if (sys_tmr < last_sys_tmr) //then sys_tmr wrapped from 0xFFFFFFFF to 0x00000000
 		elapsed_time = (0xFFFFFFFF - last_sys_tmr) + sys_tmr;
@@ -57,11 +64,56 @@ void update_system_mode(void)
 	last_sys_tmr = sys_tmr;
 
 
-	if (sysmode_buttons_down != INITIAL_BUTTONS_DOWN)
+	if (sysmode_buttons_down == 0)
 	{
 		//
 		// Do system mode stuff here: check buttons/pots to set various parameters
 		//
+
+		//Rev1 : Toggle 24-bit mode
+		if (button_state[Rec] == DOWN \
+			&& button_state[Play1]==UP && button_state[Play2]==UP && button_state[Edit]==UP && button_state[RecBank]==UP && button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
+		{
+			button_armed[Rec] = 1;
+		}
+		else if (button_state[Rec] == UP && button_armed[Rec] == 1)
+		{
+			if (global_mode[REC_24BITS]) global_mode[REC_24BITS] = 0;
+			else						 global_mode[REC_24BITS] = 1; 
+
+			//Disable the button from doing anything until it's released
+			button_state[Rec] = UP;
+			button_armed[Rec] = 0;
+		}
+
+		//Edit+Play1 : Save and Exit
+		if (button_state[Edit] >= SHORT_PRESSED && button_state[Play1] >= SHORT_PRESSED \
+			&& button_state[Rec]==UP && button_state[Play2]==UP && button_state[RecBank]==UP && button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
+		{
+			//Save and Exit
+			exit_system_mode(1);
+
+			//Reset state for the next time we enter system mode
+			sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
+
+			 //indicate we're ready to pass over control of buttons once all buttons are released
+			flags[SkipProcessButtons] = 2;
+		}
+
+		//Edit+Rev2 : Revert and Exit
+		if (button_state[Edit] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED \
+			&& button_state[Play1]==UP && button_state[Play2]==UP && button_state[RecBank]==UP && button_state[Rec]==UP && button_state[Rev1]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
+		{
+			global_mode[REC_24BITS] = undo_rec_24bits;
+			//Exit without saving
+			//exit_system_mode(0);
+
+			//Reset state for the next time we enter system mode
+			//sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
+
+			 //indicate we're ready to pass over control of buttons once all buttons are released
+			//flags[SkipProcessButtons] = 2;
+		}
 	}
 
 
@@ -91,7 +143,15 @@ void update_system_mode(void)
 
 	if (SYSMODE_BUTTONS)
 	{
-		if (sysmode_buttons_down!=INITIAL_BUTTONS_DOWN)
+		//Set the undo state on our initial entry
+		if (sysmode_buttons_down==INITIAL_BUTTONS_DOWN)
+		{
+			undo_rec_24bits = global_mode[REC_24BITS];
+		}
+
+		//If buttons are found down after they've been released, we will exit
+		//Check if they're down long enough to save+exit, or if not then revert+exit
+		else
 		{
 			sysmode_buttons_down += elapsed_time;
 			//Hold buttons down for a while ==> save and exit
@@ -109,11 +169,14 @@ void update_system_mode(void)
 		}
 	} else
 	{
-		//Release buttons too early ===> cancel (exit without saving)
+		//Release buttons too early ===> revert+exit
 		if (sysmode_buttons_down > 10 && sysmode_buttons_down < (44100 * 3))
 		{
+			//Revert to undo state
+			global_mode[REC_24BITS] = undo_rec_24bits;
+
 			//Exit without saving
-			exit_system_mode(1);
+			exit_system_mode(0);
 
 			//Reset state for the next time we enter system mode
 			sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
@@ -122,7 +185,7 @@ void update_system_mode(void)
 			flags[SkipProcessButtons] = 2;
 		}
 		//buttons were detected up, exit the INITIAL_BUTTONS_DOWN state
-		else
+		else if (NO_BUTTONS)
 			sysmode_buttons_down = 0;
 	}
 
@@ -169,7 +232,10 @@ void update_system_mode_button_leds(void)
 		set_ButtonLED_byPalette(Play1ButtonLED, WHITE);
 		set_ButtonLED_byPalette(Play2ButtonLED, WHITE);
 		set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
-		set_ButtonLED_byPalette(RecButtonLED, ORANGE);
+
+		if (global_mode[REC_24BITS]) 	set_ButtonLED_byPalette(RecButtonLED, BLUE); //24bit recording
+		else							set_ButtonLED_byPalette(RecButtonLED, ORANGE); //16bit recording
+
 		set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);
 		set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE);
 		set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE);
@@ -210,11 +276,21 @@ FRESULT save_user_settings(void)
 
 		// Write the stereo mode setting
 		f_printf(&settings_file, "[STEREO MODE]\n");
+		f_printf(&settings_file, "# Choose \"stereo\" or \"mono\" (default)\n");
 
 		if (global_mode[STEREO_MODE])
 			f_printf(&settings_file, "stereo\n\n");
 		else
 			f_printf(&settings_file, "mono\n\n");
+
+		// Write the 24bit record mode setting
+		f_printf(&settings_file, "[RECORD SAMPLE BITS]\n");
+		f_printf(&settings_file, "# Choose 16 (default) or 24\n");
+
+		if (global_mode[REC_24BITS])
+			f_printf(&settings_file, "24\n\n");
+		else
+			f_printf(&settings_file, "16\n\n");
 
 		res = f_close(&settings_file);
 	}
@@ -222,13 +298,22 @@ FRESULT save_user_settings(void)
 	return (res);
 }
 
+enum Settings
+{
+	NoSetting,
+	StereoMode,
+	RecordSampleBits,
+
+	NUM_SETTINGS_ENUM
+};
+
 FRESULT read_user_settings(void)
 {
 	FRESULT 	res;
 	char		filepath[_MAX_LFN];
 	char 		read_buffer[255];
 	FIL			settings_file;
-	uint8_t		state;
+	uint8_t		cur_setting_found;
 
 
 	// Check sys_dir is ok
@@ -240,7 +325,7 @@ FRESULT read_user_settings(void)
 		res = f_open(&settings_file, filepath, FA_READ); 
 		if (res!=FR_OK) return(res);
 
-		state = 0;
+		cur_setting_found = NoSetting;
 		while (!f_eof(&settings_file))
 		{
 			// Read next line
@@ -260,19 +345,19 @@ FRESULT read_user_settings(void)
 			{
 				if (str_startswith_nocase(read_buffer, "[STEREO MODE]"))
 				{
-					state = 1; //stereo mode header detected
+					cur_setting_found = StereoMode; //stereo mode header detected
 					continue;
 				}
 
-				// if (str_cmp(read_buffer, "[ANOTHER SETTING]"))
-				// {
-				// 	state = 2; //_____ header detected
-				// 	continue;
-				// }
+				if (str_startswith_nocase(read_buffer, "[RECORD SAMPLE BITS]"))
+				{
+					cur_setting_found = RecordSampleBits; //24bit recording mode header detected
+					continue;
+				}
 			}
 
 			 //Look for stereo mode setting
-			if (state==1)
+			if (cur_setting_found==StereoMode)
 			{
 				if (str_startswith_nocase(read_buffer, "stereo"))
 					global_mode[STEREO_MODE] = 1;
@@ -281,23 +366,23 @@ FRESULT read_user_settings(void)
 				if (str_startswith_nocase(read_buffer, "mono"))
 					global_mode[STEREO_MODE] = 0;
 
-				state=0; //back to looking for headers
+				cur_setting_found = NoSetting; //back to looking for headers
 
 				//Note: if we don't specify a setting, we will just leave the global mode alone
 			}
 
 
-			// if (state==2)
-			// {
-			// 	if (str_startswith_nocase(read_buffer, "XXXX"))
-			// 		global_mode[ANOTHER_SETTING] = 1;
+			if (cur_setting_found==RecordSampleBits)
+			{
+				if (str_startswith_nocase(read_buffer, "24"))
+					global_mode[REC_24BITS] = 1;
 
-			// 	else
-			// 	if (str_startswith_nocase(read_buffer, "YYYY"))
-			// 		global_mode[ANOTHER_SETTING] = 0;
+				else
+				//if (str_startswith_nocase(read_buffer, "16"))
+					global_mode[REC_24BITS] = 0;
 
-			// 	state=0; //back to looking for headers
-			// }
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
 		}
 
 		res = f_close(&settings_file);
