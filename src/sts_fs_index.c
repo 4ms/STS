@@ -438,17 +438,17 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 				
 				// Bank number
 				else if	(!str_cmp(token,"--------------------") &&  arm_bank) 
+				{
+					cur_bank=color_to_bank(token); 		
+					
+					// request bank to be skipped if it is not to be loaded
+					if (banks != MAX_NUM_BANKS)
 					{
-						cur_bank=color_to_bank(token); 		
-						
-						// request bank to be skipped if it is not to be loaded
-						if (banks != MAX_NUM_BANKS)
-						{
-							if (banks !=  cur_bank) skip_cur_bank = 1;
-						}
-
-						str_tok(read_buffer,' ', token);
+						if (banks !=  cur_bank) skip_cur_bank = 1;
 					}
+
+					str_tok(read_buffer,' ', token);
+				}
 
 				else if ( str_cmp(token,"--------------------") &&  arm_bank) {arm_bank=0; str_tok(read_buffer,' ', token);}
 

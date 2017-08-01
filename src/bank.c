@@ -210,7 +210,6 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		return bank_to_color_string(bank, color);
 }
 
-//FixMe: have this return an error flag, or perhaps MAX_NUM_BANKS, because we could conceivably have >200 banks someday
 uint8_t color_to_bank(char *color)
 {
 	uint8_t i;
@@ -229,7 +228,7 @@ uint8_t color_to_bank(char *color)
 			return(i);
 		}
 	}		
-	return(200);
+	return(MAX_NUM_BANKS);
 }
 
 uint8_t next_bank(uint8_t bank)

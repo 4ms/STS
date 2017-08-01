@@ -127,7 +127,7 @@ void load_missing_files(void)
 					path[0]='\0'; //root dir
 					str_cpy(filename, samples[bank][samplenum].filename);
 				}
-
+ 
 				path_len = str_len(path);
 
 				//Create a copy of path that doesn't end in a slash
@@ -182,6 +182,15 @@ void load_missing_files(void)
 				//If no files are found, try searching anywhere for the filename
 				if (!samples[bank][samplenum].file_found)
 				{
+					//split up filename
+					if (str_split(samples[bank][samplenum].filename, '/', path, filename) == 0)
+					{
+						//no slashes exist in filename, so look in the root dir
+						path[0]='\0'; //root dir
+						str_cpy(filename, samples[bank][samplenum].filename);
+					}
+
+
 					if (fopen_checked(&temp_file, path, filename) == 2) //can't find file anywhere on disk
 					{
 						samples[bank][samplenum].filename[0]='\0'; //blank out filename
@@ -265,37 +274,61 @@ void load_new_folders(void)
 	uint8_t bank;
 	uint8_t bank_loaded=0;
 	uint8_t l; 
+	uint8_t checked_root=0;
+	uint8_t do_check_dir;
 
 	//reset dir
 	root_dir.obj.fs = 0;
 
 	while (1)
 	{
-		res = get_next_dir(&root_dir, "", foldername);
+		if (!checked_root)
+		{
+			//Set test_dir to the root dir first,
+			//After we've checked the root dir, we set test_dir to each dir inside the root_dir
+			foldername[0] = '\0'; //root
+			checked_root = 1;
 
-		//exit if no more dirs found
-		if (res != FR_OK) {f_closedir(&root_dir); break;}
+			//Check if root dir contains any .wav files
+			res = f_opendir(&test_dir, foldername);
+			if (res!=FR_OK) continue;
+			if (find_next_ext_in_dir(&test_dir, ".wav", default_bankname) != FR_OK) continue;
 
-		//Check if folder contains any .wav files
-		res = f_opendir(&test_dir, foldername);
-		if (res!=FR_OK) continue;
-		if (find_next_ext_in_dir(&test_dir, ".wav", default_bankname) != FR_OK) continue;
+			l = 0;
+			do_check_dir = 1;
+		}
+		else 
+		{
+			//Get the name of the next folder inside the root dir
+			res = get_next_dir(&root_dir, "", foldername);
 
-		//add a slash to folder_path if it doesn't have one
-		l = str_len(foldername);
-		if (foldername[l-1] !='/'){
-			foldername[l] = '/';
-			foldername[l+1] = '\0';
+			//exit if no more dirs found
+			if (res != FR_OK) {f_closedir(&root_dir); break;}
+
+			//Check if foldername contains any .wav files
+			res = f_opendir(&test_dir, foldername);
+			if (res!=FR_OK) continue;
+			if (find_next_ext_in_dir(&test_dir, ".wav", default_bankname) != FR_OK) continue;
+
+			//add a slash to folder_path if it doesn't have one
+			l = str_len(foldername);
+			if (foldername[l-1] !='/'){
+				foldername[l] = '/';
+				foldername[l+1] = '\0';
+			}
+
+			do_check_dir = !dir_contains_assigned_samples(foldername);
 		}
 
 		//Check if the dir is already being used
-		if (dir_contains_assigned_samples(foldername)==0)
+		if (do_check_dir)
 		{
 			//Found a directory that doesn't contain assigned samples!!
 
 			//Strip the slash
-			foldername[l]='\0';
-
+			if (l>0)	foldername[l]='\0';
+			else		str_cpy(foldername, "/");
+			
 			//Try to load it as a bank before we go any farther, to make sure we're dealing with a potential bank
 			//Not a folder with all unusable files
 			if (load_bank_from_disk(test_bank, foldername))
@@ -654,6 +687,10 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 	//Copy bankpath into path so we can work with it
 	if (bankpath[0] != '\0')	str_cpy(path, bankpath);
 	else						return 0;
+
+	//Change root dir '/' to null string
+	if (str_cmp(path, "/"))
+		path[0] = '\0';
 
 	res = f_opendir(&dir, path);
 	if (res!=FR_OK) return 0;
