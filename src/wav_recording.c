@@ -113,6 +113,7 @@ void record_audio_to_buffer(int16_t *src)
 	uint32_t i;
 	uint32_t overrun;
 	int32_t dummy;
+	uint32_t topword, bottomword;
 
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
@@ -132,12 +133,8 @@ void record_audio_to_buffer(int16_t *src)
 			//
 			// Split incoming stereo audio into the two channels
 			//
-			if (SAMPLINGBYTES==2)
+			if (!global_mode[REC_24BITS])
 			{
-				//The following block is essentially the same as:
-				// overrun = memory_write16_cb(rec_buff, src, HT16_BUFF_LEN, 0);
-				// but manually skipping every other *src so as to convert the codec's 24-bit into 16-bits
-				// This also allows us to add codec_adc_calibration_dcoffset[]
 
 				*((int16_t *)rec_buff->in) = *src++; // + system_calibrations->codec_adc_calibration_dcoffset[i&1];
 				dummy=*src++; //ignore bottom bits
@@ -149,18 +146,21 @@ void record_audio_to_buffer(int16_t *src)
 				if ((rec_buff->in == rec_buff->out)/* && i<(HT16_BUFF_LEN-1)*/) //don't consider the heads being crossed if they end at the same place
 					overrun = rec_buff->out;
 			}
-			// else
-			// {
-			// 	topbyte 		= (uint16_t)(*src++);
-			// 	bottombyte		= (uint16_t)(*src++);
-			// 	tmp_buff16[i*2] 	= (topbyte << 16) + (uint16_t)bottombyte;
+			else
+			{
+				topword 		= (uint32_t)(*src++); // + system_calibrations->codec_adc_calibration_dcoffset[i&1];
+				bottomword		= (uint32_t)(*src++);
+				
+				*((uint32_t *)rec_buff->in) = (topword << 16) + bottomword;
 
+				while(SDRAM_IS_BUSY){;}
 
-			// 	topbyte 		= (uint16_t)(*src++);
-			// 	bottombyte 		= (uint16_t)(*src++);
-			// 	tmp_buff16[i*2+1] = (topbyte << 16) + (uint16_t)bottombyte;
+				CB_offset_in_address(rec_buff, 4, 0);
 
-			// }
+				if ((rec_buff->in == rec_buff->out)/* && i<(HT16_BUFF_LEN-1)*/) //don't consider the heads being crossed if they end at the same place
+					overrun = rec_buff->out;
+
+			}
 
 		}
 
