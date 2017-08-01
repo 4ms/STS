@@ -100,19 +100,11 @@ void update_system_mode(void)
 			flags[SkipProcessButtons] = 2;
 		}
 
-		//Edit+Rev2 : Revert and Exit
+		//Edit+Rev2 : Revert
 		if (button_state[Edit] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED \
 			&& button_state[Play1]==UP && button_state[Play2]==UP && button_state[RecBank]==UP && button_state[Rec]==UP && button_state[Rev1]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
 		{
 			global_mode[REC_24BITS] = undo_rec_24bits;
-			//Exit without saving
-			//exit_system_mode(0);
-
-			//Reset state for the next time we enter system mode
-			//sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
-
-			 //indicate we're ready to pass over control of buttons once all buttons are released
-			//flags[SkipProcessButtons] = 2;
 		}
 	}
 
