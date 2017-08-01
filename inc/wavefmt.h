@@ -52,7 +52,7 @@ typedef struct WaveHeaderAndChunk {
 uint8_t is_valid_wav_header(WaveHeader sample_header);
 uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk);
 
-void create_waveheader(WaveHeader *w, WaveFmtChunk *f);
+void create_waveheader(WaveHeader *w, WaveFmtChunk *f, uint8_t bitsPerSample, uint8_t numChannels);
 void create_chunk(uint32_t chunkId, uint32_t chunkSize, WaveChunk *wc);
 
 #endif /* INC_WAVEFMT_H_ */

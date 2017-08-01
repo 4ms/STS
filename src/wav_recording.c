@@ -34,9 +34,9 @@ extern Sample 					samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 extern SystemCalibrations 		*system_calibrations;
 
-// uint32_t WATCH_REC_BUFF;
+uint32_t WATCH_REC_BUFF;
 
-#define WRITE_BLOCK_SIZE 	8192
+#define WRITE_BLOCK_SIZE 	9216
 
 // MAX_REC_SAMPLES = Maximum bytes of sample data
 // WAV file specification limits sample data to 4GB = 0xFFFFFFFF Bytes
@@ -64,6 +64,7 @@ enum RecStates	rec_state;
 uint32_t		samplebytes_recorded;
 uint8_t			sample_num_now_recording;
 uint8_t			sample_bank_now_recording;
+uint8_t			sample_bytesize_now_recording;
 char 			sample_fname_now_recording[_MAX_LFN];
 
 uint8_t 		recording_enabled;
@@ -113,12 +114,14 @@ void record_audio_to_buffer(int16_t *src)
 	uint32_t i;
 	uint32_t overrun;
 	int32_t dummy;
+	uint16_t topword, bottomword;
+	uint8_t  bottombyte;
 
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
-		// WATCH_REC_BUFF = CB_distance(rec_buff, 0);
-		// if (WATCH_REC_BUFF < 8192)
-		// 	DEBUG3_ON;
+		WATCH_REC_BUFF = CB_distance(rec_buff, 0);
+		if (WATCH_REC_BUFF < 9216) 
+			DEBUG3_ON;
 
 		overrun = 0;
 
@@ -132,12 +135,8 @@ void record_audio_to_buffer(int16_t *src)
 			//
 			// Split incoming stereo audio into the two channels
 			//
-			if (SAMPLINGBYTES==2)
+			if (!global_mode[REC_24BITS])
 			{
-				//The following block is essentially the same as:
-				// overrun = memory_write16_cb(rec_buff, src, HT16_BUFF_LEN, 0);
-				// but manually skipping every other *src so as to convert the codec's 24-bit into 16-bits
-				// This also allows us to add codec_adc_calibration_dcoffset[]
 
 				*((int16_t *)rec_buff->in) = *src++; // + system_calibrations->codec_adc_calibration_dcoffset[i&1];
 				dummy=*src++; //ignore bottom bits
@@ -149,19 +148,25 @@ void record_audio_to_buffer(int16_t *src)
 				if ((rec_buff->in == rec_buff->out)/* && i<(HT16_BUFF_LEN-1)*/) //don't consider the heads being crossed if they end at the same place
 					overrun = rec_buff->out;
 			}
-			// else
-			// {
-			// 	topbyte 		= (uint16_t)(*src++);
-			// 	bottombyte		= (uint16_t)(*src++);
-			// 	tmp_buff16[i*2] 	= (topbyte << 16) + (uint16_t)bottombyte;
+			else
+			{
+				topword 		= (uint16_t)(*src++); // + system_calibrations->codec_adc_calibration_dcoffset[i&1];
+				bottomword		= (uint16_t)(*src++);
+
+				bottombyte 		= bottomword >> 8;
+				
+				*((uint8_t *)rec_buff->in) = bottombyte;
+				CB_offset_in_address(rec_buff, 1, 0);
+				while(SDRAM_IS_BUSY){;}
+
+				*((uint16_t *)rec_buff->in) = topword;
+				CB_offset_in_address(rec_buff, 2, 0);
+				while(SDRAM_IS_BUSY){;}
 
 
-			// 	topbyte 		= (uint16_t)(*src++);
-			// 	bottombyte 		= (uint16_t)(*src++);
-			// 	tmp_buff16[i*2+1] = (topbyte << 16) + (uint16_t)bottombyte;
-
-			// }
-
+				if ((rec_buff->in == rec_buff->out)/* && i<(HT16_BUFF_LEN-1)*/) //don't consider the heads being crossed if they end at the same place
+					overrun = rec_buff->out;
+			}
 		}
 
 		if (overrun)
@@ -175,7 +180,7 @@ void record_audio_to_buffer(int16_t *src)
 
 
 // creates file and writes headerchunk to it
-void create_new_recording(void)
+void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 {
 	uint32_t sz;
 	FRESULT res;
@@ -220,7 +225,7 @@ void create_new_recording(void)
 	sample_fname_now_recording[sz++] = 0;
 
 
-	create_waveheader(&whac.wh, &whac.fc);
+	create_waveheader(&whac.wh, &whac.fc, bitsPerSample, numChannels);
 	create_chunk(ccDATA, 0, &whac.wc);
 
 	sz = sizeof(WaveHeaderAndChunk);
@@ -392,7 +397,6 @@ void write_buffer_to_storage(void)
 	uint32_t addr_exceeded;
 	uint32_t written;
 
-
 	FRESULT res;
 	char final_filepath[_MAX_LFN];
 
@@ -427,8 +431,11 @@ void write_buffer_to_storage(void)
 			sample_num_now_recording = i_param[REC_CHAN][SAMPLE];
 			sample_bank_now_recording = i_param[REC_CHAN][BANK];
 
-			//flags[CreateTmpRecFile] = 1;
-			create_new_recording();
+			if (global_mode[REC_24BITS])	sample_bytesize_now_recording = 3;
+			else							sample_bytesize_now_recording = 2;
+
+			create_new_recording(8*sample_bytesize_now_recording, 2);
+
 			break;
 
 		case (RECORDING):
@@ -437,10 +444,12 @@ void write_buffer_to_storage(void)
 			{
 				buffer_lead = CB_distance(rec_buff, 0);
 
-				if (buffer_lead > WRITE_BLOCK_SIZE) //FixMe: comparing # samples to # bytes. Should be buffer_lead*SAMPLINGBYTES
+				if (buffer_lead > WRITE_BLOCK_SIZE)
 				{
-
-					addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, WRITE_BLOCK_SIZE>>1, 0);
+					if (sample_bytesize_now_recording==3)
+						addr_exceeded = memory_read24_cb(rec_buff, (uint8_t *)rec_buff16, WRITE_BLOCK_SIZE/3, 0);
+					else
+						addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, WRITE_BLOCK_SIZE>>1, 0);
 
 					if (!addr_exceeded)
 					{
@@ -490,7 +499,11 @@ void write_buffer_to_storage(void)
 				//Write out remaining data in buffer, one WRITE_BLOCK_SIZE at a time
 				if (buffer_lead > WRITE_BLOCK_SIZE) buffer_lead = WRITE_BLOCK_SIZE;
 
-				addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, buffer_lead>>1, 0);
+				if (sample_bytesize_now_recording==3)
+					addr_exceeded = memory_read24_cb(rec_buff, (uint8_t *)rec_buff16, buffer_lead/3, 0);
+				else
+					addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, buffer_lead>>1, 0);
+
 
 				if (!addr_exceeded)
 				{
@@ -557,20 +570,19 @@ void write_buffer_to_storage(void)
 						str_cpy(sample_fname_now_recording, final_filepath);
 				}
 
-
 				str_cpy(samples[sample_bank_now_recording][sample_num_now_recording].filename, sample_fname_now_recording);
 				samples[sample_bank_now_recording][sample_num_now_recording].sampleSize = samplebytes_recorded;
-				samples[sample_bank_now_recording][sample_num_now_recording].sampleByteSize = 2;
+				samples[sample_bank_now_recording][sample_num_now_recording].sampleByteSize = sample_bytesize_now_recording;
 				samples[sample_bank_now_recording][sample_num_now_recording].sampleRate = 44100;
 				samples[sample_bank_now_recording][sample_num_now_recording].numChannels = 2;
-				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign = 4;
+				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign = 2*sample_bytesize_now_recording;
 				samples[sample_bank_now_recording][sample_num_now_recording].startOfData = 44;
 				samples[sample_bank_now_recording][sample_num_now_recording].PCM = 1;
 				samples[sample_bank_now_recording][sample_num_now_recording].file_found = 1;
 
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_start = 0;
-				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded & 0xFFFFFFF8;
-				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded & 0xFFFFFFF8;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded;
 				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
 
 				enable_bank(sample_bank_now_recording);

@@ -180,6 +180,7 @@ void init_modes(void)
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
+	global_mode[REC_24BITS] = 0;
 }
 
 

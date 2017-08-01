@@ -46,6 +46,8 @@
 void memory_clear(uint8_t channel);
 
 uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samples, uint8_t decrement);
+uint32_t memory_read24_cb(CircularBuffer* b, uint8_t *rd_buff, uint32_t num_samples, uint8_t decrement);
+
 uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_samples, uint8_t decrement);
 
 uint32_t memory_write_8as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement);
