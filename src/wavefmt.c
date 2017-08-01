@@ -47,8 +47,14 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 		return (0);
 }
 
-void create_waveheader(WaveHeader *w, WaveFmtChunk *f)
+void create_waveheader(WaveHeader *w, WaveFmtChunk *f, uint8_t bitsPerSample, uint8_t numChannels)
 {
+	if (bitsPerSample != 8 && bitsPerSample != 16 && bitsPerSample != 24 && bitsPerSample != 32)
+		bitsPerSample = 16;
+
+	if (numChannels != 1 && numChannels != 2)
+		numChannels = 2;
+
 	w->RIFFId		= ccRIFF;
 	w->fileSize 	= sizeof(WaveHeaderAndChunk) - 8; //size of file, minus 8 for 'RIFFsize'
 	w->WAVEId 		= ccWAVE;
@@ -56,11 +62,11 @@ void create_waveheader(WaveHeader *w, WaveFmtChunk *f)
 	f->fmtId 		= ccFMT;
 	f->fmtSize		= 16;
 	f->audioFormat	= 1;
-	f->numChannels	= 2;
+	f->numChannels	= numChannels;
 	f->sampleRate	= 44100;
-	f->byteRate		= (44100 * 2 * 2); //sampleRate * blockAlign
-	f->blockAlign	= 4; //numChannels * bitsPerSample/8
-	f->bitsPerSample= 16;
+	f->byteRate		= (44100 * numChannels * (bitsPerSample/8)); //sampleRate * blockAlign
+	f->blockAlign	= numChannels * (bitsPerSample/8);
+	f->bitsPerSample= bitsPerSample;
 }
 
 void create_chunk(uint32_t chunkId, uint32_t chunkSize, WaveChunk *wc)

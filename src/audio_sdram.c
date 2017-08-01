@@ -30,6 +30,7 @@ void memory_clear(uint8_t channel)
 }
 
 
+
 uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samples, uint8_t decrement)
 {
 	uint32_t i;
@@ -53,6 +54,27 @@ uint32_t memory_read16_cb(CircularBuffer* b, int16_t *rd_buff, uint32_t num_samp
 	return (num_filled);
 }
 
+uint32_t memory_read24_cb(CircularBuffer* b, uint8_t *rd_buff, uint32_t num_samples, uint8_t decrement)
+{
+	uint32_t i;
+	uint32_t num_filled=0;
+	uint32_t num_bytes=num_samples*3;
+
+	for (i=0;i<num_bytes;i++)
+	{
+		// if (b->out==b->in)			num_filled=1;
+		// else if (num_filled)		num_filled++;
+
+		while(SDRAM_IS_BUSY){;}
+
+		// if (num_filled)				rd_buff[i] = 0;
+		// else						
+									rd_buff[i] = *((uint8_t *)(b->out));
+
+		CB_offset_out_address(b, 1, decrement);
+	}
+	return (num_filled);
+}
 
 
 //Grab 16-bit ints and write them into play_buff as 16-bit ints

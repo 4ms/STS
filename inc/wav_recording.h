@@ -26,7 +26,7 @@ void toggle_recording(void);
 void record_audio_to_buffer(int16_t *src);
 void write_buffer_to_storage(void);
 void init_rec_buff(void);
-void create_new_recording(void);
+void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels);
 FRESULT write_wav_chunk_size(FIL *wavfil, uint32_t file_position, uint32_t chunk_bytes);
 FRESULT write_wav_info_chunk(FIL *wavfil, uint32_t *total_written);
 
