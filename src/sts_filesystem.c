@@ -113,7 +113,7 @@ void load_missing_files(void)
 	FIL		temp_file;
 	FRESULT	res;
 	uint8_t	path_len;
-	uint8_t i;
+	uint16_t i;
 
 
 	for (bank=0;bank<MAX_NUM_BANKS;bank++)
@@ -665,7 +665,8 @@ uint8_t load_banks_with_noncolors(void)
 //Tries to open the folder bankpath and load 10 files into samples[][]
 //into the specified bank
 //
-//TODO: Sort the folder contents alphanbetically
+//If given a null string for bankpath, will return 0 immediately
+//To open the root dir, pass "/" for bankpath
 //
 //Returns number of samples loaded (0 if folder not found, and sample[bank][] will be cleared)
 //
@@ -683,16 +684,17 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 	char filename[256];
 
 
-	for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
-		clear_sample_header(&(sample_bank[i]));
+	for (i=0;i<NUM_SAMPLES_PER_BANK;i++)	clear_sample_header(&(sample_bank[i]));
+
+	//Return immediately if passed a null string
+	if (bankpath[0] == '\0')		return 0;
 
 	//Change root dir '/' to null string
-	if (str_cmp(bankpath, "/"))
-		bankpath[0] = '\0';
+	if (str_cmp(bankpath, "/"))		bankpath[0] = '\0';
 
 	//Copy bankpath into path so we can work with it
-	if (bankpath[0] != '\0')	str_cpy(path, bankpath);
-	else						return 0;
+	str_cpy(path, bankpath);
+
 
 	//Append '/' to path
 	path_len = str_len(path);
