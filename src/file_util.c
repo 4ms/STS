@@ -1,7 +1,10 @@
 #include <string.h>
 #include "globals.h"
 #include "file_util.h"
+#include "sts_filesystem.h"
 #include "ff.h"
+
+extern uint8_t  used_from_folder[MAX_FILES_IN_FOLDER];
 
 //Returns the next directory in the parent_dir
 //
@@ -80,6 +83,74 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
     }
 
     return (0xFD); //should not reach here, error
+}
+
+// find_next_ext_in_dir_alpha()
+// - finds next file in 'path' alphabetically
+// - sets fname as the filename for that file
+// - Returns FRESULT representing whether a file was available or not, and the reason if not.
+// - files that are already assigned are kept track of in the global array used_from_folder[MAX_FILES_IN_FOLDER]
+// - used_from_folder needs to be initalized at every new search
+// - ToDo: this initialization could be perfomed internally by setting 4th ipnut variable to 0 or 1.
+//   ... 1 being clear used_from_folder array
+FRESULT find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname)
+{
+    FRESULT res;
+    FILINFO fno;
+    uint32_t i;
+    DIR dir;
+
+    uint32_t  firstf_num = 0xFFFF;                       
+    uint32_t  fnum       = 0;
+    char      firstf_name[_MAX_LFN+1];
+    
+    // Initialize variables
+    for (i=0; i<_MAX_LFN+1; i++){firstf_name[i]=127;}   // last possible file name, alphabetically
+    fname[0]      =  0;                                 // null string
+    fno.fname[0]  = 'a';                                // enables while loop
+
+    // Open folder
+    res = f_opendir(&dir, path);   
+    if (res!=FR_OK) return(res);
+
+    // Loop through folder content
+    for (;;){
+        res = f_readdir(&dir, &fno);                               // next file in firectory
+        if (res!=FR_OK)          return(res);                      // filesystem error
+        if (fno.fname[0] == 0)  {fname[0]=0; break;}               // no more files found -> exit loop
+        if (fno.fname[0] == '.') continue;                         // ignore files starting with a .
+        i = str_len(fno.fname);  if (i==0xFFFFFFFF) return (0xFE); // invalid file name 
+
+        // check for extension at the end of filename
+        if (         fno.fname[i-4]  == ext[0] \
+            && upper(fno.fname[i-3]) == upper(ext[1]) \
+            && upper(fno.fname[i-2]) == upper(ext[2]) \
+            && upper(fno.fname[i-1]) == upper(ext[3]) \
+           )
+        {
+            fnum++;
+            if (used_from_folder[fnum-1]){continue;}                                            // if file already used, move on to next file
+            else
+            {
+              if (str_len(fno.fname) > (_MAX_LFN - 2)) {used_from_folder[fnum-1]=1; continue;}  // if filename is too long: Mark as 'used' and look for next file
+              if((str_cmp_alpha(firstf_name, fno.fname) > 0))                                   // if found file comes first alphabetically
+              {
+                firstf_num=fnum-1;                                                              // set number of the the fist to the current file number
+                str_cpy(firstf_name, fno.fname);                                                // set the name of the first file to the current file name
+              }
+            }
+        }
+    }    
+
+    // Close folder
+    f_closedir(&dir);
+
+    if (firstf_num==0xFFFF) return(NO_MORE_AVAILABLE_FILES); // if no more files available: return accordingly    
+    
+    // Return next filename, in alphabetical order
+    str_cpy(fname, firstf_name);                   // use first filename found alphabetically
+    used_from_folder[firstf_num]=1;                // mark file as found
+    return (FR_OK);                                // return accoridngly
 }
 
 
@@ -378,12 +449,36 @@ uint8_t str_cmp_nocase(char *a, char *b)
 //Return 1 if the same, 0 if not
 uint8_t str_cmp(char *a, char *b)
 {
-	while(*a!=0)
-		if (*b++ != *a++) return(0);
+  while(*a!=0)
+    if (*b++ != *a++) return(0);
 
-	if (*a!=*b) return(0); //strings must be the same length
+  if (*a!=*b) return(0); //strings must be the same length
 
-	return(1);
+  return(1);
+}
+
+//Compare strings a and b alphabetically
+//  - upper case first
+//  - shorter strings first
+// 0  if  b == a  (strings are the same)
+// > 0 if b < a   (b first alphabetically)
+// < 0 if b > a   (a is fist alphabetically)
+int str_cmp_alpha(char *a, char *b)
+{
+  int count=0;
+
+  // compare alphabetically
+	while((*a!=0) && (*b!=0))
+  {
+		count = *a++ - *b++;
+    if (count!=0) return(count);
+  }
+
+  // check lenght (if strings seem to be the same)
+  if     (str_len(b)<str_len(a)){count++;}
+	else if(str_len(b)>str_len(a)){count--;}
+
+	return(count);
 }
 
 //Returns 1 if string begins with (or is equal to) prefix

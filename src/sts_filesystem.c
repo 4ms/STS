@@ -26,6 +26,8 @@
 #include "sts_fs_renaming_queue.h"
 #include "res/LED_palette.h"
 
+uint8_t	used_from_folder[MAX_FILES_IN_FOLDER];
+
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 //extern char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
 
@@ -36,7 +38,6 @@ extern uint8_t				i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern uint8_t 				flags[NUM_FLAGS];
 extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 extern FATFS 				FatFs;
-
 
 CCMDATA Sample				test_bank[NUM_SAMPLES_PER_BANK];
 
@@ -108,13 +109,18 @@ void load_missing_files(void)
 	char 	path_noslash[_MAX_LFN+1];
 	char	filename[_MAX_LFN+1];
 	char	fullpath[_MAX_LFN+1];
-	DIR		testdir;
+	// DIR		testdir;
 	FIL		temp_file;
 	FRESULT	res;
 	uint8_t	path_len;
+	uint8_t i;
+
 
 	for (bank=0;bank<MAX_NUM_BANKS;bank++)
 	{
+		// RESET FOLDER TRACKING
+		for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;}
+
 		for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++)
 		{
 			//Look for non-blank filename and file_found==0
@@ -135,23 +141,21 @@ void load_missing_files(void)
 				if (path[path_len-1] == '/')
 					path_noslash[path_len-1]='\0';
 
-				//Look for any unused file in the original sample's folder
-				res = f_opendir(&testdir, path_noslash);
 				if (res==FR_OK)
 				{
-					while (!samples[bank][samplenum].file_found)
-					{
-						//Find first .wav file in directory
-						res = find_next_ext_in_dir(&testdir, ".wav", filename);
-						if (res!=FR_OK) break; 		//Stop if no more files found in directory
-						if (str_len(filename) > (_MAX_LFN - path_len - 2)) continue; //Skip if filename is too long, can't use it
 
-						//Append filename onto path
-						str_cat(fullpath, path, filename);
+					while (!samples[bank][samplenum].file_found) 								// for each file not found
+					{
+		
+						res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename);		// Find file in folder, in alphabetical order
+						if (res!=FR_OK) break;													// if no file can be found/open, stop searching. Condition which includes:  if ((res!=0xFF) &&  (total == file_in_folder))break; //Stop searching if no more files to be assigned in fodler			
+						str_cat(fullpath, path, filename);										//Append filename to path
 
 						//Check if this file is being used in any bank
 						//Skip it if it's used (unused returns 0xFF)
-						if (find_filename_in_all_banks(0, fullpath) != 0xFF) continue; 
+						if (find_filename_in_all_banks(0, fullpath) != 0xFF) continue; // FixMe (H) this could be if (find_filename_in_all_banks(bank, fullpath) != 0xFF) - to save cpu
+
+						// ToDo (H): if there are still empty slots, go through unused files again and grab the ones that are not used in the current bank (v.s. all banks)
 
 						//Open the file
 						res = f_open(&temp_file, fullpath, FA_READ);
@@ -172,7 +176,6 @@ void load_missing_files(void)
 						f_close(&temp_file);
 				
 					}
-					f_closedir(&testdir);
 				}
 
 
@@ -674,7 +677,6 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 
 	FIL temp_file;
 	FRESULT res;
-	DIR dir;
 
 	uint8_t path_len;
 	char path[_MAX_LFN];
@@ -684,55 +686,42 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 	for (i=0;i<NUM_SAMPLES_PER_BANK;i++)
 		clear_sample_header(&(sample_bank[i]));
 
+	//Change root dir '/' to null string
+	if (str_cmp(bankpath, "/"))
+		bankpath[0] = '\0';
+
 	//Copy bankpath into path so we can work with it
 	if (bankpath[0] != '\0')	str_cpy(path, bankpath);
 	else						return 0;
 
-	//Change root dir '/' to null string
-	if (str_cmp(path, "/"))
-		path[0] = '\0';
-
-	res = f_opendir(&dir, path);
-	if (res!=FR_OK) return 0;
-
 	//Append '/' to path
 	path_len = str_len(path);
 	path[path_len++]='/';
-	path[path_len]='\0';
+	path[path_len]  ='\0';
 
-	sample_num=0;
-	filename[0]=0;
+	sample_num  = 0;														// initialize variables
+	filename[0] = 0;	
+	for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;} 			// Reset folder tracking		
 
-	while (sample_num < NUM_SAMPLES_PER_BANK)
+	while (sample_num < NUM_SAMPLES_PER_BANK)								// for every sample slot in bank
 	{
-		//Find first .wav file in directory
-		res = find_next_ext_in_dir(&dir, ".wav", filename);
-		if (res!=FR_OK) break; 		//Stop if no more files found in directory
-		if (str_len(filename) > (_MAX_LFN - path_len - 2)) continue; //Skip if filename is too long, can't use it
-
-		//Append filename onto path
-		str_cpy(&(path[path_len]), filename);
-
-		//Open the file
-		res = f_open(&temp_file, path, FA_READ);
+		res = find_next_ext_in_dir_alpha(bankpath, ".wav", filename); 		// find next file alphabetically
+		if (res!=FR_OK){break;}												// Stop if no more files found/available
+				
+		str_cpy(&(path[path_len]), filename);								//Append filename to path
+		res = f_open(&temp_file, path, FA_READ);							//Open file
 		f_sync(&temp_file);
 
 		if (res==FR_OK)
 		{
-			//Load the sample header info into samples[][]
-			res = load_sample_header(&(sample_bank[sample_num]), &temp_file);
-
+			res = load_sample_header(&(sample_bank[sample_num]), &temp_file);	//Load the sample header info into samples[][]
 			if (res==FR_OK)
 			{
-				//Set the filename (full path)
-				str_cpy(sample_bank[sample_num++].filename, path);
-//				preloaded_clmt[sample_num] = load_file_clmt(&temp_file);
+				str_cpy(sample_bank[sample_num++].filename, path);				//Set the filename (full path)
 			}
 		}
 		f_close(&temp_file);
 	}
-	f_closedir(&dir);
-
 	return(sample_num);
 }
 

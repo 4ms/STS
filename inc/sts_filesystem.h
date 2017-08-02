@@ -31,6 +31,9 @@
 #define EOF_TAG				"End of file"
 #define EOF_PAD				10 				// number of characters that can be left after EOF_TAG
 
+#define MAX_FILES_IN_FOLDER 500
+#define	NO_MORE_AVAILABLE_FILES		0xFF
+
 FRESULT reload_sdcard(void);
 
 uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path);
