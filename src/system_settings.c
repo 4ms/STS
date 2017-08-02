@@ -264,11 +264,15 @@ FRESULT save_user_settings(void)
 		f_printf(&settings_file, "## 4ms Stereo Triggered Sampler\n");
 		f_printf(&settings_file, "## Settings File\n");
 		f_printf(&settings_file, "## http://www.4mscompany.com/sts.php\n");
+		f_printf(&settings_file, "##\n");
+		f_printf(&settings_file, "## STEREO MODE can be \"stereo\" or \"mono\" (default)\n");
+		f_printf(&settings_file, "## RECORD SAMPLE BITS can be 24 or 16 (default)\n");
+		f_printf(&settings_file, "##\n");
+		f_printf(&settings_file, "## Deleting this file will restore default settings\n");
 		f_printf(&settings_file, "##\n\n");
 
 		// Write the stereo mode setting
 		f_printf(&settings_file, "[STEREO MODE]\n");
-		f_printf(&settings_file, "# Choose \"stereo\" or \"mono\" (default)\n");
 
 		if (global_mode[STEREO_MODE])
 			f_printf(&settings_file, "stereo\n\n");
@@ -277,7 +281,6 @@ FRESULT save_user_settings(void)
 
 		// Write the 24bit record mode setting
 		f_printf(&settings_file, "[RECORD SAMPLE BITS]\n");
-		f_printf(&settings_file, "# Choose 16 (default) or 24\n");
 
 		if (global_mode[REC_24BITS])
 			f_printf(&settings_file, "24\n\n");
