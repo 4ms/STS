@@ -141,7 +141,6 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 # build/src/circular_buffer.o: CFLAGS = $(C0FLAGS)
 # build/src/audio_util.o: CFLAGS = $(C0FLAGS)
 
-
 all: Makefile $(BIN) $(HEX)
 
 $(BIN): $(ELF)

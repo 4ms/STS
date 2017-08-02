@@ -14,6 +14,7 @@
 
 FRESULT 	get_next_dir(DIR *dir, char *parent_path, char *next_dir_path);
 FRESULT 	find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
+FRESULT 	find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname);
 
 void 		str_cpy(char *dest, char *src);
 void 		str_cat(char *dest, char *srca, char *srcb);
@@ -30,6 +31,7 @@ void 		str_to_upper(char* str_in, char* str_up);
 void 		str_to_lower(char* str_in, char* str_lo);
 uint8_t 	str_cmp(char *a, char *b);
 uint8_t 	str_cmp_nocase(char *a, char *b);
+int 		str_cmp_alpha(char *a, char *b);
 uint8_t 	str_startswith(const char *string, const char *prefix);
 uint8_t 	str_startswith_nocase(const char *string, const char *prefix);
 char *		str_rstr_x(char *string, char splitchar, char *path);
