@@ -109,7 +109,7 @@ void load_missing_files(void)
 	char 	path_noslash[_MAX_LFN+1];
 	char	filename[_MAX_LFN+1];
 	char	fullpath[_MAX_LFN+1];
-	DIR		testdir;
+	// DIR		testdir;
 	FIL		temp_file;
 	FRESULT	res;
 	uint8_t	path_len;
@@ -118,6 +118,9 @@ void load_missing_files(void)
 
 	for (bank=0;bank<MAX_NUM_BANKS;bank++)
 	{
+		// RESET FOLDER TRACKING
+		for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;}
+
 		for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++)
 		{
 			//Look for non-blank filename and file_found==0
@@ -138,28 +141,15 @@ void load_missing_files(void)
 				if (path[path_len-1] == '/')
 					path_noslash[path_len-1]='\0';
 
-				//Look for any unused file in the original sample's folder
-				res = f_opendir(&testdir, path_noslash);
 				if (res==FR_OK)
 				{
-					// RESET FOLDER TRACKING
-					for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;}
 
-					while (!samples[bank][samplenum].file_found)
+					while (!samples[bank][samplenum].file_found) 								// for each file not found
 					{
 		
-						// FIND FILE IN FOLDER ALPHABETICALLY
-						res = find_next_ext_in_dir_alpha(&testdir, ".wav", filename); 			// find next file alphabetically
+						res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename);		// Find file in folder, in alphabetical order
 						if (res!=FR_OK) break;													// if no file can be found/open, stop searching. Condition which includes:  if ((res!=0xFF) &&  (total == file_in_folder))break; //Stop searching if no more files to be assigned in fodler			
-
-								// //Find first .wav file in directory
-								// res = find_next_ext_in_dir(&testdir, ".wav", filename);
-								// if (res!=FR_OK) break; 		//Stop if no more files found in directory
-								// if (str_len(filename) > (_MAX_LFN - path_len - 2)) continue; //Skip if filename is too long, can't use it
-
-						//Append filename onto path
-						str_cat(fullpath, path, filename);
-
+						str_cat(fullpath, path, filename);										//Append filename to path
 
 						//Check if this file is being used in any bank
 						//Skip it if it's used (unused returns 0xFF)
@@ -185,7 +175,6 @@ void load_missing_files(void)
 						f_close(&temp_file);
 				
 					}
-					f_closedir(&testdir);
 				}
 
 
@@ -654,7 +643,6 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 
 	FIL temp_file;
 	FRESULT res;
-	DIR dir;
 
 	uint8_t path_len;
 	char path[_MAX_LFN];
@@ -668,55 +656,34 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 	if (bankpath[0] != '\0')	str_cpy(path, bankpath);
 	else						return 0;
 
-	res = f_opendir(&dir, path);
-	if (res!=FR_OK) return 0;
-
 	//Append '/' to path
 	path_len = str_len(path);
 	path[path_len++]='/';
-	path[path_len]='\0';
+	path[path_len]  ='\0';
 
-	sample_num=0;
-	filename[0]=0;
+	sample_num  = 0;														// initialize variables
+	filename[0] = 0;	
+	for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;} 			// Reset folder tracking		
 
-	// RESET FOLDER TRACKING
-	for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;}
-
-	while (sample_num < NUM_SAMPLES_PER_BANK)
+	while (sample_num < NUM_SAMPLES_PER_BANK)								// for every sample slot in bank
 	{
-		// FIND FILE IN FOLDER ALPHABETICALLY
-		res = find_next_ext_in_dir_alpha(&dir, ".wav", filename); 			// find next file alphabetically
-		if (res!=FR_OK){break;}												// Stop if no more files found in directory
+		res = find_next_ext_in_dir_alpha(bankpath, ".wav", filename); 		// find next file alphabetically
+		if (res!=FR_OK){break;}												// Stop if no more files found/available
 				
-				//Find first .wav file in directory
-				// res = find_next_ext_in_dir(&dir, ".wav", filename);
-				// res = find_next_ext_in_dir_alpha(&dir, ".wav", filename);
-				// if (res!=FR_OK) break; 											//Stop if no more files found in directory
-				// if (str_len(filename) > (_MAX_LFN - path_len - 2)) continue; 	//Skip if filename is too long, can't use it
-
-		//Append filename onto path
-		str_cpy(&(path[path_len]), filename);
-
-		//Open the file
-		res = f_open(&temp_file, path, FA_READ);
+		str_cpy(&(path[path_len]), filename);								//Append filename to path
+		res = f_open(&temp_file, path, FA_READ);							//Open file
 		f_sync(&temp_file);
 
 		if (res==FR_OK)
 		{
-			//Load the sample header info into samples[][]
-			res = load_sample_header(&(sample_bank[sample_num]), &temp_file);
-
+			res = load_sample_header(&(sample_bank[sample_num]), &temp_file);	//Load the sample header info into samples[][]
 			if (res==FR_OK)
 			{
-				//Set the filename (full path)
-				str_cpy(sample_bank[sample_num++].filename, path);
-//				preloaded_clmt[sample_num] = load_file_clmt(&temp_file);
+				str_cpy(sample_bank[sample_num++].filename, path);				//Set the filename (full path)
 			}
 		}
 		f_close(&temp_file);
 	}
-	f_closedir(&dir);
-
 	return(sample_num);
 }
 

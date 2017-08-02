@@ -14,6 +14,7 @@
 
 FRESULT 	get_next_dir(DIR *dir, char *parent_path, char *next_dir_path);
 FRESULT 	find_next_ext_in_dir(DIR* dir, const char *ext, char *fname);
+FRESULT 	find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname);
 
 void 		str_cpy(char *dest, char *src);
 void 		str_cat(char *dest, char *srca, char *srcb);

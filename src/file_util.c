@@ -86,35 +86,40 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 }
 
 // find_next_ext_in_dir_alpha()
-// - finds next file in folder alphabetically
+// - finds next file in 'path' alphabetically
 // - sets fname as the filename for that file
 // - Returns FRESULT representing whether a file was available or not, and the reason if not.
 // - files that are already assigned are kept track of in the global array used_from_folder[MAX_FILES_IN_FOLDER]
 // - used_from_folder needs to be initalized at every new search
 // - ToDo: this initialization could be perfomed internally by setting 4th ipnut variable to 0 or 1.
 //   ... 1 being clear used_from_folder array
-FRESULT find_next_ext_in_dir_alpha(DIR* dir, const char *ext, char *fname)
+FRESULT find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname)
 {
     FRESULT res;
     FILINFO fno;
     uint32_t i;
+    DIR dir;
 
-    char    firstf_name[_MAX_LFN+1];
-    uint32_t firstf_num=0xFFFF;
+    uint32_t  firstf_num = 0xFFFF;                       
+    uint32_t  fnum       = 0;
+    char      firstf_name[_MAX_LFN+1];
+    
+    // Initialize variables
+    for (i=0; i<_MAX_LFN+1; i++){firstf_name[i]=127;}   // last possible file name, alphabetically
+    fname[0]      =  0;                                 // null string
+    fno.fname[0]  = 'a';                                // enables while loop
 
-    uint32_t fnum=0;
+    // Open folder
+    res = f_opendir(&dir, path);   
+    if (res!=FR_OK) return(res);
 
-    fname[0]      = 0;    // null string
-    fno.fname[0]  = 'a';  // enables while loop
-
-    // Loop through dir content
-    while(fno.fname[0] != 0) {
-
-        res = f_readdir(dir, &fno);                               // next file in firectory
-        if (res!=FR_OK)         return(res);                      // filesystem error
+    // Loop through folder content
+    for (;;){
+        res = f_readdir(&dir, &fno);                               // next file in firectory
+        if (res!=FR_OK)          return(res);                      // filesystem error
         if (fno.fname[0] == 0)  {fname[0]=0; break;}               // no more files found -> exit loop
-        if (fno.fname[0] == '.') continue;                        // ignore files starting with a .
-        i = str_len(fno.fname); if (i==0xFFFFFFFF) return (0xFE); // invalid file name 
+        if (fno.fname[0] == '.') continue;                         // ignore files starting with a .
+        i = str_len(fno.fname);  if (i==0xFFFFFFFF) return (0xFE); // invalid file name 
 
         // check for extension at the end of filename
         if (         fno.fname[i-4]  == ext[0] \
@@ -124,21 +129,25 @@ FRESULT find_next_ext_in_dir_alpha(DIR* dir, const char *ext, char *fname)
            )
         {
             fnum++;
-            if (used_from_folder[fnum]){continue;}
+            if (used_from_folder[fnum-1]){continue;}                                            // if file already used, move on to next file
             else
             {
-              if (str_len(fno.fname) > (_MAX_LFN - 2)) {used_from_folder[fnum]=1; continue;}    // if filename is too long: Mark as 'used' and look for next file
-              if((str_cmp_alpha(firstf_name, fno.fname) > 0))                                   // if found file hasn't been used and it comes first alphabetically
+              if (str_len(fno.fname) > (_MAX_LFN - 2)) {used_from_folder[fnum-1]=1; continue;}  // if filename is too long: Mark as 'used' and look for next file
+              if((str_cmp_alpha(firstf_name, fno.fname) > 0))                                   // if found file comes first alphabetically
               {
-                firstf_num=fnum;
-                str_cpy(firstf_name, fno.fname);
+                firstf_num=fnum-1;                                                              // set number of the the fist to the current file number
+                str_cpy(firstf_name, fno.fname);                                                // set the name of the first file to the current file name
               }
             }
         }
-    }
-    
+    }    
+
+    // Close folder
+    f_closedir(&dir);
+
     if (firstf_num==0xFFFF) return(NO_MORE_AVAILABLE_FILES); // if no more files available: return accordingly    
     
+    // Return next filename, in alphabetical order
     str_cpy(fname, firstf_name);                   // use first filename found alphabetically
     used_from_folder[firstf_num]=1;                // mark file as found
     return (FR_OK);                                // return accoridngly
