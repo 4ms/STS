@@ -458,7 +458,7 @@ uint8_t str_cmp(char *a, char *b)
 }
 
 //Compare strings a and b alphabetically
-//  - upper case first
+//  - case-insensitive (since two files cannot be next to each other with the same name and different case)
 //  - shorter strings first
 // 0  if  b == a  (strings are the same)
 // > 0 if b < a   (b first alphabetically)
@@ -470,7 +470,7 @@ int str_cmp_alpha(char *a, char *b)
   // compare alphabetically
 	while((*a!=0) && (*b!=0))
   {
-		count = *a++ - *b++;
+		count = upper(*a++) - upper(*b++);
     if (count!=0) return(count);
   }
 
