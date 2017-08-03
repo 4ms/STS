@@ -19,6 +19,11 @@
 #define	PLAY_SIZE	3
 #define	PLAY_GAIN	4
 
+#define	PLAYDATTAG_SLOT 	"- sample slot"
+#define	PLAYDATTAG_START 	"- play start"
+#define	PLAYDATTAG_SIZE 	"- play size"
+#define	PLAYDATTAG_GAIN 	"- play gain"
+
 FRESULT write_sampleindex_file(void);
 uint8_t write_samplelist(void);
 uint8_t index_write_wrapper(void);
