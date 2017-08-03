@@ -584,7 +584,7 @@ uint8_t load_banks_with_noncolors(void)
 			//Find the next directory in the root folder
 			res = get_next_dir(&rootdir, "", foldername);
 
-		if (res != FR_OK) break; //no more directories, exit the while loop
+			if (res != FR_OK) break; //no more directories, exit the while loop
 		}
 
 		test_path_loaded = 0;
@@ -634,7 +634,7 @@ uint8_t load_banks_with_noncolors(void)
 					append_rename_queue(bank, foldername, default_bankname);
 
 					break; //continue with the next folder
-				}
+				} 
 				else
 					break; //if load_bank_from_disk() fails for this foldername, try the next folder
 			}
@@ -888,6 +888,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 //		- 0: path is correct
 //		- 1: path was incorrect, and corrected
 //		- 2: path couldn't be corrected
+//		- 3: folderpath/filename was incorrect, but filename worked and was corrected by adding a slash to the beginning
 //Note: folderpath should be blank (root), or end in a '/'
 uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 {
@@ -908,7 +909,7 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 
 	// try to open full path
 	res = f_open(fp, fullpath, FA_READ);
-	f_sync(fp);
+	f_close(fp);
 
 	// if file loaded properly, move on
 	if (res==FR_OK)
@@ -919,49 +920,42 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 
 	// otherwise...
 	else
-	{
-		// close file
-		f_close(fp);
-		
-		// remove first slash in path if there is one
-		// if(filename[0]=='\\')
-		// {
-		// 	str_cpy(src, filename);
-		// 	 *src++;
-		// 	  while(*src!=0){
-		// 	  	*filename++ = *src++;
-		// 	  }
-		// 	  *filename=0;
-		// }
-
-
-
+	{		
 		// OPEN FILE FROM ROOT - AS WRITTEN IN INDEX
 		// try opening file supposing its path is in the name field
 		res = f_open(fp, filename, FA_READ);
+		f_close(fp);
 
 		// if file was found
-		// return 0: path is correct (we don't want to rewrite index for that) 
-		// exit function 
-		if (res==FR_OK) return(0);
+		// return 3: folderpath/filename was incorrect, but filename worked
+		// pre-pend a slash and exit function 
+		if (res==FR_OK) {
+			str_cat(fullpath, "/", filename);
+			str_cpy(filename, fullpath);
+			return(3);
+		}
 	
 		// OPEN FILE FROM ROOT - FILE.WAV ONLY
 		// ...Otherwise, Remove any existing path before wav file name
 		fileonly = fileonly_ptr;
-		//fileonly = str_rstr(filename, '/', dumpedpath); // FixMe: we can prob dump in folderpath since it gets erased afterwards
 		str_split(filename, '/', dumpedpath, fileonly);
 
 		// if there was a path before filename
 		if (fileonly[0]!=0) 
 		{
-	
+
 			// try opening file name only, from root
 			res = f_open(fp, fileonly, FA_READ);
-			
+			f_close(fp);
+
 			// if file was found
-			// return 0: path is correct (we don't want to rewrite index for that) 
-			// exit function 
-			if (res==FR_OK) return(0);
+			// return 3: folderpath/filename was incorrect, but filename worked
+			// pre-pend a slash and exit function 
+			if (res==FR_OK) {
+				str_cat(fullpath, "/", filename);
+				str_cpy(filename, fullpath);
+				return(3);
+			}
 		}
 
 		// if file wasn't found 
@@ -992,7 +986,7 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 
 				// try opening file from new path
 				res = f_open(fp, fullpath, FA_READ);
-				f_sync(fp);					
+				f_close(fp);					
 				
 				// if file was found
 				// return "1: path was incorrect, and corrected" 
@@ -1002,17 +996,11 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 					str_cpy(filename, fullpath); 
 					return(1);
 				}
-
-				// ... otherwise, close file
-				else f_close(fp);
 			}
 
 			// Otherwise, stop searching 
 			else
 			{
-				// close file
-				f_close(fp);
-
 				// return "2: path couldn't be corrected"
 				// exit function 
 				return(2);
