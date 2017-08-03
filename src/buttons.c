@@ -328,8 +328,8 @@ void Button_Debounce_IRQHandler(void)
 							case Play2:
 								if (!global_mode[EDIT_MODE])
 								{
-									if (i_param[i - Play1][LOOPING] && button_state[i - Play1] == DOWN) 
-										flags[Play1But + i] = 1; //if looping, stop playing when lifted (assuming it's a short press)
+									if (i_param[i==0?Play1:Play2][LOOPING] && button_state[i==0?Play1:Play2] == DOWN) 
+										flags[i==0?Play1But:Play2But] = 1; //if looping, stop playing when lifted (assuming it's a short press)
 								}
 							break;
 

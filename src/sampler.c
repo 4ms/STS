@@ -594,7 +594,7 @@ void check_change_sample(void)
 				flags[PlaySample1Changed_empty+chan] = 0;
 
 				if (play_state[chan] == SILENT && i_param[chan][LOOPING])
-					flags[Play1But]=1;
+					flags[Play1But+chan]=1;
 
 				if (play_state[chan] != SILENT && play_state[chan] != PREBUFFERING)
 					play_state[chan] = PLAY_FADEDOWN;
