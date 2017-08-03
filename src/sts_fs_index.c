@@ -127,7 +127,7 @@ FRESULT write_sampleindex_file(void)
 					}
 
 					// write edditable sample info to index file
-			 		f_printf(&temp_file, "- Sample slot: %d\n- play start: %d\n- play size: %d\n- play gain(%%): %d\n\n", j+1, samples[i][j].inst_start, samples[i][j].inst_size, (int)(100 * samples[i][j].inst_gain));
+			 		f_printf(&temp_file, "%s: %d\n%s: %d\n%s: %d\n%s(%%): %d\n\n", PLAYDATTAG_SLOT, j+1, PLAYDATTAG_START, samples[i][j].inst_start, PLAYDATTAG_SIZE, samples[i][j].inst_size, PLAYDATTAG_GAIN, (int)(100 * samples[i][j].inst_gain));
 					f_sync(&temp_file);
 				}
 			}
@@ -480,24 +480,102 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 			// Load .wav header data information and play data
 			else if (((!str_cmp(token,"--------------------"))&&(read_name>1)) && (!skip_cur_bank))
 			{
-				// num_buff = str_xt_int(read_buffer);
-				// if there is a number in the current line
-				// if (num_buff != UINT32_MAX)
-				// {
-					
-				// arm data loading
-				// arm data loading if line starts with '-'
-				// skips header info and extra lines otherwise
-				// if 		((read_buffer[0]=='-')&&(!load_data))	{load_data=1;}
-				
-				// Process data if line starts with '-'
-				// skip lines that don't start with '-'					
-				if (read_buffer[0]=='-') 
+
+				// HANDLE MISSING PLAY DATA
+				if(is_wav(read_buffer)) 																																	// check if read buffer is a filename. 
+				{
+					// load missing play data on current file
+					if (!load_data || load_data==SAMPLE_SLOT)																												// if no slot for previous sample
+					{
+						// load previous sample in next available slot (will be overwitten if a following file specifically assigned there)
+						while(samples[cur_bank][cur_sample].file_found)																										// until empty slot found
+						{
+							if(cur_sample<NUM_SAMPLES_PER_BANK-1){cur_sample++;}																							// move to next sample slot
+							else{load_data=0; read_name = 1; break;}																										// exit if cur_sample==NUM_SAMPLES_PER_BANK
+						}		
+						if (!samples[cur_bank][cur_sample].file_found)   																									// if empty slot found
+						{
+							// TRY AND OPEN FILE	
+							res = FR_INT_ERR; 																										
+							if (str_pos('/', file_name) != 0xFFFFFFFF)
+							{
+								str_cpy(full_path, file_name);
+								res = f_open(&temp_wav_file, full_path, FA_READ);
+							}
+							if (res!=FR_OK)																																	// if file wasn't found
+							{
+								l = str_len(folder_path);																													//add a slash to folder_path if it doesn't have one, and file_name doesn't start with one
+								if (folder_path[l-1] !='/' && file_name[0]!='/'){
+									folder_path[l] = '/';
+									folder_path[l+1] = '\0';
+								}
+								str_cat(full_path, folder_path, file_name);
+								res = f_open(&temp_wav_file, full_path, FA_READ); 																							//try to open folder_path/file_name
+							}
+
+							if (res==FR_OK)																																	// file found
+							{
+								if (cur_bank<MAX_NUM_BANKS)																													// Sanity check: cur_bank must be within range
+								{
+									str_cpy(samples[cur_bank][cur_sample].filename, full_path); 																			// open file_name (not read_buffer)
+									force_reload = 0;																														// At least a sample was loaded
+									head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 														// load sample information from .wav header	
+									f_close(&temp_wav_file);																												// close wav file
+									if (head_load!=FR_OK){load_data=0; read_name = 1; break;}																				// if header information couldn't load, treat file as if it couldn'tbe found
+									else{samples[cur_bank][cur_sample].file_found = 1; load_data=PLAY_START;}																		// othewise set file as found and move on to next play data
+								}
+								else {f_close(&temp_wav_file); load_data=0; read_name = 1; break;}																			// exit if cur_bank out of range
+							}
+
+							else if (res!=FR_OK) 																															// file not found
+							{
+								if (cur_bank<MAX_NUM_BANKS)
+								{
+									str_cpy(samples[cur_bank][cur_sample].filename, full_path);																				// Copy the file name into the sample struct element - This is used to find the missing file, or other files in its folder
+									samples[cur_bank][cur_sample].file_found = 0; 																							// Mark file as not found
+								}
+								else {f_close(&temp_wav_file); load_data=0; read_name = 1; break;}																			// exit if cur_bank out of range
+								load_data=0; read_name = 1; break;																											// skip loading sample play information
+							}
+						}
+						else																																				// otherwise, if no empty slot available
+						{
+							samples[cur_bank][cur_sample].file_found = 0; 																									// mark file as not found
+							load_data=0; read_name = 1; break;																												// skip loading sample play information
+						}
+					}										
+					if (load_data == PLAY_START){samples[cur_bank][cur_sample].inst_start = 0; 											load_data++;}
+					if (load_data == PLAY_SIZE ){samples[cur_bank][cur_sample].inst_size  = samples[cur_bank][cur_sample].sampleSize; 	load_data++;}
+					if (load_data == PLAY_GAIN ){samples[cur_bank][cur_sample].inst_gain  =1; 											load_data=0; read_name = 1; str_cpy(token, read_buffer); continue;}	// use read_buffer to load next file name
+				}
+
+				// HANDLE DEFINED PLAY DATA
+				else if (read_buffer[0]=='-') 
 				{	
 					num_buff = str_xt_int(read_buffer);
-
-					// load header data from .wav file
-					if (!load_data) {load_data=1;}
+					if (!load_data) 
+					{
+					 	if(str_startswith_nocase(read_buffer, PLAYDATTAG_SLOT)){load_data=SAMPLE_SLOT;}
+					 	
+					 	// HANDLE MISSING SLOT ENTRY
+					 	else
+					 	{
+							// find next available slot
+							while(samples[cur_bank][cur_sample].file_found)																										// until empty slot found
+							{
+								if(cur_sample<NUM_SAMPLES_PER_BANK-1){cur_sample++;}																							// move to next sample slot
+								else{break;}																																	// exit if cur_sample==NUM_SAMPLES_PER_BANK
+							}		
+							if (samples[cur_bank][cur_sample].file_found)   																									// if no empty slot
+							{
+								str_cpy(samples[cur_bank][cur_sample].filename, full_path);																						// keep track of unused file
+								samples[cur_bank][cur_sample].file_found = 0; 																									// Mark file as not found
+								load_data=0; token[0] = '\0'; read_name = 1; break;																								// skip loading sample play information
+							}
+							else{num_buff = cur_sample+1; load_data=SAMPLE_SLOT;} 																								// keep on loading play data
+					 	}
+					}
+	
 					if  (load_data == SAMPLE_SLOT) 									// if the data loading has just been armed
 					{
 						if (num_buff == UINT32_MAX){								// if no slot number not indicated
@@ -508,13 +586,12 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 						// Update sample bank number
 						cur_sample=num_buff-1;
 
-						// ToDo: Add slot number check here
-						// check requested slot number against what's already used and update accordingly
-
-						res = FR_INT_ERR; //not FR_OK
+						// ToDo (H) Move slot number check here
+						// ToDo (H) check requested slot number against what's already used and update accordingly
 
 						//If filename contains a slash, then try the filename as written
 						//--- if it doesn't contain a slash, then it's not a path, so don't assume it's in root
+						res = FR_INT_ERR; //not FR_OK
 						if (str_pos('/', file_name) != 0xFFFFFFFF)
 						{
 							str_cpy(full_path, file_name);
@@ -534,64 +611,39 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 							res = f_open(&temp_wav_file, full_path, FA_READ);
 						}
 
-						if (res==FR_OK)//file found
+						if (res==FR_OK)																											//file found
 						{
 							//Sanity check: cur_bank and cur_sample must be in range, or we risk memory corruption
 							if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK)
 							{
-								str_cpy(samples[cur_bank][cur_sample].filename, full_path); //use whatever file_name was opened
-								samples[cur_bank][cur_sample].file_found = 1;
-
-								// At least a sample was loaded
-								force_reload = 0;
-
-								// load sample information from .wav header	
-
-								head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 
-								// close wav file
-								f_close(&temp_wav_file);
+								str_cpy(samples[cur_bank][cur_sample].filename, full_path); 													//use whatever file_name was opened
+								samples[cur_bank][cur_sample].file_found = 1;								
+								force_reload = 0;																								// At least a sample was loaded
+								head_load = load_sample_header(&samples[cur_bank][cur_sample], &temp_wav_file); 								// load sample information from .wav header	
+								f_close(&temp_wav_file);																						// close wav file
 							}
-							else //exit if cur_bank and/or cur_sample are out of range
-								{f_close(&temp_wav_file); load_data=0; token[0] = '\0'; read_name = 1; break;}
-
+							else {f_close(&temp_wav_file); load_data=0; token[0] = '\0'; read_name = 1; break;}									//exit if cur_bank and/or cur_sample are out of range
 
 							// if header information couldn't load, treat file as if it couldn'tbe found
 							if (head_load!=FR_OK)
 							{
-								// write empty filename to samples struct element
-								// ... so this sample is skipped at the next index write
-								// FixMe:?? Set file_found==1 because the file was found, it just was corrupted
-								// Or set it to 0?
-								// samples[cur_bank][cur_sample].filename[0]='\0';
-
-								// FixMe(H) if statement redundant with same statement l502?
-								if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK)
-									samples[cur_bank][cur_sample].file_found = 0;
-								
-								// skip loading sample play information, and read next file
-								load_data=0; token[0] = '\0'; read_name = 1; break;						
+								if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK){samples[cur_bank][cur_sample].file_found = 0;}								
+								load_data=0; token[0] = '\0'; read_name = 1; break;																// skip loading sample play information, and read next file
 							}		
-							//FixMe: Should we have an 'else' here? Otherwise load_data=1 after not loading a header
-							load_data++; token[0] = '\0';
+							load_data++; token[0] = '\0';																						// read next line
 						}
 
-						else if (res!=FR_OK) //file not found
+						else if (res!=FR_OK) 														//file not found
 						{
 							// Copy the file name into the sample struct element
 							// This is used to find the missing file, or other files in its folder
 							if (cur_bank<MAX_NUM_BANKS && cur_sample<NUM_SAMPLES_PER_BANK)
 							{
 								str_cpy(samples[cur_bank][cur_sample].filename, full_path);
-
-								//Mark file as not found
-								samples[cur_bank][cur_sample].file_found = 0;
+								samples[cur_bank][cur_sample].file_found = 0; 						//Mark file as not found
 							}
-
-							// skip loading sample play information
-							load_data=0; token[0] = '\0'; read_name = 1; break;						
-
+							load_data=0; token[0] = '\0'; read_name = 1; break;						// skip loading sample play information
 						}
-					
 					}
 
 					else if (load_data == PLAY_START)
@@ -612,7 +664,8 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 					else if (load_data == PLAY_GAIN)
 					{
-						if(num_buff<10 || num_buff>500){num_buff = 100;} //if gain is invalid (<10% or >500%)
+						//if gain is invalid (<10% or >500%)
+						if(num_buff<10 || num_buff>500){num_buff = 100;} 			
 						samples[cur_bank][cur_sample].inst_gain=num_buff/100.0f;
 						load_data=0; token[0] = '\0'; read_name = 1; break;
 					}
