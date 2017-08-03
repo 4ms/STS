@@ -561,6 +561,7 @@ uint8_t load_banks_with_noncolors(void)
 	char default_bankname[_MAX_LFN];
 	uint8_t banks_loaded;
 	uint8_t test_path_loaded;
+	uint8_t checked_root;
 
 	FRESULT res;
 	DIR rootdir;
@@ -568,14 +569,23 @@ uint8_t load_banks_with_noncolors(void)
 
 	banks_loaded=0;
 	
+	checked_root = 0;
 	rootdir.obj.fs = 0; //get_next_dir() needs us to do this, to reset it
 
 	while (1)
 	{
-		//Find the next directory in the root folder
-		res = get_next_dir(&rootdir, "", foldername);
+		if (!checked_root)
+		{
+			checked_root = 1; //only check root the first time
+			foldername[0] = '\0'; //root
+		}
+		else 
+		{
+			//Find the next directory in the root folder
+			res = get_next_dir(&rootdir, "", foldername);
 
 		if (res != FR_OK) break; //no more directories, exit the while loop
+		}
 
 		test_path_loaded = 0;
 
@@ -584,7 +594,7 @@ uint8_t load_banks_with_noncolors(void)
 		if (res!=FR_OK) continue;
 
 		//Check if folder contains any .wav files
-		if (find_next_ext_in_dir(&testdir, ".wav", default_bankname) != FR_OK) continue;
+		if (find_next_ext_in_dir(&testdir, ".wav", default_bankname) != FR_OK) {f_closedir(&testdir);continue;}
 
 		//See if it starts with a default bank color string
 		for (bank=0;bank<10;bank++)
@@ -625,6 +635,8 @@ uint8_t load_banks_with_noncolors(void)
 
 					break; //continue with the next folder
 				}
+				else
+					break; //if load_bank_from_disk() fails for this foldername, try the next folder
 			}
 		}
 	}
