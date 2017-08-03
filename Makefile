@@ -108,12 +108,12 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 # build/src/main.o: CFLAGS = $(C0FLAGS)
 
 # STS Filesystem:
-build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS) 
-build/src/sts_fs_index.o: CFLAGS = $(C0FLAGS)
-build/src/sample_file.o: CFLAGS = $(C0FLAGS)
-build/src/wavefmt.o: CFLAGS = $(C0FLAGS)
-build/src/file_util.o: CFLAGS = $(C0FLAGS)
-build/src/bank.o: CFLAGS = $(C0FLAGS) 
+# build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS) 
+# build/src/sts_fs_index.o: CFLAGS = $(C0FLAGS)
+# build/src/sample_file.o: CFLAGS = $(C0FLAGS)
+# build/src/wavefmt.o: CFLAGS = $(C0FLAGS)
+# build/src/file_util.o: CFLAGS = $(C0FLAGS)
+# build/src/bank.o: CFLAGS = $(C0FLAGS) 
 
 # FAT Filesystem
 # build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
