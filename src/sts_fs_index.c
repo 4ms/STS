@@ -92,9 +92,14 @@ FRESULT write_sampleindex_file(void)
 			for (j=0; j<NUM_SAMPLES_PER_BANK; j++)
 			{
 	 		
+	 			//FixMe: if samples[i][j] contains a filename with no slashes (example: "ChordHits1.wav")
+	 			//then the next line will return filename_ptr as null, and so the sample entry will not be written to the index, 
+	 			//but the sample will play and be written to the HTML file
+	 			//Perhaps we could add a slash to the beginning of samples[][].filename if no slash is found?
+
 				// split path and filename			
 				str_split(samples[i][j].filename, '/', path, filename_ptr);
-				
+
 				// Skip empty slots
 				if (filename_ptr[0]!='\0')
 				{
