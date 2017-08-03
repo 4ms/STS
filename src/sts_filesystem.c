@@ -317,20 +317,16 @@ void load_new_folders(void)
 
 			//add a slash to folder_path if it doesn't have one
 			l = str_len(foldername);
-			if (foldername[l-1] !='/'){
-				foldername[l] = '/';
-				foldername[l+1] = '\0';
-			}
+			if (foldername[l-1] !='/'){foldername[l] = '/'; foldername[l+1] = '\0';}
 
 			if (dir_contains_assigned_samples(foldername)) continue;
 		}
 
-		//If we got here, we found a directory that contains wav files, but none of the files are assigned as samples 
+		//If we got here, we found a directory that contains wav files, and none of the files are assigned as samples 
 		//Now we will try to add this as a new bank
 
-		//Strip the ending slash, or add a slash if it's root (load_bank_from_disk() needs a slash to indicate root)
-		if (l>0)	foldername[l]='\0';
-		else		str_cpy(foldername, "/");
+		//Strip the ending slash
+		foldername[l]='\0';
 		
 		//Try to load it as a bank, to make sure there's actually some valid files inside (i.e. headers are not corrupted)
 		if (load_bank_from_disk(test_bank, foldername))
@@ -416,27 +412,6 @@ uint8_t load_banks_by_default_colors(void)
 	return(banks_loaded);
 }
 
-// uint8_t load_banks_by_default_colors(void)
-// {
-// 	uint8_t bank;
-// 	char bankname[_MAX_LFN];
-// 	uint8_t banks_loaded;
-
-// 	banks_loaded=0;
-// 	for (bank=0;bank<MAX_NUM_BANKS;bank++)
-// 	{
-// 		bank_to_color(bank, bankname);
-
-// 		if (load_bank_from_disk((samples[bank]), bankname))
-// 		{
-// 			enable_bank(bank); 
-// 			banks_loaded++;
-// 		}
-// 		else 
-// 			disable_bank(bank);
-// 	}
-// 	return(banks_loaded);
-// }
 
 uint8_t load_banks_by_color_prefix(void)
 {
@@ -662,13 +637,12 @@ uint8_t load_banks_with_noncolors(void)
 //Tries to open the folder bankpath and load 10 files into samples[][]
 //into the specified bank
 //
-//If given a null string for bankpath, will return 0 immediately
-//To open the root dir, pass "/" for bankpath
+//The path must not be terminated in a slash
 //
 //Returns number of samples loaded (0 if folder not found, and sample[bank][] will be cleared)
 //
 
-uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
+uint8_t load_bank_from_disk(Sample *sample_bank, char *path_noslash)
 {
 	uint32_t i;
 	uint32_t sample_num;
@@ -683,17 +657,13 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 
 	for (i=0;i<NUM_SAMPLES_PER_BANK;i++)	clear_sample_header(&(sample_bank[i]));
 
-	//Return immediately if passed a null string
-	if (bankpath[0] == '\0')		return 0;
+	//Remove trailing slash
+	path_len = str_len(path_noslash);
+	if (path_noslash[path_len-1] == '/')
+		path_noslash[path_len-1]='\0';
 
-	//Change root dir '/' to null string
-	if (str_cmp(bankpath, "/"))		bankpath[0] = '\0';
-
-	//Copy bankpath into path so we can work with it
-	str_cpy(path, bankpath);
-
-
-	//Append '/' to path
+	//Copy path_noslash into path and add a slash
+	str_cpy(path, path_noslash);
 	path_len = str_len(path);
 	path[path_len++]='/';
 	path[path_len]  ='\0';
@@ -704,7 +674,7 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath)
 
 	while (sample_num < NUM_SAMPLES_PER_BANK)								// for every sample slot in bank
 	{
-		res = find_next_ext_in_dir_alpha(bankpath, ".wav", filename); 		// find next file alphabetically
+		res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename); 		// find next file alphabetically
 		if (res!=FR_OK){break;}												// Stop if no more files found/available
 				
 		str_cpy(&(path[path_len]), filename);								//Append filename to path

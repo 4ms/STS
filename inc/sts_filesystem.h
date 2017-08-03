@@ -50,7 +50,7 @@ uint8_t load_banks_with_noncolors(void);
 
 FRESULT load_all_banks(uint8_t force_reload);
 
-uint8_t load_bank_from_disk(Sample *sample_bank, char *bankpath);
+uint8_t load_bank_from_disk(Sample *sample_bank, char *path_noslash);
 
 uint8_t dir_contains_assigned_samples(char *path);
 
