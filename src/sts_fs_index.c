@@ -232,7 +232,8 @@ uint8_t write_samplelist(void)
 				minutes = seconds / 60;
 				seconds-= minutes * 60;
 				if (!minutes && !seconds) seconds =1;
-				if(samples[i][j].filename[0]!=0)f_printf(&temp_file, "<tr>\n<td>%d]  %s</td>\n<td>........... [%02d:%02d]</td>\n</tr>\n", j+1, samples[i][j].filename, minutes, seconds);
+				if(samples[i][j].filename[0]!=0)	f_printf(&temp_file, "<tr>\n<td>%d]  %s</td>\n<td>........... [%02d:%02d]</td>\n</tr>\n", j+1, samples[i][j].filename, minutes, seconds);
+				else								f_printf(&temp_file, "<tr>\n<td>%d]&nbsp;&nbsp;(empty slot)</td>\n<td>&nbsp;</td>\n</tr>\n", j+1);
 				f_sync(&temp_file);
 			} 
 			
