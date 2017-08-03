@@ -179,9 +179,6 @@ void load_missing_files(void)
 				}
 
 
-				//ToDo: check sub-folders?
-				//
-
 				//If no files are found, try searching anywhere for the filename
 				if (!samples[bank][samplenum].file_found)
 				{
@@ -242,7 +239,8 @@ void load_missing_files(void)
 //0 if not
 //
 //Note: path must end in a slash! We don't add the slash here because we don't know if path[str_len(path)+1] is a valid memory location
-//This is important because path="Blue" could return a false positive for "Blue Loops/mysound.wav"
+//This is important because path="Blue" could return a false positive for "Blue Loops/mysound.wav", when we really are looking for "Blue/*.wav"
+//If we want to check the root dir, give "/" for path. This will search for samples who's entry starts with "/", or have no slash in their full path
 uint8_t dir_contains_assigned_samples(char *path)
 {
 	uint8_t bank, samplenum;
@@ -275,30 +273,34 @@ void load_new_folders(void)
 	char 	foldername[_MAX_LFN+1];
 	char 	default_bankname[_MAX_LFN];
 	uint8_t bank;
-	uint8_t bank_loaded=0;
+	uint8_t bank_loaded;
 	uint8_t l; 
 	uint8_t checked_root=0;
-	uint8_t do_check_dir;
 
-	//reset dir
+	//reset dir object, so it can be used by get_next_dir
 	root_dir.obj.fs = 0;
 
 	while (1)
 	{
+		bank_loaded=0;
 		if (!checked_root)
 		{
-			//Set test_dir to the root dir first,
-			//After we've checked the root dir, we set test_dir to each dir inside the root_dir
+			checked_root = 1;//only check root the first time
+
+			//Check the root dir first
 			foldername[0] = '\0'; //root
-			checked_root = 1;
+			l = 0;
 
 			//Check if root dir contains any .wav files
 			res = f_opendir(&test_dir, foldername);
-			if (res!=FR_OK) continue;
-			if (find_next_ext_in_dir(&test_dir, ".wav", default_bankname) != FR_OK) continue;
 
-			l = 0;
-			do_check_dir = 1;
+			if (res!=FR_OK) {f_closedir(&test_dir);continue;}
+			if (find_next_ext_in_dir(&test_dir, ".wav", default_bankname) != FR_OK) {f_closedir(&test_dir);continue;}
+
+			//Check if it contains any assigned samples
+			if (dir_contains_assigned_samples("/")) continue;
+
+
 		}
 		else 
 		{
@@ -320,52 +322,47 @@ void load_new_folders(void)
 				foldername[l+1] = '\0';
 			}
 
-			do_check_dir = !dir_contains_assigned_samples(foldername);
+			if (dir_contains_assigned_samples(foldername)) continue;
 		}
 
-		//Check if the dir is already being used
-		if (do_check_dir)
+		//If we got here, we found a directory that contains wav files, but none of the files are assigned as samples 
+		//Now we will try to add this as a new bank
+
+		//Strip the ending slash, or add a slash if it's root (load_bank_from_disk() needs a slash to indicate root)
+		if (l>0)	foldername[l]='\0';
+		else		str_cpy(foldername, "/");
+		
+		//Try to load it as a bank, to make sure there's actually some valid files inside (i.e. headers are not corrupted)
+		if (load_bank_from_disk(test_bank, foldername))
 		{
-			//Found a directory that doesn't contain assigned samples!!
-
-			//Strip the slash
-			if (l>0)	foldername[l]='\0';
-			else		str_cpy(foldername, "/");
-			
-			//Try to load it as a bank before we go any farther, to make sure we're dealing with a potential bank
-			//Not a folder with all unusable files
-			if (load_bank_from_disk(test_bank, foldername))
+			//First see if the foldername begins with a color or color-blink name:
+			//Search banks from end to start, so we look for "Yellow-2" before "Yellow"
+			for (bank=(MAX_NUM_BANKS-1);bank!=0xFF;bank--)
 			{
-				//First see if the foldername begins with a color or color-blink name:
-				//Search banks from end to start, so we look for "Yellow-2" before "Yellow"
-				for (bank=(MAX_NUM_BANKS-1);bank!=0xFF;bank--)
+				bank_to_color(bank, default_bankname);
+
+				if (str_startswith(foldername, default_bankname))
 				{
-					bank_to_color(bank, default_bankname);
+					//If the bank is already being used (e.g. "Yellow-2" is already used)
+					//Then bump down Yellow-2 ==> Yellow-3, Yellow-3 ==> Yellow-4, etc..
+					if (is_bank_enabled(bank))
+						bump_down_banks(bank);
 
-					if (str_startswith(foldername, default_bankname))
-					{
-						//If the bank is already being used (e.g. "Yellow-2" is already used)
-						//Then bump down Yellow-2 ==> Yellow-3, Yellow-3 ==> Yellow-4, etc..
-						if (is_bank_enabled(bank))
-							bump_down_banks(bank);
-
-						//Copy the test_bank into bank
-						copy_bank(samples[bank], test_bank);
-						enable_bank(bank);
-						bank_loaded=1;
-						break; //exit the for loop
-					}
-				}
-
-				//If it's not a color/blink name, then load it anywhere
-				if (!bank_loaded)
-				{
-					//try to load it into the first unused bank
-					bank = next_disabled_bank(MAX_NUM_BANKS);
+					//Copy the test_bank into bank
 					copy_bank(samples[bank], test_bank);
 					enable_bank(bank);
 					bank_loaded=1;
+					break; //exit the for loop
 				}
+			}
+
+			//If it's not a color/blink name, then load it into the first unused bank
+			if (!bank_loaded)
+			{
+				bank = next_disabled_bank(MAX_NUM_BANKS);
+				copy_bank(samples[bank], test_bank);
+				enable_bank(bank);
+				bank_loaded=1;
 			}
 		}
 	}
