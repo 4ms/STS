@@ -21,7 +21,7 @@
 #include "calibration.h"
 #include "bank.h"
 #include "button_knob_combo.h"
-#include "system_settings.h"
+#include "system_mode.h"
 
 // PLAY_TRIG_DELAY / 44100Hz is the delay in sec from detecting a trigger to calling start_playing()
 // This is required to let Sample CV settle (due to the hardware LPF).
@@ -181,6 +181,7 @@ void init_modes(void)
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
 	global_mode[REC_24BITS] = 0;
+	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;
 }
 
 

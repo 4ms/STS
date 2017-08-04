@@ -9,7 +9,7 @@
 #include "bank.h"
 #include "button_knob_combo.h"
 #include "adc.h"
-#include "system_settings.h"
+#include "system_mode.h"
 #include "sampler.h"
 #include "res/LED_palette.h"
 #include "wav_recording.h"
@@ -55,6 +55,17 @@ void init_buttons(void)
 
 }
 
+//returns 1 if all buttons are set to state, except for buttons in button_mask
+uint8_t all_buttons_except(enum ButtonStates state, uint32_t button_mask)
+{
+	uint8_t i;
+	for (i=0;i<NUM_BUTTONS;i++)
+	{
+		if (button_mask & (1<<i)) continue; //ignore this button
+		if (button_state[i] != state) return 0; //at least one button not in the mask is not set to state
+	}
+	return 1; //all buttons not in the mask are set to state
+}
 
 void Button_Debounce_IRQHandler(void)
 {
@@ -580,15 +591,14 @@ void Button_Debounce_IRQHandler(void)
 					{
 						global_mode[STEREO_MODE] = 0;
 						flags[StereoModeTurningOff] = 1;
-						flags[SaveSystemSettings] = 1;
 					} 
 					else
 					{
 						global_mode[STEREO_MODE] = 1;
 						flags[StereoModeTurningOn] = 1;
-						flags[SaveSystemSettings] = 1;
 					}
 
+					flags[SaveUserSettings] = 1;
 					long_press[Bank1] = 0xFFFFFFFF;
 					long_press[Bank2] = 0xFFFFFFFF;
 					button_state[Bank1] = UP;

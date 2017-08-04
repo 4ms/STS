@@ -13,7 +13,7 @@
 #include "button_knob_combo.h"
 #include "res/LED_palette.h"
 #include "edit_mode.h"
-#include "system_settings.h"
+#include "system_mode.h"
 
 #define BIG_PLAY_BUTTONS
 #define FROSTED_BUTTONS

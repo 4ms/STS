@@ -119,6 +119,7 @@ enum ButtonStates {
 
 
 void init_buttons(void);
+uint8_t all_buttons_except(enum ButtonStates state, uint32_t button_mask);
 
 #define Button_Debounce_IRQHandler TIM4_IRQHandler
 

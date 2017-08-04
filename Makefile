@@ -129,7 +129,8 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 # build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
 # build/src/flash_user.o: CFLAGS = $(C0FLAGS)
 # build/src/calibration.o: CFLAGS = $(C0FLAGS)
-# build/src/system_settings.o: CFLAGS = $(C0FLAGS)
+# build/src/system_mode.o: CFLAGS = $(C0FLAGS)
+# build/src/user_settings.o: CFLAGS = $(C0FLAGS)
 
 # I/O:
 # build/src/buttons.o: CFLAGS = $(C0FLAGS)

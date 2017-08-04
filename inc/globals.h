@@ -94,7 +94,7 @@ enum Flags {
 	AssignedNextSample,
 	AssignedPrevBank,
 	FindNextSampleToAssign, //45
-	SaveSystemSettings,
+	SaveUserSettings,
 	UndoSampleExists,
 	UndoSampleDiffers,
 	LoadBackupIndex,

@@ -31,8 +31,9 @@ main.c
 #include "sts_fs_index.h"
 #include "sts_filesystem.h"
 #include "edit_mode.h"
-#include "system_settings.h"
+#include "system_mode.h"
 #include "stm32f4_discovery_sdio_sd.h"
+#include "user_settings.h"
 
 #define HAS_BOOTLOADER
 
@@ -274,9 +275,9 @@ int main(void)
 			flags[FindNextSampleToAssign]=0;
 		}
 
-		if (flags[SaveSystemSettings])
+		if (flags[SaveUserSettings])
 		{
-			flags[SaveSystemSettings] = 0;
+			flags[SaveUserSettings] = 0;
 			save_user_settings();
 		}
 
