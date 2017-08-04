@@ -154,46 +154,6 @@ FRESULT find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname)
 }
 
 
-//FRESULT scan_files (
-//    char* path        /* Start node to be scanned (***also used as work area***) */
-//)
-//{
-//    FRESULT res;
-//    DIR dir;
-//    UINT i=0;
-//    static FILINFO fno;
-//
-//
-//    res = f_opendir(&dir, path);							/* Open the directory */
-//    if (res == FR_OK) {
-//        for (;;) {
-//            res = f_readdir(&dir, &fno);					/* Read a directory item */
-//            if (res != FR_OK || fno.fname[0] == 0) break;	/* Break on error or end of dir */
-//
-//
-//
-//
-//            if (fno.fattrib & AM_DIR) {						/* It is a directory */
-//              i = str_len(path);
-//              path[i]='/';
-//              str_cpy(&(path[i+1]), fno.fname);
-//
-//              //  sprintf(&path[i], "/%s", fno.fname);
-//
-//                res = scan_files(path);						/* Enter the directory */
-//                if (res != FR_OK) break;
-//                path[i] = 0;
-//            } else {										/* It is a file. */
-//              //  printf("%s/%s\n", path, fno.fname);
-//            }
-//        }
-//        f_closedir(&dir);
-//    }
-//    return res;
-//}
-
-
-
 uint32_t str_len(char* str)
 {
 	uint32_t i=0;
@@ -510,7 +470,7 @@ uint8_t str_startswith_nocase(const char *string, const char *prefix)
     return 1;
 }
 
-//Returns first position of needle in haystack
+//Returns first position of character needle in haystack string
 //Returns 0xFFFFFFFF if not found
 uint32_t str_pos(char needle, char *haystack)
 {

@@ -790,12 +790,35 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 
 
+//
+// new_filename()
+//
+//Creates a new filename in the proper format
+//The proper format is:
+// PREFIX + TAKE# + SUFFIX + EXTENSION
+// Currently we set prefix to null and put the sample slot# after the suffix, so it's just:
+// 		001-Sample02.wav
+// Where 02 is the slot# we recorded into, and 001 is the Take#
+// We also determine the best directory to place this file in, and make that part of path:
+// 		BankFolder/001-Sample02.wav --> path
+//
+#define SLOT_DIGITS 2 /* number of digits in the Slot number: since we have max 10 slots, we need 2 digits */
+#define TAKE_DIGITS 3 /* number of digits in the Take number: 3 means "001", 4 means "0001", etc. */
+#define WAV_EXT ".wav"
 uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 {
 	uint8_t i;
 	FRESULT res;
 	DIR dir;
 	uint32_t sz;
+
+	char		slot_str[SLOT_DIGITS+1];
+	char		take_str[TAKE_DIGITS+1];
+	char		slot_prefix[10];
+	char		slot_suffix[10];
+	uint16_t	highest_num, num;
+	char		filename[_MAX_LFN+1];
+	uint8_t		take_pos;
 
 	//
 	//Figure out the folder to put a new recording in:
@@ -807,7 +830,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 	path[0]=0;
 
 	//1st) Check for the current REC sample/bank folder:
-	//If file name is not blank, Split the filename at the last '/'
+	//If file name is not blank, split the filename at the last '/'
 	if (samples[bank][sample_num].filename[0])
 	{
 		if (str_rstr(samples[bank][sample_num].filename,'/',path)!=0)
@@ -827,7 +850,6 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 					path[0]=0;
 			}
 	}
-
 	//3rd) Use the default bank name if the above methods failed
 	if (!path[0])
 		bank_to_color(bank, path);
@@ -862,18 +884,97 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 	//
 	//Create the file name
 	//
-	//str_cpy(sample_fname_now_recording, path);
-	sz = str_len(path);
+	//
+	//Find the highest numbered file (of our proper format), and name this file one higher
+	//If no files are found of our format, start at 1
 
-	path[sz++] = '/';
-	sz += intToStr(sample_num, &(path[sz]), 2);
-	path[sz++] = '-';
-	sz += intToStr(sys_tmr, &(path[sz]), 0);
-	path[sz++] = '.';
-	path[sz++] = 'w';
-	path[sz++] = 'a';
-	path[sz++] = 'v';
-	path[sz++] = 0;
+	highest_num = 0;
+
+	//Compute the slot prefix
+	// intToStr(sample_num+1, slot_str, 2);
+	// str_cat(slot_prefix, "Slot", slot_str); 
+	// str_cat(slot_prefix, slot_prefix, "-");
+	slot_prefix[0]='\0';
+
+	//Compute the slot suffix
+	str_cpy(slot_suffix, "-Sample");
+
+	//Compute the slot string
+	intToStr(sample_num+1, slot_str, SLOT_DIGITS);
+
+	while(1)
+	{
+		res = find_next_ext_in_dir(&dir, WAV_EXT, filename);
+
+		if (res!=FR_OK && res!=0xFF)
+		{
+			f_closedir(&dir);
+
+			//filesystem error reading directory, 
+			//Just use a timestamp to be safe
+			sz = str_len(path);
+			path[sz++] = '/';
+			sz += intToStr(sample_num, &(path[sz]), 2);
+			path[sz++] = '-';
+			sz += intToStr(sys_tmr, &(path[sz]), 0);
+			path[sz++] = '.';
+			path[sz++] = 'w';
+			path[sz++] = 'a';
+			path[sz++] = 'v';
+			path[sz++] = 0;
+
+			return (res);
+		} 
+		if (res==0xFF) 
+		{
+			//no more .wav files found
+			//exit the while loop
+			f_closedir(&dir);
+			break; 
+		}
+		if (filename[0])
+		{
+			//See if the file is of the form we're looking for:
+
+			//Must be exactly the right length
+			if (str_len(filename) != (str_len(slot_prefix) + TAKE_DIGITS + str_len(slot_suffix) + SLOT_DIGITS + str_len(WAV_EXT))) continue;
+
+			//Must start with slot prefix
+			if (!str_startswith_nocase(filename, slot_prefix)) continue;
+
+			//Must contain the slot suffix
+			if (str_found(filename, slot_suffix)==0) continue;
+
+			//Three characters of the Take# must be digits
+			take_pos = str_len(slot_prefix);
+			if (!( filename[take_pos]>='0' && filename[take_pos]<='9' \
+				&& filename[take_pos+1]>='0' && filename[take_pos+1]<='9' \
+				&& filename[take_pos+2]>='0' && filename[take_pos+2]<='9')) continue;
+
+			//Extract the take number string and convert to an int
+			take_str[0] = filename[take_pos];
+			take_str[1] = filename[take_pos+1];
+			take_str[2] = filename[take_pos+2];
+			take_str[3] = '\0';
+			num = str_xt_int(take_str);
+
+			//Update highest_num if we find a higher one
+			if (num > highest_num)
+				highest_num = num;
+		}
+	}
+
+	//Go one higher than the highest found
+	highest_num++;
+
+	//Create the filename: path/SlotXX-XXX
+	str_cat(path, path, "/");
+	str_cat(path, path, slot_prefix);
+	intToStr(highest_num, take_str, 3);
+	str_cat(path, path, take_str);
+	str_cat(path, path, slot_suffix);
+	str_cat(path, path, slot_str);
+	str_cat(path, path, WAV_EXT);
 
 	return (FR_OK);
 
