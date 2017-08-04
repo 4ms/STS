@@ -52,6 +52,7 @@ void update_system_mode(void)
 	static uint32_t last_sys_tmr=0;
 
 	static uint8_t  undo_rec_24bits;
+	static uint8_t  undo_auto_stop;
 	uint32_t elapsed_time;
 
 
@@ -123,7 +124,8 @@ void update_system_mode(void)
 			&& all_buttons_except(UP, (1<<Edit) | (1<<Rev2)))
 //			&& button_state[Play1]==UP && button_state[Play2]==UP && button_state[RecBank]==UP && button_state[Rec]==UP && button_state[Rev1]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
 		{
-			global_mode[REC_24BITS] = undo_rec_24bits;
+			global_mode[REC_24BITS] 				= undo_rec_24bits;
+			global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]	= undo_auto_stop;
 		}
 	}
 
@@ -158,6 +160,7 @@ void update_system_mode(void)
 		if (sysmode_buttons_down==INITIAL_BUTTONS_DOWN)
 		{
 			undo_rec_24bits = global_mode[REC_24BITS];
+			undo_auto_stop 	= global_mode[AUTO_STOP_ON_SAMPLE_CHANGE];
 		}
 
 		//If buttons are found down after they've been released, we will exit
@@ -184,7 +187,8 @@ void update_system_mode(void)
 		if (sysmode_buttons_down > 10 && sysmode_buttons_down < (44100 * 3))
 		{
 			//Revert to undo state
-			global_mode[REC_24BITS] = undo_rec_24bits;
+			global_mode[REC_24BITS] 				= undo_rec_24bits;
+			global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]	= undo_auto_stop;
 
 			//Exit without saving
 			exit_system_mode(0);
