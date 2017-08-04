@@ -263,9 +263,7 @@ void Button_Debounce_IRQHandler(void)
 
 								flags[PlayBank1Changed + chan] = 1;
 
-								//Exit assignment mode (if we were in it)
-								//if (chan==0)
-									//exit_assignment_mode();
+								exit_assignment_mode();
 								
 							break;
 
@@ -604,6 +602,7 @@ void Button_Debounce_IRQHandler(void)
 					{
 						i_param[0][BANK] 		= i_param[REC][BANK];
 						flags[PlayBank1Changed] = 1;
+						exit_assignment_mode();
 
 						long_press[Bank1] 		= 0xFFFFFFFF;
 						long_press[RecBank] 	= 0xFFFFFFFF;
@@ -617,7 +616,8 @@ void Button_Debounce_IRQHandler(void)
 					{
 						i_param[1][BANK] 		= i_param[REC][BANK];
 						flags[PlayBank2Changed] = 1;
-						
+						exit_assignment_mode();
+
 						long_press[Bank2] 		= 0xFFFFFFFF;
 						long_press[RecBank] 	= 0xFFFFFFFF;
 						button_state[Bank2] 	= UP;

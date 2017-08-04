@@ -516,14 +516,10 @@ uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum)
 
 void enter_edit_mode(void)
 {
-	uint8_t i;
-
-	//If we enter edit mode with a different sample than we last entered assignment mode (based on the undo sample value)
-	//then we need to exit assignment mode.
-	//This means that once we enter asisgnment mode with a certain sample, we will stay in assignment mode
-	//until we press Edit on a different sample 
-	if (i_param[0][SAMPLE] != undo_samplenum || i_param[0][BANK] != undo_banknum)
-		exit_assignment_mode();
+	//If the current bank is different from the undo_banknum and we're in assign mode,
+	//exit assignment mode
+	 if (global_mode[ASSIGN_MODE] && i_param[0][BANK] != undo_banknum)
+	 	exit_assignment_mode();
 
 	// Latch pot values, so we can do alternative functions with the pots without distupting the original value
 	// Only latched values for channel 2 Sample, Length, and StartPos are used
