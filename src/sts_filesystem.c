@@ -819,6 +819,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 	uint16_t	highest_num, num;
 	char		filename[_MAX_LFN+1];
 	uint8_t		take_pos;
+	uint32_t	max_take_num;
 
 	//
 	//Figure out the folder to put a new recording in:
@@ -859,8 +860,11 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 
 	//If it doesn't exist, create it
 	if (res==FR_NO_PATH)
+	{
 		res = f_mkdir(path);
-
+		res = f_opendir(&dir, path);
+	}
+	
 	//If we got an error opening or creating a dir
 	//try reloading the SDCard, then opening the dir (and creating if needed)
 	if (res!=FR_OK)
@@ -872,7 +876,10 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 			res = f_opendir(&dir, path);
 
 			if (res==FR_NO_PATH) 
+			{
 				res = f_mkdir(path);
+				res = f_opendir(&dir, path);
+			}
 		}
 	}
 
@@ -961,13 +968,19 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 			//Update highest_num if we find a higher one
 			if (num > highest_num)
 				highest_num = num;
+
 		}
 	}
 
 	//Go one higher than the highest found
 	highest_num++;
 
-	//Create the filename: path/SlotXX-XXX
+	//Boundary check highest_num is not greater than the max number of digits
+	max_take_num=1;
+	for (i=0;i<TAKE_DIGITS;i++) max_take_num*=10;
+	if (highest_num >= max_take_num) highest_num=0; //start back at zero if we went past the max
+
+	//Create the filename with path
 	str_cat(path, path, "/");
 	str_cat(path, path, slot_prefix);
 	intToStr(highest_num, take_str, 3);
