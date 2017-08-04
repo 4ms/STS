@@ -816,10 +816,12 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 	char		take_str[TAKE_DIGITS+1];
 	char		slot_prefix[10];
 	char		slot_suffix[10];
+	char		timestamp_str[12];
 	uint16_t	highest_num, num;
 	char		filename[_MAX_LFN+1];
 	uint8_t		take_pos;
 	uint32_t	max_take_num;
+	uint8_t		do_add_timestamp=0;
 
 	//
 	//Figure out the folder to put a new recording in:
@@ -864,7 +866,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 		res = f_mkdir(path);
 		res = f_opendir(&dir, path);
 	}
-	
+
 	//If we got an error opening or creating a dir
 	//try reloading the SDCard, then opening the dir (and creating if needed)
 	if (res!=FR_OK)
@@ -978,13 +980,19 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 	//Boundary check highest_num is not greater than the max number of digits
 	max_take_num=1;
 	for (i=0;i<TAKE_DIGITS;i++) max_take_num*=10;
-	if (highest_num >= max_take_num) highest_num=0; //start back at zero if we went past the max
+	if (highest_num >= max_take_num) {do_add_timestamp=1;highest_num=(max_take_num-1);} //stay at the max num if we surpass it, and later we'll add a timestamp
 
 	//Create the filename with path
 	str_cat(path, path, "/");
 	str_cat(path, path, slot_prefix);
 	intToStr(highest_num, take_str, 3);
 	str_cat(path, path, take_str);
+
+	if (do_add_timestamp) {
+		str_cat(path, path, "-");
+		intToStr(sys_tmr, timestamp_str, 10);
+		str_cat(path, path, timestamp_str);
+	}
 	str_cat(path, path, slot_suffix);
 	str_cat(path, path, slot_str);
 	str_cat(path, path, WAV_EXT);
