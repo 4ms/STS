@@ -17,6 +17,7 @@ enum Settings
 	StereoMode,
 	RecordSampleBits,
 	AutoStopSampleChange,
+	PlayStopsLengthFull,
 
 	NUM_SETTINGS_ENUM
 };

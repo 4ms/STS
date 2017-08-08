@@ -433,7 +433,9 @@ void toggle_playing(uint8_t chan)
 	//Stop it if we're playing a full sample
 	else if (play_state[chan]==PLAYING && f_param[chan][LENGTH] > 0.98)
 	{
-		play_state[chan]=PLAY_FADEDOWN;
+		if (global_mode[LENGTH_FULL_START_STOP])	play_state[chan]=PLAY_FADEDOWN;
+		else 										play_state[chan]=RETRIG_FADEDOWN;
+		
 		play_led_state[chan]=0;
 	}
 

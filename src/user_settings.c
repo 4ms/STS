@@ -13,7 +13,8 @@ void set_default_user_settings(void)
 {
 	global_mode[STEREO_MODE] = 0;
 	global_mode[REC_24BITS] = 0;
-	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 1;	
+	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;	
+	global_mode[LENGTH_FULL_START_STOP] = 0;	
 }
 
 
@@ -41,6 +42,7 @@ FRESULT save_user_settings(void)
 		f_printf(&settings_file, "## [STEREO MODE] can be \"stereo\" or \"mono\" (default)\n");
 		f_printf(&settings_file, "## [RECORD SAMPLE BITS] can be 24 or 16 (default)\n");
 		f_printf(&settings_file, "## [AUTO STOP ON SAMPLE CHANGE] can be \"No\" or \"Yes\" (default)\n");
+		f_printf(&settings_file, "## [PLAY BUTTON STOPS WITH LENGTH AT FULL] can be \"No\" or \"Yes\" (default)\n");
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## Deleting this file will restore default settings\n");
 		f_printf(&settings_file, "##\n\n");
@@ -65,6 +67,14 @@ FRESULT save_user_settings(void)
 		f_printf(&settings_file, "[AUTO STOP ON SAMPLE CHANGE]\n");
 
 		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE])
+			f_printf(&settings_file, "Yes\n\n");
+		else
+			f_printf(&settings_file, "No\n\n");
+
+		// Write the Auto Stop on Sample Change mode setting
+		f_printf(&settings_file, "[PLAY BUTTON STOPS WITH LENGTH AT FULL]\n");
+
+		if (global_mode[LENGTH_FULL_START_STOP])
 			f_printf(&settings_file, "Yes\n\n");
 		else
 			f_printf(&settings_file, "No\n\n");
@@ -131,6 +141,12 @@ FRESULT read_user_settings(void)
 					continue;
 				}
 
+				if (str_startswith_nocase(read_buffer, "[PLAY BUTTON STOPS WITH LENGTH AT FULL]"))
+				{
+					cur_setting_found = PlayStopsLengthFull; //Auto Stop Mode section detected
+					continue;
+				}
+
 			}
 
 			 //Look for setting values
@@ -166,6 +182,17 @@ FRESULT read_user_settings(void)
 
 				else
 					global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+		
+			if (cur_setting_found==PlayStopsLengthFull)
+			{
+				if (str_startswith_nocase(read_buffer, "Yes"))
+					global_mode[LENGTH_FULL_START_STOP] = 1;
+
+				else
+					global_mode[LENGTH_FULL_START_STOP] = 0;
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}

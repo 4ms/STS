@@ -182,6 +182,7 @@ void init_modes(void)
 	global_mode[ASSIGN_MODE] = 0;
 	global_mode[REC_24BITS] = 0;
 	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;
+	global_mode[LENGTH_FULL_START_STOP] = 0;
 }
 
 

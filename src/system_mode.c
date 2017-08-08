@@ -51,8 +51,7 @@ void update_system_mode(void)
 
 	static uint32_t last_sys_tmr=0;
 
-	static uint8_t  undo_rec_24bits;
-	static uint8_t  undo_auto_stop;
+	static uint8_t  undo_rec_24bits, undo_auto_stop, undo_length_full;
 	uint32_t elapsed_time;
 
 
@@ -72,7 +71,6 @@ void update_system_mode(void)
 		//Rec : Toggle 24-bit mode
 		if (button_state[Rec] == DOWN \
 			&& all_buttons_except(UP, (1<<Rec)))
-			// && button_state[Play1]==UP && button_state[Play2]==UP && button_state[Edit]==UP && button_state[RecBank]==UP && button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
 		{
 			button_armed[Rec] = 1;
 		}
@@ -89,7 +87,6 @@ void update_system_mode(void)
 		//Play2 : Toggle Auto-Stop-on-Sample-Change
 		if (button_state[Play2] == DOWN \
 			&& all_buttons_except(UP, (1<<Play2)))
-			// && button_state[Play1]==UP && button_state[Rec]==UP && button_state[Edit]==UP && button_state[RecBank]==UP && button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
 		{
 			button_armed[Play2] = 1;
 		}
@@ -103,6 +100,21 @@ void update_system_mode(void)
 			button_armed[Play2] = 0;
 		}
 
+		//Play1 : Toggle LENGTH_FULL_START_STOP
+		if (button_state[Play1] == DOWN \
+			&& all_buttons_except(UP, (1<<Play1)))
+		{
+			button_armed[Play1] = 1;
+		}
+		else if (button_state[Play1] == UP && button_armed[Play1] == 1)
+		{
+			if (global_mode[LENGTH_FULL_START_STOP])global_mode[LENGTH_FULL_START_STOP] = 0;
+			else						 			global_mode[LENGTH_FULL_START_STOP] = 1; 
+
+			//Disable the button from doing anything until it's released
+			button_state[Play1] = UP;
+			button_armed[Play1] = 0;
+		}
 
 		//Edit+Play1 : Save and Exit
 		if (button_state[Edit] >= SHORT_PRESSED && button_state[Play1] >= SHORT_PRESSED \
@@ -126,6 +138,7 @@ void update_system_mode(void)
 		{
 			global_mode[REC_24BITS] 				= undo_rec_24bits;
 			global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]	= undo_auto_stop;
+			global_mode[LENGTH_FULL_START_STOP]		= undo_length_full;
 		}
 	}
 
@@ -161,6 +174,7 @@ void update_system_mode(void)
 		{
 			undo_rec_24bits = global_mode[REC_24BITS];
 			undo_auto_stop 	= global_mode[AUTO_STOP_ON_SAMPLE_CHANGE];
+			undo_length_full = global_mode[LENGTH_FULL_START_STOP];
 		}
 
 		//If buttons are found down after they've been released, we will exit
@@ -252,7 +266,10 @@ void update_system_mode_button_leds(void)
 		else											set_ButtonLED_byPalette(Play2ButtonLED, GREEN); //No auto stop on sample change
 
 
-		set_ButtonLED_byPalette(Play1ButtonLED, WHITE);
+		if (global_mode[LENGTH_FULL_START_STOP]) 		set_ButtonLED_byPalette(Play1ButtonLED, RED); //Tapping play button with Length>98% start/stops
+		else											set_ButtonLED_byPalette(Play1ButtonLED, BLUE); //tapping play button always re-starts
+
+
 		set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
 		set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);
 		set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE);
