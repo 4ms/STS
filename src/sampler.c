@@ -576,11 +576,14 @@ void check_change_sample(void)
 					flags[PlaySample1Changed_empty+chan] = 1;
 
 				flags[PlaySample1Changed_valid+chan] = 0;
-		
-				if (play_state[chan] != SILENT && play_state[chan]!=PREBUFFERING)
-					play_state[chan] = PLAY_FADEDOWN;
-				else
-					play_state[chan] = SILENT;
+
+				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] || i_param[chan][LOOPING])
+				{
+					if (play_state[chan] != SILENT && play_state[chan]!=PREBUFFERING)
+						play_state[chan] = PLAY_FADEDOWN;
+					else
+						play_state[chan] = SILENT;
+				}
 			}
 			else
 			{
