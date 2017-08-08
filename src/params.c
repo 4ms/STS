@@ -23,7 +23,7 @@
 #include "button_knob_combo.h"
 #include "system_mode.h"
 
-// PLAY_TRIG_DELAY / 44100Hz is the delay in sec from detecting a trigger to calling start_playing()
+// PLAY_TRIG_DELAY / BASE_SAMPLE_RATE is the delay in sec from detecting a trigger to calling start_playing()
 // This is required to let Sample CV settle (due to the hardware LPF).
 //
 // PLAY_TRIG_LATCH_PITCH_TIME is how long the PITCH CV is latched when a play trigger is received

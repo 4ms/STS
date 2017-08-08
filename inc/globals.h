@@ -33,13 +33,17 @@
 
  * 256/interrupt @ 44100Hz = interrupt runs every 5.8ms
 */
+//Note: If this changes, we may have also change:
+// -'make wav' section in Makefile
+// -PLLI2S_N and PLLI2S_R in system_stm32f4xx.c
+// -sys_tmr's timing will change
 
 #define BASE_SAMPLE_RATE 44100
 #define f_BASE_SAMPLE_RATE 44100.0 /*float version*/
 
 //Update the FW Version anytime FLASH RAM settings format is changed
 #define FW_MAJOR_VERSION 0
-#define FW_MINOR_VERSION 3
+#define FW_MINOR_VERSION 4
 
 //Minimum firmware version that forces a calibration on the very first boot
 //This should be set to FW_{MAJOR|MINOR}_VERSION for the first production firmware release

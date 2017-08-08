@@ -1,3 +1,4 @@
+#include "globals.h"
 #include "wavefmt.h"
 
 uint8_t is_valid_wav_header(WaveHeader sample_header)
@@ -63,8 +64,8 @@ void create_waveheader(WaveHeader *w, WaveFmtChunk *f, uint8_t bitsPerSample, ui
 	f->fmtSize		= 16;
 	f->audioFormat	= 1;
 	f->numChannels	= numChannels;
-	f->sampleRate	= 44100;
-	f->byteRate		= (44100 * numChannels * (bitsPerSample/8)); //sampleRate * blockAlign
+	f->sampleRate	= BASE_SAMPLE_RATE;
+	f->byteRate		= (BASE_SAMPLE_RATE * numChannels * (bitsPerSample/8)); //sampleRate * blockAlign
 	f->blockAlign	= numChannels * (bitsPerSample/8);
 	f->bitsPerSample= bitsPerSample;
 }

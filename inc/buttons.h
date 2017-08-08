@@ -8,6 +8,7 @@
 #ifndef BUTTONS_H_
 #define BUTTONS_H_
 #include <stm32f4xx.h>
+#include "globals.h"
 
 //Bank's + Rec's at boot, or in Sys Mode
 #define BOOTLOADER_BUTTONS (\
@@ -111,10 +112,10 @@ enum ButtonStates {
 	UNKNOWN,
 	UP,
 	DOWN,
-	SHORT_PRESSED = 22050, /* 0.5sec */
-	MED_PRESS_REPEAT = 44100, /* 1.0 sec */
-	MED_PRESSED = 88200, /* 2.0sec */
-	LONG_PRESSED = 176400 /* 4sec */
+	SHORT_PRESSED = BASE_SAMPLE_RATE/2, /* 0.5sec */
+	MED_PRESS_REPEAT = BASE_SAMPLE_RATE, /* 1.0 sec */
+	MED_PRESSED = BASE_SAMPLE_RATE*2, /* 2.0sec */
+	LONG_PRESSED = BASE_SAMPLE_RATE*4 /* 4sec */
 };
 
 

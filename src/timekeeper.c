@@ -25,7 +25,7 @@ void inc_tmrs(void)
 uint32_t get_fattime(void){
 	uint32_t secs, mins, hours, days, month;
 
-	secs = sys_tmr/44100;
+	secs = sys_tmr/BASE_SAMPLE_RATE;
 	mins = 10;
 	hours = 21;
 	days = 22;

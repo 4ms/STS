@@ -134,7 +134,7 @@ void update_system_mode(void)
 	{
 		bootloader_buttons_down += elapsed_time;
 		
-		if (bootloader_buttons_down > (44100*3))
+		if (bootloader_buttons_down > (BASE_SAMPLE_RATE*3))
 		{
 			flags[ShutdownAndBootload] = 1;
 
@@ -169,7 +169,7 @@ void update_system_mode(void)
 		{
 			sysmode_buttons_down += elapsed_time;
 			//Hold buttons down for a while ==> save and exit
-			if (sysmode_buttons_down >= (44100 * 3))
+			if (sysmode_buttons_down >= (BASE_SAMPLE_RATE * 3))
 			{
 				//Save and Exit
 				exit_system_mode(1);
@@ -184,7 +184,7 @@ void update_system_mode(void)
 	} else
 	{
 		//Release buttons too early ===> revert+exit
-		if (sysmode_buttons_down > 10 && sysmode_buttons_down < (44100 * 3))
+		if (sysmode_buttons_down > 10 && sysmode_buttons_down < (BASE_SAMPLE_RATE * 3))
 		{
 			//Revert to undo state
 			global_mode[REC_24BITS] 				= undo_rec_24bits;

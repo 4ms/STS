@@ -114,10 +114,17 @@
 #define PART_mask	(0b11110000)
 #define REV_mask	(0b00001111)
 
+#if (BASE_SAMPLE_RATE>50000)
+		#define CS_SPEED DOUBLE_SPEED
+#else
+		#define CS_SPEED SINGLE_SPEED
+#endif
+
+
 const uint8_t codec_init_data_slave_DCinput[] =
 {
 
-		SINGLE_SPEED
+		CS_SPEED
 		| RATIO0
 		| SLAVE
 		| DIF_I2S_24b,		//MODECTRL1
@@ -139,8 +146,7 @@ const uint8_t codec_init_data_slave_DCinput[] =
 
 const uint8_t codec_init_data_slave[] =
 {
-
-		SINGLE_SPEED
+		CS_SPEED
 		| RATIO0
 		| SLAVE
 		| DIF_I2S_24b,		//MODECTRL1
@@ -161,12 +167,12 @@ const uint8_t codec_init_data_slave[] =
 const uint8_t codec_init_data_master[] =
 {
 
-		SINGLE_SPEED
+		CS_SPEED
 		| RATIO0
 		| MASTER
 		| DIF_I2S_24b,//MODECTRL1
 
-		FAST_FILT_SEL
+		SLOW_FILT_SEL
 		| DEEMPH_OFF
 		| SOFT_RAMPUP
 		| SOFT_RAMPDOWN,	//DACCTRL

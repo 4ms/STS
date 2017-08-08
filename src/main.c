@@ -175,7 +175,7 @@ int main(void)
 
 	//Initialize Codec
 	Codec_GPIO_Init();
-	Codec_AudioInterface_Init(I2S_AudioFreq_44k);
+	Codec_AudioInterface_Init(BASE_SAMPLE_RATE);
 	init_audio_dma();
 	Codec_Register_Setup(0);
 

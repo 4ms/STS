@@ -175,6 +175,10 @@
 #define PLLI2S_N   271
 #define PLLI2S_R   6
 
+//295/3 runs at about 96k
+// #define PLLI2S_N   295
+// #define PLLI2S_R   3
+
 
 /******************************************************************************/
 
