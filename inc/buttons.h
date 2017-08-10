@@ -85,14 +85,16 @@
 		!BANK2BUT \
 		)
 
-//Play's + Banks's during cal mode
+//Rec and RecBank during cal mode
 #define SAVE_CALIBRATE_BUTTONS (\
-		PLAY1BUT &&\
-		PLAY2BUT &&\
-		BANK1BUT &&\
-		BANK2BUT &&\
-		!RECBUT &&\
-		!BANKRECBUT &&\
+		!PLAY1BUT &&\
+		!PLAY2BUT &&\
+		!BANK1BUT &&\
+		!BANK2BUT &&\
+		RECBUT &&\
+		BANKRECBUT &&\
+		!REV1BUT &&\
+		!REV2BUT &&\
 		!EDIT_BUTTON \
 		)
 
