@@ -35,6 +35,8 @@ extern Sample 					samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 extern SystemCalibrations 		*system_calibrations;
 
 uint32_t WATCH_REC_BUFF;
+uint32_t WATCH_REC_BUFF_IN;
+uint32_t WATCH_REC_BUFF_OUT;
 
 #define WRITE_BLOCK_SIZE 	9216
 
@@ -58,14 +60,15 @@ CircularBuffer srec_buff;
 CircularBuffer* rec_buff;
 
 //temporary SRAM buffer for storing received audio data until it can be written to SDRAM
-int16_t 		rec_buff16[WRITE_BLOCK_SIZE>>1];
+int16_t 			rec_buff16[WRITE_BLOCK_SIZE>>1];
 
-enum RecStates	rec_state;
-uint32_t		samplebytes_recorded;
-uint8_t			sample_num_now_recording;
-uint8_t			sample_bank_now_recording;
-uint8_t			sample_bytesize_now_recording;
-char 			sample_fname_now_recording[_MAX_LFN];
+enum RecStates		rec_state;
+uint32_t			samplebytes_recorded;
+uint8_t				sample_num_now_recording;
+uint8_t				sample_bank_now_recording;
+uint8_t				sample_bytesize_now_recording;
+char 				sample_fname_now_recording[_MAX_LFN];
+WaveHeaderAndChunk	whac_now_recording;
 
 uint8_t 		recording_enabled;
 
@@ -102,6 +105,9 @@ void toggle_recording(void)
 		if (global_mode[ENABLE_RECORDING])
 		{
 			CB_init(rec_buff, 0);
+WATCH_REC_BUFF_IN = rec_buff->in;
+WATCH_REC_BUFF_OUT = rec_buff->out;
+
 			rec_state = CREATING_FILE;
 		}
 	}
@@ -117,11 +123,13 @@ void record_audio_to_buffer(int16_t *src)
 	uint16_t topword, bottomword;
 	uint8_t  bottombyte;
 
+//	DEBUG1_ON;
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
 		WATCH_REC_BUFF = CB_distance(rec_buff, 0);
-		if (WATCH_REC_BUFF < 9216) 
-			DEBUG3_ON;
+		if (WATCH_REC_BUFF == 0) 
+			{DEBUG0_ON;DEBUG0_OFF;}
+
 
 		overrun = 0;
 
@@ -145,7 +153,9 @@ void record_audio_to_buffer(int16_t *src)
 
 				CB_offset_in_address(rec_buff, 2, 0);
 
-				if ((rec_buff->in == rec_buff->out)/* && i<(HT16_BUFF_LEN-1)*/) //don't consider the heads being crossed if they end at the same place
+WATCH_REC_BUFF_IN = rec_buff->in;
+
+				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) //don't consider the heads being crossed if they end at the same place
 					overrun = rec_buff->out;
 			}
 			else
@@ -163,8 +173,9 @@ void record_audio_to_buffer(int16_t *src)
 				CB_offset_in_address(rec_buff, 2, 0);
 				while(SDRAM_IS_BUSY){;}
 
+WATCH_REC_BUFF_IN = rec_buff->in;
 
-				if ((rec_buff->in == rec_buff->out)/* && i<(HT16_BUFF_LEN-1)*/) //don't consider the heads being crossed if they end at the same place
+				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) //don't consider the heads being crossed if they end at the same place
 					overrun = rec_buff->out;
 			}
 		}
@@ -175,7 +186,7 @@ void record_audio_to_buffer(int16_t *src)
 			check_errors();
 		}
 	}
-
+//	DEBUG1_OFF;
 }
 
 
@@ -184,7 +195,7 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 {
 	uint32_t sz;
 	FRESULT res;
-	WaveHeaderAndChunk whac;
+	//WaveHeaderAndChunk whac;
 	uint32_t written;
 	DIR dir;
 
@@ -225,8 +236,8 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 	sample_fname_now_recording[sz++] = 0;
 
 
-	create_waveheader(&whac.wh, &whac.fc, bitsPerSample, numChannels);
-	create_chunk(ccDATA, 0, &whac.wc);
+	create_waveheader(&whac_now_recording.wh, &whac_now_recording.fc, bitsPerSample, numChannels);
+	create_chunk(ccDATA, 0, &whac_now_recording.wc);
 
 	sz = sizeof(WaveHeaderAndChunk);
 
@@ -234,7 +245,7 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 
 	res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW | FA_READ);
 	if (res==FR_OK)
-		res = f_write(&recfil, &whac.wh, sz, &written);
+		res = f_write(&recfil, &whac_now_recording.wh, sz, &written);
 
 	if (res!=FR_OK)
 	{
@@ -244,7 +255,7 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 		{
 			res = f_open(&recfil, sample_fname_now_recording, FA_WRITE | FA_CREATE_NEW);
 			f_sync(&recfil);
-			res = f_write(&recfil, &whac.wh, sz, &written);
+			res = f_write(&recfil, &whac_now_recording.wh, sz, &written);
 			f_sync(&recfil);
 		}
 		else {f_close(&recfil); rec_state=REC_OFF; g_error |= FILE_WRITE_FAIL; check_errors(); return;}
@@ -263,7 +274,34 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 
 }
 
-FRESULT write_wav_chunk_size(FIL *wavfil, uint32_t file_position, uint32_t chunk_bytes)
+// FRESULT write_wav_chunk_size(FIL *wavfil, uint32_t file_position, uint32_t chunk_bytes)
+// {
+// 	uint32_t data;
+// 	uint32_t orig_pos;
+// 	uint32_t written;
+// 	FRESULT res;
+
+// 	//cache the original file position
+// 	orig_pos = f_tell(wavfil);
+
+// 	//data chunk size
+// 	data = chunk_bytes;
+// 	res = f_lseek(wavfil, file_position);
+// 	if (res==FR_OK)
+// 	{
+// 		res = f_write(wavfil, &data, 4, &written);
+// 		f_sync(wavfil);
+// 	}
+
+// 	if (res!=FR_OK) {		g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
+// 	if (written!=4)	{		g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
+
+// 	//restore the original file position
+// 	res = f_lseek(wavfil, orig_pos);
+// 	return(res);
+// }
+
+FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_size_bytes)
 {
 	uint32_t data;
 	uint32_t orig_pos;
@@ -273,17 +311,22 @@ FRESULT write_wav_chunk_size(FIL *wavfil, uint32_t file_position, uint32_t chunk
 	//cache the original file position
 	orig_pos = f_tell(wavfil);
 
+	//RIFF file size
+	whac_now_recording.wh.fileSize = file_size_bytes;
+
 	//data chunk size
-	data = chunk_bytes;
-	res = f_lseek(wavfil, file_position);
+	whac_now_recording.wc.chunkSize = data_chunk_bytes;
+
+	res = f_lseek(wavfil, 0);
 	if (res==FR_OK)
 	{
-		res = f_write(wavfil, &data, 4, &written);
-		f_sync(wavfil);
+		DEBUG3_ON;
+		res = f_write(wavfil, &whac_now_recording, sizeof(WaveHeaderAndChunk), &written);
+		DEBUG3_OFF;
 	}
 
-	if (res!=FR_OK) {		g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
-	if (written!=4)	{		g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
+	if (res!=FR_OK) 							{g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
+	if (written!=sizeof(WaveHeaderAndChunk))	{g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
 
 	//restore the original file position
 	res = f_lseek(wavfil, orig_pos);
@@ -396,11 +439,10 @@ void write_buffer_to_storage(void)
 	uint32_t buffer_lead;
 	uint32_t addr_exceeded;
 	uint32_t written;
+	static uint32_t write_size_ctr=0;
 
 	FRESULT res;
 	char final_filepath[_MAX_LFN];
-
-
 	uint32_t sz;
 
 	if (flags[RecSampleChanged])
@@ -416,6 +458,7 @@ void write_buffer_to_storage(void)
 	}
 
 
+	DEBUG2_ON;
 
 	// Handle write buffers (transfer SDRAM to SD card)
 	switch (rec_state)
@@ -451,39 +494,53 @@ void write_buffer_to_storage(void)
 					else
 						addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, WRITE_BLOCK_SIZE>>1, 0);
 
-					if (!addr_exceeded)
+WATCH_REC_BUFF_OUT = rec_buff->out;
+
+					if (addr_exceeded)
 					{
-						sz = WRITE_BLOCK_SIZE;
-						res = f_write(&recfil, rec_buff16, sz, &written);
-						f_sync(&recfil);
-						
-						if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
-											g_error |= FILE_WRITE_FAIL; check_errors();
-											break;}
-						if (sz!=written){	if (g_error & FILE_UNEXPECTEDEOF_WRITE) {f_close(&recfil); rec_state=REC_OFF;}
-											g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
-
-						samplebytes_recorded += written;
-
-						//Update the wav file size in the wav header
-						res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
-						res = write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
-
-						if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
-											g_error |= FILE_WRITE_FAIL; check_errors();
-											break;}
-
-						//Stop recording in this file, if we are close the maximum
-						//Then we will start recording again in a new file --there is a ~20ms gap between files
-						//
-						if (samplebytes_recorded >= MAX_REC_SAMPLES)
-							rec_state = CLOSING_FILE_TO_REC_AGAIN;
-
-					}
-					else {
 						g_error |= WRITE_BUFF_OVERRUN;
-						check_errors();}
+						check_errors();
+					}
 						
+					sz = WRITE_BLOCK_SIZE;
+					DEBUG3_ON;
+					res = f_write(&recfil, rec_buff16, sz, &written);
+					DEBUG3_OFF;
+
+					if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
+										g_error |= FILE_WRITE_FAIL; check_errors();
+										break;}
+					if (sz!=written){	if (g_error & FILE_UNEXPECTEDEOF_WRITE) {f_close(&recfil); rec_state=REC_OFF;}
+										g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+
+					samplebytes_recorded += written;
+
+					//Update the wav file size in the wav header
+					if (write_size_ctr++>20) 
+					{
+						write_size_ctr=0;
+						res = write_wav_size(&recfil, samplebytes_recorded, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
+						if (res!=FR_OK)	{		f_close(&recfil); rec_state=REC_OFF;
+												g_error |= FILE_WRITE_FAIL; check_errors();
+												break;}
+					}
+					DEBUG1_ON;
+					f_sync(&recfil);
+					DEBUG1_OFF;
+
+					// res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
+					// res = write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
+
+					if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
+										g_error |= FILE_WRITE_FAIL; check_errors();
+										break;}
+
+					//Stop recording in this file, if we are close the maximum
+					//Then we will start recording again in a new file --there is a ~20ms gap between files
+					//
+					if (samplebytes_recorded >= MAX_REC_SAMPLES)
+						rec_state = CLOSING_FILE_TO_REC_AGAIN;
+
 				}
 			}
 
@@ -504,6 +561,7 @@ void write_buffer_to_storage(void)
 				else
 					addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, buffer_lead>>1, 0);
 
+WATCH_REC_BUFF_OUT = rec_buff->out;
 
 				if (!addr_exceeded)
 				{
@@ -517,14 +575,15 @@ void write_buffer_to_storage(void)
 													g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
 
 					samplebytes_recorded += written;
+
 					//Update the wav file size in the wav header
-					res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
-					res |= write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
+					res = write_wav_size(&recfil, samplebytes_recorded, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
+					if (res!=FR_OK)	{		f_close(&recfil); rec_state=REC_OFF;
+											g_error |= FILE_WRITE_FAIL; check_errors();
+											break;}
 
-					if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
-													g_error |= FILE_WRITE_FAIL; check_errors();
-													break;}
 
+	
 				}
 				else
 				{
@@ -535,10 +594,10 @@ void write_buffer_to_storage(void)
 			else 
 			{
 				//Write the file size into the header, and close the file
-				res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
-				if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
-												g_error |= FILE_WRITE_FAIL; check_errors();
-												break;}
+				// res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
+				// if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
+				// 								g_error |= FILE_WRITE_FAIL; check_errors();
+				// 								break;}
 
 				// Write comment and Firmware chunks at bottom of wav file
 				// after data chunk (write_wav_size() puts us back there)
@@ -547,8 +606,9 @@ void write_buffer_to_storage(void)
 												g_error |= FILE_WRITE_FAIL; check_errors();
 												break;}
 
-				//Write new file size (sum of all chunks, minus 8)
-				res = write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + written + sizeof(WaveHeaderAndChunk) - 8);
+				//Write new file size and data chunk size
+				// res = write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + written + sizeof(WaveHeaderAndChunk) - 8);
+				res = write_wav_size(&recfil, samplebytes_recorded, samplebytes_recorded + written + sizeof(WaveHeaderAndChunk) - 8);
 				if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
 												g_error |= FILE_WRITE_FAIL; check_errors();
 												break;}
@@ -615,6 +675,6 @@ void write_buffer_to_storage(void)
 		// break;
 
 	}
-
+	DEBUG2_OFF;
 
 }
