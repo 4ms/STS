@@ -119,7 +119,6 @@ void update_system_mode(void)
 		//Edit+Play1 : Save and Exit
 		if (button_state[Edit] >= SHORT_PRESSED && button_state[Play1] >= SHORT_PRESSED \
 			&& all_buttons_except(UP, (1<<Edit) | (1<<Play1)))
-//			&& button_state[Rec]==UP && button_state[Play2]==UP && button_state[RecBank]==UP && button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
 		{
 			//Save and Exit
 			exit_system_mode(1);
@@ -134,7 +133,6 @@ void update_system_mode(void)
 		//Edit+Rev2 : Revert
 		if (button_state[Edit] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED \
 			&& all_buttons_except(UP, (1<<Edit) | (1<<Rev2)))
-//			&& button_state[Play1]==UP && button_state[Play2]==UP && button_state[RecBank]==UP && button_state[Rec]==UP && button_state[Rev1]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP)
 		{
 			global_mode[REC_24BITS] 				= undo_rec_24bits;
 			global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]	= undo_auto_stop;

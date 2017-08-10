@@ -59,16 +59,29 @@ void init_buttons(void)
 
 }
 
-//returns 1 if all buttons are set to state, except for buttons in button_mask
-uint8_t all_buttons_except(enum ButtonStates state, uint32_t button_mask)
+//returns 1 if all buttons are set to state, except for buttons in button_ignore_mask
+uint8_t all_buttons_except(enum ButtonStates state, uint32_t button_ignore_mask)
 {
 	uint8_t i;
 	for (i=0;i<NUM_BUTTONS;i++)
 	{
-		if (button_mask & (1<<i)) continue; //ignore this button
+		if (button_ignore_mask & (1<<i)) continue; //ignore this button
 		if (button_state[i] != state) return 0; //at least one button not in the mask is not set to state
 	}
 	return 1; //all buttons not in the mask are set to state
+}
+
+//returns 1 if all buttons in the button_mask are set to >= state
+//returns 0 if one or more buttons in the button_mask are < state
+uint8_t all_buttons_atleast(enum ButtonStates state, uint32_t button_mask)
+{
+	uint8_t i;
+	for (i=0;i<NUM_BUTTONS;i++)
+	{
+		if ((button_mask & (1<<i)) && (button_state[i] < state))
+			return 0; //at least one button in the mask is < state
+	}
+	return 1; //all buttons in the mask are >= state
 }
 
 void Button_Debounce_IRQHandler(void)
@@ -530,9 +543,24 @@ void Button_Debounce_IRQHandler(void)
 		//
 		// Multi-button presses
 		//
+			if (!global_mode[SYSTEM_MODE])
+			{
+				// All sysmode buttons down for LONG PRESS, and all others are up, and we're not recording, means we should enter System Mode
+				if (all_buttons_atleast(LONG_PRESSED, SYSMODE_BUTTONS_MASK))
+
+				//if (button_state[Rev1]>=LONG_PRESSED && button_state[Rev2]>=LONG_PRESSED && button_state[Play1]>=LONG_PRESSED && button_state[Play2]>=LONG_PRESSED && button_state[Rec]>=LONG_PRESSED && button_state[RecBank]>=LONG_PRESSED)
+				{
+					if (rec_state==REC_OFF)
+					{
+						enter_system_mode();
+						flags[SkipProcessButtons] = 1;
+					}
+				}
+			}
 
 			if (global_mode[EDIT_MODE])
 			{
+
 				if (button_state[Rev1] == UP && button_state[Play1] == UP && button_state[Play2] == UP && button_state[Rec] == UP && button_state[RecBank] == UP)
 				{
 					//
@@ -581,23 +609,11 @@ void Button_Debounce_IRQHandler(void)
 					}
 				}
 
-				if (!global_mode[SYSTEM_MODE])
-				{
-					// All buttons down except Bank1, Bank2, for LONG PRESS, and we're not recording, we enter System Mode
-					if (button_state[Rev1]>=LONG_PRESSED && button_state[Rev2]>=LONG_PRESSED && button_state[Play1]>=LONG_PRESSED && button_state[Play2]>=LONG_PRESSED && button_state[Rec]>=LONG_PRESSED && button_state[RecBank]>=LONG_PRESSED)
-					{
-						if (rec_state==REC_OFF)
-						{
-							enter_system_mode();
-							flags[SkipProcessButtons] = 1;
-						}
-					}
-				}
 			}
 			else //not EDIT_MODE
 			{
 				//Both bank buttons --> Stereo Mode toggle
-				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED && button_state[RecBank] == UP && button_state[Play1] == UP && button_state[Play2] == UP)
+				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED && all_buttons_except(UP, (1<<Bank1)|(1<<Bank2))) //button_state[RecBank] == UP && button_state[Play1] == UP && button_state[Play2] == UP)
 				{
 					if (global_mode[STEREO_MODE] == 1)
 					{

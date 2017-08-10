@@ -23,7 +23,7 @@
 			!REV2BUT\
 		)
 
-//All buttons except Banks, during runtime
+//All buttons except Banks and Edit (optional), during runtime
 #define SYSMODE_BUTTONS (\
 		REV1BUT &&\
 		REV2BUT &&\
@@ -31,10 +31,23 @@
 			!BANK2BUT &&\
 		PLAY1BUT &&\
 		PLAY2BUT &&\
-		EDIT_BUTTON &&\
 		RECBUT &&\
 		BANKRECBUT \
 		)
+
+#define SYSMODE_BUTTONS_MASK (\
+		(1<<Rev1) |\
+		(1<<Rev2) |\
+		(1<<Play1) |\
+		(1<<Play2) |\
+		(1<<Rec) |\
+		(1<<RecBank) \
+		)
+// #define SYSMODE_BUTTONS_IGNOREMASK (\
+// 		(1<<Edit) |\
+// 		(1<<Bank1) |\
+// 		(1<<Bank2) \
+// 		)
 
 #define NO_BUTTONS (\
 		!REV1BUT &&\
@@ -120,7 +133,9 @@ enum ButtonStates {
 
 
 void init_buttons(void);
-uint8_t all_buttons_except(enum ButtonStates state, uint32_t button_mask);
+uint8_t all_buttons_except(enum ButtonStates state, uint32_t button_ignore_mask);
+uint8_t all_buttons_atleast(enum ButtonStates state, uint32_t button_mask);
+
 
 #define Button_Debounce_IRQHandler TIM4_IRQHandler
 
