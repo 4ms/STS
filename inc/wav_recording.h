@@ -27,11 +27,7 @@ void record_audio_to_buffer(int16_t *src);
 void write_buffer_to_storage(void);
 void init_rec_buff(void);
 void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels);
-//FRESULT write_wav_chunk_size(FIL *wavfil, uint32_t file_position, uint32_t chunk_bytes);
 FRESULT write_wav_info_chunk(FIL *wavfil, uint32_t *total_written);
 FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_size_bytes);
-
-#define RIFF_SIZE_POS	4
-#define data_SIZE_POS	40
 
 #endif /* INC_WAV_RECORDING_H_ */

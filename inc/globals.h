@@ -43,7 +43,7 @@
 
 //Update the FW Version anytime FLASH RAM settings format is changed
 #define FW_MAJOR_VERSION 0
-#define FW_MINOR_VERSION 4
+#define FW_MINOR_VERSION 5
 
 //Minimum firmware version that forces a calibration on the very first boot
 //This should be set to FW_{MAJOR|MINOR}_VERSION for the first production firmware release

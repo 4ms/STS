@@ -320,9 +320,9 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_siz
 	res = f_lseek(wavfil, 0);
 	if (res==FR_OK)
 	{
-		DEBUG3_ON;
+		//DEBUG3_ON;
 		res = f_write(wavfil, &whac_now_recording, sizeof(WaveHeaderAndChunk), &written);
-		DEBUG3_OFF;
+		//DEBUG3_OFF;
 	}
 
 	if (res!=FR_OK) 							{g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
@@ -458,7 +458,7 @@ void write_buffer_to_storage(void)
 	}
 
 
-	DEBUG2_ON;
+	//DEBUG2_ON;
 
 	// Handle write buffers (transfer SDRAM to SD card)
 	switch (rec_state)
@@ -503,9 +503,9 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 					}
 						
 					sz = WRITE_BLOCK_SIZE;
-					DEBUG3_ON;
+					//DEBUG3_ON;
 					res = f_write(&recfil, rec_buff16, sz, &written);
-					DEBUG3_OFF;
+					//DEBUG3_OFF;
 
 					if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
 										g_error |= FILE_WRITE_FAIL; check_errors();
@@ -524,12 +524,9 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 												g_error |= FILE_WRITE_FAIL; check_errors();
 												break;}
 					}
-					DEBUG1_ON;
+					//DEBUG1_ON;
 					f_sync(&recfil);
-					DEBUG1_OFF;
-
-					// res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
-					// res = write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
+					//DEBUG1_OFF;
 
 					if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
 										g_error |= FILE_WRITE_FAIL; check_errors();
@@ -565,49 +562,38 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 
 				if (!addr_exceeded)
 				{
-					res = f_write(&recfil, rec_buff16, buffer_lead, &written);
-					f_sync(&recfil);
-
-					if (res!=FR_OK)	{				if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
-													g_error |= FILE_WRITE_FAIL; check_errors();
-													break;}
-					if (written!=buffer_lead){		if (g_error & FILE_UNEXPECTEDEOF_WRITE) {f_close(&recfil); rec_state=REC_OFF;}
-													g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
-
-					samplebytes_recorded += written;
-
-					//Update the wav file size in the wav header
-					res = write_wav_size(&recfil, samplebytes_recorded, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
-					if (res!=FR_OK)	{		f_close(&recfil); rec_state=REC_OFF;
-											g_error |= FILE_WRITE_FAIL; check_errors();
-											break;}
-
-
-	
-				}
-				else
-				{
 					g_error = 999; //math error
 					check_errors();
 				}
+
+				res = f_write(&recfil, rec_buff16, buffer_lead, &written);
+				f_sync(&recfil);
+
+				if (res!=FR_OK)	{				if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
+												g_error |= FILE_WRITE_FAIL; check_errors();
+												break;}
+				if (written!=buffer_lead){		if (g_error & FILE_UNEXPECTEDEOF_WRITE) {f_close(&recfil); rec_state=REC_OFF;}
+												g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors();}
+
+				samplebytes_recorded += written;
+
+				//Update the wav file size in the wav header
+				res = write_wav_size(&recfil, samplebytes_recorded, samplebytes_recorded + sizeof(WaveHeaderAndChunk) - 8);
+				if (res!=FR_OK)	{		f_close(&recfil); rec_state=REC_OFF;
+										g_error |= FILE_WRITE_FAIL; check_errors();
+										break;}
+	
 			}
 			else 
 			{
-				//Write the file size into the header, and close the file
-				// res = write_wav_chunk_size(&recfil, data_SIZE_POS, samplebytes_recorded);
-				// if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
-				// 								g_error |= FILE_WRITE_FAIL; check_errors();
-				// 								break;}
 
 				// Write comment and Firmware chunks at bottom of wav file
-				// after data chunk (write_wav_size() puts us back there)
 				res = write_wav_info_chunk(&recfil, &written);
 				if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
 												g_error |= FILE_WRITE_FAIL; check_errors();
 												break;}
 
-				//Write new file size and data chunk size
-				// res = write_wav_chunk_size(&recfil, RIFF_SIZE_POS, samplebytes_recorded + written + sizeof(WaveHeaderAndChunk) - 8);
+				// Write new file size and data chunk size
 				res = write_wav_size(&recfil, samplebytes_recorded, samplebytes_recorded + written + sizeof(WaveHeaderAndChunk) - 8);
 				if (res!=FR_OK)	{				f_close(&recfil); rec_state=REC_OFF;
 												g_error |= FILE_WRITE_FAIL; check_errors();
@@ -671,10 +657,8 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 			// }
 		break;
 
-		// case (REC_PAUSED):
-		// break;
 
 	}
-	DEBUG2_OFF;
+	//DEBUG2_OFF;
 
 }
