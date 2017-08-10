@@ -24,11 +24,11 @@ uint8_t color_to_bank(char *color);
 
 uint8_t next_bank(uint8_t bank);
 uint8_t next_enabled_bank(uint8_t bank);
-
 uint8_t next_enabled_bank_0xFF(uint8_t bank);
-uint8_t prev_enabled_bank_0xFF(uint8_t bank);
-
 uint8_t next_disabled_bank(uint8_t bank);
+
+uint8_t prev_enabled_bank(uint8_t bank);
+uint8_t prev_enabled_bank_0xFF(uint8_t bank);
 uint8_t prev_disabled_bank(uint8_t bank);
 
 void 	check_enabled_banks(void);

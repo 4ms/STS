@@ -19,6 +19,7 @@ extern ButtonKnobCombo 		g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_
 
 
 enum ButtonStates 			button_state[NUM_BUTTONS];
+uint8_t						button_ignore[NUM_BUTTONS];
 extern uint8_t 				flags[NUM_FLAGS];
 extern uint8_t 				i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
@@ -49,7 +50,10 @@ void init_buttons(void)
 	uint8_t i;
 
 	for (i=0;i<NUM_BUTTONS;i++)
+	{
 		button_state[i] = UP;
+		button_ignore[i] = 0;
+	}
 
 	flags[SkipProcessButtons] = 2;
 
@@ -140,6 +144,7 @@ void Button_Debounce_IRQHandler(void)
 			if (State[i]==0xff00) //1111 1111 0000 0000 = not pressed for 8 cycles , then pressed for 8 cycles
 			{
 				button_state[i] = DOWN;
+				button_ignore[i] = 0;
 				if (!flags[SkipProcessButtons])
 				{
 					switch (i)
@@ -231,7 +236,7 @@ void Button_Debounce_IRQHandler(void)
 			{
 				if (!flags[SkipProcessButtons])
 				{
-					if (button_state[i] != UP)
+					if (button_state[i] != UP && !button_ignore[i])
 					{
 						switch (i)
 						{
@@ -266,10 +271,17 @@ void Button_Debounce_IRQHandler(void)
 								//No edit button: go to next enabled bank
 								if (!combo_was_active)
 								{
-									if (global_mode[EDIT_MODE])
+									if (button_state[Rev1+chan]>=DOWN)
+									{
+										i_param[chan][BANK] = prev_enabled_bank(i_param[chan][BANK]);
+										button_ignore[Rev1+chan] = 1;
+									}
+									else if (global_mode[EDIT_MODE])
 										i_param[chan][BANK] = next_bank(i_param[chan][BANK]);
+
 									else
 										i_param[chan][BANK] = next_enabled_bank(i_param[chan][BANK]);
+									
 								}
 
 								flags[PlayBank1Changed + chan] = 1;

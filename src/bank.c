@@ -264,6 +264,20 @@ uint8_t next_enabled_bank_0xFF(uint8_t bank)
 	return (bank);
 }
 
+uint8_t prev_enabled_bank(uint8_t bank)
+{
+	uint8_t orig_bank=bank;
+	if (orig_bank>=MAX_NUM_BANKS) orig_bank = MAX_NUM_BANKS-1; //otherwise we will have an infinite loop
+
+	do{
+		if (bank==0) bank = MAX_NUM_BANKS-1;
+		else bank--;
+		if (bank==orig_bank) return(0); //no banks are enabled -->> bail out and return the first bank
+	} while(!bank_status[bank]);
+
+	return (bank);
+}
+
 uint8_t prev_enabled_bank_0xFF(uint8_t bank)
 {
 	if (bank == 0xFF) bank=MAX_NUM_BANKS;
