@@ -41,10 +41,7 @@ main.c
 #define BOOTLOADER_MAGIC_CODE 0xBADDCAFE
 #define BOOTLOADER_MAGIC_ADDRESS *((uint32_t *)(0x2001FFF0))
 
-uint32_t WATCH0;
-uint32_t WATCH1;
-uint32_t WATCH2;
-uint32_t WATCH3;
+
 
 FATFS FatFs;
 
@@ -198,9 +195,9 @@ int main(void)
 
  	//Check the RAM chip and do a factory reset if we detect a pre-production version of firmware
     else if (!valid_fw_version \
-    	|| (system_calibrations->major_firmware_version  < FIRST_PRODUCTION_FW_MAJOR_VERSION) \
-    	|| (	(system_calibrations->major_firmware_version == FIRST_PRODUCTION_FW_MAJOR_VERSION) \
-    	 	&& 	 system_calibrations->minor_firmware_version <= FIRST_PRODUCTION_FW_MINOR_VERSION)	) 
+    	|| (system_calibrations->major_firmware_version  < FORCE_CAL_UNDER_FW_MAJOR_VERSION) \
+    	|| (	(system_calibrations->major_firmware_version == FORCE_CAL_UNDER_FW_MAJOR_VERSION) \
+    	 	&& 	 system_calibrations->minor_firmware_version < FORCE_CAL_UNDER_FW_MINOR_VERSION)	) 
     {
     	LEDDRIVER_OUTPUTENABLE_ON; //turn on for RAM Test
     	if (RAM_test()==0)
