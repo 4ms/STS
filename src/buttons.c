@@ -216,7 +216,7 @@ void Button_Debounce_IRQHandler(void)
 								if (g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state == COMBO_INACTIVE)
 									g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].latched_value = bracketed_potadc[START1_POT];
 								
-								g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state = COMBO_INACTIVE;
+								//g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state = COMBO_INACTIVE;
 							}
 							break;
 
@@ -229,7 +229,7 @@ void Button_Debounce_IRQHandler(void)
 								if (g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state == COMBO_INACTIVE)
 									g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].latched_value = bracketed_potadc[START2_POT];
 
-								g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state = COMBO_INACTIVE;
+								//g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state = COMBO_INACTIVE;
 							}
 
 							break;
