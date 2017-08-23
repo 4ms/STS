@@ -43,11 +43,6 @@
 		(1<<Rec) |\
 		(1<<RecBank) \
 		)
-// #define SYSMODE_BUTTONS_IGNOREMASK (\
-// 		(1<<Edit) |\
-// 		(1<<Bank1) |\
-// 		(1<<Bank2) \
-// 		)
 
 #define NO_BUTTONS (\
 		!REV1BUT &&\

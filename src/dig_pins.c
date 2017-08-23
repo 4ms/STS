@@ -65,6 +65,43 @@ void test_noise(void)
 
 }
 
+uint8_t get_PCB_version(void)
+{
+	uint8_t pulled_up, pulled_down;
+
+	GPIO_InitTypeDef gpio;
+	GPIO_StructInit(&gpio);
+
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+
+	gpio.GPIO_Mode = GPIO_Mode_IN;
+	gpio.GPIO_Speed = GPIO_High_Speed;
+	gpio.GPIO_Pin = PCBVERSION_A_pin;
+
+	//Test pin when pulled up
+	gpio.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_Init(PCBVERSION_A_GPIO, &gpio);
+
+	delay_ms(20);
+	pulled_up = PCBVERSION_A ? 1 : 0;
+
+	//Test pin when pulled down
+	gpio.GPIO_PuPd = GPIO_PuPd_DOWN;
+	GPIO_Init(PCBVERSION_A_GPIO, &gpio);
+
+	delay_ms(20);
+	pulled_down = PCBVERSION_A ? 1 : 0;
+
+	if (pulled_up && pulled_down) return(1); //always high: PCB version 1.1
+	if (pulled_up && !pulled_down) return(0); //floating: PCB version 1.0
+
+	if (!pulled_up && !pulled_down) return(0xFF); //always low: reserved for future PCB version
+	if (!pulled_up && pulled_down) return(0xFF); //high when pulled low, low when pulled high: invalid
+
+	return(0xFF); //unknown version
+
+}
+
 void deinit_dig_inouts(void)
 {
 	RCC_AHB1PeriphClockCmd(ALL_GPIO_RCC, DISABLE);
@@ -103,6 +140,7 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = RECTRIGJACK_pin; GPIO_Init(RECTRIGJACK_GPIO, &gpio);
 	gpio.GPIO_Pin = REV1JACK_pin;	GPIO_Init(REV1JACK_GPIO, &gpio);
 	gpio.GPIO_Pin = REV2JACK_pin;	GPIO_Init(REV2JACK_GPIO, &gpio);
+
 
 	//Switch
 	// gpio.GPIO_Pin = STEREOSW_T1_pin;	GPIO_Init(STEREOSW_T1_GPIO, &gpio);

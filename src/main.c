@@ -42,6 +42,7 @@ main.c
 #define BOOTLOADER_MAGIC_ADDRESS *((uint32_t *)(0x2001FFF0))
 
 
+uint8_t PCB_version=0;
 
 FATFS FatFs;
 
@@ -127,7 +128,18 @@ int main(void)
 
     //Initialize digital in/out pins
     init_dig_inouts();
- 	//test_dig_inouts();
+     //test_dig_inouts();
+
+    PCB_version = get_PCB_version();
+    
+    if (PCB_version==0xFF) //invalid version: display error code: all LEDs on for a second
+    {
+    	timeout_boot = 0x08000000;
+		PLAYLED1_ON;PLAYLED2_ON;SIGNALLED_ON;BUSYLED_ON;
+		while(timeout_boot--){;}
+		PLAYLED1_OFF;PLAYLED2_OFF;SIGNALLED_OFF;BUSYLED_OFF;
+	}
+
 
     //Turn on middle lights, for debugging
 	SIGNALLED_ON;
