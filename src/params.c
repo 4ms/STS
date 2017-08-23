@@ -31,12 +31,12 @@
 // This reduces slew and "indecision" when a step is advanced on the sequencer
 
 #if X_FAST_ADC == 1
-	#define PLAY_TRIG_LATCH_PITCH_TIME 256 
-	#define PLAY_TRIG_DELAY 520
+	#define PLAY_TRIG_LATCH_PITCH_TIME 128 
+	#define PLAY_TRIG_DELAY 128
 
-	#define MAX_FIR_LPF_SIZE 80
+	#define MAX_FIR_LPF_SIZE 20
 	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
-			80,80, //PITCH
+			20,20, //PITCH
 			20,20, //START
 			20,20, //LENGTH
 			1,1  //SAMPLE
@@ -1031,7 +1031,8 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 	if (raw_detent > cur_detent)
 	{
 		lower_adc_bound = (int16_t)adc_val - DETENT_MIN_DEPTH;
-		if (detent_num(lower_adc_bound) == raw_detent)
+	//	if (detent_num(lower_adc_bound) == raw_detent)
+		if (detent_num(lower_adc_bound) > cur_detent)
 			return(raw_detent);
 	}
 	else
@@ -1039,7 +1040,8 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 	{
 		upper_adc_bound = (int16_t)adc_val + DETENT_MIN_DEPTH;
 
-		if (detent_num(upper_adc_bound) == raw_detent)
+//		if (detent_num(upper_adc_bound) == raw_detent)
+		if (detent_num(upper_adc_bound) < cur_detent)
 			return(raw_detent);
 	}
 
