@@ -455,9 +455,11 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 							samples[cur_bank][cur_sample].file_found = 0; 																							// mark file as not found
 							load_data=0; read_name = 1; break;																										// skip loading sample play information
 						}
-					}										
+					}
+																																									// Set default values for start/end/size/gain
 					if (load_data == PLAY_START){samples[cur_bank][cur_sample].inst_start = 0; 											load_data++;}
-					if (load_data == PLAY_SIZE ){samples[cur_bank][cur_sample].inst_size  = samples[cur_bank][cur_sample].sampleSize; 	load_data++;}
+					if (load_data == PLAY_SIZE ){samples[cur_bank][cur_sample].inst_size  = samples[cur_bank][cur_sample].sampleSize; 	
+												 samples[cur_bank][cur_sample].inst_end  = samples[cur_bank][cur_sample].sampleSize;	load_data++;}
 					if (load_data == PLAY_GAIN ){samples[cur_bank][cur_sample].inst_gain  =1; 											load_data=0; read_name = 1; str_cpy(token, read_buffer); continue;}	// use read_buffer to load next file name
 				}
 
@@ -567,6 +569,12 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 					{	
 						if ( (num_buff < 88) || (num_buff > samples[cur_bank][cur_sample].sampleSize))	samples[cur_bank][cur_sample].inst_size = samples[cur_bank][cur_sample].sampleSize; 	// bound check on play size/ is too short (<2ms @ 44kHz) or too long, set it to the default value of sampleSize
 						else 																			samples[cur_bank][cur_sample].inst_size = num_buff;
+
+						samples[cur_bank][cur_sample].inst_end  = samples[cur_bank][cur_sample].inst_size + samples[cur_bank][cur_sample].inst_start;	//Set the inst_end based on start and size
+
+						if (samples[cur_bank][cur_sample].inst_end > samples[cur_bank][cur_sample].sampleSize || samples[cur_bank][cur_sample].inst_end < 88) //Boundary check the inst_end
+							samples[cur_bank][cur_sample].inst_end = samples[cur_bank][cur_sample].sampleSize;
+
 						load_data++; token[0] = '\0'; break;																					// read next line
 					}
 
