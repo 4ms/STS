@@ -269,9 +269,18 @@ void update_system_mode_button_leds(void)
 
 
 		set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
-		set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);
 		set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE);
 		set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE);
-		set_ButtonLED_byPalette(Reverse2ButtonLED, ORANGE);
+
+		if (button_state[Rev1] >= DOWN && all_buttons_except(UP, (1<<Rev1)))
+		{
+			set_ButtonLED_byPalette(Reverse2ButtonLED, (FW_MINOR_VERSION)%14);
+			set_ButtonLED_byPalette(Reverse1ButtonLED, (FW_MAJOR_VERSION)%14);
+		}
+		else
+		{
+			set_ButtonLED_byPalette(Reverse2ButtonLED, ORANGE);
+			set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);
+		}
 	}
 }
