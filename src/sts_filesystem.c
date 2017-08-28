@@ -713,7 +713,17 @@ uint8_t load_all_banks(uint8_t force_reload)
 	FRESULT queue_valid;
 
 	//Load the index file:
-	flags[RewriteIndex]=YELLOW;
+	if (FW_MINOR_VERSION==0)		flags[RewriteIndex]=YELLOW;
+	else if (FW_MINOR_VERSION==1)	flags[RewriteIndex]=GREEN;
+	else if (FW_MINOR_VERSION==2)	flags[RewriteIndex]=CYAN;
+	else if (FW_MINOR_VERSION==3)	flags[RewriteIndex]=BLUE;
+	else if (FW_MINOR_VERSION==4)	flags[RewriteIndex]=PINK;
+	else if (FW_MINOR_VERSION==5)	flags[RewriteIndex]=RED;
+	else if (FW_MINOR_VERSION==6)	flags[RewriteIndex]=ORANGE;
+	else if (FW_MINOR_VERSION==7)	flags[RewriteIndex]=AQUA;
+	else if (FW_MINOR_VERSION==8)	flags[RewriteIndex]=DIM_RED;
+	else if (FW_MINOR_VERSION==9)	flags[RewriteIndex]=CYANER;
+
 
 	//Load the index file, marking files found or not found with samples[][].file_found = 1/0;
 	if (!force_reload)
