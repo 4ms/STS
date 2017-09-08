@@ -183,6 +183,10 @@ void init_modes(void)
 	global_mode[REC_24BITS] = 0;
 	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;
 	global_mode[LENGTH_FULL_START_STOP] = 0;
+
+	global_mode[QUANTIZE_CH1] = 0;
+	global_mode[QUANTIZE_CH2] = 0;
+
 }
 
 
@@ -206,8 +210,8 @@ void init_LowPassCoefs(void)
 	RAWCV_LPF_COEF[SAMPLE2_CV] = 1.0-(1.0/t);
 
 #if X_FAST_ADC == 1
-	CV_BRACKET[PITCH1_CV] = 5;
-	CV_BRACKET[PITCH2_CV] = 5;
+	CV_BRACKET[PITCH1_CV] = 2;
+	CV_BRACKET[PITCH2_CV] = 2;
 #else
 	CV_BRACKET[PITCH1_CV] = 20;
 	CV_BRACKET[PITCH2_CV] = 20;
@@ -364,7 +368,7 @@ void process_cv_adc(void)
 		//Additional bracketing for special-case of CV jack being near 0V
 		if (i==0 || i==1) //PITCH CV
 		{
-			if (bracketed_cvadc[i] > 2038 && bracketed_cvadc[i] < 2058)
+			if (bracketed_cvadc[i] >= 2046 && bracketed_cvadc[i] <= 2050)
 				bracketed_cvadc[i] = 2048;
 		}
 
@@ -422,23 +426,108 @@ void process_pot_adc(void)
 //
 uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt)
 {
+	float float_val;
+
 	if (cv_adcval > 2048)
 	{
 		cv_adcval -= 2048;
-		cv_adcval = (float)cv_adcval * cal_amt;
+		float_val = (float)cv_adcval * cal_amt;
+
+		//round float_val to nearest integer
+		cv_adcval = (uint32_t)float_val;
+		if ((float_val - cv_adcval) >= 0.5) cv_adcval++;
+
 		cv_adcval += 2048;
 	}
 	else
 	{
 		cv_adcval = 2048 - cv_adcval;
-		cv_adcval = (float)cv_adcval * cal_amt;
-		cv_adcval = 2048 - cv_adcval;
+		float_val = (float)cv_adcval * cal_amt;
 
+		//round float_val to nearest integer
+		cv_adcval = (uint32_t)float_val;
+		if ((float_val - cv_adcval) >= 0.5) cv_adcval++;
+
+		cv_adcval = 2048 - cv_adcval;
 	}
 	if (cv_adcval > 4095) cv_adcval = 4095;
 	if (cv_adcval < 0) cv_adcval = 0;
 	return(cv_adcval);
 }
+
+#define TWELFTH_ROOT_TWO 1.059463094
+#define SEMITONE_ADC_WIDTH 33.75
+#define OCTAVE_ADC_WIDTH (SEMITONE_ADC_WIDTH*12.0)
+
+float quantized_semitone_voct(uint32_t adcval)
+{
+	int8_t oct;
+	int8_t semitone;
+	int32_t root_adc;
+	int32_t root_adc_midpt;
+
+	uint8_t oct_mult;
+	float semitone_mult;
+
+	float octave_mult;
+
+	//every 405 adc values ocs an octtave
+	//2048-(405*oct) ---> 2^oct, oct: 0..5 ---> 1..32
+	//2048+(405*oct) ---> 1/(2^oct), oct: 0..5 --> 1..1/32
+
+	if (adcval==2048) return(1.0);
+
+//	if (adcval<2048)
+	if (0)
+	{
+		//First, set oct_mult
+		//oct_mult should be 32, 16, 8, 4, 2, or 1 to indicate the root note of the octave we're in
+		oct_mult=32; //start by testing the +5 octave
+		for (oct=5;oct>=0;oct--)
+		{
+			root_adc = 2048-(OCTAVE_ADC_WIDTH*oct);
+			if (adcval<=root_adc) break; //exit for loop
+			oct_mult>>=1; //drop down an octave
+		}
+
+		root_adc_midpt = root_adc - (SEMITONE_ADC_WIDTH/2.0);
+		semitone_mult=1.0;
+		for (semitone=0;semitone<12;semitone++)
+		{
+			if (adcval>(root_adc_midpt-(int32_t)(SEMITONE_ADC_WIDTH*(float)semitone))) break; //exit for loop
+			semitone_mult*=TWELFTH_ROOT_TWO;
+		}
+
+		return ((float)oct_mult * semitone_mult);
+	}
+	else
+	{
+		//First, set oct_mult
+		//oct_mult should be 32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125 to indicate the root note of the octave we're in
+		octave_mult=32.0; 
+		for (oct=5;oct>=-5;oct--)
+		{
+			root_adc = 2048-(OCTAVE_ADC_WIDTH*oct);
+			if (adcval<=root_adc) break; //exit for loop
+			octave_mult = octave_mult/2; //drop down an octave
+		}
+
+		root_adc_midpt = root_adc - (SEMITONE_ADC_WIDTH/2.0);
+		semitone_mult=1.0;
+		for (semitone=0;semitone<12;semitone++)
+		{
+			if (adcval>(root_adc_midpt-(int32_t)(SEMITONE_ADC_WIDTH*(float)semitone))) break; //exit for loop
+			semitone_mult*=TWELFTH_ROOT_TWO;
+		}
+
+		return (octave_mult * semitone_mult);
+	}
+
+}
+
+
+//FixMe: put this back into update_params as a local var
+uint32_t compensated_pitch_cv[2];
 
 void update_params(void)
 {
@@ -448,8 +537,8 @@ void update_params(void)
 	uint8_t new_val;
 	int32_t t_pitch_potadc;
 	float t_f;
-	uint32_t compensated_pitch_cv;
 	uint16_t sample_pot;
+	int16_t pitch_cv;
 
 	uint32_t trial_bank;
 	uint8_t samplenum, banknum;
@@ -595,12 +684,20 @@ void update_params(void)
 		if (t_pitch_potadc > 4095) t_pitch_potadc = 4095;
 		if (t_pitch_potadc < 0) t_pitch_potadc = 0;
 
-		if(flags[LatchVoltOctCV1+chan]) 
-			compensated_pitch_cv = apply_tracking_compensation(voct_latch_value[chan], system_calibrations->tracking_comp[chan]);
-		else
-			compensated_pitch_cv = apply_tracking_compensation(bracketed_cvadc[PITCH1_CV+chan], system_calibrations->tracking_comp[chan]);
+		if(flags[LatchVoltOctCV1+chan]) 	pitch_cv = voct_latch_value[chan];
+		else								pitch_cv = bracketed_cvadc[PITCH1_CV+chan];
 
-		f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
+		if (global_mode[QUANTIZE_CH1+chan]) 
+		{
+			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * quantized_semitone_voct(pitch_cv) * system_calibrations->detune;
+		}
+		else
+		{
+			compensated_pitch_cv[chan] = apply_tracking_compensation(pitch_cv, system_calibrations->tracking_comp[chan]);
+			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv[chan]];
+
+		}
+
 
 		if (f_param[chan][PITCH] > MAX_RS)
 		    f_param[chan][PITCH] = MAX_RS;

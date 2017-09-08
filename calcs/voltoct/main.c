@@ -20,29 +20,26 @@
 #include <sys/ioctl.h>
 #include <sys/times.h>
 
-//
-//Empirically found constant, by taking the average of several readings:
-//K = DESIRED_FREQ_MULTIPLIER^(1/(CENTER_ADC_VAL - MEASURED_ADCVAL))
-//Where CENTER_ADC_VAL is the ADC value with 0V applied to the jack
-//
-#define K 1.00171259374942
+#define ADCVALS_PER_OCTAVE 408.0
 #define CENTER_ADC 2048
 int main(void){
 	int i;
 	double v;
+	double pitch_per_adcval;
+
+	pitch_per_adcval = pow(2.0, 1.0/ADCVALS_PER_OCTAVE);
 
 	printf ("const float voltoct[4096]={\n");
 
 	for (i=0;i<4096;i++)
 	{
-		v = pow(K,(CENTER_ADC - i));
+		v = pow(pitch_per_adcval, (CENTER_ADC - i));
+
 		printf("%.16g",v);
 		if (i!=4095) 	printf(",");
-		printf("\t//%d",i);
-		printf("\n");
+		printf("\t//%d\n",i);
 	}
-	printf ("};");
-	printf("\n");
+	printf ("};\n");
 
 	return(0);
 }

@@ -20,6 +20,7 @@ typedef struct SystemCalibrations
 	uint32_t	led_brightness;
 	float 		tracking_comp[NUM_PLAY_CHAN];
 	int32_t		pitch_pot_detent_offset[2];
+	float		detune;
 
 } SystemCalibrations;
 

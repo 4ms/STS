@@ -44,6 +44,8 @@ void set_default_calibration_values(void)
 	system_calibrations->tracking_comp[0]=1.025;
 	system_calibrations->tracking_comp[1]=1.034;
 
+	system_calibrations->detune=1.0;
+
 	system_calibrations->led_brightness = 4;
 
 	system_calibrations->pitch_pot_detent_offset[0]=30;
@@ -142,6 +144,8 @@ void update_calibration(void)
 
 	system_calibrations->tracking_comp[0]=1.025;
 	system_calibrations->tracking_comp[1]=1.034;
+	
+	system_calibrations->detune=1.0;
 
 
 	if (SAVE_CALIBRATE_BUTTONS)

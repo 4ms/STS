@@ -306,8 +306,11 @@ void Button_Debounce_IRQHandler(void)
 							case Rec:
 								if (global_mode[EDIT_MODE])
 								{
-									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
-									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
+									if (!global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
+									if (!global_mode[QUANTIZE_CH2] && play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
+
+									if ((global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) \
+									 || (global_mode[QUANTIZE_CH2] && play_state[1] != SILENT)) {system_calibrations->detune -= 0.001;}
 								}
 								else
 								{
@@ -319,8 +322,11 @@ void Button_Debounce_IRQHandler(void)
 							case RecBank:
 								if (global_mode[EDIT_MODE])
 								{
-									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
-									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
+									if (!global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
+									if (!global_mode[QUANTIZE_CH2] && play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
+
+									if ((global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) \
+									 || (global_mode[QUANTIZE_CH2] && play_state[1] != SILENT)) {system_calibrations->detune += 0.001;}
 								}
 								else 
 								{

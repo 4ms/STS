@@ -188,6 +188,9 @@ void read_all_system_calibrations_from_FLASH(void)
 			staging_system_calibrations->tracking_comp[i] = 1.0;
 	}
 
+	if (invalid_fw_version || staging_system_calibrations->detune > 2.0 || staging_system_calibrations->detune < 0.50 || (*(uint32_t *)(&staging_system_calibrations->detune)==0xFFFFFFFF))
+		staging_system_calibrations->detune = 1.0;
+
 	if (invalid_fw_version || staging_system_calibrations->led_brightness > 15 || staging_system_calibrations->led_brightness < 1)
 		staging_system_calibrations->led_brightness = 4;
 
