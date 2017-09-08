@@ -297,18 +297,18 @@ void update_system_mode_button_leds(void)
 		if (global_mode[LENGTH_FULL_START_STOP]) 		set_ButtonLED_byPalette(Play1ButtonLED, RED); //Tapping play button with Length>98% start/stops
 		else											set_ButtonLED_byPalette(Play1ButtonLED, BLUE); //tapping play button always re-starts
 
-		if (global_mode[QUANTIZE_CH1]) 					set_ButtonLED_byPalette(Bank1ButtonLED, RED); //Ch1 quantized to semitones
+		if (global_mode[QUANTIZE_CH1]) 					set_ButtonLED_byPalette(Bank1ButtonLED, BLUE); //Ch1 quantized to semitones
 		else											set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE); //Ch1 not quantized
 
-		if (global_mode[QUANTIZE_CH2]) 					set_ButtonLED_byPalette(Bank2ButtonLED, RED); //Ch2 quantized to semitones
+		if (global_mode[QUANTIZE_CH2]) 					set_ButtonLED_byPalette(Bank2ButtonLED, BLUE); //Ch2 quantized to semitones
 		else											set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE); //Ch2 not quantized
 
 		set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
 
-		if (button_state[Rev1] >= DOWN && all_buttons_except(UP, (1<<Rev1)))
+		if (button_state[Edit] >= DOWN && all_buttons_except(UP, (1<<Edit)))
 		{
-			set_ButtonLED_byPalette(Reverse2ButtonLED, (FW_MINOR_VERSION)%14);
 			set_ButtonLED_byPalette(Reverse1ButtonLED, (FW_MAJOR_VERSION)%14);
+			set_ButtonLED_byPalette(Reverse2ButtonLED, (FW_MINOR_VERSION)%14);
 		}
 		else
 		{

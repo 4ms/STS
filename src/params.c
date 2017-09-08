@@ -368,7 +368,7 @@ void process_pot_adc(void)
 
 		t=i_smoothed_potadc[i] - bracketed_potadc[i];
 		if ((t>POT_BRACKET[i]) || (t<-POT_BRACKET[i]))
-			track_moving_pot[i]=3000;
+			track_moving_pot[i]=300;
 
 		if (track_moving_pot[i])
 		{
@@ -377,9 +377,6 @@ void process_pot_adc(void)
 			pot_delta[i] = t;
 			bracketed_potadc[i] = i_smoothed_potadc[i];
 		}
-		// else
-		// 	pot_delta[i] = 0;
-
 	}
 }
 

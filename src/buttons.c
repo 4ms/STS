@@ -551,10 +551,8 @@ void Button_Debounce_IRQHandler(void)
 		//
 			if (!global_mode[SYSTEM_MODE])
 			{
-				// All sysmode buttons down for LONG PRESS, and all others are up, and we're not recording, means we should enter System Mode
-				if (all_buttons_atleast(LONG_PRESSED, SYSMODE_BUTTONS_MASK))
-
-				//if (button_state[Rev1]>=LONG_PRESSED && button_state[Rev2]>=LONG_PRESSED && button_state[Play1]>=LONG_PRESSED && button_state[Play2]>=LONG_PRESSED && button_state[Rec]>=LONG_PRESSED && button_state[RecBank]>=LONG_PRESSED)
+				// All sysmode buttons down for MED PRESS, and all others are up, and we're not recording, means we should enter System Mode
+				if (all_buttons_atleast(MED_PRESSED, SYSMODE_BUTTONS_MASK))
 				{
 					if (rec_state==REC_OFF)
 					{

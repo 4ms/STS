@@ -173,7 +173,7 @@ FRESULT read_user_settings(void)
 				}
 				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 2 1V/OCT JACK]"))
 				{
-					cur_setting_found = QuantizeChannel1; //Channel 2 Quantize
+					cur_setting_found = QuantizeChannel2; //Channel 2 Quantize
 					continue;
 				}
 			}
