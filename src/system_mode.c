@@ -90,8 +90,10 @@ void update_system_mode(void)
 		}
 		else if (button_state[Play2] == UP && button_armed[Play2] == 1)
 		{
-			if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE])global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;
-			else						 				global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 1; 
+			if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_OFF) 		global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_ALWAYS;
+			else
+			if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS) 	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_LOOPING;
+			else						 									global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_OFF; 
 
 			//Disable the button from doing anything until it's released
 			button_state[Play2] = UP;
@@ -291,8 +293,10 @@ void update_system_mode_button_leds(void)
 		if (global_mode[REC_24BITS]) 					set_ButtonLED_byPalette(RecButtonLED, BLUE); //24bit recording
 		else											set_ButtonLED_byPalette(RecButtonLED, ORANGE); //16bit recording
 
-		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]) 	set_ButtonLED_byPalette(Play2ButtonLED, RED); //Auto Stop on sample change
-		else											set_ButtonLED_byPalette(Play2ButtonLED, GREEN); //No auto stop on sample change
+		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_OFF) 		set_ButtonLED_byPalette(Play2ButtonLED, GREEN); //No auto stop on sample change
+		else
+		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS) 	set_ButtonLED_byPalette(Play2ButtonLED, RED); //Auto Stop on sample change
+		else						 									set_ButtonLED_byPalette(Play2ButtonLED, BLUE); //Auto Stop only when Looping
 
 		if (global_mode[LENGTH_FULL_START_STOP]) 		set_ButtonLED_byPalette(Play1ButtonLED, RED); //Tapping play button with Length>98% start/stops
 		else											set_ButtonLED_byPalette(Play1ButtonLED, BLUE); //tapping play button always re-starts

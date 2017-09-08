@@ -94,6 +94,12 @@ enum GlobalModes
 	NUM_GLOBAL_MODES
 };
 
+enum AutoStopModes
+{
+	AutoStop_OFF=0,
+	AutoStop_ALWAYS=1,
+	AutoStop_LOOPING=2
+};
 void reset_cv_lowpassfilter(uint8_t cv_num);
 
 

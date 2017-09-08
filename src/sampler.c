@@ -579,7 +579,7 @@ void check_change_sample(void)
 
 				flags[PlaySample1Changed_valid+chan] = 0;
 
-				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] || i_param[chan][LOOPING])
+				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS || (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==2 && i_param[chan][LOOPING]))
 				{
 					if (play_state[chan] != SILENT && play_state[chan]!=PREBUFFERING)
 						play_state[chan] = PLAY_FADEDOWN;
@@ -597,7 +597,7 @@ void check_change_sample(void)
 
 				flags[PlaySample1Changed_empty+chan] = 0;
 
-				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE])
+				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS)
 				{
 					if (play_state[chan] == SILENT && i_param[chan][LOOPING])
 						flags[Play1But+chan]=1;
@@ -607,7 +607,7 @@ void check_change_sample(void)
 				}
 				else
 				{
-					if (i_param[chan][LOOPING])
+					if ((play_state[chan] == SILENT || global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_LOOPING) && i_param[chan][LOOPING])
 						flags[Play1But+chan]=1;
 				}
 				//ToDo?: set play_state[chan] to PRELOAD, so we start loading the new sample as soon as we change to it

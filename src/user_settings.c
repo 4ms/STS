@@ -13,7 +13,7 @@ void set_default_user_settings(void)
 {
 	global_mode[STEREO_MODE] = 0;
 	global_mode[REC_24BITS] = 0;
-	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;	
+	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_OFF;	
 	global_mode[LENGTH_FULL_START_STOP] = 0;	
 
 	global_mode[QUANTIZE_CH1] = 0;
@@ -45,7 +45,7 @@ FRESULT save_user_settings(void)
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## [STEREO MODE] can be \"stereo\" or \"mono\" (default)\n");
 		f_printf(&settings_file, "## [RECORD SAMPLE BITS] can be 24 or 16 (default)\n");
-		f_printf(&settings_file, "## [AUTO STOP ON SAMPLE CHANGE] can be \"No\" or \"Yes\" (default)\n");
+		f_printf(&settings_file, "## [AUTO STOP ON SAMPLE CHANGE] can be \"No\", \"Looping Only\" or \"Yes\" (default)\n");
 		f_printf(&settings_file, "## [PLAY BUTTON STOPS WITH LENGTH AT FULL] can be \"No\" or \"Yes\" (default)\n");
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## Deleting this file will restore default settings\n");
@@ -70,10 +70,14 @@ FRESULT save_user_settings(void)
 		// Write the Auto Stop on Sample Change mode setting
 		f_printf(&settings_file, "[AUTO STOP ON SAMPLE CHANGE]\n");
 
-		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE])
+		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS)
 			f_printf(&settings_file, "Yes\n\n");
 		else
+		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_OFF)
 			f_printf(&settings_file, "No\n\n");
+		else
+		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_LOOPING)
+			f_printf(&settings_file, "Looping Only\n\n");
 
 		// Write the Auto Stop on Sample Change mode setting
 		f_printf(&settings_file, "[PLAY BUTTON STOPS WITH LENGTH AT FULL]\n");
@@ -166,12 +170,12 @@ FRESULT read_user_settings(void)
 					cur_setting_found = PlayStopsLengthFull; //Auto Stop Mode section detected
 					continue;
 				}
-				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 1 1V/OCT JACK]"))
+				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 1"))
 				{
 					cur_setting_found = QuantizeChannel1; //Channel 1 Quantize
 					continue;
 				}
-				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 2 1V/OCT JACK]"))
+				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 2"))
 				{
 					cur_setting_found = QuantizeChannel2; //Channel 2 Quantize
 					continue;
@@ -207,10 +211,12 @@ FRESULT read_user_settings(void)
 			if (cur_setting_found==AutoStopSampleChange)
 			{
 				if (str_startswith_nocase(read_buffer, "Yes"))
-					global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 1;
-
+					global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_ALWAYS;
 				else
-					global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;
+				if (str_startswith_nocase(read_buffer, "Looping Only"))
+					global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_LOOPING;
+				else
+					global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_OFF;
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}
