@@ -15,6 +15,10 @@ void set_default_user_settings(void)
 	global_mode[REC_24BITS] = 0;
 	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;	
 	global_mode[LENGTH_FULL_START_STOP] = 0;	
+
+	global_mode[QUANTIZE_CH1] = 0;
+	global_mode[QUANTIZE_CH2] = 0;
+
 }
 
 
@@ -75,6 +79,22 @@ FRESULT save_user_settings(void)
 		f_printf(&settings_file, "[PLAY BUTTON STOPS WITH LENGTH AT FULL]\n");
 
 		if (global_mode[LENGTH_FULL_START_STOP])
+			f_printf(&settings_file, "Yes\n\n");
+		else
+			f_printf(&settings_file, "No\n\n");
+
+		// Write the Quantize Channel 1 setting
+		f_printf(&settings_file, "[QUANTIZE CHANNEL 1 1V/OCT JACK]\n");
+
+		if (global_mode[QUANTIZE_CH1])
+			f_printf(&settings_file, "Yes\n\n");
+		else
+			f_printf(&settings_file, "No\n\n");
+
+		// Write the Quantize Channel 2 setting
+		f_printf(&settings_file, "[QUANTIZE CHANNEL 2 1V/OCT JACK]\n");
+
+		if (global_mode[QUANTIZE_CH2])
 			f_printf(&settings_file, "Yes\n\n");
 		else
 			f_printf(&settings_file, "No\n\n");
@@ -146,7 +166,16 @@ FRESULT read_user_settings(void)
 					cur_setting_found = PlayStopsLengthFull; //Auto Stop Mode section detected
 					continue;
 				}
-
+				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 1 1V/OCT JACK]"))
+				{
+					cur_setting_found = QuantizeChannel1; //Channel 1 Quantize
+					continue;
+				}
+				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 2 1V/OCT JACK]"))
+				{
+					cur_setting_found = QuantizeChannel1; //Channel 2 Quantize
+					continue;
+				}
 			}
 
 			 //Look for setting values
@@ -193,6 +222,28 @@ FRESULT read_user_settings(void)
 
 				else
 					global_mode[LENGTH_FULL_START_STOP] = 0;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found==QuantizeChannel1)
+			{
+				if (str_startswith_nocase(read_buffer, "Yes"))
+					global_mode[QUANTIZE_CH1] = 1;
+
+				else
+					global_mode[QUANTIZE_CH1] = 0;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found==QuantizeChannel2)
+			{
+				if (str_startswith_nocase(read_buffer, "Yes"))
+					global_mode[QUANTIZE_CH2] = 1;
+
+				else
+					global_mode[QUANTIZE_CH2] = 0;
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}

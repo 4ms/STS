@@ -18,6 +18,8 @@ enum Settings
 	RecordSampleBits,
 	AutoStopSampleChange,
 	PlayStopsLengthFull,
+	QuantizeChannel1,
+	QuantizeChannel2,
 
 	NUM_SETTINGS_ENUM
 };

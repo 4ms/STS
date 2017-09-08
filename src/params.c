@@ -122,14 +122,9 @@ int16_t bracketed_potadc[NUM_POT_ADCS];
 //Latched pot value for use during edit mode
 extern int16_t editmode_latched_potadc[NUM_POT_ADCS];
 
-// #define PITCH_DELAY_BUFFER_SZ 1
-// int32_t delayed_pitch_cvadc_buffer[NUM_PLAY_CHAN][PITCH_DELAY_BUFFER_SZ];
-// uint32_t del_cv_i[NUM_PLAY_CHAN];
-//int16_t prepared_cvadc[NUM_CV_ADCS];
 
 
 //LPF of raw ADC values for calibration
-//float smoothed_rawcvadc[NUM_CV_ADCS];
 int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
 
 //Change in pot since last process_adc
@@ -161,14 +156,6 @@ void init_params(void)
 		flags[i]=0;
 	}
 
-	// for (i=0;i<PITCH_DELAY_BUFFER_SZ;i++)
-	// {
-	// 	delayed_pitch_cvadc_buffer[0][i]=2048;
-	// 	delayed_pitch_cvadc_buffer[1][i]=2048;
-	// }
-	// del_cv_i[0]=0;
-	// del_cv_i[1]=0;
-
 }
 
 //initializes modes that aren't read from flash ram or disk
@@ -180,13 +167,6 @@ void init_modes(void)
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
-	global_mode[REC_24BITS] = 0;
-	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = 0;
-	global_mode[LENGTH_FULL_START_STOP] = 0;
-
-	global_mode[QUANTIZE_CH1] = 0;
-	global_mode[QUANTIZE_CH2] = 0;
-
 }
 
 
@@ -247,8 +227,8 @@ void init_LowPassCoefs(void)
 
 
 
-	POT_BRACKET[PITCH1_POT] = 15;
-	POT_BRACKET[PITCH2_POT] = 15;
+	POT_BRACKET[PITCH1_POT] = 12;
+	POT_BRACKET[PITCH2_POT] = 12;
 
 	POT_BRACKET[START1_POT] = 20;
 	POT_BRACKET[START2_POT] = 20;
@@ -351,18 +331,12 @@ void process_cv_adc(void)
 		{
 			cv_delta[i] = t;
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] - (CV_BRACKET[i]);
-			//bracketed_cvadc[i] = i_smoothed_cvadc[i] - (CV_BRACKET[i]/2);
-			//bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
-			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
 		}
 
 		else if (t<-CV_BRACKET[i])
 		{
 			cv_delta[i] = t;
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] + (CV_BRACKET[i]);
-			//bracketed_cvadc[i] = i_smoothed_cvadc[i] + (CV_BRACKET[i]/2);
-			//bracketed_cvadc[i] = (bracketed_cvadc[i] + i_smoothed_cvadc[i])/2;
-			//bracketed_cvadc[i] = i_smoothed_cvadc[i];
 		}
 
 		//Additional bracketing for special-case of CV jack being near 0V
@@ -372,18 +346,7 @@ void process_cv_adc(void)
 				bracketed_cvadc[i] = 2048;
 		}
 
-		
-
-		//Not using a delay buffer
-		//Set the final usable value to the oldest element in the delayed_ buffer
-		// prepared_cvadc[i] = delayed_pitch_cvadc_buffer[i][del_cv_i[i]];
-
-		// //Overwrite the oldest value with the newest value
-		// delayed_pitch_cvadc_buffer[i][del_cv_i[i]] = bracketed_cvadc[i];
-
-		// //Increment the index, wrapping around the whole buffer
-		// if (++del_cv_i[i] >= PITCH_DELAY_BUFFER_SZ) del_cv_i[i]=0;
-	}
+			}
 }
 
 void process_pot_adc(void)
@@ -405,7 +368,7 @@ void process_pot_adc(void)
 
 		t=i_smoothed_potadc[i] - bracketed_potadc[i];
 		if ((t>POT_BRACKET[i]) || (t<-POT_BRACKET[i]))
-			track_moving_pot[i]=250;
+			track_moving_pot[i]=3000;
 
 		if (track_moving_pot[i])
 		{
@@ -456,7 +419,7 @@ uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt)
 }
 
 #define TWELFTH_ROOT_TWO 1.059463094
-#define SEMITONE_ADC_WIDTH 33.75
+#define SEMITONE_ADC_WIDTH 34.0
 #define OCTAVE_ADC_WIDTH (SEMITONE_ADC_WIDTH*12.0)
 
 float quantized_semitone_voct(uint32_t adcval)
@@ -689,7 +652,7 @@ void update_params(void)
 
 		if (global_mode[QUANTIZE_CH1+chan]) 
 		{
-			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * quantized_semitone_voct(pitch_cv) * system_calibrations->detune;
+			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * quantized_semitone_voct(pitch_cv) * system_calibrations->tracking_comp[chan];
 		}
 		else
 		{

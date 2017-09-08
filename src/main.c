@@ -214,8 +214,9 @@ int main(void)
    	if ( 	system_calibrations->major_firmware_version != FW_MAJOR_VERSION
    		|| 	system_calibrations->minor_firmware_version != FW_MINOR_VERSION	)
     {
-    	LEDDRIVER_OUTPUTENABLE_ON; //turn on for flash writing
+    	LEDDRIVER_OUTPUTENABLE_ON;
 
+    	apply_firmware_specific_adjustments();
     	copy_system_calibrations_into_staging();
     	set_firmware_version();
     	write_all_system_calibrations_to_FLASH();

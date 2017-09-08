@@ -27,6 +27,16 @@ extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
 #define FLASH_SYMBOL_firmwareoffset 0xAA550000
 
 
+void apply_firmware_specific_adjustments(void)
+{
+	//Upgrading from 1.0 or 1.1 to 1.2: reset tracking comp to 1.0
+	if (FW_MAJOR_VERSION == 1 && FW_MINOR_VERSION == 2 && system_calibrations->major_firmware_version == 1 && system_calibrations->minor_firmware_version <=1)
+	{
+		system_calibrations->tracking_comp[0] = 1.0;
+		system_calibrations->tracking_comp[1] = 1.0;
+	}
+}
+
 void set_firmware_version(void)
 {
 	staging_system_calibrations->major_firmware_version = FW_MAJOR_VERSION;
@@ -187,9 +197,6 @@ void read_all_system_calibrations_from_FLASH(void)
 		if (invalid_fw_version || staging_system_calibrations->tracking_comp[i] > 2.0 || staging_system_calibrations->tracking_comp[i] < 0.50 || (*(uint32_t *)(&staging_system_calibrations->tracking_comp[i])==0xFFFFFFFF))
 			staging_system_calibrations->tracking_comp[i] = 1.0;
 	}
-
-	if (invalid_fw_version || staging_system_calibrations->detune > 2.0 || staging_system_calibrations->detune < 0.50 || (*(uint32_t *)(&staging_system_calibrations->detune)==0xFFFFFFFF))
-		staging_system_calibrations->detune = 1.0;
 
 	if (invalid_fw_version || staging_system_calibrations->led_brightness > 15 || staging_system_calibrations->led_brightness < 1)
 		staging_system_calibrations->led_brightness = 4;
