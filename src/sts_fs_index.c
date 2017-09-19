@@ -329,8 +329,8 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 
 
 	// handle backup vs normal index file, and open
-	if (use_backup==USE_INDEX_FILE) {if (!check_sampleindex_valid(SAMPLE_INDEX_FILE))use_backup=USE_BACKUP_FILE;}	//If normal non-backup file requested but isn't a valid file, use the backup file instead
-	if (use_backup==USE_BACKUP_FILE){if (!check_sampleindex_valid(SAMPLE_BAK_FILE))return(1); }						// If we requested the backup file (or if we requested the normal file, and it was invalid, Then see if the backup file is valid. If not, then we exit with an error
+	if (use_backup==USE_INDEX_FILE) {if (!check_sampleindex_valid(SAMPLE_INDEX_FILE)) use_backup=USE_BACKUP_FILE;}	//If normal non-backup file requested but isn't a valid file, use the backup file instead
+	if (use_backup==USE_BACKUP_FILE){if (!check_sampleindex_valid(SAMPLE_BAK_FILE)) return(1); }					// If we requested the backup file (or if we requested the normal file, and it was invalid, Then see if the backup file is valid. If not, then we exit with an error
 	if (use_backup){str_cat(full_path, SYS_DIR_SLASH, SAMPLE_BAK_FILE);}
 	else{str_cat(full_path, SYS_DIR_SLASH, SAMPLE_INDEX_FILE);}
 	res = f_open(&temp_file,full_path, FA_READ);
@@ -347,7 +347,7 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks)
 		else str_cpy(token, read_buffer);																			// otherwise, copy read buffer into token
 		separator = str_cmp(token,"--------------------");															// set separator value
 
-		// Read fulle line from file
+		// Read full line from file
 		while(token[0]!='\0')																						// While we're not finished reading line
 		{
 			// Load bank data

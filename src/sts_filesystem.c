@@ -26,8 +26,6 @@
 #include "sts_fs_renaming_queue.h"
 #include "res/LED_palette.h"
 
-uint8_t	used_from_folder[MAX_FILES_IN_FOLDER];
-
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 //extern char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
 
@@ -95,12 +93,10 @@ FRESULT reload_sdcard(void)
 //Go through all banks and samples, 
 //If file_found==0, then look for a file to fill the slot:
 //If samples[][].filename == "path/to/file.wav": 
-//1) look for the first .wav in path (path/*.wav) <<Notice sub-folders are not supported 
-//2) If none found, search all dirs for file.wav (*/file.wav)
-//3) If still none found, keep file_found=0 and exit 
-//
-//When a file is found, load the header. If loading the header fails, keep trying more files
-//If the header succeeds, set file_found to 1 and copy the filename to samples[][].filename
+// - Scan all .wav files in path alphabetically (path/*.wav), in two passes:
+//   --First pass: Look for a .wav file that isn't assigned anywhere
+//   --Second pass: Look for a .wav file that isn't assigned in this bank (but may be assigned in some other bank)
+// - If still none found, keep file_found=0 and exit 
 //
 void load_missing_files(void)
 {
@@ -109,119 +105,82 @@ void load_missing_files(void)
 	char 	path_noslash[_MAX_LFN+1];
 	char	filename[_MAX_LFN+1];
 	char	fullpath[_MAX_LFN+1];
-	// DIR		testdir;
-	FIL		temp_file;
-	FRESULT	res;
-	uint8_t	path_len;
-	uint16_t i;
+
+	FIL			temp_file;
+	FRESULT		res=FR_OK;
+	uint8_t		path_len;
+	uint16_t	i;
+	uint8_t		first_pass=1;
 
 
-	for (bank=0;bank<MAX_NUM_BANKS;bank++)
+	for (bank=0;bank<MAX_NUM_BANKS;bank++)													//Scan samples[][] for non-blank filename with file_found==0
 	{
-		// RESET FOLDER TRACKING
-		for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;}
 
 		for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++)
 		{
-			//Look for non-blank filename and file_found==0
 			if (samples[bank][samplenum].filename[0] && !samples[bank][samplenum].file_found)
 			{
-				//split up filename
-				if (str_split(samples[bank][samplenum].filename, '/', path, filename) == 0)
+				if (str_split(samples[bank][samplenum].filename, '/', path, filename) == 0)		//split up filename into path and filename
 				{
-					//no slashes exist in filename, so look in the root dir
+					//no slashes exist in filename, so path is the root dir
 					path[0]='\0'; //root dir
 					str_cpy(filename, samples[bank][samplenum].filename);
 				}
  
+				//Create a copy of path string that doesn't end in a slash
 				path_len = str_len(path);
-
-				//Create a copy of path that doesn't end in a slash
 				str_cpy(path_noslash, path);
 				if (path[path_len-1] == '/')
 					path_noslash[path_len-1]='\0';
 
-				if (res==FR_OK)
+				find_next_ext_in_dir_alpha(0, 0, 0, FIND_ALPHA_INIT_FOLDER); 				// Initialize alphabetical folder search
+
+				while (!samples[bank][samplenum].file_found) 								// for each file not found:
 				{
+																							//Search alphabetically for any wav file in original file's path
+					res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename, FIND_ALPHA_DONT_INIT);	
 
-					while (!samples[bank][samplenum].file_found) 								// for each file not found
+					if (res!=FR_OK)															//First pass: When our alphabetical search hits the end of the folder, 
+					{																		//initialize the search and do another pass
+						if (first_pass) {first_pass=0; find_next_ext_in_dir_alpha(0, 0, 0, FIND_ALPHA_INIT_FOLDER);}
+						else break;															//Second pass: When we hit the end of the folder, stop searching
+					}													
+
+					str_cat(fullpath, path, filename);										//Append filename to path
+																							
+					if (first_pass){
+						if (find_filename_in_all_banks(bank, fullpath) != 0xFF) continue;}	//First pass: skip files that are used in *any* bank
+					else{
+						if (find_filename_in_bank(bank, fullpath) != 0xFF) continue;}		//Second pass: Skip files that are used in *this* bank
+
+					res = f_open(&temp_file, fullpath, FA_READ);							//Open the file
+
+					if (res==FR_OK)
 					{
-		
-						res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename);		// Find file in folder, in alphabetical order
-						if (res!=FR_OK) break;													// if no file can be found/open, stop searching. Condition which includes:  if ((res!=0xFF) &&  (total == file_in_folder))break; //Stop searching if no more files to be assigned in fodler			
-						str_cat(fullpath, path, filename);										//Append filename to path
-
-						//Check if this file is being used in any bank
-						//Skip it if it's used (unused returns 0xFF)
-						if (find_filename_in_all_banks(0, fullpath) != 0xFF) continue; // FixMe (H) this could be if (find_filename_in_all_banks(bank, fullpath) != 0xFF) - to save cpu
-
-						// ToDo (H): if there are still empty slots, go through unused files again and grab the ones that are not used in the current bank (v.s. all banks)
-
-						//Open the file
-						res = f_open(&temp_file, fullpath, FA_READ);
+						res = load_sample_header(&(samples[bank][samplenum]), &temp_file);	//Load the sample header info into samples[][]
 
 						if (res==FR_OK)
 						{
-							//Load the sample header info into samples[][]
-							res = load_sample_header(&(samples[bank][samplenum]), &temp_file);
-
-							if (res==FR_OK)
-							{
-								//Set the filename (full path)
-								str_cpy(samples[bank][samplenum].filename, fullpath);
-								samples[bank][samplenum].file_found = 1;
-								enable_bank(bank); 
-							}
+							str_cpy(samples[bank][samplenum].filename, fullpath);			//Set the filename (full path)
+							samples[bank][samplenum].file_found = 1;						//Mark it as found
+							enable_bank(bank); 
 						}
-						f_close(&temp_file);
-				
 					}
+					f_close(&temp_file);
+			
 				}
 
 
 				//If no files are found, try searching anywhere for the filename
 				if (!samples[bank][samplenum].file_found)
 				{
-					//split up filename
-					if (str_split(samples[bank][samplenum].filename, '/', path, filename) == 0)
-					{
-						//no slashes exist in filename, so look in the root dir
-						path[0]='\0'; //root dir
-						str_cpy(filename, samples[bank][samplenum].filename);
-					}
+					samples[bank][samplenum].filename[0]='\0'; //not found: blank out filename
+																							//ToDo: If we change indexing, we may not want to blank out the filename here
+																							//so that we can write "path/notfoundfile.wav -- NOT FOUND" in the index text file
+																							//For now, we leave this because sometimes we use a blank filename to indicate file is
+																							//not able to be loaded
+				}
 
-
-					if (fopen_checked(&temp_file, path, filename) == 2) //can't find file anywhere on disk
-					{
-						samples[bank][samplenum].filename[0]='\0'; //blank out filename
-						//ToDo: If we change indexing, we may not want to blank out the filename here
-						//so that we can write "path/notfoundfile.wav -- NOT FOUND" in the index text file
-						//For now, we leave this because sometimes we use a blank filename to indicate file is
-						//not able to be loaded
-						
-					}
-					else //We found  */filename, and put the full path into filename
-					{
-						//See if it's a valid wav file:
-						//Open the file
-						res = f_open(&temp_file, filename, FA_READ);
-
-						if (res==FR_OK)
-						{
-							//Load the sample header info into samples[][]
-							res = load_sample_header(&(samples[bank][samplenum]), &temp_file);
-
-							if (res==FR_OK)
-							{
-								//Set the filename (full path)
-								str_cpy(samples[bank][samplenum].filename, filename);
-								samples[bank][samplenum].file_found = 1;
-							}
-						}
-						f_close(&temp_file);
-					}
-
-				} //search with fopen_checked
 			} //if file_found==0
 
 		} //for each sample
@@ -680,25 +639,26 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *path_noslash)
 	path[path_len++]='/';
 	path[path_len]  ='\0';
 
-	sample_num  = 0;														// initialize variables
-	filename[0] = 0;	
-	for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;} 			// Reset folder tracking		
+	sample_num  = 0;
+	filename[0] = 0;
 
-	while (sample_num < NUM_SAMPLES_PER_BANK)								// for every sample slot in bank
+	find_next_ext_in_dir_alpha(path_noslash, ".wav", 0, FIND_ALPHA_INIT_FOLDER);				// Initialize alphabetical searching in folder 				
+
+	while (sample_num < NUM_SAMPLES_PER_BANK)													// for every sample slot in bank
 	{
-		res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename); 		// find next file alphabetically
-		if (res!=FR_OK){break;}												// Stop if no more files found/available
+		res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename, FIND_ALPHA_DONT_INIT); // find next file alphabetically
+		if (res!=FR_OK){break;}																	// Stop if no more files found/available
 				
-		str_cpy(&(path[path_len]), filename);								//Append filename to path
-		res = f_open(&temp_file, path, FA_READ);							//Open file
+		str_cpy(&(path[path_len]), filename);													//Append filename to path
+		res = f_open(&temp_file, path, FA_READ);												//Open file
 		f_sync(&temp_file);
 
 		if (res==FR_OK)
 		{
-			res = load_sample_header(&(sample_bank[sample_num]), &temp_file);	//Load the sample header info into samples[][]
+			res = load_sample_header(&(sample_bank[sample_num]), &temp_file);					//Load the sample header info into samples[][]
 			if (res==FR_OK)
 			{
-				str_cpy(sample_bank[sample_num++].filename, path);				//Set the filename (full path)
+				str_cpy(sample_bank[sample_num++].filename, path);								//Set the filename (full path)
 			}
 		}
 		f_close(&temp_file);
@@ -728,14 +688,10 @@ uint8_t load_all_banks(uint8_t force_reload)
 	//Load the index file, marking files found or not found with samples[][].file_found = 1/0;
 	if (!force_reload)
 		force_reload = load_sampleindex_file(USE_INDEX_FILE, MAX_NUM_BANKS);
-	//ToDo: load_sampleindex_file() should detect a bad file, (missing timestamp at end?)
-	//Then it should re-run itself by loading the backup file
-	//The use-case is if power cuts out shortly after boot, during write_sampleindex_file()
-	//The next time we boot, we don't want to load the truncated index, we should load from the last known source
 
 	if (!force_reload) //sampleindex file was ok
 	{	
-		//Look for new folders and missing files: (buttons are yellow)
+		//Look for new folders and missing files
 		flags[RewriteIndex]=ORANGE;
 
 		// Update the list of banks that are enabled
@@ -745,15 +701,18 @@ uint8_t load_all_banks(uint8_t force_reload)
 		// Check for new folders, and turn them into banks if possible
 		load_new_folders();
 
-		// Go through all sample slots in all banks that have file_found==0
+		// Check for files that have file_found==0
 		// Look for a file to fill this slot
 		load_missing_files();
+
+		// Check for empty slots
+
 	}
 
 	else //sampleindex file was not ok, or we requested to force a full reload from disk
 	{
 
-		// Ignore index and create new banks from disk: (buttons are blue)
+		// Ignore index and create new banks from disk:
 		flags[RewriteIndex]=WHITE;
 
 		//initialize the renaming queue

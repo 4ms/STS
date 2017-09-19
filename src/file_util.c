@@ -4,7 +4,6 @@
 #include "sts_filesystem.h"
 #include "ff.h"
 
-extern uint8_t  used_from_folder[MAX_FILES_IN_FOLDER];
 
 //Returns the next directory in the parent_dir
 //
@@ -89,11 +88,9 @@ FRESULT find_next_ext_in_dir(DIR* dir, const char *ext, char *fname)
 // - finds next file in 'path' alphabetically
 // - sets fname as the filename for that file
 // - Returns FRESULT representing whether a file was available or not, and the reason if not.
-// - files that are already assigned are kept track of in the global array used_from_folder[MAX_FILES_IN_FOLDER]
-// - used_from_folder needs to be initalized at every new search
-// - ToDo: this initialization could be perfomed internally by setting 4th ipnut variable to 0 or 1.
-//   ... 1 being clear used_from_folder array
-FRESULT find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname)
+// - files that are already assigned are kept track of in the static array used_from_folder[MAX_FILES_IN_FOLDER]
+// - set do_init to FIND_ALPHA_INIT_FOLDER to reset the alphabetical searching, or when calling this function with a new path
+FRESULT find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname, enum INIT_FIND_ALPHA_ACTIONS do_init)
 {
     FRESULT res;
     FILINFO fno;
@@ -103,8 +100,16 @@ FRESULT find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname)
     uint32_t  firstf_num = 0xFFFF;                       
     uint32_t  fnum       = 0;
     char      firstf_name[_MAX_LFN+1];
+    static  uint8_t  used_from_folder[MAX_FILES_IN_FOLDER];
+
     
     // Initialize variables
+    if (do_init == FIND_ALPHA_INIT_FOLDER){
+       for(i=0; i<MAX_FILES_IN_FOLDER; i++){used_from_folder[i]=0;} // Reset folder tracking   
+       return(FR_OK);
+    }  
+
+
     for (i=0; i<_MAX_LFN+1; i++){firstf_name[i]=127;}   // last possible file name, alphabetically
     fname[0]      =  0;                                 // null string
     fno.fname[0]  = 'a';                                // enables while loop
@@ -135,7 +140,7 @@ FRESULT find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname)
               if (str_len(fno.fname) > (_MAX_LFN - 2)) {used_from_folder[fnum-1]=1; continue;}  // if filename is too long: Mark as 'used' and look for next file
               if((str_cmp_alpha(firstf_name, fno.fname) > 0))                                   // if found file comes first alphabetically
               {
-                firstf_num=fnum-1;                                                              // set number of the the fist to the current file number
+                firstf_num=fnum-1;                                                              // set number of the first file to the current file number
                 str_cpy(firstf_name, fno.fname);                                                // set the name of the first file to the current file name
               }
             }
