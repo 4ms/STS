@@ -139,6 +139,9 @@ void do_assignment(uint8_t direction)
 			flags[ForceFileReload1] = 1;
 			flags[Play1Trig]		= 1;
 
+			flags[PlaySample1Changed_valid] = 1;
+			flags[PlaySample1Changed_empty] = 0;
+
 			if (direction==1) 	flags[AssignedNextSample] 	= 10;
 			else
 			if (direction==2) 	flags[AssignedPrevBank] 	= 10;
@@ -202,10 +205,9 @@ FRESULT init_unassigned_scan(Sample *s_sample, uint8_t samplenum, uint8_t banknu
 
 	//If the slot is empty, look for a filled slot in this bank
 	samplenum=0;
-	while (!is_wav(s_sample->filename) && samplenum<(NUM_SAMPLES_PER_BANK-1))
+	while (!is_wav(s_sample->filename) && samplenum<NUM_SAMPLES_PER_BANK)
 	{
-		samplenum++;
-		s_sample = &(samples[banknum][samplenum]);
+		s_sample = &(samples[banknum][samplenum++]);
 	}
 
 	//Use the filename to determine the folder we should start scanning in
@@ -375,12 +377,6 @@ uint8_t next_unassigned_sample(void)
 
 		//See if the file already is assigned to a sample slot in any bank
 
-		//FixMe: Why would we skip the undo file? If we go backwards from an assigned bank to the unassigned bank, we want to make sure we can load the original undo file
-		// if (str_cmp(filepath, undo_sample.filename))
-		// 	is_file_already_assigned = 1;
-		// else 
-		// {
-
 		is_file_already_assigned = 0;
 
 		//Skip this file if it's already assigned somewhere
@@ -491,6 +487,7 @@ void save_undo_state(uint8_t bank, uint8_t samplenum)
 	undo_sample.inst_size 		= samples[bank][samplenum].inst_size;
 	undo_sample.inst_start 		= samples[bank][samplenum].inst_start;
 	undo_sample.inst_end 		= samples[bank][samplenum].inst_end;
+	undo_sample.inst_gain 		= samples[bank][samplenum].inst_gain;
 
 	undo_banknum				= bank;
 	undo_samplenum 				= samplenum;
@@ -517,6 +514,7 @@ uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum)
 		samples[undo_banknum][undo_samplenum].inst_size 		= undo_sample.inst_size;
 		samples[undo_banknum][undo_samplenum].inst_start 		= undo_sample.inst_start;
 		samples[undo_banknum][undo_samplenum].inst_end 			= undo_sample.inst_end;
+		samples[undo_banknum][undo_samplenum].inst_gain 		= undo_sample.inst_gain;
 
 		flags[ForceFileReload1] 	= 1;
 		flags[Play1Trig]			= 1;
@@ -619,6 +617,7 @@ void copy_sample(uint8_t dst_bank, uint8_t dst_sample, uint8_t src_bank, uint8_t
 	samples[dst_bank][dst_sample].inst_size 		= samples[src_bank][src_sample].inst_size;
 	samples[dst_bank][dst_sample].inst_start 		= samples[src_bank][src_sample].inst_start;
 	samples[dst_bank][dst_sample].inst_end 			= samples[src_bank][src_sample].inst_end;
+	samples[dst_bank][dst_sample].inst_gain 		= samples[src_bank][src_sample].inst_gain;
 }
 
 

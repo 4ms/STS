@@ -36,10 +36,6 @@ FRESULT get_next_dir(DIR *dir, char *parent_path, char *next_dir_path)
 
                 i = str_len(next_dir_path);
 
-                //Add a slash to the end of parent_path if it doesn't have one
-                // if (next_dir_path[i-1] != '/')
-                //     next_dir_path[i++] = '/';
-
                 //Append the directory name to the end of parent_path
                 str_cpy(&(next_dir_path[i]), fno.fname);
                 return (FR_OK);

@@ -171,7 +171,7 @@ void load_missing_files(void)
 
 	FIL			temp_file;
 	FRESULT		res=FR_OK;
-	uint8_t		path_len;
+	// uint8_t		path_len;
 	uint8_t		first_pass=1;
 
 
@@ -190,10 +190,13 @@ void load_missing_files(void)
 				}
  
 				//Create a copy of path string that doesn't end in a slash
-				path_len = str_len(path);
 				str_cpy(path_noslash, path);
-				if (path[path_len-1] == '/')
-					path_noslash[path_len-1]='\0';
+				trim_slash(path_noslash);
+
+				// path_len = str_len(path);
+				// str_cpy(path_noslash, path);
+				// if (path[path_len-1] == '/')
+				// 	path_noslash[path_len-1]='\0';
 
 				find_next_ext_in_dir_alpha(0, 0, 0, FIND_ALPHA_INIT_FOLDER); 				// Initialize alphabetical folder search
 
@@ -670,8 +673,6 @@ uint8_t load_banks_with_noncolors(void)
 //Tries to open the folder bankpath and load 10 files into samples[][]
 //into the specified bank
 //
-//The path must not be terminated in a slash
-//
 //Returns number of samples loaded (0 if folder not found, and sample[bank][] will be cleared)
 //
 
@@ -691,9 +692,11 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *path_noslash)
 	for (i=0;i<NUM_SAMPLES_PER_BANK;i++)	clear_sample_header(&(sample_bank[i]));
 
 	//Remove trailing slash
-	path_len = str_len(path_noslash);
-	if (path_noslash[path_len-1] == '/')
-		path_noslash[path_len-1]='\0';
+	trim_slash(path_noslash);
+
+	// path_len = str_len(path_noslash);
+	// if (path_noslash[path_len-1] == '/')
+	// 	path_noslash[path_len-1]='\0';
 
 	//Copy path_noslash into path and add a slash
 	str_cpy(path, path_noslash);
