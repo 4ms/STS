@@ -29,7 +29,7 @@ void do_assignment(uint8_t direction);
 uint8_t next_unassigned_sample(void);
 uint8_t next_assigned_sample(void);
 
-FRESULT init_unassigned_scan(Sample *s_sample);
+FRESULT init_unassigned_scan(Sample *s_sample, uint8_t samplenum, uint8_t banknum);
 void init_assigned_scan(void);
 
 

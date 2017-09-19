@@ -113,7 +113,7 @@ void do_assignment(uint8_t direction)
 			// Unassigned 'bank'
 			if (cur_assign_bank == 0xFF)
 			{
-				res = init_unassigned_scan(&undo_sample);
+				res = init_unassigned_scan(&undo_sample, undo_samplenum, undo_banknum);
 
 				if (res!=FR_OK) {exit_assignment_mode(); return;} //unable to enter assignment mode
 
@@ -166,7 +166,7 @@ uint8_t enter_assignment_mode(void)
 	global_mode[ASSIGN_MODE] = 1;
 
 	//Initialize the scan of unassigned samples
-	res = init_unassigned_scan(&(samples[i_param[0][BANK]][i_param[0][SAMPLE]]));
+	res = init_unassigned_scan(&(samples[i_param[0][BANK]][i_param[0][SAMPLE]]), i_param[0][SAMPLE], i_param[0][BANK]);
 
 	if (res!=FR_OK) {exit_assignment_mode(); return(0);} //unable to enter assignment mode
 
@@ -190,35 +190,51 @@ void exit_assignment_mode(void)
 	flags[UndoSampleDiffers]	= 0;
 }
 
-FRESULT init_unassigned_scan(Sample *s_sample)
+
+FRESULT init_unassigned_scan(Sample *s_sample, uint8_t samplenum, uint8_t banknum)
 {
 	char tmp[_MAX_LFN];
 
-	//Start with the unassigned samples
+	//Unassigned samples represented by bank of 0xFF
 	cur_assign_bank = 0xFF;
 	cur_assign_sample = -1;
 
+	//If the slot is empty, look for a filled slot in this bank
+	samplenum=0;
+	while (!is_wav(s_sample->filename) && samplenum<(NUM_SAMPLES_PER_BANK-1))
+	{
+		samplenum++;
+		s_sample = &(samples[banknum][samplenum]);
+	}
 
+	//Use the filename to determine the folder we should start scanning in
 	if (is_wav(s_sample->filename))
 	{
-		//s_sample is a wav file, so this means we're assigning an already filled slot
-
 		//Get the folder path from the samples's filename
 		if (str_split(s_sample->filename, '/', cur_assign_bank_path, tmp))
 			cur_assign_bank_path[str_len(cur_assign_bank_path)-1]='\0'; //remove trailing slash
 		else
 			cur_assign_bank_path[0]='\0'; //filename contained no slash: use root dir
 
-		//Start with the current sample's folder
 		cur_assign_state = ASSIGN_IN_FOLDER;
 	}
 	else
 	{
-		//s_sample is not a wav file, so this means we are assigning a blank slot
+		//The entire bank of s_sample is empty:
+		//See if the folder with the default color name exists
+		bank_to_color(banknum, cur_assign_bank_path);
 
-		//Skip the current sample's folder and start with the root dir
-		cur_assign_state = ASSIGN_UNUSED_IN_ROOT;
-		cur_assign_bank_path[0]='\0'; //root
+		if (f_opendir(&assign_dir, cur_assign_bank_path) == FR_OK)
+		{
+			cur_assign_state = ASSIGN_IN_FOLDER;
+			return(FR_OK);
+		} 
+		else
+		//If there's no default color name folder, then start the assignment scan in the root dir
+		{
+			cur_assign_state = ASSIGN_UNUSED_IN_ROOT;
+			cur_assign_bank_path[0]='\0'; //root
+		}
 
 	}
 
@@ -453,7 +469,7 @@ uint8_t next_assigned_sample(void)
 
 	// At this point, we've gone through all the assigned samples in all the banks
 	// Now switch to unassigned samples
-	res = init_unassigned_scan(&undo_sample);
+	res = init_unassigned_scan(&undo_sample, undo_samplenum, undo_banknum);
 	if (res!=FR_OK) return 0;//failed
 
 	return (next_unassigned_sample());
