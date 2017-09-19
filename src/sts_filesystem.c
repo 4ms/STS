@@ -110,7 +110,6 @@ void load_missing_files(void)
 	FIL			temp_file;
 	FRESULT		res=FR_OK;
 	uint8_t		path_len;
-	uint16_t	i;
 	uint8_t		first_pass=1;
 
 
@@ -214,7 +213,7 @@ uint8_t dir_contains_assigned_samples(char *path)
 		for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++)
 		{
 			if (samples[bank][samplenum].filename[0] != 0)
-				if (str_startswith(samples[bank][samplenum].filename, path) == 1) //
+				if (str_startswith_nocase(samples[bank][samplenum].filename, path) == 1) //
 					return(1); //found! at least one sample filename begins with path 
 		}
 	}
@@ -297,7 +296,7 @@ void load_new_folders(void)
 			{
 				bank_to_color(bank, default_bankname);
 
-				if (str_startswith(foldername, default_bankname))
+				if (str_startswith_nocase(foldername, default_bankname))
 				{
 					//If the bank is already being used (e.g. "Yellow-2" is already used)
 					//Then bump down Yellow-2 ==> Yellow-3, Yellow-3 ==> Yellow-4, etc..

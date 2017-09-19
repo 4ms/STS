@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "ff.h"
 #include "file_util.h"
+#include "str_util.h"
 #include "sts_filesystem.h"
 #include "sts_fs_renaming_queue.h"
 
@@ -128,7 +129,7 @@ FRESULT process_renaming_queue(void)
 			if (read_buffer[0]==0) continue;
 
 			//Look for a new entry
-			if (str_startswith(read_buffer, "Bank: "))
+			if (str_startswith_nocase(read_buffer, "Bank: "))
 			{
 				//Load the bank number
 				bank = str_xt_int(&(read_buffer[6]));
@@ -140,7 +141,7 @@ FRESULT process_renaming_queue(void)
 			}
 			else
 			//Look for an original name line (only if we've already found a valid bank number)
-			if (bank<MAX_NUM_BANKS && str_startswith(read_buffer, "Original name: "))
+			if (bank<MAX_NUM_BANKS && str_startswith_nocase(read_buffer, "Original name: "))
 			{
 				str_cpy(orig_name, &(read_buffer[15]));
 
@@ -150,7 +151,7 @@ FRESULT process_renaming_queue(void)
 			}
 			else
 			//Look for a new name line (only if we've already found a valid bank number AND an original name)
-			if (bank<MAX_NUM_BANKS && orig_name[0] && str_startswith(read_buffer, "New name: "))
+			if (bank<MAX_NUM_BANKS && orig_name[0] && str_startswith_nocase(read_buffer, "New name: "))
 			{
 				str_cpy(new_name, &(read_buffer[10]));
 
