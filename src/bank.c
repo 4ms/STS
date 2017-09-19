@@ -15,6 +15,9 @@ extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 uint8_t bank_status[MAX_NUM_BANKS];
 
+///
+/// Moving banks
+///
 
 void copy_bank(Sample *dst, Sample *src)
 {
@@ -70,6 +73,78 @@ void bump_down_banks(uint8_t bank)
 
 }
 
+
+///
+/// Searching banks
+///
+
+
+
+//
+// Returns the "predominant" path of the samples in a bank
+// FixMe: make go through all samples in the bank, and set path to the most common path
+// For now, it sets path to the path of the first non-empty slot
+// Returns 1 if path is set
+// Returns 0 if no slots are filled
+//
+uint8_t get_bank_path(uint8_t bank, char *path)
+{
+	uint8_t samplenum;
+	char tmp_path[_MAX_LFN+1];
+	char tmp_filename[_MAX_LFN+1];
+//	char path_candidates[NUM_SAMPLES_PER_BANK][_MAX_LFN+1];
+//	uint8_t candidate_occurances[NUM_SAMPLES_PER_BANK];
+//	uint8_t candidate_i = 0, path_is_new;
+
+	for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++){
+		if (samples[bank][samplenum].filename[0])
+		{
+			if (str_split(samples[bank][samplenum].filename, '/', path, tmp_filename) == 0)
+				path[0]='\0'; //no slashes exist in filename, so path is the root dir
+
+			// path_is_new = 1;
+			// for (i=0;i<candidate_i;i++)
+			// {
+			// 	if (str_cmp(path_candidates[i], path))
+			// 	{
+			// 		candidate_occurances[i]++;
+			// 		path_is_new = 0;
+			// 		break;
+			// 	}
+			// }
+			// if (path_is_new)
+			// {
+			// 	str_cpy(path_candidates[candidate_i], path); //add it to the candidate array
+			// 	candidate_occurances[candidate_i] = 0;
+			// 	candidate_i++;
+			// }
+
+
+			return(1); //at least one slot is filled
+		}
+	}
+	path[0]='\0';
+	return(0); //no slots are filled
+
+	// if (!candidate_i)
+	// {
+	// 	path[0]='\0';
+	// 	return(0); //no slots are filled
+	// }
+
+	// //Find the top hit
+	// top = 0;
+	// for (i=0;i<candidate_i;i++)
+	// {
+	// 	if (candidate_occurances[i] > top)
+	// 	{
+	// 		top = candidate_occurances[i];
+	// 		str_cpy(path, path_candidates[i]);
+	// 	}
+	// }
+	// return(1);
+}
+
 //
 //Returns the sample number inside the given bank, whose filename matches the given filename
 //If not found, returns 0xFF
@@ -108,6 +183,11 @@ uint8_t find_filename_in_all_banks(uint8_t bank, char *filename)
 
 	return(0xFF);//not found
 }
+
+
+///
+/// Bank naming
+///
 
 
 uint8_t bank_to_color_string(uint8_t bank, char *color)
@@ -230,6 +310,37 @@ uint8_t color_to_bank(char *color)
 	}		
 	return(MAX_NUM_BANKS);
 }
+
+
+//
+//Given a number, returns the units digit
+//This digit refers to the bank color, regardless of blink #
+//
+uint8_t get_bank_color_digit(uint8_t bank)
+{
+//	uint8_t digit1;
+
+	if (bank<10) return bank;
+	
+	while (bank>=10) bank-=10;
+	return (bank);
+}
+
+//
+//Given a number, returns the tens digit
+//This digit refers to the bank blink #, regardless of color
+//
+uint8_t get_bank_blink_digit(uint8_t bank)
+{
+	return (bank / 10);
+}
+
+
+
+///
+/// Bank Navigation
+///
+
 
 uint8_t next_bank(uint8_t bank)
 {
@@ -356,6 +467,11 @@ void disable_bank(uint8_t bank)
 }
 
 
+
+
+/// Initialization
+
+
 void init_banks(void)
 {
 	uint32_t bank;
@@ -383,26 +499,3 @@ void init_banks(void)
 }
 
 
-
-//
-//Given a number, returns the units digit
-//This digit refers to the bank color, regardless of blink #
-//
-uint8_t get_bank_color_digit(uint8_t bank)
-{
-//	uint8_t digit1;
-
-	if (bank<10) return bank;
-	
-	while (bank>=10) bank-=10;
-	return (bank);
-}
-
-//
-//Given a number, returns the tens digit
-//This digit refers to the bank blink #, regardless of color
-//
-uint8_t get_bank_blink_digit(uint8_t bank)
-{
-	return (bank / 10);
-}

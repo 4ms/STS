@@ -15,6 +15,40 @@ uint32_t str_len(char* str)
 	return(i);
 }
 
+//removes trailing slash if it exists
+//returns 1 if slash existed, 0 if not
+uint8_t trim_slash(char *string)
+{
+  uint8_t len;
+
+  len = str_len(string);
+
+  if (string[len-1]=='/') {
+    string[len-1] = 0;
+    return(1); //trimmed
+  }
+  else
+    return(0); //not trimmed
+}
+
+//adds trailing slash if it doesn't already exist
+//returns 1 if slash was added, 0 if it already existed
+uint8_t add_slash(char *string)
+{
+  uint8_t len;
+
+  len = str_len(string);
+
+  if (string[len-1]=='/') 
+    return (0); //not added
+  else {
+    string[len]   = '/';
+    string[len+1] = '\0';
+    return(1); //added
+  }
+}
+
+
 // str_split()
 //
 // Returns 0 if split_char is not found:
@@ -60,10 +94,13 @@ uint8_t str_split(char *string, char split_char, char *before_split, char *after
 }
 
 
-//FixMe: Don't return a char*: consider replacing all uses of str_rstr() with str_split()
-// Returns the tail of a string following the last splitting char "split_char" that was found in "string" input
-// ...copies everything found before split_char (included) into "before_split"
-char *str_rstr(char *string, char split_char, char *before_split)
+// Returns position+1 of split_char in string
+// Returns 0 if split_char is not found in string
+// Copies everything found before and including split_char into "before_split"
+// str_rstr("MyPath/file.wav", '/', before_split) --->> returns 7, before_split is "MyPath/"
+// str_rstr("filename.wav", '/', before_split) -->>> returns 0, before_split is "filename.wav"
+// str_rstr("/root.wav", '/', before_split)  -->> returns 1, before_split is "/"
+uint8_t str_rstr(char *string, char split_char, char *before_split)
 {
 
   char *cp;
@@ -75,10 +112,10 @@ char *str_rstr(char *string, char split_char, char *before_split)
   {
     if (*cp == split_char) rp = cp+1;
   }
-  if (rp==0) return 0; //or maybe string?
+  if (rp==0) return 0;
   else {
     before_split[str_len(before_split)-str_len(rp)]=0;
-    return (rp);
+    return (rp-string);
   }
 }
 

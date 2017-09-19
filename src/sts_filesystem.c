@@ -91,6 +91,68 @@ FRESULT reload_sdcard(void)
 }
 
 
+//Go through all enabled banks, looking for empty sample slots 
+//Search within the bank's folder, looking for a file to fill the slot
+//
+void load_empty_slots(void)
+{
+	uint8_t	bank, samplenum;
+	char 	bankpath[_MAX_LFN+1];
+	char 	bankpath_noslash[_MAX_LFN+1];
+	char	filename[_MAX_LFN+1];
+	char	fullpath[_MAX_LFN+1];
+
+	FIL			temp_file;
+	FRESULT		res=FR_OK;
+
+	for (bank=0;bank<MAX_NUM_BANKS;bank++)												//Scan samples[][] for blank filenames
+	{
+		if (!is_bank_enabled(bank)) continue;											//Skip disabled banks
+
+		if (!get_bank_path(bank, bankpath))												//Get the bank's predominant path
+			{disable_bank(bank); continue;}												// Disable and skip banks with no samples
+
+		str_cpy(bankpath_noslash, bankpath);
+		trim_slash(bankpath_noslash);
+
+		for(samplenum=0;samplenum<NUM_SAMPLES_PER_BANK;samplenum++)
+		{
+			if (!samples[bank][samplenum].filename[0])									//For each empty slot:
+			{
+				find_next_ext_in_dir_alpha(0, 0, 0, FIND_ALPHA_INIT_FOLDER); 				// Initialize alphabetical folder search
+				samples[bank][samplenum].file_found = 0;
+
+				while (!samples[bank][samplenum].file_found) 								
+				{																			//Search alphabetically for any wav file in bankpath
+					res = find_next_ext_in_dir_alpha(bankpath_noslash, ".wav", filename, FIND_ALPHA_DONT_INIT);	
+					if (res!=FR_OK)		{samplenum=NUM_SAMPLES_PER_BANK; break;}			//When we hit the end of the folder, stop searching this bank [exit while() and for() loops]
+
+					str_cat(fullpath, bankpath, filename);									//Append filename to path
+																							
+					if (find_filename_in_bank(bank, fullpath) != 0xFF) continue;			//Skip files that are already used in this bank
+
+					res = f_open(&temp_file, fullpath, FA_READ);							//Open the file
+
+					if (res==FR_OK)
+					{
+						res = load_sample_header(&(samples[bank][samplenum]), &temp_file);	//Load the sample header info into samples[][]
+
+						if (res==FR_OK)														//If we can load the file's wav header, then success!
+						{
+							str_cpy(samples[bank][samplenum].filename, fullpath);				//Set the filename (full path)
+							samples[bank][samplenum].file_found = 1;							//Mark it as found
+						}
+					}
+					f_close(&temp_file);
+
+				} //while !file_found
+			} //if filename is blank
+		} //for each sample
+	}//for each bank
+}
+
+
+
 //Go through all banks and samples, 
 //If file_found==0, then look for a file to fill the slot:
 //If samples[][].filename == "path/to/file.wav": 
@@ -706,7 +768,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 		load_missing_files();
 
 		// Check for empty slots
-
+		load_empty_slots();
 	}
 
 	else //sampleindex file was not ok, or we requested to force a full reload from disk
