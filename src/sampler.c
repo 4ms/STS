@@ -19,7 +19,7 @@
 
 #include "wavefmt.h"
 #include "circular_buffer.h"
-#include "file_util.h"
+#include "str_util.h"
 #include "wav_recording.h"
 #include "sts_filesystem.h"
 #include "edit_mode.h"

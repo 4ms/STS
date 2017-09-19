@@ -7,7 +7,7 @@
 #include "ff.h"
 #include "sampler.h"
 #include "circular_buffer.h"
-#include "file_util.h"
+#include "str_util.h"
 #include "rgb_leds.h"
 #include "audio_util.h"
 #include "wav_recording.h"

@@ -4,7 +4,7 @@
 #include "params.h"
 #include "user_settings.h"
 #include "sts_filesystem.h"
-#include "file_util.h"
+#include "str_util.h"
 
 extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 
