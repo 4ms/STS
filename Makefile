@@ -3,6 +3,10 @@
 
 BINARYNAME = main
 
+COMBO = build/combo
+BOOTLOADER_DIR = ../STS-bootloader
+BOOTLOADER_HEX = ../STS-bootloader/bootloader.hex
+
 STARTUP = startup_stm32f427_437xx.s
 SYSTEM = system_stm32f4xx.c
 LOADFILE = stm32f427.ld
@@ -141,6 +145,12 @@ LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIP
 # Misc:
 # build/src/circular_buffer.o: CFLAGS = $(C0FLAGS)
 # build/src/audio_util.o: CFLAGS = $(C0FLAGS)
+
+combo: $(COMBO).hex 
+$(COMBO).hex:  $(BOOTLOADER_HEX) $(BIN) $(HEX) 
+	cat  $(HEX) $(BOOTLOADER_HEX) | \
+	awk -f $(BOOTLOADER_DIR)/util/merge_hex.awk > $(COMBO).hex
+	$(OBJCPY) -I ihex -O binary $(COMBO).hex $(COMBO).bin
 
 all: Makefile $(BIN) $(HEX)
 
