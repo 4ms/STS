@@ -87,6 +87,7 @@ uint8_t all_buttons_atleast(enum ButtonStates state, uint32_t button_mask)
 void Button_Debounce_IRQHandler(void)
 {
 	static uint16_t State[NUM_BUTTONS] = {0xffff}; // Current debounce status
+	static uint8_t disable_stereo_toggle=0;
 
 	uint16_t t;
 	uint8_t i;
@@ -255,6 +256,8 @@ void Button_Debounce_IRQHandler(void)
 						{
 							case Bank1:
 							case Bank2:
+								disable_stereo_toggle=0;
+
 								chan = i - Bank1;	
 
 								combo_was_active = 0;
@@ -614,26 +617,22 @@ void Button_Debounce_IRQHandler(void)
 					}
 				}
 
-				//Edit + Rec + RecBank 2 seconds ---> reset tracking and detuning
+				//Edit + Rec + RecBank 2 seconds ---> reset tracking
 				if (button_state[Rec]>=MED_PRESSED && button_state[RecBank]>=MED_PRESSED)
 				{
-					// if (!global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) system_calibrations->tracking_comp[0] = 1.0;
-					// if (!global_mode[QUANTIZE_CH2] && play_state[1] != SILENT) system_calibrations->tracking_comp[1] = 1.0;
-
-					// if ((global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) \
-					//  || (global_mode[QUANTIZE_CH2] && play_state[1] != SILENT)) system_calibrations->detune = 1.0;
-
 					if (play_state[0] != SILENT) system_calibrations->tracking_comp[0] = 1.0;
 					if (play_state[1] != SILENT) system_calibrations->tracking_comp[1] = 1.0;
-
-
 				}
 
+				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED)
+				{
+					disable_stereo_toggle=1;
+				}
 			}
 			else //not EDIT_MODE
 			{
 				//Both bank buttons --> Stereo Mode toggle
-				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED && all_buttons_except(UP, (1<<Bank1)|(1<<Bank2))) //button_state[RecBank] == UP && button_state[Play1] == UP && button_state[Play2] == UP)
+				if (!disable_stereo_toggle && button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED && all_buttons_except(UP, (1<<Bank1)|(1<<Bank2)))
 				{
 					if (global_mode[STEREO_MODE] == 1)
 					{
