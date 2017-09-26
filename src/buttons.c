@@ -306,14 +306,15 @@ void Button_Debounce_IRQHandler(void)
 							case Rec:
 								if (global_mode[EDIT_MODE])
 								{
-									// if (!global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
-									// if (!global_mode[QUANTIZE_CH2] && play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
-
-									// if ((global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) \
-									//  || (global_mode[QUANTIZE_CH2] && play_state[1] != SILENT)) {system_calibrations->detune -= 0.001;}
-
-									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
-									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
+									if (button_state[Bank1] >= DOWN && button_state[Bank2] >= DOWN)
+									{
+										if (play_state[0] != SILENT) {system_calibrations->cv_calibration_offset[0] += 1;}
+										if (play_state[1] != SILENT) {system_calibrations->cv_calibration_offset[1] += 1;}
+									} else 
+									{
+										if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
+										if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
+									}
 								}
 								else
 								{
@@ -325,15 +326,15 @@ void Button_Debounce_IRQHandler(void)
 							case RecBank:
 								if (global_mode[EDIT_MODE])
 								{
-									// if (!global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
-									// if (!global_mode[QUANTIZE_CH2] && play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
-
-									// if ((global_mode[QUANTIZE_CH1] && play_state[0] != SILENT) \
-									//  || (global_mode[QUANTIZE_CH2] && play_state[1] != SILENT)) {system_calibrations->detune += 0.001;}
-
-									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
-									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
-
+									if (button_state[Bank1] >= DOWN && button_state[Bank2] >= DOWN)
+									{
+										if (play_state[0] != SILENT) {system_calibrations->cv_calibration_offset[0] -= 1;}
+										if (play_state[1] != SILENT) {system_calibrations->cv_calibration_offset[1] -= 1;}
+									} else 
+									{
+										if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
+										if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
+									}
 								}
 								else 
 								{

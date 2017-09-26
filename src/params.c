@@ -1113,7 +1113,7 @@ void adc_param_update_IRQHandler(void)
 
 		if (global_mode[CALIBRATE])
 		{
-			update_calibration();
+			update_calibration(1);
 			update_calibrate_leds();
 		}
 		else
