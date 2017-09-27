@@ -7,17 +7,19 @@ Using a computer:
 
 Without a computer:
 
-  1) Go into System Mode (check the manual if don't know how!). 
+  1) Go into System Mode (_hold both Reverse, both Play, REC and REC Bank buttons down for a few seconds_). 
 
-  2) Press and hold the Edit button. If the colors of Reverse buttons change, you have a version 1.2 or later:
+  2) Press and hold the Edit button. Look at the colors of Reverse buttons:
 
-*  Left=White, Right=Red ==> 1.2 (latest version)
+*  Left Reverse = __White__, Right Reverse = __Orange__ ==> 1.3 (latest version)
+
+*  Left Reverse = __White__, Right Reverse = __Red__ ==> 1.2 
 
 <!--
 *Key: The left Reverse button shows the Major version number, and the right Reverse button shows the Minor version number. Off = 0, White = 1, Red = 2, Orange = 3, Yellow = 4, Green = 5, Cyan = 6, Blue = 7, Magenta = 8, Lavender = 9* -->
 
 
-*  Orange | Orange ==> 1.0 or 1.1 (see note below)
+*  Left Reverse = __Orange__, Right Reverse = __Orange__ ==> 1.0 or 1.1 (see note below)
 
 3) If the Reverse buttons stay Orange, then you have v1.0 or 1.1. To tell the difference between v1.0 and v1.1, press and hold just the left Reverse button in System Mode. If both Reverse buttons turn White, then you have v1.1. If they remain Orange, you have v1.0.
 
@@ -26,12 +28,36 @@ Without a computer:
 ###Change log:
 
 ----
+#### v1.3
 
+*Released:* (beta released Sept 26, 2017)
+
+*Download:* [Firmware v1.3 WAV file -- BETA version](http://4mscompany.com/STS/firmware/STS-firmware-v1_3RC.wav)
+
+*New Features:*
+
+  * Drag-and-dropping WAV files to SD card works better:
+    * Adding WAV files to an existing folder now adds the files to the bank if there are empty slots.
+    * If there are no empty slots, the files can be added using Edit + Next File.
+    * On boot, the STS will try to fill empty slots in banks by searching in the bank's folder:
+      * If the bank contains files from multiple folders, the lowest-numbered sample file's folder is used. 
+
+  * Holding down Bank 1 + Bank 2 + Edit while tapping REC and REC Bank adjusts 1V/oct cv jack offset.
+    * _This compensates for small DC offsets on the jack which causes the two playback channels to be out of tune with each other and/or the Record channel (even if the Pitch knob is centered). All units are calibrated in the factory, but variations in power supplies and grounding configurations of cases may cause DC offset to appear in a user's system._
+    * REC shifts it downwards, REC Bank shifts it upwards.
+    * Settings are saved in flash (save using Edit + Save after making necessary adjustments).
+    
+*Fixes:*
+
+  * Creating a folder with an exact color name in all lowercase added the folder twice. Fixed.
+  * Edit+Next File while in an empty slot now searches in the folder of the first filled slot.
+
+----
 #### v1.2
 
-*Released:* (release candidate Sept 8, 2017)
+*Released:* (released Sept 8, 2017)
 
-*Download:* [Firmware v1.2 Release Candidate WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_2RC.wav) <<--not final version, being tested!
+*Download:* [Firmware v1.2 WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_2RC.wav)
 
 *New Features:*
 
@@ -85,13 +111,9 @@ Released: August 10, 2017
 *Initial Release*
 
 ----
-
-#### Known Bugs:
-  * Setting a folder name to an exact color name can sometimes cause it to load twice.
   
 
 #### Features for future firmware versions:
-  * Auto-loading empty slots from unused files in the folder, if a dominant folder exists (currently, the user has to press Edit+Next File to load a sample into an empty slot)
   * System Mode setting to disable envelope when Length < 50%
   * System Mode setting to disable fade up/down when looping a sample
   * Allow for internally patching OUTs to INs for self-recording
