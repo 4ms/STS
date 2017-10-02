@@ -5,11 +5,9 @@
  *      Author: design
  */
 
-#ifndef FLASH_USER_H_
-#define FLASH_USER_H_
+#pragma once
+
 #include <stm32f4xx.h>
-
-
 
 void set_firmware_version(void);
 void factory_reset(void);
@@ -20,4 +18,4 @@ void write_all_system_calibrations_to_FLASH(void);
 void read_all_system_calibrations_from_FLASH(void);
 void apply_firmware_specific_adjustments(void);
 
-#endif /* FLASH_USER_H_ */
+

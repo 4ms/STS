@@ -5,8 +5,8 @@
  *      Author: design
  */
 
-#ifndef BUTTONS_H_
-#define BUTTONS_H_
+#pragma once
+
 #include <stm32f4xx.h>
 #include "globals.h"
 
@@ -80,6 +80,19 @@
 		!BANK2BUT \
 		)
 
+//All buttons during system mode
+#define FACTORY_RESET_BUTTONS (\
+		PLAY1BUT &&\
+		PLAY2BUT &&\
+		REV1BUT &&\
+		REV2BUT &&\
+		RECBUT &&\
+		BANKRECBUT &&\
+		EDIT_BUTTON &&\
+		BANK1BUT &&\
+		BANK2BUT \
+		)
+
 //Rec and RecBank during cal mode
 #define SAVE_CALIBRATE_BUTTONS (\
 		!PLAY1BUT &&\
@@ -135,5 +148,3 @@ uint8_t all_buttons_atleast(enum ButtonStates state, uint32_t button_mask);
 
 
 #define Button_Debounce_IRQHandler TIM4_IRQHandler
-
-#endif /* BUTTONS_H_ */

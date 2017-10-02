@@ -5,8 +5,8 @@
  *      Author: design
  */
 
-#ifndef INC_WAV_RECORDING_H_
-#define INC_WAV_RECORDING_H_
+#pragma once
+
 #define	WAV_COMMENT 	"Recorded on a 4ms Stereo Triggered Sampler" // goes into wav info chunk and id3 tag
 #define	WAV_SOFTWARE 	"4ms Stereo Triggered Sampler firmware v"	 //	goes into wav info chunk and id3 tag
 
@@ -30,4 +30,4 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels);
 FRESULT write_wav_info_chunk(FIL *wavfil, uint32_t *total_written);
 FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_size_bytes);
 
-#endif /* INC_WAV_RECORDING_H_ */
+

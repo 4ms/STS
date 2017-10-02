@@ -5,8 +5,7 @@
  *      Author: design
  */
 
-#ifndef INC_CIRCULAR_BUFFER_H_
-#define INC_CIRCULAR_BUFFER_H_
+#pragma once
 
 #include <stm32f4xx.h>
 
@@ -28,4 +27,4 @@ uint32_t CB_distance_points(uint32_t leader, uint32_t follower, uint32_t size, u
 void CB_init(CircularBuffer *b, uint8_t rev);
 
 
-#endif /* INC_CIRCULAR_BUFFER_H_ */
+

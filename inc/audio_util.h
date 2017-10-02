@@ -5,10 +5,9 @@
  *      Author: design
  */
 
-#ifndef SRC_AUDIO_UTIL_H_
-#define SRC_AUDIO_UTIL_H_
-#include <stm32f4xx.h>
+#pragma once
 
+#include <stm32f4xx.h>
 
 // uint32_t offset_addr(uint32_t addr, uint8_t channel, int32_t offset);
 // uint32_t inc_addr(uint32_t addr, uint8_t channel, uint8_t direction);
@@ -21,4 +20,4 @@
 uint32_t align_addr(uint32_t addr, uint32_t blockAlign);
 
 
-#endif /* SRC_AUDIO_UTIL_H_ */
+

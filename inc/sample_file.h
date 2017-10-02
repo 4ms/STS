@@ -5,8 +5,8 @@
  *      Author: design
  */
 
-#ifndef INC_SAMPLE_FILE_H_
-#define INC_SAMPLE_FILE_H_
+#pragma once
+
 #include <stm32f4xx.h>
 #include "ff.h"
 
@@ -36,4 +36,4 @@ FRESULT reload_sample_file(FIL *fil, Sample *s_sample);
 FRESULT create_linkmap(FIL *fil, uint8_t chan);
 
 
-#endif /* INC_SAMPLE_FILE_H_ */
+

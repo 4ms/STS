@@ -5,10 +5,9 @@
  *      Author: design
  */
 
-#ifndef TIMEKEEPER_H_
-#define TIMEKEEPER_H_
-#include <stm32f4xx.h>
+#pragma once
 
+#include <stm32f4xx.h>
 
 void init_timekeeper(void);
 
@@ -21,4 +20,4 @@ void init_ButtonLED_IRQ(void);
 
 void init_SDIO_read_IRQ(void);
 
-#endif /* TIMEKEEPER_H_ */
+

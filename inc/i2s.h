@@ -2,8 +2,7 @@
  * i2s.h - I2S feeder routines
  */
 
-#ifndef __i2s__
-#define __i2s__
+#pragma once
 
 #include <stm32f4xx.h>
 
@@ -12,6 +11,4 @@ void DeInit_I2S_Clock(void);
 void DeInit_I2SDMA(void);
 void Start_I2SDMA(void);
 void init_audio_dma(void);
-
-#endif
 

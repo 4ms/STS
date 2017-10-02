@@ -5,8 +5,7 @@
  *      Author: design
  */
 
-#ifndef INC_FILE_UTIL_H_
-#define INC_FILE_UTIL_H_
+#pragma once
 
 #include <stm32f4xx.h>
 #include "ff.h"
@@ -23,4 +22,4 @@ FRESULT 	find_next_ext_in_dir_alpha(char* path, const char *ext, char *fname, en
 uint8_t 	is_wav(char *string);
 
 
-#endif /* INC_FILE_UTIL_H_ */
+

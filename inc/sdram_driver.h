@@ -5,8 +5,8 @@
 // http://en.radzio.dxp.pl/stm32f429idiscovery/
 // Date : 24.11.2013
 //=================================================================================================
-#ifndef SDRAM_H_
-#define SDRAM_H_
+#pragma once
+
 #include <stm32f4xx.h>
 
 #define SDRAM_BASE 0xD0000000
@@ -49,4 +49,4 @@ void FMC_Config(void);
 
 void SDRAM_Init(void);
 
-#endif /* SDRAM_H_ */
+

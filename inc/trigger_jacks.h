@@ -5,11 +5,9 @@
  *      Author: design
  */
 
-#ifndef INC_TRIGGER_JACKS_H_
-#define INC_TRIGGER_JACKS_H_
+#pragma once
+
 #include <stm32f4xx.h>
-
-
 
 enum TriggerJacks {
 	TrigJack_Play1,
@@ -30,4 +28,4 @@ enum TriggerStates {
 #define Trigger_Jack_Debounce_IRQHandler TIM5_IRQHandler
 #define TrigJack_TIM TIM5
 
-#endif /* INC_TRIGGER_JACKS_H_ */
+

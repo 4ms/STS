@@ -5,8 +5,7 @@
  *      Author: design
  */
 
-#ifndef INC_STR_UTIL_H_
-#define INC_STR_UTIL_H_
+#pragma once
 
 #include <stm32f4xx.h>
 
@@ -34,4 +33,4 @@ uint8_t trim_slash(char *string);
 uint8_t add_slash(char *string);
 
 
-#endif /* INC_STR_UTIL_H_ */
+

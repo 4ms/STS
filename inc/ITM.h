@@ -5,9 +5,7 @@
  *      Author: design
  */
 
-#ifndef ITM_H_
-#define ITM_H_
-
+#pragma once
 
 //void ITM_Init(uint32_t SWOSpeed);
 void ITM_SendValue (int port, uint32_t value);
@@ -19,4 +17,4 @@ void TRACE_init(void);
 
 
 
-#endif /* ITM_H_ */
+

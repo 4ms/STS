@@ -5,8 +5,8 @@
  *      Author: design
  */
 
-#ifndef INC_EDIT_MODE_H
-#define INC_EDIT_MODE_H
+#pragma once
+
 #include <stm32f4xx.h>
 #include "sample_file.h"
 
@@ -44,5 +44,3 @@ void enter_edit_mode(void);
 
 void save_undo_state(uint8_t bank, uint8_t samplenum);
 uint8_t restore_undo_state(uint8_t bank, uint8_t samplenum);
-
-#endif /* INC_EDIT_MODE_H */

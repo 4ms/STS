@@ -9,7 +9,6 @@ main.c
 #include "sampler.h"
 #include "sdram_driver.h"
 
-#include "audio_sdcard.h"
 #include "audio_sdram.h"
 #include "codec.h"
 #include "i2s.h"
@@ -41,7 +40,7 @@ main.c
 #define BOOTLOADER_MAGIC_CODE 0xBADDCAFE
 #define BOOTLOADER_MAGIC_ADDRESS *((uint32_t *)(0x2001FFF0))
 
-
+ 
 
 FATFS FatFs;
 

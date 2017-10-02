@@ -20,14 +20,13 @@
   */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32F40x_CONF_H
-#define __STM32F40x_CONF_H
+#pragma once
 
 #if defined  (HSE_VALUE)
 /* Redefine the HSE value; it's equal to 8 MHz on the STM32F4-DISCOVERY Kit */
  #undef HSE_VALUE
  #define HSE_VALUE    ((uint32_t)8000000) 
-#endif /* HSE_VALUE */
+#endif
 
 /* Includes ------------------------------------------------------------------*/
 /* Uncomment the line below to enable peripheral header file inclusion */
@@ -89,8 +88,6 @@
   void assert_failed(uint8_t* file, uint32_t line);
 #else
   #define assert_param(expr) ((void)0)
-#endif /* USE_FULL_ASSERT */
-
-#endif /* __STM32F40x_CONF_H */
+#endif
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/

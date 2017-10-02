@@ -5,8 +5,7 @@
  *      Author: Dan Green
  */
 
-#ifndef SRC_RGB_LEDS_H_
-#define SRC_RGB_LEDS_H_
+#pragma once
 
 #include <stm32f4xx.h>
 
@@ -43,4 +42,4 @@ void update_all_ButtonLEDs(void);
 
 uint32_t display_bank_blink(uint8_t ButLEDnum, uint8_t bank_to_display, uint32_t t);
 
-#endif /* SRC_RGB_LEDS_H_ */
+

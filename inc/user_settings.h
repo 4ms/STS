@@ -5,8 +5,7 @@
  *      Author: Dan Green
  */
 
-#ifndef USER_SETTINGS_H_
-#define USER_SETTINGS_H_
+#pragma once
 
 #include <stm32f4xx.h>
 #include "ff.h"
@@ -30,4 +29,4 @@ FRESULT save_user_settings(void);
 FRESULT read_user_settings(void);
 
 
-#endif /* USER_SETTINGS_H_ */
+

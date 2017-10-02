@@ -5,10 +5,9 @@
  *      Author: design
  */
 
-#ifndef PARAMS_H_
-#define PARAMS_H_
-#include <stm32f4xx.h>
+#pragma once
 
+#include <stm32f4xx.h>
 
 //
 // Params are values that the user controls, often in real-time
@@ -127,4 +126,4 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent);
 #define adc_param_update_IRQHandler TIM1_BRK_TIM9_IRQHandler
 void adc_param_update_IRQHandler(void);
 
-#endif /* PARAMS_H_ */
+

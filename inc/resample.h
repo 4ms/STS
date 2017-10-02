@@ -5,8 +5,7 @@
  *      Author: design
  */
 
-#ifndef INC_RESAMPLE_H_
-#define INC_RESAMPLE_H_
+#pragma once
 
 #include <stm32f4xx.h>
 
@@ -16,4 +15,4 @@ void resample_read16_avg(float rs, CircularBuffer* buf, uint32_t buff_len, uint8
 
 
 
-#endif /* INC_RESAMPLE_H_ */
+

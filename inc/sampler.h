@@ -2,10 +2,7 @@
  * sampler.h
  */
 
-#ifndef __sampler_h__
-#define __sampler_h__
-
-//#define ARM_MATH_CM4
+#pragma once
 
 #include <stm32f4xx.h>
 #include "sample_file.h"
@@ -83,6 +80,3 @@ void clear_is_buffered_to_file_end(uint8_t chan);
 //void check_trim_bounds(void);
 
 void SDIO_read_IRQHandler(void);
-
-#endif
-

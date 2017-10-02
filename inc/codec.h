@@ -3,8 +3,7 @@
  *
  */
 
-#ifndef __codec__
-#define __codec__
+#pragma once
 
 #include <stm32f4xx.h>
 
@@ -133,5 +132,3 @@ void Codec_Deinit(void);
 void Codec_GPIO_Init(void);
 
 void init_i2s_clkin(void);
-
-#endif

@@ -4,8 +4,7 @@
  *      Author: design
  */
 
-#ifndef GLOBALS_H_
-#define GLOBALS_H_
+#pragma once
 
 //Set this to 0 for slower ADC (classic)
 //Set to 1 for faster ADC (newer, less tested)
@@ -186,4 +185,4 @@ void check_errors(void);
 //#define delay_sys(x) do{register uint32_t donetime=x+systime;__asm__ __volatile__ ("nop\n\t":::"memory");}while(sys_time!=donetime;)
 
 
-#endif /* GLOBALS_H_ */
+

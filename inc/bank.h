@@ -5,8 +5,8 @@
  *      Author: design
  */
 
-#ifndef INC_BANK_H
-#define INC_BANK_H
+#pragma once
+
 #include <stm32f4xx.h>
 #include "ff.h"
 #include "sample_file.h"
@@ -45,4 +45,4 @@ uint8_t get_bank_blink_digit(uint8_t bank);
 //void create_bank_path_index(void);
 void init_banks(void);
 
-#endif /* INC_BANK_H */
+

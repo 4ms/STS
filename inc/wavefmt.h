@@ -5,8 +5,7 @@
  *      Author: design
  */
 
-#ifndef INC_WAVEFMT_H_
-#define INC_WAVEFMT_H_
+#pragma once
 
 #include <stm32f4xx.h>
 
@@ -55,4 +54,3 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk);
 void create_waveheader(WaveHeader *w, WaveFmtChunk *f, uint8_t bitsPerSample, uint8_t numChannels);
 void create_chunk(uint32_t chunkId, uint32_t chunkSize, WaveChunk *wc);
 
-#endif /* INC_WAVEFMT_H_ */

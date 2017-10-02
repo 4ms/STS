@@ -5,10 +5,9 @@
  * 	Author: Dan Green (danngreen1@gmail.com)
  */
 
-#ifndef INC_BUTTON_KNOB_COMBO_H
-#define INC_BUTTON_KNOB_COMBO_H
-#include <stm32f4xx.h>
+#pragma once
 
+#include <stm32f4xx.h>
 
 enum ButtonKnobCombo_Buttons{
 	bkc_Bank1,
@@ -64,4 +63,4 @@ typedef struct ButtonKnobCombo{
 } ButtonKnobCombo;
 
 
-#endif /* INC_BUTTON_KNOB_COMBO_H */
+

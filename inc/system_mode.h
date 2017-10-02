@@ -5,8 +5,7 @@
  *      Author: design
  */
 
-#ifndef SYSTEM_MODE_H_
-#define SYSTEM_MODE_H_
+#pragma once
 
 #include <stm32f4xx.h>
 
@@ -17,4 +16,4 @@ void update_system_mode_leds(void);
 void update_system_mode_button_leds(void);
 
 
-#endif /* SYSTEM_MODE_H_ */
+

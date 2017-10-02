@@ -2,8 +2,8 @@
  * dig_inouts.h
  */
 
-#ifndef INOUTS_H_
-#define INOUTS_H_
+#pragma once
+
 #include <stm32f4xx.h>
 
 #define ALL_GPIO_RCC 	(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | \
@@ -167,4 +167,4 @@ void test_noise(void);
 void deinit_dig_inouts(void);
 
 
-#endif /* INOUTS_H_ */
+

@@ -1,5 +1,4 @@
-#ifndef LED_PALETTE_H_
-#define LED_PALETTE_H_
+#pragma once
 
 enum LEDPalette{
 	OFF,
@@ -24,6 +23,3 @@ enum LEDPalette{
 
 	NUM_LED_PALETTE
 };
-
-
-#endif

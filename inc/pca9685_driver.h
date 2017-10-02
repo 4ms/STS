@@ -25,8 +25,7 @@
  *
  * -----------------------------------------------------------------------------
  */
-#ifndef PCA9685_DRIVER_H_
-#define PCA9685_DRIVER_H_
+#pragma once
 
 /* How to Use:
  *
@@ -77,5 +76,3 @@ void LEDDriver_setRGBLED_RGB(uint8_t rgbled_number, int16_t c_red, int16_t c_gre
 
 void LEDDriver_Init(uint8_t numdrivers);
 uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8_t RegisterValue);
-
-#endif /* PCA9685_DRIVER_H_ */

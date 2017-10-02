@@ -5,8 +5,8 @@
  *      Author: design
  */
 
-#ifndef INC_STS_FILESYSTEM_H_
-#define INC_STS_FILESYSTEM_H_
+#pragma once
+
 #include <stm32f4xx.h>
 #include "ff.h"
 #include "sample_file.h"
@@ -57,4 +57,4 @@ uint8_t dir_contains_assigned_samples(char *path);
 uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename);
 FRESULT check_sys_dir(void);
 
-#endif /* INC_STS_FILESYSTEM_H_ */
+

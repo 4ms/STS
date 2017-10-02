@@ -5,8 +5,8 @@
  *      Author: design
  */
 
-#ifndef FLASH_H_
-#define FLASH_H_
+#pragma once
+
 #include <stm32f4xx.h>
 
 FLASH_Status flash_erase_sector(uint32_t address);
@@ -22,4 +22,4 @@ uint8_t flash_read_byte(uint32_t address);
 
 
 
-#endif /* FLASH_H_ */
+

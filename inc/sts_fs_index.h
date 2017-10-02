@@ -5,8 +5,8 @@
  *      Author: Hugo Paris (hugoplho@gmail.com)
  */
 
-#ifndef INC_STS_FS_INDEX_H_
-#define INC_STS_FS_INDEX_H_
+#pragma once
+
 #include <stm32f4xx.h>
 #include "ff.h"
 
@@ -32,4 +32,3 @@ uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks);
 
 uint8_t check_sampleindex_valid(char *indexfilename);
 
-#endif /* INC_STS_FS_INDEX_H_ */

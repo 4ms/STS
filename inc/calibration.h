@@ -5,10 +5,9 @@
  *      Author: design
  */
 
-#ifndef CALIBRATION_H_
-#define CALIBRATION_H_
-#include <stm32f4xx.h>
+#pragma once
 
+#include <stm32f4xx.h>
 
 typedef struct SystemCalibrations
 {
@@ -28,4 +27,4 @@ void auto_calibrate(void);
 void update_calibration(uint8_t user_cal_mode);
 void update_calibration_button_leds(void);
 
-#endif /* CALIBRATION_H_ */
+

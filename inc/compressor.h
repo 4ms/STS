@@ -5,8 +5,8 @@
  *      Author: design
  */
 
-#ifndef COMPRESSOR_H_
-#define COMPRESSOR_H_
+#pragma once
+
 #include <stm32f4xx.h>
 
 #define C_THRESHOLD_75_16BIT 201326592 /*  ((1<<15)*(1<<15)*0.75*0.75 - 0.75*(1<<15)*(1<<15))  */
@@ -19,4 +19,4 @@
 
 void init_compressor(uint32_t max_sample_val, float threshold_percent);
 
-#endif /* COMPRESSOR_H_ */
+
