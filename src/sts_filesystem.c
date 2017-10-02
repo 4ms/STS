@@ -830,7 +830,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 //Creates a new filename in the proper format
 //The proper format is:
 // PREFIX + TAKE# + SUFFIX + EXTENSION
-// Currently we set prefix to null and put the sample slot# after the suffix, so it's just:
+// For the STS we set prefix to null and put the sample slot# after the suffix, so it's just:
 // 		001-Sample02.wav
 // Where 02 is the slot# we recorded into, and 001 is the Take#
 // We also determine the best directory to place this file in, and make that part of path:

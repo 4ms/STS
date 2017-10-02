@@ -105,8 +105,8 @@ void toggle_recording(void)
 		if (global_mode[ENABLE_RECORDING])
 		{
 			CB_init(rec_buff, 0);
-WATCH_REC_BUFF_IN = rec_buff->in;
-WATCH_REC_BUFF_OUT = rec_buff->out;
+// WATCH_REC_BUFF_IN = rec_buff->in;
+// WATCH_REC_BUFF_OUT = rec_buff->out;
 
 			rec_state = CREATING_FILE;
 		}
@@ -126,9 +126,9 @@ void record_audio_to_buffer(int16_t *src)
 //	DEBUG1_ON;
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
-		WATCH_REC_BUFF = CB_distance(rec_buff, 0);
-		if (WATCH_REC_BUFF == 0) 
-			{DEBUG0_ON;DEBUG0_OFF;}
+		// WATCH_REC_BUFF = CB_distance(rec_buff, 0);
+		// if (WATCH_REC_BUFF == 0) 
+		// 	{DEBUG0_ON;DEBUG0_OFF;}
 
 
 		overrun = 0;
@@ -153,7 +153,7 @@ void record_audio_to_buffer(int16_t *src)
 
 				CB_offset_in_address(rec_buff, 2, 0);
 
-WATCH_REC_BUFF_IN = rec_buff->in;
+// WATCH_REC_BUFF_IN = rec_buff->in;
 
 				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) //don't consider the heads being crossed if they end at the same place
 					overrun = rec_buff->out;
@@ -173,7 +173,7 @@ WATCH_REC_BUFF_IN = rec_buff->in;
 				CB_offset_in_address(rec_buff, 2, 0);
 				while(SDRAM_IS_BUSY){;}
 
-WATCH_REC_BUFF_IN = rec_buff->in;
+// WATCH_REC_BUFF_IN = rec_buff->in;
 
 				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) //don't consider the heads being crossed if they end at the same place
 					overrun = rec_buff->out;
@@ -467,8 +467,6 @@ void write_buffer_to_storage(void)
 			if (recfil.obj.fs!=0)
 			{
 				rec_state = CLOSING_FILE;
-				//f_close(&recfil);
-				//f_sync(&recfil);
 			}
 
 			sample_num_now_recording = i_param[REC_CHAN][SAMPLE];
