@@ -167,6 +167,8 @@ void init_modes(void)
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
+	
+	global_mode[ALLOW_SPLIT_MONITORING] = 1;
 }
 
 
@@ -1009,7 +1011,7 @@ void process_mode_flags(void)
 		else
 		{
 			global_mode[ENABLE_RECORDING] = 1;
-			global_mode[MONITOR_RECORDING] = 1;
+			global_mode[MONITOR_RECORDING] = (1<<0) | (1<<1); //monitor channel 1 and 2
 			i_param[0][LOOPING] = 0;
 			i_param[1][LOOPING] = 0;
 		}

@@ -71,10 +71,10 @@ Without a computer:
   * Holding Edit+Rec+RecBank resets tracking compensation values to 1.0000
     * Updating to v1.2 firmware automatically sets tracking to 1.0000 the first time it is loaded (this is necessary because tracking is calculated differently in v1.2)
 
-  * Auto Stop On Sample Change:  "Always" mode added. There are now three Auto Stop modes. The modes determine what happens when the sample is changed while a sample is being played.
-    * Always: The sample instantly stops playing. If looping is on, the new sample starts playing immediately.
-    * Looping Only:  The sample keep playing normally -- unless it's looping, in which case it stops immediately and the new sample starts.
-    * Off: The sample keeps playing normally. If it's looping then the new sample begins when the previous sample reaches the end.
+  * Auto Stop On Sample Change:  "Always keep playing" mode added. There are now three Auto Stop modes. The modes determine what happens when the sample is changed while a sample is being played.
+    * Red = Always Stop: The sample instantly stops playing. If looping is on, the new sample starts playing immediately.
+    * Blue = Change When Looping:  The sample keeps playing normally -- unless it's looping, in which case it stops immediately and the new sample starts.
+    * Green = Always Keep Playing: The sample keeps playing normally. If it's looping then the new sample begins when the previous sample reaches the end.
 
 *Fixes:*
 

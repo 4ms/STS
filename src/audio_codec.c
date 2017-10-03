@@ -23,6 +23,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	CCMDATA static int32_t outL[2][HT16_CHAN_BUFF_LEN];
 	CCMDATA static int32_t outR[2][HT16_CHAN_BUFF_LEN];
 	uint16_t i;
+	int16_t dummy;
 	int32_t t_i32;
 
 	//
@@ -52,7 +53,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			*dst++ = 0;
 		}
 	}
-	else if (global_mode[MONITOR_RECORDING])
+	else if (global_mode[MONITOR_RECORDING] == 0b11)
 	{
 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 		{
@@ -68,88 +69,186 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 		}
 	}
-	else if (SAMPLINGBYTES==2)
+	else if (global_mode[MONITOR_RECORDING] == 0b00)
 	{
-		if (global_mode[STEREO_MODE])
+		if (SAMPLINGBYTES==2)
 		{
-			//Left Out = Sum of both L channels
-			//Right Out = Sum of both R channels
-			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+			if (global_mode[STEREO_MODE])
 			{
-				//Chan 1 L + Chan 2 L clipped at signed 16-bits
-				t_i32 = outL[0][i] + outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
-				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-				*dst++ = t_i32;
-				*dst++ = 0;
+				//Left Out = Sum of both L channels
+				//Right Out = Sum of both R channels
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+				{
+					//Chan 1 L + Chan 2 L clipped at signed 16-bits
+					t_i32 = outL[0][i] + outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = 0;
 
-				//Chan 1 R + Chan 2 R clipped at signed 16-bits
-				t_i32 = outR[0][i] + outR[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
-				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-				*dst++ = t_i32;
-				*dst++ = 0;
+					//Chan 1 R + Chan 2 R clipped at signed 16-bits
+					t_i32 = outR[0][i] + outR[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = 0;
+				}
 			}
-		}
-		else
-		{
-			//in mono mode, outL is the average of L+R
-			for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+			else
 			{
-				//Chan 1 L+R clipped at signed 16-bits
-				t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
-				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-				*dst++ = t_i32;
-				*dst++ = 0;
+				//in mono mode, outL is the average of L+R
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+				{
+					//Chan 1 L+R clipped at signed 16-bits
+					t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = 0;
 
-				//Chan 2 L+R clipped at signed 16-bits
-				t_i32 = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
-				asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-				//DEBUG:
-				//*dst++ = f_param[0][PITCH] * 4000;
-				//*dst++ = bracketed_cvadc[6] * 3;
-				*dst++ = t_i32;
-
-				*dst++ = 0;
+					//Chan 2 L+R clipped at signed 16-bits
+					t_i32 = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = 0;
+				}
 			}
-		}
 
+		}
 	}
-	// else //SAMPLINGBYTES==4
-	// {
-	// 	if (global_mode[STEREO_MODE])
-	// 	{
-	// 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-	// 		{
-	// 			//L out clipped at signed 24 bits
-	// 			t_i32 = ((outL[0][i] + outL[1][i]) >> 1) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
-	//			asm("ssat %[dst], #24, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-	// 			*dst++ = (int16_t)(t_i32>>16) ;
-	// 			*dst++ = (int16_t)(t_i32 & 0x0000FF00);
+	else if (global_mode[MONITOR_RECORDING] == 0b10)
+	{
+		if (SAMPLINGBYTES==2)
+		{
+			if (global_mode[STEREO_MODE])
+			{
+				//Left Out = Sum of both L channels
+				//Right Out = right input
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+				{
+					//Chan 1 L + Chan 2 L clipped at signed 16-bits
+					t_i32 = outL[0][i] + outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = 0;
 
-	// 			//R out clipped at signed 24 bits
-	// 			t_i32 = ((outR[0][i] + outR[1][i]) >> 1) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
-	//			asm("ssat %[dst], #24, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-	// 			*dst++ = (int16_t)(t_i32>>16) ;
-	// 			*dst++ = (int16_t)(t_i32 & 0x0000FF00);
-	// 		}
-	// 	}
-	// 	else
-	// 	{
-	// 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-	// 		{
-	// 			//Chan 1 L+R out clipped at signed 24 bits
-	//			t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
-	//			asm("ssat %[dst], #24, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-	// 			*dst++ = (int16_t)(t_i32>>16) ;
-	// 			*dst++ = (int16_t)(t_i32 & 0x0000FF00);
+					//R input signal
+					dummy = *src++;dummy = *src++;
+					t_i32 = (*src++) + system_calibrations->codec_dac_calibration_dcoffset[1];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					//ignore L input
+					*dst++ = *src++;
+				}
+			}
+			else
+			{
+				//in mono mode, outL is the average of L+R
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+				{
+					//Chan 1 L+R clipped at signed 16-bits
+					t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = 0;
 
-	// 			//Chan 2 L+R out clipped at signed 24 bits
-	//			t_i32 = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
-	//			asm("ssat %[dst], #24, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-	// 			*dst++ = (int16_t)(t_i32>>16) ;
-	// 			*dst++ = (int16_t)(t_i32 & 0x0000FF00);
-	// 		}
-	// 	}
-	// }
+					//R input signal
+					dummy = *src++;dummy = *src++;
+					t_i32 = (*src++) + system_calibrations->codec_dac_calibration_dcoffset[1];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					//ignore L input
+					*dst++ = *src++;
+				}
+			}
+
+		}
+	}
+	else if (global_mode[MONITOR_RECORDING] == 0b01)
+	{
+		if (SAMPLINGBYTES==2)
+		{
+			if (global_mode[STEREO_MODE])
+			{
+				//Left Out = L input signal
+				//Right Out = Sum of both R channels
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+				{
+					//L input signal
+					t_i32 = (*src++) + system_calibrations->codec_dac_calibration_dcoffset[0];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = *src++;
+					//ignore R input
+					dummy = *src++;dummy = *src++;
+
+					//Chan 1 R + Chan 2 R clipped at signed 16-bits
+					t_i32 = outR[0][i] + outR[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = 0;
+				}
+			}
+			else
+			{
+				//in mono mode, outL is the average of L+R
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+				{
+					//L input signal
+					t_i32 = (*src++) + system_calibrations->codec_dac_calibration_dcoffset[0];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = *src++;
+					//ignore R input
+					dummy = *src++;dummy = *src++;
+
+					//Chan 2 L+R clipped at signed 16-bits
+					t_i32 = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
+					*dst++ = 0;
+				}
+			}
+
+		}
+	}
+
+
+		// else //SAMPLINGBYTES==4
+		// {
+		// 	if (global_mode[STEREO_MODE])
+		// 	{
+		// 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+		// 		{
+		// 			//L out clipped at signed 24 bits
+		// 			t_i32 = ((outL[0][i] + outL[1][i]) >> 1) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
+		//			asm("ssat %[dst], #24, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+		// 			*dst++ = (int16_t)(t_i32>>16) ;
+		// 			*dst++ = (int16_t)(t_i32 & 0x0000FF00);
+
+		// 			//R out clipped at signed 24 bits
+		// 			t_i32 = ((outR[0][i] + outR[1][i]) >> 1) + (int16_t)system_calibrations->codec_dac_calibration_dcoffset[0];
+		//			asm("ssat %[dst], #24, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+		// 			*dst++ = (int16_t)(t_i32>>16) ;
+		// 			*dst++ = (int16_t)(t_i32 & 0x0000FF00);
+		// 		}
+		// 	}
+		// 	else
+		// 	{
+		// 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+		// 		{
+		// 			//Chan 1 L+R out clipped at signed 24 bits
+		//			t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+		//			asm("ssat %[dst], #24, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+		// 			*dst++ = (int16_t)(t_i32>>16) ;
+		// 			*dst++ = (int16_t)(t_i32 & 0x0000FF00);
+
+		// 			//Chan 2 L+R out clipped at signed 24 bits
+		//			t_i32 = outL[1][i] + system_calibrations->codec_dac_calibration_dcoffset[1];
+		//			asm("ssat %[dst], #24, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+		// 			*dst++ = (int16_t)(t_i32>>16) ;
+		// 			*dst++ = (int16_t)(t_i32 & 0x0000FF00);
+		// 		}
+		// 	}
+		// }
+
 
 #else //DEBUG_ADC_TO_CODEC
 	for (i=0;i<HT16_CHAN_BUFF_LEN;i++)

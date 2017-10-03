@@ -26,5 +26,6 @@ void set_default_calibration_values(void);
 void auto_calibrate(void);
 void update_calibration(uint8_t user_cal_mode);
 void update_calibration_button_leds(void);
+void update_calibrate_leds(void);
 
 

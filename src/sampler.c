@@ -399,7 +399,14 @@ void start_playing(uint8_t chan)
 
 	play_led_state[chan]=1;
 
-	if (global_mode[MONITOR_RECORDING])	global_mode[MONITOR_RECORDING] = 0;
+	if (global_mode[ALLOW_SPLIT_MONITORING] && global_mode[STEREO_MODE]==0)
+	{
+		//Turn off monitoring for just this channel
+		if (global_mode[MONITOR_RECORDING] & (1<<chan))
+			global_mode[MONITOR_RECORDING] &= ~(1<<chan);
+	}
+	else
+		global_mode[MONITOR_RECORDING] = 0;
 
 	//DEBUG
 	str_cpy(dbg_sample.filename , s_sample->filename);
@@ -579,7 +586,7 @@ void check_change_sample(void)
 
 				flags[PlaySample1Changed_valid+chan] = 0;
 
-				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS || (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==2 && i_param[chan][LOOPING]))
+				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS || (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_LOOPING && i_param[chan][LOOPING]))
 				{
 					if (play_state[chan] != SILENT && play_state[chan]!=PREBUFFERING)
 						play_state[chan] = PLAY_FADEDOWN;
