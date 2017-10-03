@@ -30,34 +30,13 @@
 // This allows for a CV/gate sequencer to settle, and the internal LPF to settle, before using the new CV value
 // This reduces slew and "indecision" when a step is advanced on the sequencer
 
-#if X_FAST_ADC == 1
-	#define PLAY_TRIG_LATCH_PITCH_TIME 256 
-	#define PLAY_TRIG_DELAY 520
+uint16_t PLAY_TRIG_LATCH_PITCH_TIME;
+uint16_t PLAY_TRIG_DELAY;
+#define MAX_FIR_LPF_SIZE 80
+uint32_t FIR_LPF_SIZE[NUM_CV_ADCS];
 
-	#define MAX_FIR_LPF_SIZE 80
-	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
-			80,80, //PITCH
-			20,20, //START
-			20,20, //LENGTH
-			1,1  //SAMPLE
-	};
-#else
-	#define PLAY_TRIG_LATCH_PITCH_TIME 768 
-	#define PLAY_TRIG_DELAY 1024
 
-	#define MAX_FIR_LPF_SIZE 40
-	const uint32_t FIR_LPF_SIZE[NUM_CV_ADCS] = {
-			40,40, //PITCH
-			20,20, //START
-			20,20, //LENGTH
-			20,20  //SAMPLE
-	};
-#endif
-
-//20 gives about 10ms slew
-//40 gives about 18ms slew
-//100 gives about 40ms slew
-
+extern uint8_t PCB_version;
 
 //CV LPFs
 CCMDATA int32_t 	fir_lpf		[NUM_CV_ADCS][MAX_FIR_LPF_SIZE];
@@ -191,13 +170,8 @@ void init_LowPassCoefs(void)
 	RAWCV_LPF_COEF[SAMPLE1_CV] = 1.0-(1.0/t);
 	RAWCV_LPF_COEF[SAMPLE2_CV] = 1.0-(1.0/t);
 
-#if X_FAST_ADC == 1
-	CV_BRACKET[PITCH1_CV] = 2;
-	CV_BRACKET[PITCH2_CV] = 2;
-#else
-	CV_BRACKET[PITCH1_CV] = 20;
-	CV_BRACKET[PITCH2_CV] = 20;
-#endif
+	CV_BRACKET[PITCH1_CV] = 5;
+	CV_BRACKET[PITCH2_CV] = 5;
 
 	CV_BRACKET[START1_CV] = 20;
 	CV_BRACKET[START2_CV] = 20;
@@ -259,6 +233,30 @@ void init_LowPassCoefs(void)
 		cv_delta[i]				=0;
 	}
 
+	//Set Trig delay and FIR LPF buffer sizes
+	if (PCB_version == 0)
+	{
+		PLAY_TRIG_LATCH_PITCH_TIME 	= 256;
+		PLAY_TRIG_DELAY 			= 520;
+
+		FIR_LPF_SIZE[PITCH1_CV] = 80;
+		FIR_LPF_SIZE[PITCH2_CV] = 80;
+	}
+	else
+	{
+		PLAY_TRIG_LATCH_PITCH_TIME 	= 128;
+		PLAY_TRIG_DELAY 			= 128;
+
+		FIR_LPF_SIZE[PITCH1_CV] = 20;
+		FIR_LPF_SIZE[PITCH2_CV] = 20;
+	}
+
+	FIR_LPF_SIZE[START1_CV] = 20;
+	FIR_LPF_SIZE[START2_CV] = 20;
+	FIR_LPF_SIZE[LENGTH1_CV] = 20;
+	FIR_LPF_SIZE[LENGTH2_CV] = 20;
+	FIR_LPF_SIZE[SAMPLE1_CV] = 1;
+	FIR_LPF_SIZE[SAMPLE2_CV] = 1;
 
 	//initialize FIR LPF
 
@@ -1090,7 +1088,8 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 	if (raw_detent > cur_detent)
 	{
 		lower_adc_bound = (int16_t)adc_val - DETENT_MIN_DEPTH;
-		if (detent_num(lower_adc_bound) == raw_detent)
+	//	if (detent_num(lower_adc_bound) == raw_detent)
+		if (detent_num(lower_adc_bound) > cur_detent)
 			return(raw_detent);
 	}
 	else
@@ -1098,7 +1097,8 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 	{
 		upper_adc_bound = (int16_t)adc_val + DETENT_MIN_DEPTH;
 
-		if (detent_num(upper_adc_bound) == raw_detent)
+//		if (detent_num(upper_adc_bound) == raw_detent)
+		if (detent_num(upper_adc_bound) < cur_detent)
 			return(raw_detent);
 	}
 

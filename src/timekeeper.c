@@ -220,13 +220,8 @@ void init_TrigJackDebounce_IRQ(void)
 	NVIC_Init(&nvic);
 
 	TIM_TimeBaseStructInit(&tim);
-#if X_FAST_ADC == 1
 	//7500 --> 12.0kHz 0.083ms
 	tim.TIM_Period = 7500;
-#else
-	//30000 --> 3.0kHz 0.333ms
-	tim.TIM_Period = 30000;
-#endif
 	tim.TIM_Prescaler = 0;
 	tim.TIM_ClockDivision = 0;
 	tim.TIM_CounterMode = TIM_CounterMode_Up;

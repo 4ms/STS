@@ -6,36 +6,25 @@
 
 #pragma once
 
-//Set this to 0 for slower ADC (classic)
-//Set to 1 for faster ADC (newer, less tested)
-#define X_FAST_ADC 1
+/* 
+ * 1024 bytes per DMA transfer
+ * 512 bytes/half-transfer @ 16 bits/sample = 256 samples per half-transfer
+ * 256 samples/half-transfer = 128 samples per channel per half-transfer
+ * 128/interrupt @ 44100Hz = interrupt runs every 2.9ms
+ */
 
-//codec_BUFF_LEN = Size (in samples) of the DMA rx/tx buffers:
-//Each channel = codec_BUFF_LEN/2 samples
-//We process the rx buffer when it's half-full and 100% full, so codec_BUFF_LEN/4 samples are processed at one time
+#define codec_BUFF_LEN 1024 
 
-//=2048B codec_BUFF_LEN
-//=1024B each Half Transfer
-//=256 samples (32-bit samples from codec, even if in 16bit mode)
-#if X_FAST_ADC == 1
-	#define codec_BUFF_LEN 1024 
-#else
-	#define codec_BUFF_LEN 2048
-#endif
 #define HT16_BUFF_LEN (codec_BUFF_LEN>>2)		/*256*/
 #define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) 	/*128*/
 
-/* @codec_BUFF_LEN2048:
- * 2048 bytes per DMA transfer
- * 1024 bytes/half-transfer @ 16 bits/sample = 512 samples per half-transfer
- * 512 samples/half-transfer = 256 samples per channel per half-transfer
 
- * 256/interrupt @ 44100Hz = interrupt runs every 5.8ms
-*/
-//Note: If this changes, we may have also change:
+
+//Note: If the BASE_SAMPLE_RATE changes, we may have also change:
 // -'make wav' section in Makefile
 // -PLLI2S_N and PLLI2S_R in system_stm32f4xx.c
-// -sys_tmr's timing will change
+// -sys_tmr's timing will change, so have to update LED flashing rates, etc
+// -bootloader's sample rate
 
 #define BASE_SAMPLE_RATE 44100
 #define f_BASE_SAMPLE_RATE 44100.0 /*float version*/

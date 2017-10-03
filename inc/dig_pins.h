@@ -137,6 +137,10 @@
 #define JUMPER_4 (!(JUMPER_4_GPIO->IDR & JUMPER_4_pin))
 */
 
+#define PCBVERSION_A_pin GPIO_Pin_13
+#define PCBVERSION_A_GPIO GPIOC
+#define PCBVERSION_A (PCBVERSION_A_GPIO->IDR & PCBVERSION_A_pin)
+
 
 //DEBUG pins
 #define DEBUG0 GPIO_Pin_5
@@ -165,6 +169,7 @@ void init_dig_inouts(void);
 void test_dig_inouts(void);
 void test_noise(void);
 void deinit_dig_inouts(void);
+uint8_t get_PCB_version(void);
 
 
 
