@@ -28,6 +28,9 @@ void LED_PWM_IRQHandler(void)
 {
 	static uint32_t loop_led_PWM_ctr=0;
 	uint32_t tm_11 = sys_tmr & 0x07FF; //11-bit counter
+	uint32_t tm_12 = sys_tmr & 0x0FFF; //12-bit counter
+	uint32_t tm_13 = sys_tmr & 0x1FFF; //13-bit counter
+	uint32_t tm_14 = sys_tmr & 0x3FFF; //14-bit counter
 
 	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
 	{
@@ -50,11 +53,11 @@ void LED_PWM_IRQHandler(void)
 				else																		SIGNALLED_OFF;
 			}
 			else if (global_mode[MONITOR_RECORDING]==0b10) { //R channel monitoring: monitor LED flicker quickly
-				if (tm_11<0x0400 && loop_led_PWM_ctr<system_calibrations->led_brightness)	SIGNALLED_ON;
+				if (tm_13<0x0400 && loop_led_PWM_ctr<system_calibrations->led_brightness)	SIGNALLED_ON;
 				else																		SIGNALLED_OFF;
 			}
 			else if (global_mode[MONITOR_RECORDING]==0b01) { //L channel monitoring: monitor LED flicker dimly
-				if (tm_11<0x0400 && loop_led_PWM_ctr<system_calibrations->led_brightness)	SIGNALLED_ON;
+				if (tm_13<0x0400 && loop_led_PWM_ctr<system_calibrations->led_brightness)	SIGNALLED_ON;
 				else																		SIGNALLED_OFF;
 			}
 			else if (global_mode[MONITOR_RECORDING]==0b00) { //no channels monitoring: monitor LED always off
