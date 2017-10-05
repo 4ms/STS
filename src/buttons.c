@@ -84,6 +84,9 @@ uint8_t all_buttons_atleast(enum ButtonStates state, uint32_t button_mask)
 	return 1; //all buttons in the mask are >= state
 }
 
+//
+// Main routine to handle button presses
+//
 void Button_Debounce_IRQHandler(void)
 {
 	static uint16_t State[NUM_BUTTONS] = {0xffff}; // Current debounce status
@@ -216,9 +219,7 @@ void Button_Debounce_IRQHandler(void)
 								// We have to detect the knob as moving to make the combo ACTIVE
 								if (g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state == COMBO_INACTIVE)
 									g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].latched_value = bracketed_potadc[START1_POT];
-								
-								//g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state = COMBO_INACTIVE;
-							}
+															}
 							break;
 
 						case Rev2:
@@ -229,8 +230,6 @@ void Button_Debounce_IRQHandler(void)
 								// We have to detect the knob as moving to make the combo ACTIVE
 								if (g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state == COMBO_INACTIVE)
 									g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].latched_value = bracketed_potadc[START2_POT];
-
-								//g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].combo_state = COMBO_INACTIVE;
 							}
 
 							break;
@@ -465,7 +464,8 @@ void Button_Debounce_IRQHandler(void)
 								{
 
 									case Rev1:
-										if (button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
+										if ( all_buttons_except( UP, (1<<Rev1)|(1<<Edit) ) )
+//										if (button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
 											if(global_mode[EDIT_MODE])
 											{
@@ -497,14 +497,16 @@ void Button_Debounce_IRQHandler(void)
 								{
 									//Short-press REC: Enable/disable recording, or Toggle monitoring
 									case Rec:
-										if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Play1]==UP && button_state[Play2]==UP && button_state[RecBank]==UP)
+										if ( all_buttons_except( UP, (1<<Rec) ) )
+										//if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Play1]==UP && button_state[Play2]==UP && button_state[RecBank]==UP)
 										{
 											flags[ToggleMonitor] = 1;
 										}
 										break;
 
 									case Play1:
-										if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
+										if ( all_buttons_except( UP, (1<<Play1)|(1<<Edit) ) )
+										// if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
 											if (global_mode[EDIT_MODE])
 											{
@@ -519,7 +521,8 @@ void Button_Debounce_IRQHandler(void)
 										break;
 
 									case Play2:
-										if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
+										if ( all_buttons_except( UP, (1<<Play2)|(1<<Edit) ) )
+//										if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
 											if (global_mode[EDIT_MODE])
 											{
@@ -569,7 +572,12 @@ void Button_Debounce_IRQHandler(void)
 			if (global_mode[EDIT_MODE])
 			{
 
-				if (button_state[Rev1] == UP && button_state[Play1] == UP && button_state[Play2] == UP && button_state[Rec] == UP && button_state[RecBank] == UP)
+				//
+				// Edit + Rev2 + Bank1/2
+				// Reload bank(s)
+				//
+				// if (button_state[Rev1] == UP && button_state[Play1] == UP && button_state[Play2] == UP && button_state[Rec] == UP && button_state[RecBank] == UP)
+				if ( all_buttons_except( UP, (1<<Bank1)|(1<<Bank2)|(1<<Rev2)|(1<<Edit) ) )
 				{
 					//
 					//Medium press with Edit + Rev2 + one Bank button: reload bank from the saved index file
@@ -617,6 +625,17 @@ void Button_Debounce_IRQHandler(void)
 					}
 				}
 
+				//Edit+Bank1+Bank2+Play1 Short Press: Save start-up banks
+				if ( all_buttons_except( UP, (1<<Bank1)|(1<<Bank2)|(1<<Edit)|(1<<Play1) ) 
+					&& all_buttons_atleast( SHORT_PRESSED, (1<<Bank1)|(1<<Bank2)|(1<<Edit)|(1<<Play1) ) )
+				{
+					global_mode[STARTUPBANK_CH1] = i_param[0][BANK];
+					global_mode[STARTUPBANK_CH2] = i_param[1][BANK];
+
+					flags[SkipProcessButtons] = 2;
+					flags[SaveUserSettings] = 1;
+				}
+
 				//Edit + Rec + RecBank 2 seconds ---> reset tracking
 				if (button_state[Rec]>=MED_PRESSED && button_state[RecBank]>=MED_PRESSED)
 				{
@@ -624,7 +643,8 @@ void Button_Debounce_IRQHandler(void)
 					if (play_state[1] != SILENT) system_calibrations->tracking_comp[1] = 1.0;
 				}
 
-				if (button_state[Bank1] >= SHORT_PRESSED && button_state[Bank2] >= SHORT_PRESSED)
+				// Don't allow stereo mode to change if Edit+Bank1+Bank2 was ever detected
+				if (button_state[Bank1] >= DOWN && button_state[Bank2] >= DOWN)
 				{
 					disable_stereo_toggle=1;
 				}

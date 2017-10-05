@@ -20,8 +20,7 @@ extern volatile uint32_t 	sys_tmr;
 extern uint8_t 				flags[NUM_FLAGS];
 extern enum PlayStates 		play_state[NUM_PLAY_CHAN];
 enum ButtonStates 			button_state[NUM_BUTTONS];
-
-
+uint8_t 					button_armed[NUM_BUTTONS];
 
 void enter_system_mode(void)
 {
@@ -43,15 +42,48 @@ void exit_system_mode(uint8_t do_save)
 
 #define INITIAL_BUTTONS_DOWN -1
 
+//returns 1 if the button is detected as being pressed for the first time
+uint8_t check_button_pressed(uint8_t button)
+{
+	if (button_state[button] == DOWN && all_buttons_except(UP, (1<<button)))
+	{
+		button_armed[button] = 1;
+	}
+	else if (button_state[button] == UP && button_armed[button] == 1)
+	{
+		//Disable the button from doing anything until it's released
+		button_state[button] = UP;
+		button_armed[button] = 0;
+
+		return(1); //first time detected as pressed
+	}
+
+	return(0);
+}
+
+uint8_t 	undo_global_mode[NUM_GLOBAL_MODES];
+
+void save_globals_undo_state(void)
+{
+	uint8_t i;
+	for(i=0;i<NUM_GLOBAL_MODES;i++)
+		undo_global_mode[i] = global_mode[i];
+}
+
+void restore_globals_undo_state(void)
+{
+	uint8_t i;
+	for(i=0;i<NUM_GLOBAL_MODES;i++)
+		global_mode[i] = undo_global_mode[i];
+}
+
 void update_system_mode(void)
 {
 	static int32_t sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
 	static int32_t bootloader_buttons_down=0;
-	static uint8_t button_armed[NUM_BUTTONS];
 
 	static uint32_t last_sys_tmr=0;
 
-	static uint8_t  undo_rec_24bits, undo_auto_stop, undo_length_full, undo_quantize1, undo_quantize2;
 	uint32_t elapsed_time;
 
 
@@ -65,84 +97,49 @@ void update_system_mode(void)
 	if (sysmode_buttons_down == 0)
 	{
 		//
-		// Do system mode stuff here: check buttons/pots to set various parameters
+		// Check buttons to set various parameters
 		//
 
 		//Rec : Toggle 24-bit mode
-		if (button_state[Rec] == DOWN && all_buttons_except(UP, (1<<Rec)))
-		{
-			button_armed[Rec] = 1;
-		}
-		else if (button_state[Rec] == UP && button_armed[Rec] == 1)
-		{
-			if (global_mode[REC_24BITS]) global_mode[REC_24BITS] = 0;
-			else						 global_mode[REC_24BITS] = 1; 
-
-			//Disable the button from doing anything until it's released
-			button_state[Rec] = UP;
-			button_armed[Rec] = 0;
+		if (check_button_pressed(Rec)){	
+			if (global_mode[REC_24BITS]) 									global_mode[REC_24BITS] = 0;
+			else															global_mode[REC_24BITS] = 1; 
 		}
 
 		//Play2 : Toggle Auto-Stop-on-Sample-Change
-		if (button_state[Play2] == DOWN	&& all_buttons_except(UP, (1<<Play2)))
-		{
-			button_armed[Play2] = 1;
-		}
-		else if (button_state[Play2] == UP && button_armed[Play2] == 1)
-		{
+		if (check_button_pressed(Play2)){	
 			if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_OFF) 		global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_ALWAYS;
 			else
 			if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS) 	global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_LOOPING;
 			else						 									global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] = AutoStop_OFF; 
-
-			//Disable the button from doing anything until it's released
-			button_state[Play2] = UP;
-			button_armed[Play2] = 0;
 		}
 
 		//Play1 : Toggle LENGTH_FULL_START_STOP
-		if (button_state[Play1] == DOWN && all_buttons_except(UP, (1<<Play1)))
-		{
-			button_armed[Play1] = 1;
-		}
-		else if (button_state[Play1] == UP && button_armed[Play1] == 1)
-		{
-			if (global_mode[LENGTH_FULL_START_STOP])global_mode[LENGTH_FULL_START_STOP] = 0;
-			else						 			global_mode[LENGTH_FULL_START_STOP] = 1; 
-
-			//Disable the button from doing anything until it's released
-			button_state[Play1] = UP;
-			button_armed[Play1] = 0;
+		if (check_button_pressed(Play1)){	
+			if (global_mode[LENGTH_FULL_START_STOP])						global_mode[LENGTH_FULL_START_STOP] = 0;
+			else						 									global_mode[LENGTH_FULL_START_STOP] = 1; 
 		}
 
 		//Bank1 : Toggle QUANTIZE_CH1
-		if (button_state[Bank1] == DOWN && all_buttons_except(UP, (1<<Bank1)))
-		{
-			button_armed[Bank1] = 1;
+		if (check_button_pressed(Bank1)){	
+			if (global_mode[QUANTIZE_CH1])									global_mode[QUANTIZE_CH1] = 0;
+			else						 									global_mode[QUANTIZE_CH1] = 1; 
 		}
-		else if (button_state[Bank1] == UP && button_armed[Bank1] == 1)
-		{
-			if (global_mode[QUANTIZE_CH1])	global_mode[QUANTIZE_CH1] = 0;
-			else						 	global_mode[QUANTIZE_CH1] = 1; 
 
-			//Disable the button from doing anything until it's released
-			button_state[Bank1] = UP;
-			button_armed[Bank1] = 0;
-		}
 		//Bank2 : Toggle QUANTIZE_CH2
-		if (button_state[Bank2] == DOWN && all_buttons_except(UP, (1<<Bank2)))
-		{
-			button_armed[Bank2] = 1;
+		if (check_button_pressed(Bank2)){	
+			if (global_mode[QUANTIZE_CH2])									global_mode[QUANTIZE_CH2] = 0;
+			else						 									global_mode[QUANTIZE_CH2] = 1; 
 		}
-		else if (button_state[Bank2] == UP && button_armed[Bank2] == 1)
-		{
-			if (global_mode[QUANTIZE_CH2])	global_mode[QUANTIZE_CH2] = 0;
-			else						 	global_mode[QUANTIZE_CH2] = 1; 
 
-			//Disable the button from doing anything until it's released
-			button_state[Bank2] = UP;
-			button_armed[Bank2] = 0;
+		//Rev1 : Change envelopes on/off
+		//Toggles 00 -> 01 -> 10 -> 11 -> 00 ->...
+		if (check_button_pressed(Rev1)){	
+			if (global_mode[PERC_ENVELOPE])	{								global_mode[PERC_ENVELOPE] = 0;
+																			global_mode[FADEUPDOWN_ENVELOPE] = 1 - global_mode[FADEUPDOWN_ENVELOPE];}
+			else						 									global_mode[PERC_ENVELOPE] = 1; 
 		}
+
 
 		//Edit+Play1 : Save and Exit
 		if (button_state[Edit] >= SHORT_PRESSED && button_state[Play1] >= SHORT_PRESSED && all_buttons_except(UP, (1<<Edit) | (1<<Play1)))
@@ -160,11 +157,7 @@ void update_system_mode(void)
 		//Edit+Rev2 : Revert
 		if (button_state[Edit] >= SHORT_PRESSED && button_state[Rev2] >= SHORT_PRESSED	&& all_buttons_except(UP, (1<<Edit) | (1<<Rev2)))
 		{
-			global_mode[REC_24BITS] 				= undo_rec_24bits;
-			global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]	= undo_auto_stop;
-			global_mode[LENGTH_FULL_START_STOP]		= undo_length_full;
-			global_mode[QUANTIZE_CH1] 				= undo_quantize1;
-			global_mode[QUANTIZE_CH2] 				= undo_quantize2;
+			restore_globals_undo_state();
 		}
 	}
 
@@ -198,11 +191,7 @@ void update_system_mode(void)
 		//Set the undo state on our initial entry
 		if (sysmode_buttons_down==INITIAL_BUTTONS_DOWN)
 		{
-			undo_rec_24bits 	= global_mode[REC_24BITS];
-			undo_auto_stop 		= global_mode[AUTO_STOP_ON_SAMPLE_CHANGE];
-			undo_length_full 	= global_mode[LENGTH_FULL_START_STOP];
-			undo_quantize1 		= global_mode[QUANTIZE_CH1];
-			undo_quantize2 		= global_mode[QUANTIZE_CH2];
+			save_globals_undo_state();
 		}
 
 		//If buttons are found down after they've been released, we will exit
@@ -228,12 +217,7 @@ void update_system_mode(void)
 		//Release buttons too early ===> revert+exit
 		if (sysmode_buttons_down > 10 && sysmode_buttons_down < (BASE_SAMPLE_RATE * 3))
 		{
-			//Revert to undo state
-			global_mode[REC_24BITS] 				= undo_rec_24bits;
-			global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]	= undo_auto_stop;
-			global_mode[LENGTH_FULL_START_STOP]		= undo_length_full;
-			global_mode[QUANTIZE_CH1] 				= undo_quantize1;
-			global_mode[QUANTIZE_CH2] 				= undo_quantize2;
+			restore_globals_undo_state();
 
 			//Exit without saving
 			exit_system_mode(0);
@@ -290,22 +274,22 @@ void update_system_mode_button_leds(void)
 	if (flags[ShutdownAndBootload] != 1)
 	{
 
-		if (global_mode[REC_24BITS]) 					set_ButtonLED_byPalette(RecButtonLED, BLUE); //24bit recording
-		else											set_ButtonLED_byPalette(RecButtonLED, ORANGE); //16bit recording
+		if (global_mode[REC_24BITS]) 									set_ButtonLED_byPalette(RecButtonLED, BLUE); //24bit recording
+		else															set_ButtonLED_byPalette(RecButtonLED, ORANGE); //16bit recording
 
 		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_OFF) 		set_ButtonLED_byPalette(Play2ButtonLED, GREEN); //No auto stop on sample change
 		else
 		if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS) 	set_ButtonLED_byPalette(Play2ButtonLED, RED); //Auto Stop on sample change
 		else						 									set_ButtonLED_byPalette(Play2ButtonLED, BLUE); //Auto Stop only when Looping
 
-		if (global_mode[LENGTH_FULL_START_STOP]) 		set_ButtonLED_byPalette(Play1ButtonLED, RED); //Tapping play button with Length>98% start/stops
-		else											set_ButtonLED_byPalette(Play1ButtonLED, BLUE); //tapping play button always re-starts
+		if (global_mode[LENGTH_FULL_START_STOP]) 						set_ButtonLED_byPalette(Play1ButtonLED, RED); //Tapping play button with Length>98% start/stops
+		else															set_ButtonLED_byPalette(Play1ButtonLED, BLUE); //tapping play button always re-starts
 
-		if (global_mode[QUANTIZE_CH1]) 					set_ButtonLED_byPalette(Bank1ButtonLED, BLUE); //Ch1 quantized to semitones
-		else											set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE); //Ch1 not quantized
+		if (global_mode[QUANTIZE_CH1]) 									set_ButtonLED_byPalette(Bank1ButtonLED, BLUE); //Ch1 quantized to semitones
+		else															set_ButtonLED_byPalette(Bank1ButtonLED, ORANGE); //Ch1 not quantized
 
-		if (global_mode[QUANTIZE_CH2]) 					set_ButtonLED_byPalette(Bank2ButtonLED, BLUE); //Ch2 quantized to semitones
-		else											set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE); //Ch2 not quantized
+		if (global_mode[QUANTIZE_CH2]) 									set_ButtonLED_byPalette(Bank2ButtonLED, BLUE); //Ch2 quantized to semitones
+		else															set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE); //Ch2 not quantized
 
 		set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
 
@@ -317,7 +301,15 @@ void update_system_mode_button_leds(void)
 		else
 		{
 			set_ButtonLED_byPalette(Reverse2ButtonLED, ORANGE);
-			set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);
+
+			if (global_mode[PERC_ENVELOPE]) {
+				if (global_mode[FADEUPDOWN_ENVELOPE]) 					set_ButtonLED_byPalette(Reverse1ButtonLED, ORANGE);	//Orange: All envelopes, default mode
+				else													set_ButtonLED_byPalette(Reverse1ButtonLED, YELLOW);	//Yellow: Percussive envelopes only, no start/end sample envelopes
+			} else {
+				if (global_mode[FADEUPDOWN_ENVELOPE]) 					set_ButtonLED_byPalette(Reverse1ButtonLED, RED);	//Red: Start/end sample envelopes only, no percussive envelopes
+				else													set_ButtonLED_byPalette(Reverse1ButtonLED, DIM_RED); //Dim Red: no envelopes
+
+			}
 		}
 	}
 }

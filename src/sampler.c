@@ -27,13 +27,17 @@
 #include "circular_buffer_cache.h"
 #include "bank.h"
 
+inline int32_t _SSAT16(int32_t x);
+inline int32_t _SSAT16(int32_t x) {asm("ssat %[dst], #16, %[src]" : [dst] "=r" (x) : [src] "r" (x)); return x;}
+
+
 //
 // DEBUG
 //
-extern uint32_t WATCH0;
-extern uint32_t WATCH1;
-extern uint32_t WATCH2;
-extern uint32_t WATCH3;
+// extern uint32_t WATCH0;
+// extern uint32_t WATCH1;
+// extern uint32_t WATCH2;
+// extern uint32_t WATCH3;
 Sample dbg_sample;
 
 //
@@ -918,6 +922,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	uint16_t i;
 	int32_t t_i32;
 	float t_f;
+	float env;
 	uint32_t t_u32;
 	uint8_t t_flag;
 
@@ -935,6 +940,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	float length;
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
+
+	float env_enable;
 
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
@@ -1066,24 +1073,27 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 			 case (PLAY_FADEDOWN):
 			 case (RETRIG_FADEDOWN):
-//DEBUG1_ON;
-//DEBUG2_ON;
+DEBUG3_ON;
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
-					t_f = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
+				 	if (global_mode[FADEUPDOWN_ENVELOPE])
+						env = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
+					else
+						env = 1.0;
 
-					outL[i] = (float)outL[i] * t_f;
-					t_i32 = (float)outL[i] * gain;
+					outL[i] = (float)outL[i] * env * gain;
+					outR[i] = (float)outR[i] * env * gain;
+
+					t_i32 = outL[i];
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 					outL[i] = t_i32;
 
-					outR[i] = (float)outR[i] * t_f;
-					t_i32 = (float)outR[i] * gain;
+					t_i32 = outR[i];
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 					outR[i] = t_i32;
 				}
-
+DEBUG3_OFF;
 				play_led_state[chan] = 0;
 
 				end_out_ctr[chan] = (play_time>0.300)? 35 : ((play_time * 90) + 8);
@@ -1095,54 +1105,51 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					flags[Play1But+chan] = 1;
 
 				play_state[chan] = SILENT;
-//DEBUG2_OFF;
-//DEBUG1_OFF;
 			break;
 
-			 case (PLAYING):
 			 case (PLAY_FADEUP):
-		 		if (play_state[chan] == PLAY_FADEUP) 
-		 		{
-//DEBUG3_ON;
-//DEBUG2_ON;
-					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-					{
-						t_f = gain * (float)i / (float)HT16_CHAN_BUFF_LEN;
-
-						t_i32 = (float)outL[i] * t_f;
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outL[i] = t_i32;
-
-						t_i32 = (float)outR[i] * t_f;
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outR[i] = t_i32;
-					}
-//DEBUG3_OFF;
-//DEBUG2_OFF;
-				} 
-				else
+DEBUG2_ON;
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
-//DEBUG3_ON;
-//DEBUG1_ON;
-					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
-					{
-						t_i32 = (float)outL[i] * gain;
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outL[i] = t_i32;
+					if (global_mode[FADEUPDOWN_ENVELOPE])
+						env = (float)i / (float)HT16_CHAN_BUFF_LEN;
+					else
+						env = 1.0;
 
-						t_i32 = (float)outR[i] * gain;
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outR[i] = t_i32;
-					}
-//DEBUG3_OFF;
-//DEBUG1_OFF;
+					outL[i] = (float)outL[i] * env * gain;
+					outR[i] = (float)outR[i] * env * gain;
+
+					t_i32 = outL[i];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					outL[i] = t_i32;
+
+					t_i32 = outR[i];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					outR[i] = t_i32;
 				}
+DEBUG2_OFF;
+				if (length<=0.5)		play_state[chan] 	= PLAYING_PERC;
+				else					play_state[chan]	= PLAYING;
+		 	 break;
 
-				if (length<=0.5)
-					play_state[chan] 	= PLAYING_PERC;
-				else
-					play_state[chan]	= PLAYING;
+			 case (PLAYING):
+DEBUG1_ON;
+				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
+				{
+					outL[i] = (float)outL[i] * gain;
+					outR[i] = (float)outR[i] * gain;
 
+					t_i32 = outL[i];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					outL[i] = t_i32;
+
+					t_i32 = outR[i];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					outR[i] = t_i32;
+				}
+DEBUG1_OFF;
+				if (length<=0.5)		play_state[chan] 	= PLAYING_PERC;
+				else					play_state[chan]	= PLAYING;
 		 	 break;
 
 			 case (PLAYING_PERC):
@@ -1153,7 +1160,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 		 		if (play_state[chan]==PLAYING_PERC) 
 		 		{
-//DEBUG3_ON;
+DEBUG3_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
@@ -1162,18 +1169,21 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 						if (decay_amp_i[chan] < 0.0f) 		{decay_inc[chan] = 0.0; decay_amp_i[chan] = 0.0f;}
 						else if (decay_amp_i[chan] > 1.0f) 	{decay_inc[chan] = 0.0; decay_amp_i[chan] = 1.0f;}
 
-						outL[i] = ((float)outL[i]) * decay_amp_i[chan];
-						outR[i] = ((float)outR[i]) * decay_amp_i[chan];
+						if (global_mode[PERC_ENVELOPE]) env = decay_amp_i[chan];
+						else env = 1.0;
 
-						t_i32 = (float)outL[i] * gain;
+						outL[i] = ((float)outL[i]) * env * gain;
+						outR[i] = ((float)outR[i]) * env * gain;
+
+						t_i32 = outL[i];
 						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 						outL[i] = t_i32;
 
-						t_i32 = (float)outR[i] * gain;
+						t_i32 = outR[i];
 						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 						outR[i] = t_i32;
 					}
-//DEBUG3_OFF;
+DEBUG3_OFF;
 				} else
 
 				// Fade down to silence before going to PAD_SILENCE mode or ending the playback
@@ -1182,22 +1192,27 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 		 		if (play_state[chan]==PLAYING_PERC_FADEDOWN) 
 		 		{
 //DEBUG2_ON;
-
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						decay_amp_i[chan] -= decay_inc[chan];
 
 						if (decay_amp_i[chan] < 0.0f) 		{decay_inc[chan] = 0.0; decay_amp_i[chan] = 0.0f;}
 
-						t_f = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
+						if (global_mode[FADEUPDOWN_ENVELOPE])
+							env = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
+						else
+							env = 1.0;
 
-						outL[i] = (float)outL[i] * t_f * decay_amp_i[chan];
-						t_i32 = (float)outL[i] * gain;
+						if (global_mode[PERC_ENVELOPE]) env *= decay_amp_i[chan];
+
+						outL[i] = ((float)outL[i]) * env * gain;
+						outR[i] = ((float)outR[i]) * env * gain;
+
+						t_i32 = outL[i];
 						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 						outL[i] = t_i32;
 
-						outR[i] = (float)outR[i] * t_f * decay_amp_i[chan];
-						t_i32 = (float)outR[i] * gain;
+						t_i32 = outR[i];
 						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 						outR[i] = t_i32;
 					}
@@ -1247,7 +1262,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				}
 				break;
 
-			 default: //PREBUFFERING or SILENT do happen here
+			 default: //PREBUFFERING or SILENT
 				 break;
 
 		 }//switch play_state

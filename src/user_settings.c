@@ -8,6 +8,17 @@
 
 extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 
+#define MAX_SETTINGS_CHOICES 3
+#define	SETTING_INTEGER 255
+
+typedef struct UserSettings{
+	char	setting_text[40];						// Text for block header in settings file
+	uint8_t	num_choices;							// Number of choices. Must be: 2 <= num_choices < MAX_SETTINGS_CHOICES, or num_choices == SETTING_INTEGER
+													// If num_choices == SETTING_INTEGER, then the value is a uint8_t and value_choice[] and text_choice[] are ignored
+	char	text_choice[MAX_SETTINGS_CHOICES][12];	// Text for the choices
+	int8_t	value_choice[MAX_SETTINGS_CHOICES];		// Values to set global_mode[ gm_index ]
+	uint8_t	gm_index;								// which global_mode[] is associated
+} UserSettings;
 
 void set_default_user_settings(void)
 {
@@ -18,6 +29,12 @@ void set_default_user_settings(void)
 
 	global_mode[QUANTIZE_CH1] = 0;
 	global_mode[QUANTIZE_CH2] = 0;
+
+	global_mode[PERC_ENVELOPE] = 1;
+	global_mode[FADEUPDOWN_ENVELOPE] = 1;
+
+	global_mode[STARTUPBANK_CH1] = 0;
+	global_mode[STARTUPBANK_CH2] = 0;
 
 }
 
@@ -47,6 +64,12 @@ FRESULT save_user_settings(void)
 		f_printf(&settings_file, "## [RECORD SAMPLE BITS] can be 24 or 16 (default)\n");
 		f_printf(&settings_file, "## [AUTO STOP ON SAMPLE CHANGE] can be \"No\", \"Looping Only\" or \"Yes\" (default)\n");
 		f_printf(&settings_file, "## [PLAY BUTTON STOPS WITH LENGTH AT FULL] can be \"No\" or \"Yes\" (default)\n");
+		f_printf(&settings_file, "## [QUANTIZE CHANNEL 1 1V/OCT JACK] can be \"Yes\" or \"No\" (default)\n");
+		f_printf(&settings_file, "## [QUANTIZE CHANNEL 2 1V/OCT JACK] can be \"Yes\" or \"No\" (default)\n");
+		f_printf(&settings_file, "## [SHORT SAMPLE PERCUSSIVE ENVELOPE] can be \"No\" or \"Yes\" (default)\n");
+		f_printf(&settings_file, "## [CROSSFADE SAMPLE END POINTS] can be \"No\" or \"Yes\" (default)\n");
+		f_printf(&settings_file, "## [STARTUP BANK CHANNEL 1] can be a number between 0 and 59 (default is 0, which is the White bank)\n");
+		f_printf(&settings_file, "## [STARTUP BANK CHANNEL 2] can be a number between 0 and 59 (default is 0, which is the White bank)\n");
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## Deleting this file will restore default settings\n");
 		f_printf(&settings_file, "##\n\n");
@@ -90,19 +113,34 @@ FRESULT save_user_settings(void)
 		// Write the Quantize Channel 1 setting
 		f_printf(&settings_file, "[QUANTIZE CHANNEL 1 1V/OCT JACK]\n");
 
-		if (global_mode[QUANTIZE_CH1])
-			f_printf(&settings_file, "Yes\n\n");
-		else
-			f_printf(&settings_file, "No\n\n");
+		if (global_mode[QUANTIZE_CH1])			f_printf(&settings_file, "Yes\n\n");
+		else									f_printf(&settings_file, "No\n\n");
 
 		// Write the Quantize Channel 2 setting
 		f_printf(&settings_file, "[QUANTIZE CHANNEL 2 1V/OCT JACK]\n");
 
-		if (global_mode[QUANTIZE_CH2])
-			f_printf(&settings_file, "Yes\n\n");
-		else
-			f_printf(&settings_file, "No\n\n");
+		if (global_mode[QUANTIZE_CH2])			f_printf(&settings_file, "Yes\n\n");
+		else									f_printf(&settings_file, "No\n\n");
 
+		// Write the Perc Envelope setting
+		f_printf(&settings_file, "[SHORT SAMPLE PERCUSSIVE ENVELOPE]\n");
+
+		if (global_mode[PERC_ENVELOPE])			f_printf(&settings_file, "Yes\n\n");
+		else									f_printf(&settings_file, "No\n\n");
+
+		// Write the Fade Up/Down Envelope setting
+		f_printf(&settings_file, "[CROSSFADE SAMPLE END POINTS]\n");
+
+		if (global_mode[FADEUPDOWN_ENVELOPE])	f_printf(&settings_file, "Yes\n\n");
+		else									f_printf(&settings_file, "No\n\n");
+
+		// Write the Channel 1 startup bank setting
+		f_printf(&settings_file, "[STARTUP BANK CHANNEL 1]\n");
+		f_printf(&settings_file, "%d\n\n", global_mode[STARTUPBANK_CH1]);
+
+		// Write the Channel 2 startup bank setting
+		f_printf(&settings_file, "[STARTUP BANK CHANNEL 2]\n");
+		f_printf(&settings_file, "%d\n\n", global_mode[STARTUPBANK_CH2]);
 
 		res = f_close(&settings_file);
 	}
@@ -180,6 +218,26 @@ FRESULT read_user_settings(void)
 					cur_setting_found = QuantizeChannel2; //Channel 2 Quantize
 					continue;
 				}
+				if (str_startswith_nocase(read_buffer, "[SHORT SAMPLE PERCUSSIVE ENVELOPE"))
+				{
+					cur_setting_found = PercEnvelope; //Percussive envelope
+					continue;
+				}
+				if (str_startswith_nocase(read_buffer, "[CROSSFADE SAMPLE END POINTS"))
+				{
+					cur_setting_found = FadeEnvelope; //Fade up/dpwn envelope
+					continue;
+				}	
+				if (str_startswith_nocase(read_buffer, "[STARTUP BANK CHANNEL 1"))
+				{
+					cur_setting_found = StartUpBank_ch1; //Fade up/dpwn envelope
+					continue;
+				}	
+				if (str_startswith_nocase(read_buffer, "[STARTUP BANK CHANNEL 2"))
+				{
+					cur_setting_found = StartUpBank_ch2; //Fade up/dpwn envelope
+					continue;
+				}	
 			}
 
 			 //Look for setting values
@@ -250,6 +308,42 @@ FRESULT read_user_settings(void)
 
 				else
 					global_mode[QUANTIZE_CH2] = 0;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found==PercEnvelope)
+			{
+				if (str_startswith_nocase(read_buffer, "Yes"))
+					global_mode[PERC_ENVELOPE] = 1;
+
+				else
+					global_mode[PERC_ENVELOPE] = 0;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found==FadeEnvelope)
+			{
+				if (str_startswith_nocase(read_buffer, "Yes"))
+					global_mode[FADEUPDOWN_ENVELOPE] = 1;
+
+				else
+					global_mode[FADEUPDOWN_ENVELOPE] = 0;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found==StartUpBank_ch1)
+			{
+				global_mode[STARTUPBANK_CH1] = str_xt_int(read_buffer);
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found==StartUpBank_ch2)
+			{
+				global_mode[STARTUPBANK_CH2] = str_xt_int(read_buffer);
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}

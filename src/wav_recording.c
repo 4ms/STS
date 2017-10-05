@@ -34,9 +34,9 @@ extern Sample 					samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 extern SystemCalibrations 		*system_calibrations;
 
-uint32_t WATCH_REC_BUFF;
-uint32_t WATCH_REC_BUFF_IN;
-uint32_t WATCH_REC_BUFF_OUT;
+// uint32_t WATCH_REC_BUFF;
+// uint32_t WATCH_REC_BUFF_IN;
+// uint32_t WATCH_REC_BUFF_OUT;
 
 #define WRITE_BLOCK_SIZE 	9216
 
@@ -153,7 +153,7 @@ void record_audio_to_buffer(int16_t *src)
 
 				CB_offset_in_address(rec_buff, 2, 0);
 
-// WATCH_REC_BUFF_IN = rec_buff->in;
+ // WATCH_REC_BUFF_IN = rec_buff->in;
 
 				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) //don't consider the heads being crossed if they end at the same place
 					overrun = rec_buff->out;
@@ -173,7 +173,7 @@ void record_audio_to_buffer(int16_t *src)
 				CB_offset_in_address(rec_buff, 2, 0);
 				while(SDRAM_IS_BUSY){;}
 
-// WATCH_REC_BUFF_IN = rec_buff->in;
+ // WATCH_REC_BUFF_IN = rec_buff->in;
 
 				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) //don't consider the heads being crossed if they end at the same place
 					overrun = rec_buff->out;
@@ -303,7 +303,6 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 
 FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_size_bytes)
 {
-	uint32_t data;
 	uint32_t orig_pos;
 	uint32_t written;
 	FRESULT res;
@@ -492,7 +491,7 @@ void write_buffer_to_storage(void)
 					else
 						addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, WRITE_BLOCK_SIZE>>1, 0);
 
-WATCH_REC_BUFF_OUT = rec_buff->out;
+// WATCH_REC_BUFF_OUT = rec_buff->out;
 
 					if (addr_exceeded)
 					{
@@ -556,7 +555,7 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 				else
 					addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, buffer_lead>>1, 0);
 
-WATCH_REC_BUFF_OUT = rec_buff->out;
+// WATCH_REC_BUFF_OUT = rec_buff->out;
 
 				if (!addr_exceeded)
 				{

@@ -250,6 +250,9 @@ int main(void)
     //Turn on button LEDs for bank loading
     LEDDRIVER_OUTPUTENABLE_ON;
 
+	set_default_user_settings();
+	read_user_settings();
+
     //Load all banks
 	init_banks(); // calls load_all_banks which calls index_write_wrapper() w/	flags[RewriteIndex]=RED high
 
@@ -257,9 +260,6 @@ int main(void)
     if (!do_factory_reset) backup_sampleindex_file();
 
 	Start_I2SDMA();
-
-	set_default_user_settings();
-	read_user_settings();
 
 	delay();
 

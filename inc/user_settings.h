@@ -19,6 +19,10 @@ enum Settings
 	PlayStopsLengthFull,
 	QuantizeChannel1,
 	QuantizeChannel2,
+	PercEnvelope,
+	FadeEnvelope,
+	StartUpBank_ch1,
+	StartUpBank_ch2,
 
 	NUM_SETTINGS_ENUM
 };

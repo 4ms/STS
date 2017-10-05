@@ -11,21 +11,33 @@ Without a computer:
 
   2) Press and hold the Edit button. Look at the colors of Reverse buttons:
 
-*  Left Reverse = __White__, Right Reverse = __Orange__ ==> 1.3 (latest version)
-
+*  Left Reverse = __White__, Right Reverse = __Yellow__ ==> 1.4 (latest version)
+*  Left Reverse = __White__, Right Reverse = __Orange__ ==> 1.3
 *  Left Reverse = __White__, Right Reverse = __Red__ ==> 1.2 
+*  Left Reverse = __Orange__, Right Reverse = __Orange__ ==> 1.0 or 1.1 (see note below)
 
 <!--
 *Key: The left Reverse button shows the Major version number, and the right Reverse button shows the Minor version number. Off = 0, White = 1, Red = 2, Orange = 3, Yellow = 4, Green = 5, Cyan = 6, Blue = 7, Magenta = 8, Lavender = 9* -->
-
-
-*  Left Reverse = __Orange__, Right Reverse = __Orange__ ==> 1.0 or 1.1 (see note below)
 
 3) If the Reverse buttons stay Orange, then you have v1.0 or 1.1. To tell the difference between v1.0 and v1.1, press and hold just the left Reverse button in System Mode. If both Reverse buttons turn White, then you have v1.1. If they remain Orange, you have v1.0.
 
 
 
 ###Change log:
+
+----
+#### v1.4
+
+*New Features:*
+
+  * Can turning monitoring on or off for left and right channels separately.
+     * Pressing PLAY on one channel while monitoring is on will turn monitoring off for just that channel.
+     * Only works in Mono mode.
+     * Monitor LED blinks to indicate split monitoring.
+     * _Typical use would be to patch Right OUT -> Left IN, then Left OUT -> mixer. Then record the right channel's playback._
+  * Can set the default bank to be loaded at start-up.
+     * Hold down Edit + Bank 1 + Bank 2 + left PLAY (Save) for 1 second. Current bank selection will be the saved as the default after power on. 
+     
 
 ----
 #### v1.3
@@ -35,7 +47,7 @@ Without a computer:
 *Download:* [Firmware v1.3 WAV file -- BETA version](http://4mscompany.com/STS/firmware/STS-firmware-v1_3RC.wav)
 
 *New Features:*
-
+ 
   * Drag-and-dropping WAV files to SD card works better:
     * Adding WAV files to an existing folder now adds the files to the bank if there are empty slots.
     * If there are no empty slots, the files can be added using Edit + Next File.

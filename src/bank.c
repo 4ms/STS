@@ -13,6 +13,8 @@ extern enum g_Errors g_error;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
+extern uint8_t	global_mode[NUM_GLOBAL_MODES];
+
 uint8_t bank_status[MAX_NUM_BANKS];
 
 ///
@@ -468,30 +470,30 @@ void disable_bank(uint8_t bank)
 
 
 
-
 /// Initialization
 
 
 void init_banks(void)
 {
-	uint32_t bank;
+	uint32_t first_enabled_bank;
 	uint8_t force_reload;
 
 
 	//Force reloading of banks from disk with button press on boot
-	if (REV1BUT && REV2BUT) 
-		force_reload = 1;
-	else
-		force_reload = 0;
-
+	if (REV1BUT && REV2BUT) force_reload = 1;
+	else					force_reload = 0;
 
 	load_all_banks(force_reload);
 
-	bank = next_enabled_bank(MAX_NUM_BANKS-1); 				//Find the first enabled bank
-	i_param[0][BANK] = bank; 								//Bank 1 starts on the first enabled bank
-	i_param[1][BANK] = bank; 								//Bank 2 starts on the first enabled bank
-	
-	i_param[2][BANK] = next_disabled_bank(bank);			//REC bank starts on first disabled bank
+	i_param[0][BANK] = global_mode[STARTUPBANK_CH1];
+	i_param[1][BANK] = global_mode[STARTUPBANK_CH2];
+
+	first_enabled_bank = next_enabled_bank(MAX_NUM_BANKS-1);
+
+	if (!is_bank_enabled(i_param[0][BANK]))		i_param[0][BANK] = first_enabled_bank;
+	if (!is_bank_enabled(i_param[1][BANK]))		i_param[1][BANK] = first_enabled_bank;
+
+	i_param[2][BANK] = next_disabled_bank(first_enabled_bank);			//REC bank starts on first disabled bank after the first enabled bank
 
 	flags[PlaySample1Changed] = 1;
 	flags[PlaySample2Changed] = 1;
