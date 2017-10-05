@@ -656,10 +656,6 @@ void read_storage_to_buffer(void)
 
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
-		// if (play_state[chan] == SILENT)
-		// {
-		// 	check_change_bank(chan);
-		// }	
 
 		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN && play_state[chan] != RETRIG_FADEDOWN)
 		{
@@ -941,8 +937,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
 
-	float env_enable;
-
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
 	{
@@ -1073,14 +1067,12 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 			 case (PLAY_FADEDOWN):
 			 case (RETRIG_FADEDOWN):
-DEBUG3_ON;
+// DEBUG3_ON;
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
-				 	if (global_mode[FADEUPDOWN_ENVELOPE])
-						env = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
-					else
-						env = 1.0;
+				 	if (global_mode[FADEUPDOWN_ENVELOPE])	env = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
+					else									env = 1.0;
 
 					outL[i] = (float)outL[i] * env * gain;
 					outR[i] = (float)outR[i] * env * gain;
@@ -1093,7 +1085,7 @@ DEBUG3_ON;
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 					outR[i] = t_i32;
 				}
-DEBUG3_OFF;
+// DEBUG3_OFF;
 				play_led_state[chan] = 0;
 
 				end_out_ctr[chan] = (play_time>0.300)? 35 : ((play_time * 90) + 8);
@@ -1108,13 +1100,11 @@ DEBUG3_OFF;
 			break;
 
 			 case (PLAY_FADEUP):
-DEBUG2_ON;
+// DEBUG2_ON;
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
-					if (global_mode[FADEUPDOWN_ENVELOPE])
-						env = (float)i / (float)HT16_CHAN_BUFF_LEN;
-					else
-						env = 1.0;
+					if (global_mode[FADEUPDOWN_ENVELOPE])	env = (float)i / (float)HT16_CHAN_BUFF_LEN;
+					else									env = 1.0;
 
 					outL[i] = (float)outL[i] * env * gain;
 					outR[i] = (float)outR[i] * env * gain;
@@ -1127,13 +1117,13 @@ DEBUG2_ON;
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 					outR[i] = t_i32;
 				}
-DEBUG2_OFF;
+// DEBUG2_OFF;
 				if (length<=0.5)		play_state[chan] 	= PLAYING_PERC;
 				else					play_state[chan]	= PLAYING;
 		 	 break;
 
 			 case (PLAYING):
-DEBUG1_ON;
+// DEBUG1_ON;
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
 					outL[i] = (float)outL[i] * gain;
@@ -1147,7 +1137,7 @@ DEBUG1_ON;
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 					outR[i] = t_i32;
 				}
-DEBUG1_OFF;
+// DEBUG1_OFF;
 				if (length<=0.5)		play_state[chan] 	= PLAYING_PERC;
 				else					play_state[chan]	= PLAYING;
 		 	 break;
@@ -1160,7 +1150,7 @@ DEBUG1_OFF;
 
 		 		if (play_state[chan]==PLAYING_PERC) 
 		 		{
-DEBUG3_ON;
+// DEBUG3_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
@@ -1183,7 +1173,7 @@ DEBUG3_ON;
 						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 						outR[i] = t_i32;
 					}
-DEBUG3_OFF;
+// DEBUG3_OFF;
 				} else
 
 				// Fade down to silence before going to PAD_SILENCE mode or ending the playback
@@ -1198,12 +1188,8 @@ DEBUG3_OFF;
 
 						if (decay_amp_i[chan] < 0.0f) 		{decay_inc[chan] = 0.0; decay_amp_i[chan] = 0.0f;}
 
-						if (global_mode[FADEUPDOWN_ENVELOPE])
-							env = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
-						else
-							env = 1.0;
-
-						if (global_mode[PERC_ENVELOPE]) env *= decay_amp_i[chan];
+						if (global_mode[FADEUPDOWN_ENVELOPE])	env = decay_amp_i[chan] * (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
+						else									env = 1.0;
 
 						outL[i] = ((float)outL[i]) * env * gain;
 						outR[i] = ((float)outR[i]) * env * gain;
@@ -1291,7 +1277,6 @@ void SDIO_read_IRQHandler(void)
 		//Keeping sdcard read/writes out of interrupts forces us to complete each read/write before beginning another
 
 		flags[TimeToReadStorage] = 1;
-		//read_storage_to_buffer();
 
 		TIM_ClearITPendingBit(SDIO_read_TIM, TIM_IT_Update);
 	}
