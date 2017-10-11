@@ -13,10 +13,13 @@
  * 128/interrupt @ 44100Hz = interrupt runs every 2.9ms
  */
 
-#define codec_BUFF_LEN 1024 
+//1024 = every 2.9ms
+//256 = every 0.73ms
+//128 = every 0.36ms
+#define codec_BUFF_LEN 128 
 
-#define HT16_BUFF_LEN (codec_BUFF_LEN>>2)		/*256*/
-#define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) 	/*128*/
+#define HT16_BUFF_LEN (codec_BUFF_LEN>>2)		/*32*/
+#define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) 	/*16*/
 
 
 

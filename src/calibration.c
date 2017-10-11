@@ -23,8 +23,6 @@ extern int16_t bracketed_potadc[NUM_POT_ADCS];
 extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 extern int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
 
-extern volatile int16_t rx_buffer[codec_BUFF_LEN];
-
 extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 extern uint8_t 	flags[NUM_FLAGS];
 
@@ -126,13 +124,6 @@ void update_calibration(uint8_t user_cal_mode)
 		if (REV2BUT)
 				system_calibrations->codec_dac_calibration_dcoffset[1]=(i_smoothed_potadc[LENGTH_POT*2+1]-2048-1750);
 	}
-
-	//Audio input dc offset (hardware uses AC coupling, so this not necessary)
-	// if (EDIT_BUTTON)
-	// {
-	// 	system_calibrations->codec_adc_calibration_dcoffset[0]= -1*rx_buffer[0];
-	// 	system_calibrations->codec_adc_calibration_dcoffset[1]= -1*rx_buffer[2];
-	// }
 
 	//ToDo: Create a tracking calibration mode.
 	//In tracking calibration mode, user should input C0 (0.00V) into 1V/oct jack
