@@ -23,15 +23,7 @@
 #include "button_knob_combo.h"
 #include "system_mode.h"
 
-// PLAY_TRIG_DELAY / BASE_SAMPLE_RATE is the delay in sec from detecting a trigger to calling start_playing()
-// This is required to let Sample CV settle (due to the hardware LPF).
-//
-// PLAY_TRIG_LATCH_PITCH_TIME is how long the PITCH CV is latched when a play trigger is received
-// This allows for a CV/gate sequencer to settle, and the internal LPF to settle, before using the new CV value
-// This reduces slew and "indecision" when a step is advanced on the sequencer
 
-uint16_t PLAY_TRIG_LATCH_PITCH_TIME;
-uint16_t PLAY_TRIG_DELAY;
 #define MAX_FIR_LPF_SIZE 80
 uint32_t FIR_LPF_SIZE[NUM_CV_ADCS];
 
@@ -58,13 +50,14 @@ extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 extern uint8_t disable_mode_changes;
 
-volatile float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
-uint8_t i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
-uint8_t settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
+volatile float	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
+uint8_t 		i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
+uint8_t 		settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
+uint8_t			global_mode[NUM_GLOBAL_MODES];
+GlobalParams	global_params;
+uint8_t 		flags[NUM_FLAGS];
 
-uint8_t	global_mode[NUM_GLOBAL_MODES];
 
-uint8_t flags[NUM_FLAGS];
 uint32_t play_trig_timestamp[2];
 
 uint8_t flag_pot_changed[NUM_POT_ADCS];
@@ -76,10 +69,11 @@ volatile uint32_t 			sys_tmr;
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
+//jack/pot LPF coefficients:
 float POT_LPF_COEF[NUM_POT_ADCS];
-
 float RAWCV_LPF_COEF[NUM_CV_ADCS];
 
+//jack/pot LPF bracketing amounts:
 int32_t POT_BRACKET[NUM_POT_ADCS];
 int32_t CV_BRACKET[NUM_CV_ADCS];
 
@@ -100,8 +94,6 @@ int16_t bracketed_potadc[NUM_POT_ADCS];
 
 //Latched pot value for use during edit mode
 extern int16_t editmode_latched_potadc[NUM_POT_ADCS];
-
-
 
 //LPF of raw ADC values for calibration
 int16_t i_smoothed_rawcvadc[NUM_CV_ADCS];
@@ -135,6 +127,30 @@ void init_params(void)
 		flags[i]=0;
 	}
 
+	if (PCB_version == 0)
+	{
+
+		if (global_mode[LOW_LATENCY])
+		{
+			global_params.play_trig_delay 				= 256;
+			global_params.play_trig_latch_pitch_time 	= 128;
+		}
+		else {
+			global_params.play_trig_delay 				= 520;
+			global_params.play_trig_latch_pitch_time 	= 256;
+		}
+
+	} else {
+		if (global_mode[LOW_LATENCY])
+		{
+			global_params.play_trig_delay 				= 0;
+			global_params.play_trig_latch_pitch_time 	= 0;
+		}
+		else {
+			global_params.play_trig_delay 				= 128;
+			global_params.play_trig_latch_pitch_time 	= 128;
+		}
+	}
 }
 
 //initializes modes that aren't read from flash ram or disk
@@ -147,7 +163,8 @@ void init_modes(void)
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
 	
-	global_mode[ALLOW_SPLIT_MONITORING] = 1;	
+	global_mode[ALLOW_SPLIT_MONITORING] = 1;
+	global_mode[LOW_LATENCY] = 1;
 }
 
 
@@ -233,20 +250,14 @@ void init_LowPassCoefs(void)
 		cv_delta[i]				=0;
 	}
 
-	//Set Trig delay and FIR LPF buffer sizes
+	//Set FIR LPF buffer sizes
 	if (PCB_version == 0)
 	{
-		PLAY_TRIG_LATCH_PITCH_TIME 	= 256;
-		PLAY_TRIG_DELAY 			= 520;
-
 		FIR_LPF_SIZE[PITCH1_CV] = 80;
 		FIR_LPF_SIZE[PITCH2_CV] = 80;
 	}
 	else
 	{
-		PLAY_TRIG_LATCH_PITCH_TIME 	= 128;
-		PLAY_TRIG_DELAY 			= 128;
-
 		FIR_LPF_SIZE[PITCH1_CV] = 20;
 		FIR_LPF_SIZE[PITCH2_CV] = 20;
 	}
@@ -948,17 +959,16 @@ void process_mode_flags(void)
 
 	if (flags[Play1TrigDelaying])
 	{
-		if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_LATCH_PITCH_TIME)
+		if ((sys_tmr - play_trig_timestamp[0]) > global_params.play_trig_latch_pitch_time)
 			flags[LatchVoltOctCV1] = 0;
 		else
 			flags[LatchVoltOctCV1] = 1;
 
-		if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_DELAY) 
+		if ((sys_tmr - play_trig_timestamp[0]) > global_params.play_trig_delay) 
 		{
 			flags[Play1Trig] 			= 1;
 			flags[Play1TrigDelaying]	= 0;
 			flags[LatchVoltOctCV1] 		= 0;		
-//			DEBUG3_OFF;
 		}
 	}
 	if (flags[Play1Trig])
@@ -971,16 +981,17 @@ void process_mode_flags(void)
 
 	if (flags[Play2TrigDelaying])
 	{
-		if ((sys_tmr - play_trig_timestamp[0]) > PLAY_TRIG_LATCH_PITCH_TIME)
+		if ((sys_tmr - play_trig_timestamp[0]) > global_params.play_trig_latch_pitch_time)
 			flags[LatchVoltOctCV2] = 0;
 		else
 			flags[LatchVoltOctCV2] = 1;
 
-		if ((sys_tmr - play_trig_timestamp[1]) > PLAY_TRIG_DELAY)
+		if ((sys_tmr - play_trig_timestamp[1]) > global_params.play_trig_delay)
 		{
 			flags[Play2Trig] 			= 1;
 			flags[Play2TrigDelaying]	= 0;
 			flags[LatchVoltOctCV2]		= 0;
+			DEBUG3_OFF;
 		}
 	}
 	if (flags[Play2Trig])
