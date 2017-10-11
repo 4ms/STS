@@ -67,7 +67,6 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 				switch (i)
 				{
 					case TrigJack_Play1: //we detect a trigger within 0.338ms after voltage appears on the jack
-	//					DEBUG3_ON;
 						if (play_state[0] == PLAYING) 
 							play_state[0] = PLAY_FADEDOWN;
 
@@ -77,6 +76,7 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 						break;
 					
 					case TrigJack_Play2:
+						DEBUG3_ON;
 						if (play_state[1] == PLAYING) 
 							play_state[1] = PLAY_FADEDOWN;
 

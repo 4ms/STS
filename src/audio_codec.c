@@ -3,6 +3,7 @@
 #include "wav_recording.h"
 #include "params.h"
 #include "calibration.h"
+#include "adc.h"
 
 extern SystemCalibrations *system_calibrations;
 
@@ -13,9 +14,9 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 //extern volatile float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 //extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
-//extern __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
+extern uint16_t cvadc_buffer[NUM_CV_ADCS];
 //extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
-//extern int16_t bracketed_cvadc[8];
+extern int16_t bracketed_cvadc[8];
 //extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 
 void process_audio_block_codec(int16_t *src, int16_t *dst)
@@ -98,9 +99,10 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
 					//Chan 1 L+R clipped at signed 16-bits
-					t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					*dst++ = t_i32;
+					//t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+					//asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = cvadc_buffer[SAMPLE2_CV] * 8;
+					//*dst++ = t_i32;
 					*dst++ = 0;
 
 					//Chan 2 L+R clipped at signed 16-bits

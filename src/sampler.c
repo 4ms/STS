@@ -102,8 +102,8 @@ uint32_t 		play_buff_bufferedamt	[NUM_PLAY_CHAN];
 enum PlayLoadTriage play_load_triage;
 
 //must have chan, banknum, and samplenum defined to use this macro!
-#define goto_filepos(p)	f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + (p));\
-						if(fil[chan].fptr != samples[banknum][samplenum].startOfData + (p)) g_error|=LSEEK_FPTR_MISMATCH;
+#define goto_filepos(p)	f_lseek(&fil[chan][samplenum], samples[banknum][samplenum].startOfData + (p));\
+						if(fil[chan][samplenum].fptr != samples[banknum][samplenum].startOfData + (p)) g_error|=LSEEK_FPTR_MISMATCH;
 
 
 //
@@ -116,7 +116,7 @@ float decay_inc[NUM_PLAY_CHAN]={0,0};
 //
 // Filesystem
 //
-FIL fil[NUM_PLAY_CHAN];
+FIL fil[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 
 //
 // Sample info
@@ -257,7 +257,7 @@ void toggle_reverse(uint8_t chan)
 
 	//Seek the starting position in the file 
 	//This gets us ready to start playing from the new position
-	if (fil[chan].obj.id > 0)
+	if (fil[chan][samplenum].obj.id > 0)
 	{
 		res = goto_filepos(sample_file_curpos[chan]); //uses samplenum and banknum to find startOfData
 
@@ -296,23 +296,28 @@ void start_playing(uint8_t chan)
 
 	//Check if sample/bank changed, or file is flagged for reload
 	//if so, close the current file and open the new sample file
-	if (flags[ForceFileReload1+chan] || (sample_num_now_playing[chan] != samplenum) || (sample_bank_now_playing[chan] != banknum) || fil[chan].obj.fs==0)
+//	if (flags[ForceFileReload1+chan] || (sample_num_now_playing[chan] != samplenum) || (sample_bank_now_playing[chan] != banknum) || fil[chan].obj.fs==0)
+	if (flags[ForceFileReload1+chan] || (sample_bank_now_playing[chan] != banknum) || fil[chan][samplenum].obj.fs==0)
 	{
 		flags[ForceFileReload1+chan] = 0;
 
-		res = reload_sample_file(&fil[chan], s_sample);
+		DEBUG2_ON;
+		res = reload_sample_file(&fil[chan][samplenum], s_sample);
 		if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
+		DEBUG2_OFF;
 
-		res = create_linkmap(&fil[chan], chan);
+		res = create_linkmap(&fil[chan][samplenum], chan, samplenum);
 		if (res == FR_NOT_ENOUGH_CORE) {g_error |= FILE_CANNOT_CREATE_CLTBL;} //ToDo: Log this error
-		else if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+		else if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan][samplenum]);play_state[chan] = SILENT;return;}
 		
+		DEBUG1_ON;
+
 		file_loaded = 1;
 
 		//Check the file is really as long as the sampleSize says it is
-		if (f_size(&fil[chan]) < (s_sample->startOfData + s_sample->sampleSize))
+		if (f_size(&fil[chan][samplenum]) < (s_sample->startOfData + s_sample->sampleSize))
 		{
-			s_sample->sampleSize = f_size(&fil[chan]) - s_sample->startOfData;
+			s_sample->sampleSize = f_size(&fil[chan][samplenum]) - s_sample->startOfData;
 
 			if (s_sample->inst_end > s_sample->sampleSize)
 				s_sample->inst_end = s_sample->sampleSize;
@@ -367,11 +372,11 @@ void start_playing(uint8_t chan)
 		//Reload the sample file (important to do, in case card has been removed)
 		if (!file_loaded)
 		{
-			res = reload_sample_file(&fil[chan], s_sample);
+			res = reload_sample_file(&fil[chan][samplenum], s_sample);
 			if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
 
-			res = create_linkmap(&fil[chan], chan);
-			if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+			res = create_linkmap(&fil[chan][samplenum], chan, samplenum);
+			if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan][samplenum]);play_state[chan] = SILENT;return;}
 		}
 
 		res = goto_filepos(sample_file_startpos[chan]);
@@ -379,7 +384,7 @@ void start_playing(uint8_t chan)
 
 		if (g_error & LSEEK_FPTR_MISMATCH)
 		{
-			sample_file_startpos[chan] = align_addr(f_tell(&fil[chan]) - s_sample->startOfData, s_sample->blockAlign);
+			sample_file_startpos[chan] = align_addr(f_tell(&fil[chan][samplenum]) - s_sample->startOfData, s_sample->blockAlign);
 		}
 
 		sample_file_curpos[chan] 		= sample_file_startpos[chan];
@@ -425,6 +430,7 @@ void start_playing(uint8_t chan)
 	dbg_sample.inst_end 		= s_sample->inst_end;
 	dbg_sample.inst_size 		= s_sample->inst_size;
 	dbg_sample.inst_gain 		= s_sample->inst_gain;
+	DEBUG1_OFF;
 }
 
 
@@ -654,6 +660,7 @@ void read_storage_to_buffer(void)
 	check_change_bank(0);
 	check_change_bank(1);
 
+	DEBUG0_ON;
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
 
@@ -670,11 +677,11 @@ void read_storage_to_buffer(void)
 			//
 			if (g_error & (FILE_READ_FAIL_1 << chan))
 			{
-				res = reload_sample_file(&fil[chan], s_sample);
+				res = reload_sample_file(&fil[chan][samplenum], s_sample);
 				if (res != FR_OK) {g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
 
-				res = create_linkmap(&fil[chan], chan);
-				if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL;f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+				res = create_linkmap(&fil[chan][samplenum], chan, samplenum);
+				if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL;f_close(&fil[chan][samplenum]);play_state[chan] = SILENT;return;}
 
 				//clear the error flag
 				g_error &= ~(FILE_READ_FAIL_1 << chan);
@@ -738,8 +745,8 @@ void read_storage_to_buffer(void)
 						rd = s_sample->inst_end -  sample_file_curpos[chan];
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
-						//else align rd to 24
-						res = f_read(&fil[chan], (uint8_t *)tmp_buff_u32, rd, &br);
+
+						res = f_read(&fil[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, &br);
 						if (res != FR_OK) 
 						{
 							g_error |= FILE_READ_FAIL_1 << chan; 
@@ -754,7 +761,7 @@ void read_storage_to_buffer(void)
 						}
 
 						//sample_file_curpos[chan] += br;
-						sample_file_curpos[chan] = f_tell(&fil[chan]) - s_sample->startOfData;
+						sample_file_curpos[chan] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
 
 						if (sample_file_curpos[chan] >= s_sample->inst_end)
 						{
@@ -781,12 +788,12 @@ void read_storage_to_buffer(void)
 							//Jump back a block
 							rd = READ_BLOCK_SIZE;
 
-							t_fptr=f_tell(&fil[chan]);
-							res = f_lseek(&fil[chan], t_fptr - READ_BLOCK_SIZE);
-							if (res || (f_tell(&fil[chan])!=(t_fptr - READ_BLOCK_SIZE)))
+							t_fptr=f_tell(&fil[chan][samplenum]);
+							res = f_lseek(&fil[chan][samplenum], t_fptr - READ_BLOCK_SIZE);
+							if (res || (f_tell(&fil[chan][samplenum])!=(t_fptr - READ_BLOCK_SIZE)))
 								g_error |= LSEEK_FPTR_MISMATCH;
 							
-							sample_file_curpos[chan] = f_tell(&fil[chan]) - s_sample->startOfData;
+							sample_file_curpos[chan] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
 
 						}
 						else //rd < READ_BLOCK_SIZE: read the first block (which is the last to be read, since we're reversing)
@@ -804,17 +811,17 @@ void read_storage_to_buffer(void)
 						}
 
 						//Read one block forward
-						t_fptr=f_tell(&fil[chan]);
-						res = f_read(&fil[chan], (uint8_t *)tmp_buff_u32, rd, &br);
+						t_fptr=f_tell(&fil[chan][samplenum]);
+						res = f_read(&fil[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, &br);
 						if (res != FR_OK) 
 							g_error |= FILE_READ_FAIL_1 << chan;
 
 						if (br < rd)		g_error |= FILE_UNEXPECTEDEOF;
 
 						//Jump backwards to where we started reading
-						res = f_lseek(&fil[chan], t_fptr);
+						res = f_lseek(&fil[chan][samplenum], t_fptr);
 						if (res != FR_OK)	g_error |= FILE_SEEK_FAIL;
-						if (f_tell(&fil[chan])!=t_fptr)		g_error |= LSEEK_FPTR_MISMATCH;
+						if (f_tell(&fil[chan][samplenum])!=t_fptr)		g_error |= LSEEK_FPTR_MISMATCH;
 
 					}
 
@@ -910,6 +917,7 @@ void read_storage_to_buffer(void)
 
 		} //play_state != SILENT, FADEDOWN
 	} //for (chan)
+	DEBUG0_OFF;
 
 }
 
@@ -1077,13 +1085,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					outL[i] = (float)outL[i] * env * gain;
 					outR[i] = (float)outR[i] * env * gain;
 
-					t_i32 = outL[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outL[i] = t_i32;
-
-					t_i32 = outR[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outR[i] = t_i32;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
 				}
 // DEBUG3_OFF;
 				play_led_state[chan] = 0;
@@ -1109,13 +1112,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					outL[i] = (float)outL[i] * env * gain;
 					outR[i] = (float)outR[i] * env * gain;
 
-					t_i32 = outL[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outL[i] = t_i32;
-
-					t_i32 = outR[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outR[i] = t_i32;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
 				}
 // DEBUG2_OFF;
 				if (length<=0.5)		play_state[chan] 	= PLAYING_PERC;
@@ -1129,13 +1127,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					outL[i] = (float)outL[i] * gain;
 					outR[i] = (float)outR[i] * gain;
 
-					t_i32 = outL[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outL[i] = t_i32;
-
-					t_i32 = outR[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outR[i] = t_i32;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
 				}
 // DEBUG1_OFF;
 				if (length<=0.5)		play_state[chan] 	= PLAYING_PERC;
@@ -1165,13 +1158,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 						outL[i] = ((float)outL[i]) * env * gain;
 						outR[i] = ((float)outR[i]) * env * gain;
 
-						t_i32 = outL[i];
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outL[i] = t_i32;
-
-						t_i32 = outR[i];
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outR[i] = t_i32;
+						outL[i] = _SSAT16(outL[i]);
+						outR[i] = _SSAT16(outR[i]);
 					}
 // DEBUG3_OFF;
 				} else
@@ -1194,13 +1182,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 						outL[i] = ((float)outL[i]) * env * gain;
 						outR[i] = ((float)outR[i]) * env * gain;
 
-						t_i32 = outL[i];
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outL[i] = t_i32;
-
-						t_i32 = outR[i];
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outR[i] = t_i32;
+						outL[i] = _SSAT16(outL[i]);
+						outR[i] = _SSAT16(outR[i]);
 					}
 					play_state[chan]=PAD_SILENCE;
 //DEBUG2_OFF;

@@ -958,7 +958,6 @@ void process_mode_flags(void)
 			flags[Play1Trig] 			= 1;
 			flags[Play1TrigDelaying]	= 0;
 			flags[LatchVoltOctCV1] 		= 0;		
-//			DEBUG3_OFF;
 		}
 	}
 	if (flags[Play1Trig])
@@ -985,6 +984,7 @@ void process_mode_flags(void)
 	}
 	if (flags[Play2Trig])
 	{
+		DEBUG3_OFF;
 		start_playing(1);
 		flags[Play2Trig]	 = 0;
 		flags[LatchVoltOctCV2] = 0;		

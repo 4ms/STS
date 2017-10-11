@@ -33,7 +33,7 @@ typedef struct Sample {
 uint8_t load_sample_header(Sample *s_sample, FIL *sample_file);
 void clear_sample_header(Sample *s_sample);
 FRESULT reload_sample_file(FIL *fil, Sample *s_sample);
-FRESULT create_linkmap(FIL *fil, uint8_t chan);
+FRESULT create_linkmap(FIL *fil, uint8_t chan, uint8_t samplenum);
 
 
 
