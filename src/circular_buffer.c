@@ -2,23 +2,6 @@
 #include "globals.h"
 #include "circular_buffer.h"
 
-//in = leader
-//out = follower
-//if in>out then wrapping should be 0
-//if in<out then wrapping should be 1 (in has "wrapped" around max->min)
-
-//uint8_t check_wrap(CircularBuffer* b)
-//{
-//	if (b->wrapping && (b->in > b->out))
-//		return(2); //wrap error
-//
-//	else if (!b->wrapping && (b->in < b->out))
-//		return(2); //wrap error
-//
-//	else
-//		return(0);
-//
-//}
 
 uint8_t CB_offset_in_address(CircularBuffer *b, uint32_t amt, uint8_t subtract)
 {
@@ -92,8 +75,6 @@ uint8_t CB_offset_out_address(CircularBuffer *b, uint32_t amt, uint8_t subtract)
 		}
 		else
 			b->out -= amt;
-
-
 
 	}
 

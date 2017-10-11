@@ -44,7 +44,7 @@ uint32_t map_cache_to_buffer(uint32_t cache_point, uint8_t sampleByteSize, uint3
 	//Find how many samples that is
 	p = p/sampleByteSize;
 
-	//Multiply that by 2 to get the address offset in play_buff
+	//Multiply that by 2 to get the address offset in b
 	p *= 2;
 
 	//Add the offset to the start of the buffer

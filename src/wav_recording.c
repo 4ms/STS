@@ -20,7 +20,6 @@
 extern volatile uint32_t 		sys_tmr;
 extern enum g_Errors 			g_error;
 
-extern const uint32_t 			AUDIO_MEM_BASE[4];
 extern uint8_t 					SAMPLINGBYTES;
 
 extern uint8_t					i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
@@ -47,7 +46,7 @@ uint32_t WATCH_REC_BUFF_OUT;
 // Then we shorten this by two WRITE_BLOCK_SIZEs just to be safe
 // Note: the wav file itself can exceed 4GB, just the 'data' chunk size must be <=4GB 
 //
-#define MAX_REC_SAMPLES 	(0xFFFFFFFF - MEM_SIZE - (WRITE_BLOCK_SIZE*2))
+#define MAX_REC_SAMPLES 	(0xFFFFFFFF - REC_BUFF_SIZE - (WRITE_BLOCK_SIZE*2))
 
 //#define MAX_REC_SAMPLES 	(0x00A17FC0)  /*DEBUGGING: about 1 minute*/
 
@@ -78,11 +77,11 @@ FIL 			recfil;
 void init_rec_buff(void)
 {
 	rec_buff = &srec_buff;
-	rec_buff->in 		= AUDIO_MEM_BASE[REC_CHAN];
-	rec_buff->out 		= AUDIO_MEM_BASE[REC_CHAN];
-	rec_buff->min		= AUDIO_MEM_BASE[REC_CHAN];
-	rec_buff->max		= AUDIO_MEM_BASE[REC_CHAN] + MEM_SIZE;
-	rec_buff->size		= MEM_SIZE;
+	rec_buff->in 		= REC_BUFF_START;
+	rec_buff->out 		= REC_BUFF_START;
+	rec_buff->min		= REC_BUFF_START;
+	rec_buff->max		= REC_BUFF_START + REC_BUFF_SIZE;
+	rec_buff->size		= REC_BUFF_SIZE;
 	rec_buff->wrapping	= 0;
 }
 
