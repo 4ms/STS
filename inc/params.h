@@ -94,6 +94,7 @@ enum GlobalModes
 	FADEUPDOWN_ENVELOPE,
 	STARTUPBANK_CH1,
 	STARTUPBANK_CH2,
+	LOW_LATENCY,
 	
 	NUM_GLOBAL_MODES
 };
@@ -104,7 +105,21 @@ enum AutoStopModes
 	AutoStop_ALWAYS=1,
 	AutoStop_LOOPING=2
 };
-void reset_cv_lowpassfilter(uint8_t cv_num);
+
+// play_trig_delay / BASE_SAMPLE_RATE is the delay in sec from detecting a trigger to calling start_playing()
+// This is required to let Sample CV settle (due to the hardware LPF).
+//
+// play_trig_latch_pitch_time is how long the PITCH CV is latched when a play trigger is received
+// This allows for a CV/gate sequencer to settle, and the internal LPF to settle, before using the new CV value
+// This reduces slew and "indecision" when a step is advanced on the sequencer
+
+typedef struct GlobalParams
+{
+	uint32_t	play_trig_delay;
+	uint32_t	play_trig_latch_pitch_time;
+
+} GlobalParams;
+
 
 
 static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef)

@@ -660,7 +660,7 @@ void read_storage_to_buffer(void)
 	check_change_bank(0);
 	check_change_bank(1);
 
-	DEBUG0_ON;
+DEBUG0_ON;
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
 
@@ -918,7 +918,6 @@ void read_storage_to_buffer(void)
 		} //play_state != SILENT, FADEDOWN
 	} //for (chan)
 	DEBUG0_OFF;
-
 }
 
 void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
@@ -944,6 +943,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	float length;
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
+
+DEBUG1_ON;
 
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
@@ -1245,6 +1246,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	else
 		play_load_triage = NO_PRIORITY;
 
+DEBUG1_OFF;
 
 }
 
