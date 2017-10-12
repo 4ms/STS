@@ -377,6 +377,14 @@ void update_ButtonLEDs(void)
 			flags[RevertBank1]--;
 		}
 		else
+		
+		if (flags[ChangedTrigDelay])
+		{
+			flags[ChangedTrigDelay]--;
+			set_ButtonLED_byPalette(RecButtonLED, WHITE);
+			set_ButtonLED_byPalette(RecBankButtonLED, WHITE);
+		}
+		else
 
 		if (flags[SkipProcessButtons]==2)
 		{
@@ -550,14 +558,14 @@ void update_ButtonLEDs(void)
 
 		}
 
-		//Rec Light
+		//Rec button Light
 		else if (ButLEDnum == RecButtonLED)
 		{
 			if (global_mode[EDIT_MODE])
 			{
 				set_ButtonLED_byPalette(RecButtonLED, OFF);
 			}
-			if (flags[RecSampleChanged_light])
+			else if (flags[RecSampleChanged_light])
 			{
 				set_ButtonLED_byPalette(RecButtonLED, WHITE);
 				flags[RecSampleChanged_light]--;

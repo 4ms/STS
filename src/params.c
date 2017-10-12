@@ -158,7 +158,7 @@ void init_modes(void)
 {
 	global_mode[CALIBRATE] = 0;
 	global_mode[SYSTEM_MODE] = 0;
-	global_mode[MONITOR_RECORDING] = 0;
+	global_mode[MONITOR_RECORDING] = MONITOR_OFF;
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
@@ -426,6 +426,11 @@ uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt)
 	return(cv_adcval);
 }
 
+
+
+//
+// Returns a semitone-quantized tuning amount, given an ADC value
+//
 #define TWELFTH_ROOT_TWO 1.059463094
 #define SEMITONE_ADC_WIDTH 34.0
 #define OCTAVE_ADC_WIDTH (SEMITONE_ADC_WIDTH*12.0)
@@ -497,9 +502,6 @@ float quantized_semitone_voct(uint32_t adcval)
 }
 
 
-//FixMe: put this back into update_params as a local var
-uint32_t compensated_pitch_cv[2];
-
 void update_params(void)
 {
 	uint8_t chan;
@@ -513,6 +515,9 @@ void update_params(void)
 
 	uint32_t trial_bank;
 	uint8_t samplenum, banknum;
+	uint32_t compensated_pitch_cv;
+	uint32_t old_trig_delay, old_pitch_latch_time;
+
 	ButtonKnobCombo *this_bank_bkc; //pointer to the currently active button/knob combo action
 	ButtonKnobCombo *other_bank_bkc; //pointer to the other channel's button/knob combo action
 	ButtonKnobCombo *edit_bkc; //pointer to Edit+knob combo actions
@@ -664,8 +669,8 @@ void update_params(void)
 		}
 		else
 		{
-			compensated_pitch_cv[chan] = apply_tracking_compensation(pitch_cv, system_calibrations->tracking_comp[chan]);
-			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv[chan]];
+			compensated_pitch_cv = apply_tracking_compensation(pitch_cv, system_calibrations->tracking_comp[chan]);
+			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 
 		}
 
@@ -905,7 +910,26 @@ void update_params(void)
 		}
 	}
 
-	//If the RecBank button is not down, just change the sample
+	//
+	// Edit + RecSample knob = control trig delay
+	//
+	else if (global_mode[EDIT_MODE])
+	{
+		old_trig_delay 			= global_params.play_trig_delay;
+		old_pitch_latch_time 	= global_params.play_trig_latch_pitch_time;
+
+		new_val = detent_num( bracketed_potadc[RECSAMPLE_POT] );
+
+		global_params.play_trig_delay 				= calc_trig_delay( new_val, PCB_version );
+		global_params.play_trig_latch_pitch_time 	= calc_pitch_latch_time( new_val, PCB_version );
+
+		//See if the params changed. If so, set the flag to animate the lights
+		if (old_trig_delay != global_params.play_trig_delay || old_pitch_latch_time != global_params.play_trig_latch_pitch_time)
+			flags[ChangedTrigDelay] = new_val + 1;
+
+	}
+
+	//If the RecBank and Edit buttons are not down, just change the sample
 	//Note: we don't have value-crossing for the RecBank knob, so this section
 	//is simplier than the case of play Bank1/2 + Sample1/2
 	else
@@ -918,7 +942,7 @@ void update_params(void)
 			i_param[REC][SAMPLE] = new_val;
 			flags[RecSampleChanged] = 1;
 
-			if (global_mode[MONITOR_RECORDING])
+			if (global_mode[MONITOR_RECORDING] != MONITOR_OFF)
 			{
 				flags[RecSampleChanged_light] = 10;
 			}
@@ -1012,16 +1036,16 @@ void process_mode_flags(void)
 	{
 		flags[ToggleMonitor] = 0;
 
-		if (global_mode[ENABLE_RECORDING] && global_mode[MONITOR_RECORDING])
+		if (global_mode[ENABLE_RECORDING] && global_mode[MONITOR_RECORDING] != MONITOR_OFF)
 		{
-			global_mode[ENABLE_RECORDING] = 0;
-			global_mode[MONITOR_RECORDING] = 0;
+			global_mode[ENABLE_RECORDING] 	= 0;
+			global_mode[MONITOR_RECORDING] 	= MONITOR_OFF;
 			stop_recording();
 		}
 		else
 		{
 			global_mode[ENABLE_RECORDING] = 1;
-			global_mode[MONITOR_RECORDING] = (1<<0) | (1<<1); //monitor channel 1 and 2
+			global_mode[MONITOR_RECORDING] = MONITOR_BOTH; //monitor channel 1 and 2
 			i_param[0][LOOPING] = 0;
 			i_param[1][LOOPING] = 0;
 		}
@@ -1116,6 +1140,30 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 
 	return cur_detent;
 }
+
+
+//PCB version 1.0 (==0): 20..1010
+//PCB version 1.1 (==1): 0..495
+
+uint32_t calc_trig_delay(uint8_t detent_num, uint8_t pcb_version)
+{
+	if (detent_num > 9) detent_num = 0; //range assertation
+
+	if ( pcb_version == 0 )		return (detent_num*110) + 20;
+	if ( pcb_version == 1 )		return (detent_num*55);
+}
+
+//PCB version 1.0 (==0): 20..515
+//PCB version 1.1 (==1): 0..243
+
+uint32_t calc_pitch_latch_time(uint8_t detent_num, uint8_t pcb_version)
+{
+	if (detent_num > 9) detent_num = 0; //range assertation
+
+	if ( pcb_version == 0 )		return (detent_num*55) + 20;
+	if ( pcb_version == 1 )		return (detent_num*27);
+}
+
 
 void adc_param_update_IRQHandler(void)
 {

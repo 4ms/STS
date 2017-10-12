@@ -99,6 +99,7 @@ enum Flags {
 	BootBak,				// 55
 	SystemModeButtonsDown,
 	ShutdownAndBootload,
+	ChangedTrigDelay,
 
 	NUM_FLAGS
 };

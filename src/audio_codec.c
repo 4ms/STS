@@ -14,9 +14,9 @@ extern uint8_t global_mode[NUM_GLOBAL_MODES];
 
 //extern volatile float 	f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 //extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
-extern uint16_t cvadc_buffer[NUM_CV_ADCS];
+//extern uint16_t cvadc_buffer[NUM_CV_ADCS];
 //extern int16_t i_smoothed_cvadc[NUM_CV_ADCS];
-extern int16_t bracketed_cvadc[8];
+//extern int16_t bracketed_cvadc[8];
 //extern int16_t i_smoothed_potadc[NUM_POT_ADCS];
 
 void process_audio_block_codec(int16_t *src, int16_t *dst)
@@ -54,7 +54,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 			*dst++ = 0;
 		}
 	}
-	else if (global_mode[MONITOR_RECORDING] == 0b11)
+	else if (global_mode[MONITOR_RECORDING] == MONITOR_BOTH)
 	{
 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 		{
@@ -70,7 +70,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 		}
 	}
-	else if (global_mode[MONITOR_RECORDING] == 0b00)
+	else if (global_mode[MONITOR_RECORDING] == MONITOR_OFF)
 	{
 		if (SAMPLINGBYTES==2)
 		{
@@ -99,10 +99,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
 					//Chan 1 L+R clipped at signed 16-bits
-					//t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
-					//asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					*dst++ = cvadc_buffer[SAMPLE2_CV] * 8;
-					//*dst++ = t_i32;
+					t_i32 = outL[0][i] + system_calibrations->codec_dac_calibration_dcoffset[0];
+					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
+					*dst++ = t_i32;
 					*dst++ = 0;
 
 					//Chan 2 L+R clipped at signed 16-bits
@@ -115,7 +114,7 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 
 		}
 	}
-	else if (global_mode[MONITOR_RECORDING] == 0b10)
+	else if (global_mode[MONITOR_RECORDING] == MONITOR_RIGHT)
 	{
 		if (SAMPLINGBYTES==2)
 		{
@@ -131,12 +130,11 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 					*dst++ = t_i32;
 					*dst++ = 0;
 
-					//R input signal
-					dummy = *src++;dummy = *src++;
+					dummy = *src++;dummy = *src++; //ignore L input
+					//copy R input signal to R output
 					t_i32 = (*src++) + system_calibrations->codec_dac_calibration_dcoffset[1];
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 					*dst++ = t_i32;
-					//ignore L input
 					*dst++ = *src++;
 				}
 			}
@@ -151,19 +149,18 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 					*dst++ = t_i32;
 					*dst++ = 0;
 
-					//R input signal
-					dummy = *src++;dummy = *src++;
+					dummy = *src++;dummy = *src++; //ignore L input
+					//copy R input signal to R output
 					t_i32 = (*src++) + system_calibrations->codec_dac_calibration_dcoffset[1];
 					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
 					*dst++ = t_i32;
-					//ignore L input
 					*dst++ = *src++;
 				}
 			}
 
 		}
 	}
-	else if (global_mode[MONITOR_RECORDING] == 0b01)
+	else if (global_mode[MONITOR_RECORDING] == MONITOR_LEFT)
 	{
 		if (SAMPLINGBYTES==2)
 		{

@@ -48,27 +48,23 @@ void LED_PWM_IRQHandler(void)
 			else
 				PLAYLED2_OFF;
 
-			if (global_mode[MONITOR_RECORDING]==0b11) { //both channels monitoring: monitor LED always on
+			if (global_mode[MONITOR_RECORDING] == MONITOR_BOTH) { //both channels monitoring: monitor LED always on (subject to led_brightness)
 				if (loop_led_PWM_ctr<system_calibrations->led_brightness)					SIGNALLED_ON;
 				else																		SIGNALLED_OFF;
 			}
-			else if (global_mode[MONITOR_RECORDING]==0b10) { //R channel monitoring: monitor LED flicker quickly
+			else if (global_mode[MONITOR_RECORDING] == MONITOR_RIGHT) { //R channel monitoring: monitor LED flicker quickly
 				if (tm_13<0x0400 && loop_led_PWM_ctr<system_calibrations->led_brightness)	SIGNALLED_ON;
 				else																		SIGNALLED_OFF;
 			}
-			else if (global_mode[MONITOR_RECORDING]==0b01) { //L channel monitoring: monitor LED flicker dimly
+			else if (global_mode[MONITOR_RECORDING] == MONITOR_LEFT) { //L channel monitoring: monitor LED flicker dimly
 				if (tm_13<0x0400 && loop_led_PWM_ctr<system_calibrations->led_brightness)	SIGNALLED_ON;
 				else																		SIGNALLED_OFF;
 			}
-			else if (global_mode[MONITOR_RECORDING]==0b00) { //no channels monitoring: monitor LED always off
+			else if (global_mode[MONITOR_RECORDING] == MONITOR_OFF) { //no channels monitoring: monitor LED always off
 																							SIGNALLED_OFF;
 			}
 
-
-			// if (clip_led_state[1] && (loop_led_PWM_ctr<system_calibrations->led_brightness))
-			// 	BUSYLED_ON;
-			// else
-			// 	BUSYLED_OFF;
+			//Note: Busy LED is controlled directly in the SD Card driver code. 
 		}
 
 		loop_led_PWM_ctr++;

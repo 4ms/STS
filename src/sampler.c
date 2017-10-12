@@ -446,11 +446,10 @@ void start_playing(uint8_t chan)
 	if (global_mode[ALLOW_SPLIT_MONITORING] && global_mode[STEREO_MODE]==0)
 	{
 		//Turn off monitoring for just this channel
-		if (global_mode[MONITOR_RECORDING] & (1<<chan))
-			global_mode[MONITOR_RECORDING] &= ~(1<<chan);
+		global_mode[MONITOR_RECORDING] &= ~(1<<chan);
 	}
 	else
-		global_mode[MONITOR_RECORDING] = 0;
+		global_mode[MONITOR_RECORDING] = MONITOR_OFF;
 
 	//DEBUG
 	str_cpy(dbg_sample.filename , s_sample->filename);
