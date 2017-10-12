@@ -70,6 +70,9 @@ void toggle_reverse(uint8_t chan);
 void check_change_bank(uint8_t chan);
 void check_change_sample(void);
 
+void init_changed_bank(uint8_t chan);
+
+
 //uint8_t preload_sample(uint32_t samplenum, FIL* sample_file);
 
 uint32_t calc_start_point(float start_param, Sample *sample);

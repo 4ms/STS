@@ -271,7 +271,21 @@ void toggle_reverse(uint8_t chan)
 	 play_state[chan] = tplay_state;
 }
 
+	void init_changed_bank(uint8_t chan)
+{
+	uint8_t samplenum;
+	FRESULT res;
 
+	for ( samplenum=0; samplenum<NUM_SAMPLES_PER_BANK; samplenum++ )
+	{
+		res = f_close(&fil[chan][samplenum]);
+		if (res != FR_OK) fil[chan][samplenum].obj.fs = 0;
+
+		is_buffered_to_file_end[chan][samplenum] = 0;
+
+		CB_init(play_buff[chan][samplenum], 0);
+	}
+}
 
 //
 // start_playing()
@@ -295,11 +309,18 @@ void start_playing(uint8_t chan)
 
 	//file_loaded = 0;
 
-	check_change_bank(chan);
+	//Todo: is it necessary to check for change bank and change sample here?
+	//check_change_bank(chan);
 
-	// Todo: Do something if the sample we're about to play is not the same one we just played on this channel?
+	// Todo: The If() could be removed. But should we do something if the sample we're about to play is not the same one we just played on this channel?
 	if ( samplenum != sample_num_now_playing[chan] )
 		sample_num_now_playing[chan] = samplenum;
+
+	if ( banknum != sample_bank_now_playing[chan] )
+	{
+		sample_bank_now_playing[chan] = banknum;
+		init_changed_bank(chan);
+	}
 
 	//
 	// Reload the sample file if necessary
@@ -559,26 +580,19 @@ uint32_t calc_stop_point(float length_param, float resample_param, Sample *sampl
 }
 
 
-
+//
+// Updates the play light to indicate if a sample is present or not
+// Doesn't flash the light brightly, like it does when the Sample knob is turned,
+// because that's distracting to see when pressing the bank button.
+// Also sets the sample changed flag.
+//
 void check_change_bank(uint8_t chan)
 {
-	uint8_t samplenum;
-	FRESULT res;
-
 	if (flags[PlayBank1Changed + chan])
 	{
 		flags[PlayBank1Changed + chan]=0;
-		
-		sample_bank_now_playing[chan] 	= i_param[chan][BANK];
 
-		for ( samplenum=0; samplenum<NUM_SAMPLES_PER_BANK; samplenum++ )
-		{
-			res = f_close(&fil[chan][samplenum]);
-			if (res != FR_OK) fil[chan][samplenum].obj.fs = 0;
-
-			is_buffered_to_file_end[chan][samplenum] = 0;
-		}
-
+		// Set flag that the sample has changed
 		flags[PlaySample1Changed + chan]=1;
 
 		//
@@ -597,7 +611,6 @@ void check_change_bank(uint8_t chan)
 		}
 
 	}
-
 }
 
 void check_change_sample(void)
@@ -613,6 +626,7 @@ void check_change_sample(void)
 			if (samples[ i_param[chan][BANK] ][ i_param[chan][SAMPLE] ].filename[0] == 0) //no file: fadedown or remain silent
 			{
 				//No sample in this slot:
+
 				//Set the sample empty flag to 1 (dim) only if it's 0
 				//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
 				if (flags[PlaySample1Changed_empty+chan]==0)
@@ -622,7 +636,7 @@ void check_change_sample(void)
 
 				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS || (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_LOOPING && i_param[chan][LOOPING]))
 				{
-					if (play_state[chan] != SILENT && play_state[chan]!=PREBUFFERING)
+					if (play_state[chan] != SILENT && play_state[chan] != PREBUFFERING)
 						play_state[chan] = PLAY_FADEDOWN;
 					else
 						play_state[chan] = SILENT;
@@ -631,6 +645,7 @@ void check_change_sample(void)
 			else
 			{
 				//Sample found in this slot:
+
 				//Set the sample valid flag to 1 (dim) only if it's 0
 				//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
 				if (flags[PlaySample1Changed_valid+chan]==0)
