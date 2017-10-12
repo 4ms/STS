@@ -16,17 +16,17 @@
 //Play buffer 3:  	0xD0240000 - 
 //Play buffer 4:  	0xD0360000 - 
 //..
-//Play buffer 11: 	0xD0C60000 - 
+//Play buffer 11: 	0xD0B40000 - 
 //...
-//Play buffer 20: 	0xD1680000 - 0xD179FFFF
-//	unused 		   [0xD17A0000 - 0xD17FFFFF] = 0x60000 = 393216B unused
+//Play buffer 20: 	0xD1560000 - 0xD167FFFF
+//	unused 		   [0xD1680000 - 0xD17FFFFF] = 0xB0000 = 600kB unused
 //Record buffer: 	0xD1800000 - 0xD1FFFFF8
 
 #define PLAY_BUFF_START			(0x00000000 + SDRAM_BASE)
-#define PLAY_BUFF_SLOT_SIZE		0x00120000
+#define PLAY_BUFF_SLOT_SIZE		 0x00120000
 
 #define	REC_BUFF_START			(0x01800000 + SDRAM_BASE)
-#define REC_BUFF_SIZE			0x007FFFF8
+#define REC_BUFF_SIZE			 0x007FFFF8
 
 
 #define REC_CHAN 2
