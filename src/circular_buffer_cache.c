@@ -29,7 +29,7 @@ uint32_t map_buffer_to_cache(uint32_t buffer_point, uint8_t sampleByteSize, uint
 //
 //Given: the starting address of the cache, and the address in the buffer to which it refers.
 //Returns: a buffer address equivalent to cache_point
-//Assumes cache_start is the lowest value of the cache (to overcome this, we would have to use int32_t or compare cache_point>cache_start)
+//Assumes cache_start is the lowest value of the cache
 //
 uint32_t map_cache_to_buffer(uint32_t cache_point, uint8_t sampleByteSize, uint32_t cache_start, uint32_t buffer_start, CircularBuffer *b)
 {
@@ -44,12 +44,13 @@ uint32_t map_cache_to_buffer(uint32_t cache_point, uint8_t sampleByteSize, uint3
 	//Find how many samples that is
 	p = p/sampleByteSize;
 
-	//Multiply that by 2 to get the address offset in play_buff
+	//Multiply that by 2 to get the address offset in b
 	p *= 2;
 
 	//Add the offset to the start of the buffer
 	p += buffer_start;
 
+	//Shorter way to write it is this:
 	//p = buffer_start + (((cache_point - cache_start) * 2) / sampleByteSize);
 
 	//Wrap the circular buffer

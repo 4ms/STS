@@ -537,7 +537,6 @@ void enter_edit_mode(void)
 	 	exit_assignment_mode();
 
 	// Latch pot values, so we can do alternative functions with the pots without distupting the original value
-	// Only latched values for channel 2 Sample, Length, and StartPos are used
 
 	if (g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state 	== COMBO_INACTIVE)
 	{
@@ -555,6 +554,11 @@ void enter_edit_mode(void)
 	{
 		g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state = COMBO_ACTIVE;
 		g_button_knob_combo[bkc_Edit][bkc_StartPos2].latched_value = bracketed_potadc[START2_POT];
+	}
+
+	if (g_button_knob_combo[bkc_Edit][bkc_RecSample].combo_state == COMBO_INACTIVE)
+	{
+		g_button_knob_combo[bkc_Edit][bkc_RecSample].latched_value = bracketed_potadc[RECSAMPLE_POT];
 	}
 
 	global_mode[EDIT_MODE] = 1;
@@ -583,6 +587,9 @@ void exit_edit_mode(void)
 	g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state 		= COMBO_LATCHED;
 	g_button_knob_combo[bkc_Edit][bkc_Length2].combo_state 		= COMBO_LATCHED;
 	g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state 	= COMBO_LATCHED;
+
+	//RecSample pot is not latched, its value returns to the knob position immediately
+	g_button_knob_combo[bkc_Edit][bkc_RecSample].combo_state 	= COMBO_INACTIVE;
 
 	global_mode[EDIT_MODE] = 0;
 

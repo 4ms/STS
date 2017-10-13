@@ -34,7 +34,7 @@
 
 //Update the FW Version anytime FLASH RAM settings format is changed
 #define FW_MAJOR_VERSION 1
-#define FW_MINOR_VERSION 3
+#define FW_MINOR_VERSION 4
 
 //Minimum firmware version that doesn't need a calibration on the very first boot
 #define FORCE_CAL_UNDER_FW_MAJOR_VERSION 0
@@ -99,6 +99,8 @@ enum Flags {
 	BootBak,				// 55
 	SystemModeButtonsDown,
 	ShutdownAndBootload,
+	ChangedTrigDelay,
+	SaveUserSettingsLater,
 
 	NUM_FLAGS
 };
@@ -106,12 +108,12 @@ enum Flags {
 
 //Error codes for g_error
 enum g_Errors{
-	OUT_OF_MEM					=1,
-	SDCARD_CANT_MOUNT			=2,
-	SPIERROR_1					=4,
-	WRITE_SDRAM_ERROR			=8,
-	DMA_OVR_ERROR				=16,
-	sFLASH_BAD_ID				=32,
+	OUT_OF_MEM					=(1<<0),
+	SDCARD_CANT_MOUNT			=(1<<1),
+	SPIERROR_1					=(1<<2),
+	WRITE_SDRAM_ERROR			=(1<<3),
+	DMA_OVR_ERROR				=(1<<4),
+	sFLASH_BAD_ID				=(1<<5),
 	WRITE_BUFF_OVERRUN			=(1<<6),
 	READ_BUFF1_OVERRUN			=(1<<7),
 	READ_BUFF2_OVERRUN			=(1<<8),

@@ -6,6 +6,7 @@
 #include "sampler.h"
 #include "wavefmt.h"
 #include "sample_file.h"
+#include "dig_pins.h"
 
 extern enum g_Errors g_error;
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
@@ -48,14 +49,14 @@ FRESULT reload_sample_file(FIL *fil, Sample *s_sample)
 // Create a fast-lookup table (linkmap)
 //
 #define SZ_TBL 256
-CCMDATA DWORD chan_clmt[NUM_PLAY_CHAN][SZ_TBL];
+CCMDATA DWORD chan_clmt[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK][SZ_TBL];
 
-FRESULT create_linkmap(FIL *fil, uint8_t chan)
+FRESULT create_linkmap(FIL *fil, uint8_t chan, uint8_t samplenum)
 {
 	FRESULT res;
 
-	fil->cltbl = chan_clmt[chan];
-	chan_clmt[chan][0] = SZ_TBL;
+	fil->cltbl = chan_clmt[chan][samplenum];
+	chan_clmt[chan][samplenum][0] = SZ_TBL;
 
 	res = f_lseek(fil, CREATE_LINKMAP);
 

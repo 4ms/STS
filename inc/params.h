@@ -94,7 +94,7 @@ enum GlobalModes
 	FADEUPDOWN_ENVELOPE,
 	STARTUPBANK_CH1,
 	STARTUPBANK_CH2,
-	LOW_LATENCY,
+	TRIG_DELAY,
 	
 	NUM_GLOBAL_MODES
 };
@@ -105,6 +105,15 @@ enum AutoStopModes
 	AutoStop_ALWAYS=1,
 	AutoStop_LOOPING=2
 };
+
+enum MonitorModes
+{
+	MONITOR_OFF		=	0b00,
+	MONITOR_BOTH	=	0b11,
+	MONITOR_LEFT	=	0b01,
+	MONITOR_RIGHT	=	0b10
+};
+
 
 // play_trig_delay / BASE_SAMPLE_RATE is the delay in sec from detecting a trigger to calling start_playing()
 // This is required to let Sample CV settle (due to the hardware LPF).
@@ -142,6 +151,10 @@ void init_modes(void);
 
 uint8_t detent_num(uint16_t adc_val);
 uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent);
+
+uint32_t calc_trig_delay(uint8_t trig_delay_setting);
+uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting);
+
 
 #define adc_param_update_IRQHandler TIM1_BRK_TIM9_IRQHandler
 void adc_param_update_IRQHandler(void);

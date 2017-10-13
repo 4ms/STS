@@ -23,6 +23,7 @@ enum Settings
 	FadeEnvelope,
 	StartUpBank_ch1,
 	StartUpBank_ch2,
+	TrigDelay,
 
 	NUM_SETTINGS_ENUM
 };

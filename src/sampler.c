@@ -27,8 +27,8 @@
 #include "circular_buffer_cache.h"
 #include "bank.h"
 
-inline int32_t _SSAT16(int32_t x);
-inline int32_t _SSAT16(int32_t x) {asm("ssat %[dst], #16, %[src]" : [dst] "=r" (x) : [src] "r" (x)); return x;}
+static inline int32_t _SSAT16(int32_t x);
+static inline int32_t _SSAT16(int32_t x) {asm("ssat %[dst], #16, %[src]" : [dst] "=r" (x) : [src] "r" (x)); return x;}
 
 
 //
@@ -70,7 +70,6 @@ uint32_t 					play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
 //
 // Memory
 //
-extern const uint32_t AUDIO_MEM_BASE[4];
 
 uint32_t tmp_buff_u32[READ_BLOCK_SIZE>>2];
 
@@ -78,32 +77,39 @@ uint32_t tmp_buff_u32[READ_BLOCK_SIZE>>2];
 // SDRAM buffer addresses for playing from sdcard
 // SD Card:fil[]@sample_file_curpos --> SDARM @play_buff[]->in ... SDRAM @play_buff[]->out --> Codec
 //
-CircularBuffer splay_buff				[NUM_PLAY_CHAN];
-CircularBuffer* play_buff				[NUM_PLAY_CHAN];
+CircularBuffer splay_buff				[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+CircularBuffer* play_buff				[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 
 //make this a struct: play_state
-uint8_t 		is_buffered_to_file_end	[NUM_PLAY_CHAN]; //is_buffered_to_end
 enum PlayStates play_state				[NUM_PLAY_CHAN]; //activity
 uint8_t			sample_num_now_playing	[NUM_PLAY_CHAN]; //sample_now_playing
 uint8_t			sample_bank_now_playing	[NUM_PLAY_CHAN]; //bank_now_playing
 
 //ToDo: make cache_* a struct
-uint32_t		cache_low				[NUM_PLAY_CHAN]; //file position address that corresponds to lowest position in file that's cached
-uint32_t		cache_high				[NUM_PLAY_CHAN]; //file position address that corresponds to highest position in file that's cached
-uint32_t		cache_size				[NUM_PLAY_CHAN]; //size in bytes of the cache (should always equal play_buff[]->size / 2 * sampleByteSize
-uint32_t		cache_map_pt			[NUM_PLAY_CHAN]; //address in play_buff[] that corresponds to cache_low
+//The cache tells us what section of the file has been cached into the play_buff
+//cache_low and cache_high and cache_size are all in file's native units (varies by the file's bit rate and stereo/mono)
+//cache_map_pt is in units of play_buff, and tells us what address cache_low maps to
+//
+uint32_t		cache_low				[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //file position address that corresponds to lowest position in file that's cached
+uint32_t		cache_high				[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //file position address that corresponds to highest position in file that's cached
+uint32_t		cache_size				[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //size in bytes of the cache (should always equal play_buff[]->size / 2 * sampleByteSize
+uint32_t		cache_map_pt			[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //address in play_buff[] that corresponds to cache_low
+uint8_t 		is_buffered_to_file_end	[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //1 = file is totally cached (from inst_start to inst_end), otherwise 0
+uint32_t 		play_buff_bufferedamt	[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+
 
 //ToDo: make this a struct
 uint32_t 		sample_file_startpos	[NUM_PLAY_CHAN]; //file position where we began playback. 
 uint32_t		sample_file_endpos		[NUM_PLAY_CHAN]; //file position where we will end playback. endpos > startpos when REV==0, endpos < startpos when REV==1
-uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN]; //current file position being read. This is always inc/decrementing from startpos towards endpos
 
-uint32_t 		play_buff_bufferedamt	[NUM_PLAY_CHAN];
+uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //current file position being read. Must match the actual open file's position. This is always inc/decrementing from startpos towards endpos
+
+
 enum PlayLoadTriage play_load_triage;
 
 //must have chan, banknum, and samplenum defined to use this macro!
-#define goto_filepos(p)	f_lseek(&fil[chan], samples[banknum][samplenum].startOfData + (p));\
-						if(fil[chan].fptr != samples[banknum][samplenum].startOfData + (p)) g_error|=LSEEK_FPTR_MISMATCH;
+#define goto_filepos(p)	f_lseek(&fil[chan][samplenum], samples[banknum][samplenum].startOfData + (p));\
+						if(fil[chan][samplenum].fptr != samples[banknum][samplenum].startOfData + (p)) g_error|=LSEEK_FPTR_MISMATCH;
 
 
 //
@@ -116,7 +122,7 @@ float decay_inc[NUM_PLAY_CHAN]={0,0};
 //
 // Filesystem
 //
-FIL fil[NUM_PLAY_CHAN];
+FIL fil[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 
 //
 // Sample info
@@ -126,50 +132,48 @@ extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 void audio_buffer_init(void)
 {
+	uint8_t i, chan;
+	uint8_t window_num;
 
-//	if (MODE_24BIT_JUMPER)
-//		SAMPLINGBYTES=4;
-//	else
-		SAMPLINGBYTES=2;
+	SAMPLINGBYTES=2;
 
-	memory_clear(0);
-	memory_clear(1);
-	memory_clear(2);
-	memory_clear(3);
+	memory_clear();
 
 	init_rec_buff();
 
-	play_buff[0] = &(splay_buff[0]);
-	play_buff[1] = &(splay_buff[1]);
-
-	play_buff[0]->in 		= AUDIO_MEM_BASE[0];
-	play_buff[0]->out		= AUDIO_MEM_BASE[0];
-	play_buff[0]->min		= AUDIO_MEM_BASE[0];
-	play_buff[0]->max		= AUDIO_MEM_BASE[0] + MEM_SIZE;
-	play_buff[0]->size		= MEM_SIZE;
-	play_buff[0]->wrapping	= 0;
+	for ( chan=0; chan<NUM_PLAY_CHAN; chan++ ){
+		for ( i=0; i<NUM_SAMPLES_PER_BANK; i++ )
+		{
+			play_buff[chan][i] 				= &(splay_buff[chan][i]);
 
 
-	play_buff[1]->in 		= AUDIO_MEM_BASE[1];
-	play_buff[1]->out		= AUDIO_MEM_BASE[1];
-	play_buff[1]->min		= AUDIO_MEM_BASE[1];
-	play_buff[1]->max		= AUDIO_MEM_BASE[1] + MEM_SIZE;
-	play_buff[1]->size		= MEM_SIZE;
-	play_buff[1]->wrapping	= 0;
+			window_num = (chan * NUM_SAMPLES_PER_BANK) + i;
+
+			play_buff[chan][i]->min			= PLAY_BUFF_START + (window_num * PLAY_BUFF_SLOT_SIZE);
+			play_buff[chan][i]->max			= play_buff[chan][i]->min + PLAY_BUFF_SLOT_SIZE;
+			play_buff[chan][i]->size		= PLAY_BUFF_SLOT_SIZE;
+
+			play_buff[chan][i]->in			= play_buff[chan][i]->min;
+			play_buff[chan][i]->out			= play_buff[chan][i]->min;
+
+			play_buff[chan][i]->wrapping	= 0;
+
+
+		}
+	}
+
 
 	flags[PlayBuff1_Discontinuity] = 1;
 	flags[PlayBuff2_Discontinuity] = 1;
 
-	// if (SAMPLINGBYTES==2){
-	// 	//min_vol = 10;
-	// 	init_compressor(1<<15, 0.75);
-	// }
-	// else{
-	// 	//min_vol = 10 << 16;
-	// 	init_compressor(1<<31, 0.75);
-	// }
-
 }
+
+//
+// Each sample slot gets a window of the SDRAM dedicated to it
+// When a bank is loaded, the first few seconds of the 10 sample files are pre-loaded
+// (or else just flagged as not yet loaded)
+// This only has latency benefits if StartPos is at 0, or at least starts the file wihtin the first few seconds
+//
 
 
 
@@ -217,8 +221,8 @@ void toggle_reverse(uint8_t chan)
 		{
 			// See if the endpos is within the cache,
 			// Then we can just play from that point
-			if ((sample_file_endpos[chan] >= cache_low[chan]) && (sample_file_endpos[chan] <= cache_high[chan]))
-				play_buff[chan]->out = map_cache_to_buffer(sample_file_endpos[chan], samples[banknum][samplenum].sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
+			if ((sample_file_endpos[chan] >= cache_low[chan][samplenum]) && (sample_file_endpos[chan] <= cache_high[chan][samplenum]))
+				play_buff[chan][samplenum]->out = map_cache_to_buffer(sample_file_endpos[chan], samples[banknum][samplenum].sampleByteSize, cache_low[chan][samplenum], cache_map_pt[chan][samplenum], play_buff[chan][samplenum]);
 			else
 			{
 				//Otherwise we have to make a new cache, so run start_playing()
@@ -238,14 +242,14 @@ void toggle_reverse(uint8_t chan)
 	if (i_param[chan][REV])
 	{
 		i_param[chan][REV] = 0;
-		sample_file_curpos[chan] = cache_high[chan];
-		play_buff[chan]->in = map_cache_to_buffer(cache_high[chan], samples[banknum][samplenum].sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
+		sample_file_curpos[chan][samplenum] = cache_high[chan][samplenum];
+		play_buff[chan][samplenum]->in 		= map_cache_to_buffer(cache_high[chan][samplenum], samples[banknum][samplenum].sampleByteSize, cache_low[chan][samplenum], cache_map_pt[chan][samplenum], play_buff[chan][samplenum]);
 	}
 	else
 	{
 		i_param[chan][REV] = 1;
-		sample_file_curpos[chan] = cache_low[chan];
-		play_buff[chan]->in = cache_map_pt[chan]; //cache_map_pt is the map of cache_low
+		sample_file_curpos[chan][samplenum] = cache_low[chan][samplenum];
+		play_buff[chan][samplenum]->in		= cache_map_pt[chan][samplenum]; //cache_map_pt is the map of cache_low
 	}
 
 	//Swap the endpos with the startpos
@@ -257,9 +261,9 @@ void toggle_reverse(uint8_t chan)
 
 	//Seek the starting position in the file 
 	//This gets us ready to start playing from the new position
-	if (fil[chan].obj.id > 0)
+	if (fil[chan][samplenum].obj.id > 0)
 	{
-		res = goto_filepos(sample_file_curpos[chan]); //uses samplenum and banknum to find startOfData
+		res = goto_filepos(sample_file_curpos[chan][samplenum]); //uses samplenum and banknum to find startOfData
 
 		if (res!=FR_OK)
 			g_error |= FILE_SEEK_FAIL;
@@ -268,7 +272,21 @@ void toggle_reverse(uint8_t chan)
 	 play_state[chan] = tplay_state;
 }
 
+	void init_changed_bank(uint8_t chan)
+{
+	uint8_t samplenum;
+	FRESULT res;
 
+	for ( samplenum=0; samplenum<NUM_SAMPLES_PER_BANK; samplenum++ )
+	{
+		res = f_close(&fil[chan][samplenum]);
+		if (res != FR_OK) fil[chan][samplenum].obj.fs = 0;
+
+		is_buffered_to_file_end[chan][samplenum] = 0;
+
+		CB_init(play_buff[chan][samplenum], 0);
+	}
+}
 
 //
 // start_playing()
@@ -281,38 +299,43 @@ void start_playing(uint8_t chan)
 	Sample *s_sample;
 	FRESULT res;
 	float rs;
-	uint8_t file_loaded;
+	//uint8_t file_loaded;
+
+	// DEBUG2_ON;
 
 	samplenum = i_param[chan][SAMPLE];
-
 	banknum = i_param[chan][BANK];
 	s_sample = &(samples[banknum][samplenum]);
 
 	if (s_sample->filename[0] == 0)
 		return;
 
-	file_loaded = 0;
-	check_change_bank(chan);
+	sample_num_now_playing[chan] = samplenum;
 
-	//Check if sample/bank changed, or file is flagged for reload
-	//if so, close the current file and open the new sample file
-	if (flags[ForceFileReload1+chan] || (sample_num_now_playing[chan] != samplenum) || (sample_bank_now_playing[chan] != banknum) || fil[chan].obj.fs==0)
+	if ( banknum != sample_bank_now_playing[chan] )
+	{
+		sample_bank_now_playing[chan] = banknum;
+		init_changed_bank(chan);
+	}
+
+	//
+	// Reload the sample file if necessary
+	//
+	if (flags[ForceFileReload1+chan] || fil[chan][samplenum].obj.fs==0)
 	{
 		flags[ForceFileReload1+chan] = 0;
 
-		res = reload_sample_file(&fil[chan], s_sample);
+		res = reload_sample_file(&fil[chan][samplenum], s_sample);
 		if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
 
-		res = create_linkmap(&fil[chan], chan);
+		res = create_linkmap(&fil[chan][samplenum], chan, samplenum);
 		if (res == FR_NOT_ENOUGH_CORE) {g_error |= FILE_CANNOT_CREATE_CLTBL;} //ToDo: Log this error
-		else if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+		else if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan][samplenum]);play_state[chan] = SILENT;return;}
 		
-		file_loaded = 1;
-
 		//Check the file is really as long as the sampleSize says it is
-		if (f_size(&fil[chan]) < (s_sample->startOfData + s_sample->sampleSize))
+		if (f_size(&fil[chan][samplenum]) < (s_sample->startOfData + s_sample->sampleSize))
 		{
-			s_sample->sampleSize = f_size(&fil[chan]) - s_sample->startOfData;
+			s_sample->sampleSize = f_size(&fil[chan][samplenum]) - s_sample->startOfData;
 
 			if (s_sample->inst_end > s_sample->sampleSize)
 				s_sample->inst_end = s_sample->sampleSize;
@@ -321,13 +344,14 @@ void start_playing(uint8_t chan)
 				s_sample->inst_size = s_sample->sampleSize - s_sample->inst_start;
 		}
 
-		sample_num_now_playing[chan] = samplenum;
-		sample_bank_now_playing[chan] = i_param[chan][BANK];
+		sample_num_now_playing[chan] 	= samplenum;
+		sample_bank_now_playing[chan] 	= i_param[chan][BANK];
 
-		cache_low[chan] = 0;
-		cache_high[chan] = 0;
-		cache_map_pt[chan] = play_buff[chan]->min;
+		cache_low[chan][samplenum] 		= 0;
+		cache_high[chan][samplenum] 	= 0;
+		cache_map_pt[chan][samplenum] 	= play_buff[chan][samplenum]->min;
 	}
+
 
 	//Calculate our actual resampling rate
 	rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / f_BASE_SAMPLE_RATE);
@@ -345,13 +369,15 @@ void start_playing(uint8_t chan)
 	}
 
 
-	//See if starting position is already cached
-	if ((cache_high[chan]>cache_low[chan]) && (cache_low[chan] <= sample_file_startpos[chan]) && (sample_file_startpos[chan] <= cache_high[chan]))
+	//See if the starting position is already cached
+	if (   (cache_high[chan][samplenum] > cache_low[chan][samplenum]) 
+		&& (cache_low[chan][samplenum] <= sample_file_startpos[chan]) 
+		&& (sample_file_startpos[chan] <= cache_high[chan][samplenum]) )
 	{
-		play_buff[chan]->out = map_cache_to_buffer(sample_file_startpos[chan], s_sample->sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]);
+		play_buff[chan][samplenum]->out = map_cache_to_buffer(sample_file_startpos[chan], s_sample->sampleByteSize, cache_low[chan][samplenum], cache_map_pt[chan][samplenum], play_buff[chan][samplenum]);
 
-		if (play_buff[chan]->out < play_buff[chan]->in)	play_buff[chan]->wrapping = 0;
-		else											play_buff[chan]->wrapping = 1;
+		if (play_buff[chan][samplenum]->out < play_buff[chan][samplenum]->in)	play_buff[chan][samplenum]->wrapping = 0;
+		else																	play_buff[chan][samplenum]->wrapping = 1;
 
 		if (f_param[chan][LENGTH] <= 0.5 && i_param[chan][REV])	play_state[chan] = PLAYING_PERC;
 		else													play_state[chan] = PLAY_FADEUP;
@@ -359,46 +385,44 @@ void start_playing(uint8_t chan)
 	}
 	else //...otherwise, start buffering from scratch
 	{
-		CB_init(play_buff[chan], i_param[chan][REV]);
+		CB_init(play_buff[chan][samplenum], i_param[chan][REV]);
 
-		// if (i_param[chan][REV])
-		// 	play_buff[chan]->in = play_buff[chan]->max - ((READ_BLOCK_SIZE * 2) / s_sample->sampleByteSize);
+		//Seek to the file position where we will start reading
+		res = goto_filepos(sample_file_startpos[chan]);
 
-		//Reload the sample file (important to do, in case card has been removed)
-		if (!file_loaded)
-		{
-			res = reload_sample_file(&fil[chan], s_sample);
+		//If seeking fails, perhaps we need to reload the file
+		if (res != FR_OK) {
+			res = reload_sample_file(&fil[chan][samplenum], s_sample);
 			if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
 
-			res = create_linkmap(&fil[chan], chan);
-			if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+			res = create_linkmap(&fil[chan][samplenum], chan, samplenum);
+			if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan][samplenum]);play_state[chan] = SILENT;return;}
+
+			res = goto_filepos(sample_file_startpos[chan]);
+			if (res != FR_OK) {g_error |= FILE_SEEK_FAIL;}
 		}
-
-		res = goto_filepos(sample_file_startpos[chan]);
-		if (res != FR_OK) g_error |= FILE_SEEK_FAIL;
-
 		if (g_error & LSEEK_FPTR_MISMATCH)
 		{
-			sample_file_startpos[chan] = align_addr(f_tell(&fil[chan]) - s_sample->startOfData, s_sample->blockAlign);
+			sample_file_startpos[chan] = align_addr(f_tell(&fil[chan][samplenum]) - s_sample->startOfData, s_sample->blockAlign);
 		}
 
-		sample_file_curpos[chan] 		= sample_file_startpos[chan];
-
-		cache_low[chan] 				= sample_file_startpos[chan];
-		cache_high[chan] 				= sample_file_startpos[chan];
-		cache_map_pt[chan] 				= play_buff[chan]->min;
-		cache_size[chan]				= (play_buff[chan]->size>>1) * s_sample->sampleByteSize;
-		is_buffered_to_file_end[chan] = 0;
+		sample_file_curpos[chan][samplenum] 		= sample_file_startpos[chan];
+		cache_low[chan][samplenum] 					= sample_file_startpos[chan];
+		cache_high[chan][samplenum] 				= sample_file_startpos[chan];
+		cache_map_pt[chan][samplenum] 				= play_buff[chan][samplenum]->min;
+		cache_size[chan][samplenum]					= (play_buff[chan][samplenum]->size>>1) * s_sample->sampleByteSize;
+		is_buffered_to_file_end[chan][samplenum] 	= 0;
 
 		play_state[chan]=PREBUFFERING;
 	}
 
-	last_play_start_tmr[chan]	= sys_tmr;
+	last_play_start_tmr[chan]	= sys_tmr; //used by toggle_reverse() to see if we hit a reverse trigger right after a play trigger
 
 	flags[PlayBuff1_Discontinuity+chan] = 1;
 
 	if (i_param[chan][REV])	decay_amp_i[chan]=0.0;
 	else					decay_amp_i[chan]=1.0;
+
 	decay_inc[chan]=0.0;
 
 	play_led_state[chan]=1;
@@ -406,25 +430,25 @@ void start_playing(uint8_t chan)
 	if (global_mode[ALLOW_SPLIT_MONITORING] && global_mode[STEREO_MODE]==0)
 	{
 		//Turn off monitoring for just this channel
-		if (global_mode[MONITOR_RECORDING] & (1<<chan))
-			global_mode[MONITOR_RECORDING] &= ~(1<<chan);
+		global_mode[MONITOR_RECORDING] &= ~(1<<chan);
 	}
 	else
-		global_mode[MONITOR_RECORDING] = 0;
+		global_mode[MONITOR_RECORDING] = MONITOR_OFF;
 
 	//DEBUG
-	str_cpy(dbg_sample.filename , s_sample->filename);
-	dbg_sample.sampleSize 		= s_sample->sampleSize;
-	dbg_sample.sampleByteSize	= s_sample->sampleByteSize;
-	dbg_sample.sampleRate 		= s_sample->sampleRate;
-	dbg_sample.numChannels 		= s_sample->numChannels;
-	dbg_sample.startOfData 		= s_sample->startOfData;
-	dbg_sample.blockAlign 		= s_sample->blockAlign;
-	dbg_sample.PCM 				= s_sample->PCM;
-	dbg_sample.inst_start 		= s_sample->inst_start;
-	dbg_sample.inst_end 		= s_sample->inst_end;
-	dbg_sample.inst_size 		= s_sample->inst_size;
-	dbg_sample.inst_gain 		= s_sample->inst_gain;
+	// str_cpy(dbg_sample.filename , s_sample->filename);
+	// dbg_sample.sampleSize 		= s_sample->sampleSize;
+	// dbg_sample.sampleByteSize	= s_sample->sampleByteSize;
+	// dbg_sample.sampleRate 		= s_sample->sampleRate;
+	// dbg_sample.numChannels 		= s_sample->numChannels;
+	// dbg_sample.startOfData 		= s_sample->startOfData;
+	// dbg_sample.blockAlign 		= s_sample->blockAlign;
+	// dbg_sample.PCM 				= s_sample->PCM;
+	// dbg_sample.inst_start 		= s_sample->inst_start;
+	// dbg_sample.inst_end 		= s_sample->inst_end;
+	// dbg_sample.inst_size 		= s_sample->inst_size;
+	// dbg_sample.inst_gain 		= s_sample->inst_gain;
+	// DEBUG2_OFF;
 }
 
 
@@ -540,15 +564,19 @@ uint32_t calc_stop_point(float length_param, float resample_param, Sample *sampl
 }
 
 
-
+//
+// Updates the play light to indicate if a sample is present or not
+// Doesn't flash the light brightly, like it does when the Sample knob is turned,
+// because that's distracting to see when pressing the bank button.
+// Also sets the sample changed flag.
+//
 void check_change_bank(uint8_t chan)
 {
 	if (flags[PlayBank1Changed + chan])
 	{
 		flags[PlayBank1Changed + chan]=0;
 
-		is_buffered_to_file_end[chan] = 0;
-
+		// Set flag that the sample has changed
 		flags[PlaySample1Changed + chan]=1;
 
 		//
@@ -567,7 +595,6 @@ void check_change_bank(uint8_t chan)
 		}
 
 	}
-
 }
 
 void check_change_sample(void)
@@ -583,6 +610,7 @@ void check_change_sample(void)
 			if (samples[ i_param[chan][BANK] ][ i_param[chan][SAMPLE] ].filename[0] == 0) //no file: fadedown or remain silent
 			{
 				//No sample in this slot:
+
 				//Set the sample empty flag to 1 (dim) only if it's 0
 				//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
 				if (flags[PlaySample1Changed_empty+chan]==0)
@@ -592,7 +620,7 @@ void check_change_sample(void)
 
 				if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_ALWAYS || (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE]==AutoStop_LOOPING && i_param[chan][LOOPING]))
 				{
-					if (play_state[chan] != SILENT && play_state[chan]!=PREBUFFERING)
+					if (play_state[chan] != SILENT && play_state[chan] != PREBUFFERING)
 						play_state[chan] = PLAY_FADEDOWN;
 					else
 						play_state[chan] = SILENT;
@@ -601,6 +629,7 @@ void check_change_sample(void)
 			else
 			{
 				//Sample found in this slot:
+
 				//Set the sample valid flag to 1 (dim) only if it's 0
 				//(that way we avoid dimming it if we had already set the flag to 6 in order to flash it brightly)
 				if (flags[PlaySample1Changed_valid+chan]==0)
@@ -654,7 +683,7 @@ void read_storage_to_buffer(void)
 	check_change_bank(0);
 	check_change_bank(1);
 
-DEBUG0_ON;
+	// DEBUG0_ON;
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
 
@@ -664,28 +693,28 @@ DEBUG0_ON;
 			banknum = sample_bank_now_playing[chan];
 			s_sample = &(samples[banknum][samplenum]);
 
-			play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
+			play_buff_bufferedamt[chan][samplenum] = CB_distance(play_buff[chan][samplenum], i_param[chan][REV]);
 
 			//
 			//Try to recover from a file read error
 			//
 			if (g_error & (FILE_READ_FAIL_1 << chan))
 			{
-				res = reload_sample_file(&fil[chan], s_sample);
+				res = reload_sample_file(&fil[chan][samplenum], s_sample);
 				if (res != FR_OK) {g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
 
-				res = create_linkmap(&fil[chan], chan);
-				if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL;f_close(&fil[chan]);play_state[chan] = SILENT;return;}
+				res = create_linkmap(&fil[chan][samplenum], chan, samplenum);
+				if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL;f_close(&fil[chan][samplenum]);play_state[chan] = SILENT;return;}
 
 				//clear the error flag
 				g_error &= ~(FILE_READ_FAIL_1 << chan);
 			}
-			else //If no file read error... [?? what are we doing here???]
+			else //If no file read error... [?? FixMe: what are we doing here???]
 			{
 
-				if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < s_sample->inst_end))
-				 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > s_sample->inst_start)) )
-					is_buffered_to_file_end[chan] = 0;
+				if ( (!i_param[chan][REV] && (sample_file_curpos[chan][samplenum] < s_sample->inst_end))
+				 	|| (i_param[chan][REV] && (sample_file_curpos[chan][samplenum] > s_sample->inst_start)) )
+					is_buffered_to_file_end[chan][samplenum] = 0;
 			}
 
 			//
@@ -703,30 +732,24 @@ DEBUG0_ON;
 			pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign * s_sample->numChannels) * pb_adjustment);
 			active_buff_size = pre_buff_size * 8;
 
-			if (!is_buffered_to_file_end[chan] && 
+			if (!is_buffered_to_file_end[chan][samplenum] && 
 				(
-					(play_state[chan]==PREBUFFERING && (play_buff_bufferedamt[chan] < pre_buff_size)) ||
-					(play_state[chan]!=PREBUFFERING && (play_buff_bufferedamt[chan] < active_buff_size))
+					(play_state[chan]==PREBUFFERING && (play_buff_bufferedamt[chan][samplenum] < pre_buff_size)) ||
+					(play_state[chan]!=PREBUFFERING && (play_buff_bufferedamt[chan][samplenum] < active_buff_size))
 				))
 			{
 
-				if (sample_file_curpos[chan] > s_sample->sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
+				if (sample_file_curpos[chan][samplenum] > s_sample->sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
 				{
-					g_error |= FILE_WAVEFORMATERR;							//Breakpoint
+					g_error |= FILE_WAVEFORMATERR;
 					play_state[chan] = SILENT;
 					start_playing(chan);
 				}
 
 
-				else if (sample_file_curpos[chan] > s_sample->inst_end) //FixMe: Does this need a if (REV), as above?
+				else if (sample_file_curpos[chan][samplenum] > s_sample->inst_end) //FixMe: Does this need a if (REV), as above?
 				{
-					//if (i_param[chan][LOOPING])
-					//	flags[Play1But]=1;
-					//else
-						is_buffered_to_file_end[chan] = 1;
-
-					//sample_file_curpos[chan] = s_sample->inst_end;
-					//goto_filepos(sample_file_curpos[chan]);
+					is_buffered_to_file_end[chan][samplenum] = 1;
 				}
 
 				else
@@ -736,32 +759,30 @@ DEBUG0_ON;
 					//
 					if (i_param[chan][REV]==0)
 					{
-						rd = s_sample->inst_end -  sample_file_curpos[chan];
+						rd = s_sample->inst_end -  sample_file_curpos[chan][samplenum];
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
-						//else align rd to 24
-						res = f_read(&fil[chan], (uint8_t *)tmp_buff_u32, rd, &br);
+
+						res = f_read(&fil[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, &br);
 						if (res != FR_OK) 
 						{
 							g_error |= FILE_READ_FAIL_1 << chan; 
-							is_buffered_to_file_end[chan] = 1;
+							is_buffered_to_file_end[chan][samplenum] = 1; //FixMe: Do we really want to set this in case of disk error? We don't when reversing.
 						}
 
 
 						if (br < rd)
 						{
 							g_error |= FILE_UNEXPECTEDEOF; //unexpected end of file, but we can continue writing out the data we read
-							is_buffered_to_file_end[chan] = 1;
+							is_buffered_to_file_end[chan][samplenum] = 1; 
 						}
 
-						//sample_file_curpos[chan] += br;
-						sample_file_curpos[chan] = f_tell(&fil[chan]) - s_sample->startOfData;
+						//sample_file_curpos[chan][samplenum] += br;
+						sample_file_curpos[chan][samplenum] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
 
-						if (sample_file_curpos[chan] >= s_sample->inst_end)
+						if (sample_file_curpos[chan][samplenum] >= s_sample->inst_end)
 						{
-							//sample_file_curpos[chan] = s_sample->inst_end;
-							//Breakpoint
-							is_buffered_to_file_end[chan] = 1;
+							is_buffered_to_file_end[chan][samplenum] = 1;
 						}
 
 					}
@@ -771,8 +792,8 @@ DEBUG0_ON;
 					//
 					else
 					{
-						if (sample_file_curpos[chan] > s_sample->inst_start)
-							rd = sample_file_curpos[chan] - s_sample->inst_start;
+						if (sample_file_curpos[chan][samplenum] > s_sample->inst_start)
+							rd = sample_file_curpos[chan][samplenum] - s_sample->inst_start;
 						else
 							rd = 0;
 
@@ -782,12 +803,12 @@ DEBUG0_ON;
 							//Jump back a block
 							rd = READ_BLOCK_SIZE;
 
-							t_fptr=f_tell(&fil[chan]);
-							res = f_lseek(&fil[chan], t_fptr - READ_BLOCK_SIZE);
-							if (res || (f_tell(&fil[chan])!=(t_fptr - READ_BLOCK_SIZE)))
+							t_fptr=f_tell(&fil[chan][samplenum]);
+							res = f_lseek(&fil[chan][samplenum], t_fptr - READ_BLOCK_SIZE);
+							if (res || (f_tell(&fil[chan][samplenum])!=(t_fptr - READ_BLOCK_SIZE)))
 								g_error |= LSEEK_FPTR_MISMATCH;
 							
-							sample_file_curpos[chan] = f_tell(&fil[chan]) - s_sample->startOfData;
+							sample_file_curpos[chan][samplenum] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
 
 						}
 						else //rd < READ_BLOCK_SIZE: read the first block (which is the last to be read, since we're reversing)
@@ -796,26 +817,26 @@ DEBUG0_ON;
 							//align rd to 24
 
 							//Jump to the beginning
-							sample_file_curpos[chan] = s_sample->inst_start;
-							res = goto_filepos(sample_file_curpos[chan]);
+							sample_file_curpos[chan][samplenum] = s_sample->inst_start;
+							res = goto_filepos(sample_file_curpos[chan][samplenum]);
 							if (res!=FR_OK)
 								g_error |= FILE_SEEK_FAIL;
 
-							is_buffered_to_file_end[chan] = 1;
+							is_buffered_to_file_end[chan][samplenum] = 1;
 						}
 
 						//Read one block forward
-						t_fptr=f_tell(&fil[chan]);
-						res = f_read(&fil[chan], (uint8_t *)tmp_buff_u32, rd, &br);
+						t_fptr=f_tell(&fil[chan][samplenum]);
+						res = f_read(&fil[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, &br);
 						if (res != FR_OK) 
 							g_error |= FILE_READ_FAIL_1 << chan;
 
 						if (br < rd)		g_error |= FILE_UNEXPECTEDEOF;
 
 						//Jump backwards to where we started reading
-						res = f_lseek(&fil[chan], t_fptr);
+						res = f_lseek(&fil[chan][samplenum], t_fptr);
 						if (res != FR_OK)	g_error |= FILE_SEEK_FAIL;
-						if (f_tell(&fil[chan])!=t_fptr)		g_error |= LSEEK_FPTR_MISMATCH;
+						if (f_tell(&fil[chan][samplenum])!=t_fptr)		g_error |= LSEEK_FPTR_MISMATCH;
 
 					}
 
@@ -826,42 +847,37 @@ DEBUG0_ON;
 					{
 						//Jump back in play_buff by the amount just read (re-sized from file addresses to buffer address)
 						if (i_param[chan][REV])
-							CB_offset_in_address(play_buff[chan], (rd * 2) / s_sample->sampleByteSize, 1);
+							CB_offset_in_address(play_buff[chan][samplenum], (rd * 2) / s_sample->sampleByteSize, 1);
 
 						err=0;
 
 						//
-						// Write raw file data into buffer
+						// Write raw file data (tmp_buff_u32) into buffer (play_buff)
 						//
 						if (s_sample->sampleByteSize == 2) //16bit
-							err = memory_write_16as16(play_buff[chan], tmp_buff_u32, rd>>2, 0);
+							err = memory_write_16as16(play_buff[chan][samplenum], tmp_buff_u32, rd>>2, 0);
 
 						else
 						if (s_sample->sampleByteSize == 3) //24bit
-						{
-							err = memory_write_24as16(play_buff[chan], (uint8_t *)tmp_buff_u32, rd, 0); //rd must be a multiple of 3
-						} 
+							err = memory_write_24as16(play_buff[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, 0); //rd must be a multiple of 3
+
 						else
 						if (s_sample->sampleByteSize == 1) //8bit
-						{
-							err = memory_write_8as16(play_buff[chan], (uint8_t *)tmp_buff_u32, rd, 0);
-						} 
+							err = memory_write_8as16(play_buff[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, 0);
+
 						else
 						if (s_sample->sampleByteSize == 4 && s_sample->PCM == 3) //32-bit float
-						{
-							err = memory_write_32fas16(play_buff[chan], (float *)tmp_buff_u32, rd>>2, 0); //rd must be a multiple of 4
+							err = memory_write_32fas16(play_buff[chan][samplenum], (float *)tmp_buff_u32, rd>>2, 0); //rd must be a multiple of 4
 
-						}else
+						else
 						if (s_sample->sampleByteSize == 4 && s_sample->PCM == 1) //32-bit int
-						{
-							err = memory_write_32ias16(play_buff[chan], (uint8_t *)tmp_buff_u32, rd, 0); //rd must be a multiple of 4
-						}
+							err = memory_write_32ias16(play_buff[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, 0); //rd must be a multiple of 4
 
 						//Update the cache addresses
 						if (i_param[chan][REV])
 						{
 							//Ignore head crossing error if we are reversing and ended up with in==out (that's normal for the first reading)
-							if (err && (play_buff[chan]->in == play_buff[chan]->out)) 
+							if (err && (play_buff[chan][samplenum]->in == play_buff[chan][samplenum]->out)) 
 								err = 0;
 
 							//
@@ -869,31 +885,27 @@ DEBUG0_ON;
 							//This ensures play_buff[]->in points to the buffer seam
 							//
 							if (i_param[chan][REV])
-								CB_offset_in_address(play_buff[chan], (rd * 2) / s_sample->sampleByteSize, 1);
+								CB_offset_in_address(play_buff[chan][samplenum], (rd * 2) / s_sample->sampleByteSize, 1);
 
-							cache_low[chan] = sample_file_curpos[chan]; 
-							cache_map_pt[chan] = play_buff[chan]->in;
+							cache_low[chan][samplenum] 		= sample_file_curpos[chan][samplenum]; 
+							cache_map_pt[chan][samplenum] 	= play_buff[chan][samplenum]->in;
 
-							if ((cache_high[chan] - cache_low[chan]) > cache_size[chan])
-							{
-								cache_high[chan] = cache_low[chan] + cache_size[chan];
-							}
+							if ((cache_high[chan][samplenum] - cache_low[chan][samplenum]) > cache_size[chan][samplenum])
+								 cache_high[chan][samplenum] = cache_low[chan][samplenum] + cache_size[chan][samplenum];
 						} 
 						else {
 
-							cache_high[chan] = sample_file_curpos[chan];
+							cache_high[chan][samplenum] 		= sample_file_curpos[chan][samplenum];
 
-							if ((cache_high[chan] - cache_low[chan]) > cache_size[chan])
+							if ((cache_high[chan][samplenum] - cache_low[chan][samplenum]) > cache_size[chan][samplenum])
 							{
-								cache_map_pt[chan] = play_buff[chan]->in;
-								cache_low[chan] = cache_high[chan] - cache_size[chan];
+								cache_map_pt[chan][samplenum] 	= play_buff[chan][samplenum]->in;
+								cache_low[chan][samplenum] 		= cache_high[chan][samplenum] - cache_size[chan][samplenum];
 							}
 						}
 
 						if (err)
-						{
 							g_error |= READ_BUFF1_OVERRUN*(1+chan);
-						}
 
 					}
 
@@ -902,7 +914,7 @@ DEBUG0_ON;
 			}
 
 			//Check if we've prebuffered enough to start playing
-			if ((is_buffered_to_file_end[chan] || play_buff_bufferedamt[chan] >= pre_buff_size) && play_state[chan] == PREBUFFERING)
+			if ((is_buffered_to_file_end[chan][samplenum] || play_buff_bufferedamt[chan][samplenum] >= pre_buff_size) && play_state[chan] == PREBUFFERING)
 			{
 				if (f_param[chan][LENGTH] <= 0.5 && i_param[chan][REV])	play_state[chan] = PLAYING_PERC;
 				else													play_state[chan] = PLAY_FADEUP;
@@ -911,14 +923,12 @@ DEBUG0_ON;
 
 		} //play_state != SILENT, FADEDOWN
 	} //for (chan)
-	DEBUG0_OFF;
+	// DEBUG0_OFF;
 }
 
 void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 {
 	uint16_t i;
-	int32_t t_i32;
-	float t_f;
 	float env;
 	uint32_t t_u32;
 	uint8_t t_flag;
@@ -938,7 +948,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
 
-DEBUG1_ON;
+//	DEBUG1_ON;
 
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
@@ -976,7 +986,7 @@ DEBUG1_ON;
 			resampled_cache_size = (resampled_buffer_size * s_sample->sampleByteSize) / 2;
 
 			//Find out where the audio output data is from the start of the cache
-			sample_file_playpos = map_buffer_to_cache(play_buff[chan]->out, s_sample->sampleByteSize, cache_low[chan], cache_map_pt[chan], play_buff[chan]); 
+			sample_file_playpos = map_buffer_to_cache(play_buff[chan][samplenum]->out, s_sample->sampleByteSize, cache_low[chan][samplenum], cache_map_pt[chan][samplenum], play_buff[chan][samplenum]); 
 
 			//See if we are about to surpass the calculated position in the file where we should end our sample
 			//If so, fade down the sample or pad silence if we have a fixed-length envelope (PLAYING_PERC)
@@ -994,9 +1004,9 @@ DEBUG1_ON;
 			else
 			{
 				//Check if we are about to hit buffer underrun
-				play_buff_bufferedamt[chan] = CB_distance(play_buff[chan], i_param[chan][REV]);
+				play_buff_bufferedamt[chan][samplenum] = CB_distance(play_buff[chan][samplenum], i_param[chan][REV]);
 
-				if (play_buff_bufferedamt[chan] <= resampled_buffer_size)
+				if (play_buff_bufferedamt[chan][samplenum] <= resampled_buffer_size)
 				{
 					//buffer underrun: tried to read too much out. Try to recover!
 					g_error |= READ_BUFF1_OVERRUN<<chan; //FixMe: this error is actually UNDERRUN, not OVERRUN
@@ -1020,17 +1030,17 @@ DEBUG1_ON;
 
 			if (s_sample->numChannels == 2)
 			{
-				t_u32 = play_buff[chan]->out;
+				t_u32 = play_buff[chan][samplenum]->out;
 				t_flag = flags[PlayBuff1_Discontinuity+chan];
-				resample_read16_left(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 4, chan, outL);
+				resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outL);
 
-				play_buff[chan]->out = t_u32;
+				play_buff[chan][samplenum]->out = t_u32;
 				flags[PlayBuff1_Discontinuity+chan] = t_flag;
-				resample_read16_right(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 4, chan, outR);
+				resample_read16_right(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outR);
 			}
 			else	//MONO: read left channel and copy to right
 			{
-				resample_read16_left(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 2, chan, outL);
+				resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 2, chan, outL);
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++) outR[i] = outL[i];
 			}
 		}
@@ -1040,9 +1050,9 @@ DEBUG1_ON;
 				rs = (MAX_RS);
 
 			if (s_sample->numChannels == 2)
-				resample_read16_avg(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 4, chan, outL);
+				resample_read16_avg(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outL);
 			else
-				resample_read16_left(rs, play_buff[chan], HT16_CHAN_BUFF_LEN, 2, chan, outL);
+				resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 2, chan, outL);
 
 		}
 
@@ -1065,12 +1075,12 @@ DEBUG1_ON;
 		}
 		
 
+		//Yes, we could make this code more readable by putting the switch() inside the for() loop, but that would waste too many processor cycles
 		 switch (play_state[chan])
 		 {
 
 			 case (PLAY_FADEDOWN):
 			 case (RETRIG_FADEDOWN):
-// DEBUG3_ON;
 
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
@@ -1080,15 +1090,9 @@ DEBUG1_ON;
 					outL[i] = (float)outL[i] * env * gain;
 					outR[i] = (float)outR[i] * env * gain;
 
-					t_i32 = outL[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outL[i] = t_i32;
-
-					t_i32 = outR[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outR[i] = t_i32;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
 				}
-// DEBUG3_OFF;
 				play_led_state[chan] = 0;
 
 				end_out_ctr[chan] = (play_time>0.300)? 35 : ((play_time * 90) + 8);
@@ -1103,7 +1107,6 @@ DEBUG1_ON;
 			break;
 
 			 case (PLAY_FADEUP):
-// DEBUG2_ON;
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
 					if (global_mode[FADEUPDOWN_ENVELOPE])	env = (float)i / (float)HT16_CHAN_BUFF_LEN;
@@ -1112,35 +1115,22 @@ DEBUG1_ON;
 					outL[i] = (float)outL[i] * env * gain;
 					outR[i] = (float)outR[i] * env * gain;
 
-					t_i32 = outL[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outL[i] = t_i32;
-
-					t_i32 = outR[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outR[i] = t_i32;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
 				}
-// DEBUG2_OFF;
 				if (length<=0.5)		play_state[chan] 	= PLAYING_PERC;
 				else					play_state[chan]	= PLAYING;
 		 	 break;
 
 			 case (PLAYING):
-// DEBUG1_ON;
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
 					outL[i] = (float)outL[i] * gain;
 					outR[i] = (float)outR[i] * gain;
 
-					t_i32 = outL[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outL[i] = t_i32;
-
-					t_i32 = outR[i];
-					asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-					outR[i] = t_i32;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
 				}
-// DEBUG1_OFF;
 				if (length<=0.5)		play_state[chan] 	= PLAYING_PERC;
 				else					play_state[chan]	= PLAYING;
 		 	 break;
@@ -1153,7 +1143,6 @@ DEBUG1_ON;
 
 		 		if (play_state[chan]==PLAYING_PERC) 
 		 		{
-// DEBUG3_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
@@ -1168,15 +1157,9 @@ DEBUG1_ON;
 						outL[i] = ((float)outL[i]) * env * gain;
 						outR[i] = ((float)outR[i]) * env * gain;
 
-						t_i32 = outL[i];
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outL[i] = t_i32;
-
-						t_i32 = outR[i];
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outR[i] = t_i32;
+						outL[i] = _SSAT16(outL[i]);
+						outR[i] = _SSAT16(outR[i]);
 					}
-// DEBUG3_OFF;
 				} else
 
 				// Fade down to silence before going to PAD_SILENCE mode or ending the playback
@@ -1184,7 +1167,6 @@ DEBUG1_ON;
 				//
 		 		if (play_state[chan]==PLAYING_PERC_FADEDOWN) 
 		 		{
-//DEBUG2_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						decay_amp_i[chan] -= decay_inc[chan];
@@ -1197,16 +1179,10 @@ DEBUG1_ON;
 						outL[i] = ((float)outL[i]) * env * gain;
 						outR[i] = ((float)outR[i]) * env * gain;
 
-						t_i32 = outL[i];
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outL[i] = t_i32;
-
-						t_i32 = outR[i];
-						asm("ssat %[dst], #16, %[src]" : [dst] "=r" (t_i32) : [src] "r" (t_i32));
-						outR[i] = t_i32;
+						outL[i] = _SSAT16(outL[i]);
+						outR[i] = _SSAT16(outR[i]);
 					}
 					play_state[chan]=PAD_SILENCE;
-//DEBUG2_OFF;
 				}
 				else
 
@@ -1214,7 +1190,6 @@ DEBUG1_ON;
 				//
 				if (play_state[chan]==PAD_SILENCE)
 				{
-//DEBUG1_ON;
 					if (i_param[chan][REV])	decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
 					else					decay_amp_i[chan] -= HT16_CHAN_BUFF_LEN * decay_inc[chan];
 
@@ -1223,7 +1198,6 @@ DEBUG1_ON;
 						outL[i] = 0;
 						outR[i] = 0;
 					}
-//DEBUG1_OFF;
 				}
 
 				//After fading up to full amplitude in a reverse percussive playback, 
@@ -1258,14 +1232,15 @@ DEBUG1_ON;
 
 	} //if play_state
 
-	if (	(play_state[0]==PLAYING && (play_buff_bufferedamt[0] < 15000)) ||
-			(play_state[1]==PLAYING && (play_buff_bufferedamt[1] < 15000)) )
+	// //FixMe: samplenum is not necessarily set at this point in the function
+	// if (	(play_state[0]==PLAYING && (play_buff_bufferedamt[0][samplenum] < 15000)) ||
+	// 		(play_state[1]==PLAYING && (play_buff_bufferedamt[1][samplenum] < 15000)) )
 
-		play_load_triage = PRIORITIZE_PLAYING;
-	else
-		play_load_triage = NO_PRIORITY;
+	// 	play_load_triage = PRIORITIZE_PLAYING;
+	// else
+	// 	play_load_triage = NO_PRIORITY;
 
-DEBUG1_OFF;
+//DEBUG1_OFF;
 
 }
 

@@ -377,6 +377,48 @@ void update_ButtonLEDs(void)
 			flags[RevertBank1]--;
 		}
 		else
+		
+		if (flags[ChangedTrigDelay])
+		{
+			//initialize phase
+			if (flags[ChangedTrigDelay] == 1){
+				// st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
+				st_phase = sys_tmr;
+				flags[ChangedTrigDelay]++;
+			}
+
+			// t = (sys_tmr + st_phase) & 0x7FF;
+			t = sys_tmr - st_phase;
+
+			if (flags[ChangedTrigDelay] == 2){
+				set_ButtonLED_byPalette(RecButtonLED, WHITE);
+				set_ButtonLED_byPalette(RecBankButtonLED, OFF);
+				flags[ChangedTrigDelay]++;
+			}
+			else
+			if ( (flags[ChangedTrigDelay] == 3) && (t > calc_trig_delay(global_mode[TRIG_DELAY]) * 4) )
+			{
+				set_ButtonLED_byPalette(RecButtonLED, WHITE);
+				set_ButtonLED_byPalette(RecBankButtonLED, GREEN);
+				flags[ChangedTrigDelay]++;
+				st_phase = sys_tmr;
+			}
+			else
+			if ( (flags[ChangedTrigDelay] == 4) && (t > calc_trig_delay(global_mode[TRIG_DELAY]) * 4) )
+			{
+				set_ButtonLED_byPalette(RecButtonLED, OFF);
+				set_ButtonLED_byPalette(RecBankButtonLED, OFF);
+				flags[ChangedTrigDelay]++;
+				st_phase = sys_tmr;
+			}
+			else
+			if ( (flags[ChangedTrigDelay] == 5) && (t > 10000) )
+			{
+				flags[ChangedTrigDelay]=0;
+			}
+
+		}
+		else
 
 		if (flags[SkipProcessButtons]==2)
 		{
@@ -550,14 +592,14 @@ void update_ButtonLEDs(void)
 
 		}
 
-		//Rec Light
+		//Rec button Light
 		else if (ButLEDnum == RecButtonLED)
 		{
 			if (global_mode[EDIT_MODE])
 			{
 				set_ButtonLED_byPalette(RecButtonLED, OFF);
 			}
-			if (flags[RecSampleChanged_light])
+			else if (flags[RecSampleChanged_light])
 			{
 				set_ButtonLED_byPalette(RecButtonLED, WHITE);
 				flags[RecSampleChanged_light]--;

@@ -53,6 +53,7 @@ __IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern uint8_t 	flags[NUM_FLAGS];
+extern uint32_t flags32[NUM_FLAGS];
 
 extern SystemCalibrations *system_calibrations;
 
@@ -191,12 +192,14 @@ int main(void)
 	//Initialize parameters/modes
 	global_mode[CALIBRATE] = 0;
 	init_adc_param_update_IRQ();
+
+	set_default_user_settings();
+	read_user_settings();
 	init_params();
 	init_modes();
 	
 	//Read the FLASH memory for user params, system calibration settings, etc
 	valid_fw_version = load_flash_params();
-
 
 	//Check for calibration buttons on boot
 	if (ENTER_CALIBRATE_BUTTONS)
@@ -250,11 +253,8 @@ int main(void)
     //Turn on button LEDs for bank loading
     LEDDRIVER_OUTPUTENABLE_ON;
 
-	set_default_user_settings();
-	read_user_settings();
-
     //Load all banks
-	init_banks(); // calls load_all_banks which calls index_write_wrapper() w/	flags[RewriteIndex]=RED high
+	init_banks(); // calls load_all_banks which calls index_write_wrapper()
 
   	// Backup index file (unless we are booting for the first time)
     if (!do_factory_reset) backup_sampleindex_file();
@@ -283,6 +283,14 @@ int main(void)
 		{
 			do_assignment(flags[FindNextSampleToAssign]);
 			flags[FindNextSampleToAssign]=0;
+		}
+
+		if (flags32[SaveUserSettingsLater])
+		{
+			flags32[SaveUserSettingsLater]--;
+
+			if (flags32[SaveUserSettingsLater] == 0)
+				flags[SaveUserSettings] = 1;
 		}
 
 		if (flags[SaveUserSettings])

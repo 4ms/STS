@@ -55,12 +55,14 @@ uint8_t 		i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 uint8_t 		settings[NUM_ALL_CHAN][NUM_CHAN_SETTINGS];
 uint8_t			global_mode[NUM_GLOBAL_MODES];
 GlobalParams	global_params;
-uint8_t 		flags[NUM_FLAGS];
+
+uint8_t 		flags[NUM_FLAGS]; //FixMe: is it OK to use 32-bit flags?
+uint32_t 		flags32[NUM_FLAGS];
 
 
 uint32_t play_trig_timestamp[2];
 
-uint8_t flag_pot_changed[NUM_POT_ADCS];
+uint8_t pot_changed[NUM_POT_ADCS];
 
 extern uint8_t recording_enabled;
 
@@ -127,30 +129,9 @@ void init_params(void)
 		flags[i]=0;
 	}
 
-	if (PCB_version == 0)
-	{
+	global_params.play_trig_delay 				= calc_trig_delay(global_mode[TRIG_DELAY]);
+	global_params.play_trig_latch_pitch_time 	= calc_pitch_latch_time(global_mode[TRIG_DELAY]);
 
-		if (global_mode[LOW_LATENCY])
-		{
-			global_params.play_trig_delay 				= 256;
-			global_params.play_trig_latch_pitch_time 	= 128;
-		}
-		else {
-			global_params.play_trig_delay 				= 520;
-			global_params.play_trig_latch_pitch_time 	= 256;
-		}
-
-	} else {
-		if (global_mode[LOW_LATENCY])
-		{
-			global_params.play_trig_delay 				= 0;
-			global_params.play_trig_latch_pitch_time 	= 0;
-		}
-		else {
-			global_params.play_trig_delay 				= 128;
-			global_params.play_trig_latch_pitch_time 	= 128;
-		}
-	}
 }
 
 //initializes modes that aren't read from flash ram or disk
@@ -158,13 +139,12 @@ void init_modes(void)
 {
 	global_mode[CALIBRATE] = 0;
 	global_mode[SYSTEM_MODE] = 0;
-	global_mode[MONITOR_RECORDING] = 0;
+	global_mode[MONITOR_RECORDING] = MONITOR_OFF;
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
 	
 	global_mode[ALLOW_SPLIT_MONITORING] = 1;
-	global_mode[LOW_LATENCY] = 1;
 }
 
 
@@ -357,7 +337,7 @@ void process_cv_adc(void)
 				bracketed_cvadc[i] = 2048;
 		}
 
-			}
+	}
 }
 
 void process_pot_adc(void)
@@ -372,7 +352,7 @@ void process_pot_adc(void)
 	//
 	for (i=0;i<NUM_POT_ADCS;i++)
 	{
-		flag_pot_changed[i]=0;
+		pot_changed[i]=0;
 
 		smoothed_potadc[i] = LowPassSmoothingFilter(smoothed_potadc[i], (float)potadc_buffer[i], POT_LPF_COEF[i]);
 		i_smoothed_potadc[i] = (int16_t)smoothed_potadc[i];
@@ -384,7 +364,7 @@ void process_pot_adc(void)
 		if (track_moving_pot[i])
 		{
 			track_moving_pot[i]--;
-			flag_pot_changed[i]=1;
+			pot_changed[i]=1;
 			pot_delta[i] = t;
 			bracketed_potadc[i] = i_smoothed_potadc[i];
 		}
@@ -426,6 +406,11 @@ uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt)
 	return(cv_adcval);
 }
 
+
+
+//
+// Returns a semitone-quantized tuning amount, given an ADC value
+//
 #define TWELFTH_ROOT_TWO 1.059463094
 #define SEMITONE_ADC_WIDTH 34.0
 #define OCTAVE_ADC_WIDTH (SEMITONE_ADC_WIDTH*12.0)
@@ -497,15 +482,13 @@ float quantized_semitone_voct(uint32_t adcval)
 }
 
 
-//FixMe: put this back into update_params as a local var
-uint32_t compensated_pitch_cv[2];
-
 void update_params(void)
 {
 	uint8_t chan;
 	uint8_t knob;
 	uint8_t old_val;
 	uint8_t new_val;
+	uint8_t t_trig_delay_val;
 	int32_t t_pitch_potadc;
 	float t_f;
 	uint16_t sample_pot;
@@ -513,6 +496,8 @@ void update_params(void)
 
 	uint32_t trial_bank;
 	uint8_t samplenum, banknum;
+	uint32_t compensated_pitch_cv;
+
 	ButtonKnobCombo *this_bank_bkc; //pointer to the currently active button/knob combo action
 	ButtonKnobCombo *other_bank_bkc; //pointer to the other channel's button/knob combo action
 	ButtonKnobCombo *edit_bkc; //pointer to Edit+knob combo actions
@@ -532,11 +517,11 @@ void update_params(void)
 		//
 		// Trim Size 
 		// 
-		if (flag_pot_changed[LENGTH2_POT])
+		if (pot_changed[LENGTH2_POT])
 		{
 			nudge_trim_size(&samples[banknum][samplenum], pot_delta[LENGTH2_POT]);
 
-			flag_pot_changed[LENGTH2_POT] = 0;
+			pot_changed[LENGTH2_POT] = 0;
 			//pot_delta[LENGTH2_POT] = 0;
 
 			f_param[0][START] = 0.999f;
@@ -550,10 +535,10 @@ void update_params(void)
 		//
 		// Trim Start
 		// 
-		if (flag_pot_changed[START2_POT])
+		if (pot_changed[START2_POT])
 		{
 			nudge_trim_start(&samples[banknum][samplenum], pot_delta[START2_POT]);
-			flag_pot_changed[START2_POT] = 0;
+			pot_changed[START2_POT] = 0;
 			//pot_delta[START2_POT] = 0;
 
 			f_param[0][START] = 0.000f;
@@ -570,7 +555,7 @@ void update_params(void)
 		// 1x when pot is at 50%
 		// 5x when pot is at 100%
 		//
-		if (flag_pot_changed[SAMPLE2_POT])
+		if (pot_changed[SAMPLE2_POT])
 		{
 			if (bracketed_potadc[SAMPLE2_POT] < 2020) 
 				t_f = (bracketed_potadc[SAMPLE2_POT] / 2244.44f) + 0.1; //0.1 to 1.0
@@ -588,14 +573,18 @@ void update_params(void)
 		//Check if pots moved with Edit Mode off
 		//Unlatch and inactivate the combo mode
 		//
-		if (flag_pot_changed[START2_POT])
+		if (pot_changed[START2_POT])
 			g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state = COMBO_INACTIVE;
 
-		if (flag_pot_changed[LENGTH2_POT])
+		if (pot_changed[LENGTH2_POT])
 			g_button_knob_combo[bkc_Edit][bkc_Length2].combo_state = COMBO_INACTIVE;
 
-		if (flag_pot_changed[SAMPLE2_POT])
+		if (pot_changed[SAMPLE2_POT])
 			g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state = COMBO_INACTIVE;
+
+		if (pot_changed[SAMPLE2_POT])
+			g_button_knob_combo[bkc_Edit][bkc_RecSample].combo_state = COMBO_INACTIVE;
+
 	}
 
 
@@ -664,8 +653,8 @@ void update_params(void)
 		}
 		else
 		{
-			compensated_pitch_cv[chan] = apply_tracking_compensation(pitch_cv, system_calibrations->tracking_comp[chan]);
-			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv[chan]];
+			compensated_pitch_cv = apply_tracking_compensation(pitch_cv, system_calibrations->tracking_comp[chan]);
+			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 
 		}
 
@@ -721,7 +710,7 @@ void update_params(void)
 				//Activate it when we detect the knob was turned to a new detent
 				else
 				{
-					if (flag_pot_changed[SAMPLE1_POT + knob])
+					if (pot_changed[SAMPLE1_POT + knob])
 					{
 						this_bank_bkc->combo_state = COMBO_ACTIVE;
 
@@ -757,13 +746,23 @@ void update_params(void)
 		}
 
 
-		if (this_bank_bkc->combo_state == COMBO_LATCHED && flag_pot_changed[SAMPLE1_POT+chan])
+		if (this_bank_bkc->combo_state == COMBO_LATCHED && pot_changed[SAMPLE1_POT+chan])
 			this_bank_bkc->combo_state = COMBO_INACTIVE;
 
-		if (other_bank_bkc->combo_state == COMBO_LATCHED && flag_pot_changed[SAMPLE1_POT+chan])
+		if (other_bank_bkc->combo_state == COMBO_LATCHED && pot_changed[SAMPLE1_POT+chan])
 			other_bank_bkc->combo_state = COMBO_INACTIVE;
 
 
+
+
+		// Sample Pot+CV
+		//
+		// Sample knob: If we're not doing a button+knob combo, just change the sample
+		//
+
+		// Use the pot adc for the samplepot value if there's no combo active
+		// Or else use the latched value if there's an active combo happening
+		//
 		if (this_bank_bkc->combo_state == COMBO_INACTIVE && other_bank_bkc->combo_state == COMBO_INACTIVE)
 			sample_pot = bracketed_potadc[SAMPLE1_POT+chan];
 		else
@@ -773,13 +772,6 @@ void update_params(void)
 			else
 				sample_pot = other_bank_bkc->latched_value;
 		}
-
-
-		// Sample Pot+CV
-		//
-		// Sample knob: If we're not doing a button+knob combo, just change the sample
-		//
-
 
 		edit_bkc 	= &g_button_knob_combo[bkc_Edit][bkc_Sample2];
 
@@ -801,9 +793,6 @@ void update_params(void)
 			flags[PlaySample1Changed + chan] = 1;
 
 			//Set a flag to initiate a bright flash on the Play button
-			//
-			//We first have to know if there is a sample in the new place,
-			//by seeing if there is a non-blank filename
 			if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
 			{
 				flags[PlaySample1Changed_empty + chan] = 6;
@@ -827,7 +816,7 @@ void update_params(void)
 		else				vol_bkc = &g_button_knob_combo[bkc_Reverse2][bkc_StartPos2];
 
 		// Activate the combo alt feature if the StartPos pot moves while the Rev button is down
-		if (button_state[Rev1+chan] >= DOWN && flag_pot_changed[START1_POT+chan])
+		if (button_state[Rev1+chan] >= DOWN && pot_changed[START1_POT+chan])
 		{
 			vol_bkc->combo_state = COMBO_ACTIVE;
 			vol_bkc->value_crossed = 0;
@@ -852,7 +841,7 @@ void update_params(void)
 		}
 
 		// Inactivate the combo if the StartPos pot moves while the Rev button is up
-		if (button_state[Rev1+chan] == UP && flag_pot_changed[START1_POT+chan])
+		if (button_state[Rev1+chan] == UP && pot_changed[START1_POT+chan])
 			vol_bkc->combo_state = COMBO_INACTIVE;
 
 
@@ -863,14 +852,16 @@ void update_params(void)
 	//
 	// REC SAMPLE POT
 	//
-	this_bank_bkc 	= &g_button_knob_combo[bkc_RecBank][bkc_RecSample];
 
+	//
+	// RecBank + RecSample = change rec bank blink
+	//
 	if (button_state[RecBank] >= DOWN)
 	{
+		this_bank_bkc 	= &g_button_knob_combo[bkc_RecBank][bkc_RecSample];
 		new_val = detent_num(bracketed_potadc[RECSAMPLE_POT]);
 
-		// If the combo is not active,
-		// Activate it when we detect the knob was turned to a new detent
+		// If the combo is not active, activate it when we detect the knob was turned to a new detent
 		//
 		if (this_bank_bkc->combo_state != COMBO_ACTIVE)
 		{
@@ -879,8 +870,6 @@ void update_params(void)
 			if (new_val != old_val)
 			{
 				this_bank_bkc->combo_state = COMBO_ACTIVE;
-
-				//Initialize the hover value
 				this_bank_bkc->hover_value = i_param[REC][BANK];
 			}
 		}
@@ -891,7 +880,6 @@ void update_params(void)
 		else			
 		{
 			//Calcuate the (tentative) new bank, based on the new_val and the current hover_value
-
 			trial_bank = get_bank_color_digit(this_bank_bkc->hover_value) + (new_val*10);
 
 			//bring the # blinks down until we get a bank in the valid range
@@ -905,7 +893,44 @@ void update_params(void)
 		}
 	}
 
-	//If the RecBank button is not down, just change the sample
+	//
+	// Edit + RecSample knob = control trig delay
+	//
+	else if (global_mode[EDIT_MODE])
+	{
+		edit_bkc = &g_button_knob_combo[bkc_Edit][bkc_RecSample];
+
+		new_val = detent_num( bracketed_potadc[RECSAMPLE_POT] ); //valid values are 1 to 10
+
+		// If the combo is not active, activate it when we detect the knob was turned to a new detent
+		if (edit_bkc->combo_state != COMBO_ACTIVE)
+		{
+			old_val = detent_num( edit_bkc->latched_value );
+			if (new_val != old_val)
+				edit_bkc->combo_state = COMBO_ACTIVE;
+		}
+
+		// If the combo is active, see if the value has changed. Then update the params and flag for LED response
+		else
+		{
+			t_trig_delay_val = new_val + 1; //convert detents 0..9 to 1..10
+			if ( t_trig_delay_val != global_mode[TRIG_DELAY] )
+			{
+				global_params.play_trig_delay 				= calc_trig_delay( t_trig_delay_val );
+				global_params.play_trig_latch_pitch_time 	= calc_pitch_latch_time( t_trig_delay_val );
+
+				flags[ChangedTrigDelay] = 1;
+				global_mode[TRIG_DELAY] = t_trig_delay_val;
+
+				flags32[SaveUserSettingsLater] = 0x800000; //10-15s
+
+			}
+		}
+
+
+	}
+
+	//If the RecBank and Edit buttons are not down, just change the sample
 	//Note: we don't have value-crossing for the RecBank knob, so this section
 	//is simplier than the case of play Bank1/2 + Sample1/2
 	else
@@ -918,7 +943,7 @@ void update_params(void)
 			i_param[REC][SAMPLE] = new_val;
 			flags[RecSampleChanged] = 1;
 
-			if (global_mode[MONITOR_RECORDING])
+			if (global_mode[MONITOR_RECORDING] != MONITOR_OFF)
 			{
 				flags[RecSampleChanged_light] = 10;
 			}
@@ -991,11 +1016,12 @@ void process_mode_flags(void)
 			flags[Play2Trig] 			= 1;
 			flags[Play2TrigDelaying]	= 0;
 			flags[LatchVoltOctCV2]		= 0;
-			DEBUG3_OFF;
+			// DEBUG3_OFF;
 		}
 	}
 	if (flags[Play2Trig])
 	{
+		// DEBUG3_OFF;
 		start_playing(1);
 		flags[Play2Trig]	 = 0;
 		flags[LatchVoltOctCV2] = 0;		
@@ -1011,16 +1037,16 @@ void process_mode_flags(void)
 	{
 		flags[ToggleMonitor] = 0;
 
-		if (global_mode[ENABLE_RECORDING] && global_mode[MONITOR_RECORDING])
+		if (global_mode[ENABLE_RECORDING] && global_mode[MONITOR_RECORDING] != MONITOR_OFF)
 		{
-			global_mode[ENABLE_RECORDING] = 0;
-			global_mode[MONITOR_RECORDING] = 0;
+			global_mode[ENABLE_RECORDING] 	= 0;
+			global_mode[MONITOR_RECORDING] 	= MONITOR_OFF;
 			stop_recording();
 		}
 		else
 		{
 			global_mode[ENABLE_RECORDING] = 1;
-			global_mode[MONITOR_RECORDING] = (1<<0) | (1<<1); //monitor channel 1 and 2
+			global_mode[MONITOR_RECORDING] = MONITOR_BOTH; //monitor channel 1 and 2
 			i_param[0][LOOPING] = 0;
 			i_param[1][LOOPING] = 0;
 		}
@@ -1099,7 +1125,6 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 	if (raw_detent > cur_detent)
 	{
 		lower_adc_bound = (int16_t)adc_val - DETENT_MIN_DEPTH;
-	//	if (detent_num(lower_adc_bound) == raw_detent)
 		if (detent_num(lower_adc_bound) > cur_detent)
 			return(raw_detent);
 	}
@@ -1108,13 +1133,46 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 	{
 		upper_adc_bound = (int16_t)adc_val + DETENT_MIN_DEPTH;
 
-//		if (detent_num(upper_adc_bound) == raw_detent)
 		if (detent_num(upper_adc_bound) < cur_detent)
 			return(raw_detent);
 	}
 
 	return cur_detent;
 }
+
+
+//PCB version 1.0 (==0): 0..630
+//PCB version 1.1 (==1): 0..84, 180, 360
+
+uint32_t calc_trig_delay(uint8_t trig_delay_setting)
+{
+	if (trig_delay_setting > 10 || trig_delay_setting < 1) trig_delay_setting = 1; //range assertation
+
+	if ( PCB_version == 0 )		return ((trig_delay_setting-1)*70);
+	if ( PCB_version == 1 )		{
+		if (trig_delay_setting<=8)	return (trig_delay_setting*12) - 8;
+		if (trig_delay_setting==9)	return 180;
+		if (trig_delay_setting==10)	return 360;
+	}
+	return(0);
+}
+
+//PCB version 1.0 (==0): 0..315
+//PCB version 1.1 (==1): 0..42, 50, 60
+
+uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting)
+{
+	if (trig_delay_setting > 10 || trig_delay_setting < 1) trig_delay_setting = 1; //range assertation
+
+	if ( PCB_version == 0 )		return ((trig_delay_setting-1)*35);
+	if ( PCB_version == 1 )		{
+		if (trig_delay_setting<=8)	return ((trig_delay_setting-1)*6);
+		if (trig_delay_setting==9)	return 50;
+		if (trig_delay_setting==10)	return 60;
+	}
+	return(0);
+}
+
 
 void adc_param_update_IRQHandler(void)
 {

@@ -16,16 +16,13 @@
 #include "circular_buffer.h"
 
 
-const uint32_t AUDIO_MEM_BASE[4] = {SDRAM_BASE, SDRAM_BASE + MEM_SIZE, SDRAM_BASE + MEM_SIZE*2, SDRAM_BASE + MEM_SIZE*3};
-
 extern uint8_t SAMPLINGBYTES;
 
-
-void memory_clear(uint8_t channel)
+void memory_clear(void)
 {
 	uint32_t i;
 	//Takes 700ms to clear the channel buffer in 32-bit chunks, roughly 83ns per write
-	for(i = AUDIO_MEM_BASE[channel]; i < (AUDIO_MEM_BASE[channel] + MEM_SIZE); i += 4)
+	for(i = SDRAM_BASE; i < (SDRAM_BASE + SDRAM_SIZE); i += 4)
 			*((uint32_t *)i) = 0x00000000;
 }
 
@@ -77,7 +74,7 @@ uint32_t memory_read24_cb(CircularBuffer* b, uint8_t *rd_buff, uint32_t num_samp
 }
 
 
-//Grab 16-bit ints and write them into play_buff as 16-bit ints
+//Grab 16-bit ints and write them into b as 16-bit ints
 //num_words should be the number of 32-bit words to read from wr_buff (bytes>>2)
 uint32_t memory_write_16as16(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_words, uint8_t decrement)
 {
@@ -115,7 +112,7 @@ uint32_t memory_write_16as16(CircularBuffer* b, uint32_t *wr_buff, uint32_t num_
 }
 
 
-//Grab 24-bit words and write them into play_buff as 16-bit values
+//Grab 24-bit words and write them into b as 16-bit values
 uint32_t memory_write_24as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement)
 {
 	uint32_t i;
@@ -144,7 +141,7 @@ uint32_t memory_write_24as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_b
 
 }
 
-//Grab 32-bit words and write them into play_buff as 16-bit values
+//Grab 32-bit words and write them into b as 16-bit values
 uint32_t memory_write_32ias16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement)
 {
 	uint32_t i;
@@ -173,7 +170,7 @@ uint32_t memory_write_32ias16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_
 
 }
 
-//Grab 32-bit floats and write them into play_buff as 16-bit values
+//Grab 32-bit floats and write them into b as 16-bit values
 uint32_t memory_write_32fas16(CircularBuffer* b, float *wr_buff, uint32_t num_floats, uint8_t decrement)
 {
 	uint32_t i;
@@ -204,7 +201,7 @@ uint32_t memory_write_32fas16(CircularBuffer* b, float *wr_buff, uint32_t num_fl
 
 }
 
-//Grab 8-bit ints from wr_buff and write them into play_buff as 16-bit ints
+//Grab 8-bit ints from wr_buff and write them into b as 16-bit ints
 uint32_t memory_write_8as16(CircularBuffer* b, uint8_t *wr_buff, uint32_t num_bytes, uint8_t decrement)
 {
 	uint32_t i;

@@ -28,15 +28,30 @@ Without a computer:
 ----
 #### v1.4
 
+*Released:* (beta released October 13, 2017)
+
+*Download:* [Firmware v1.4 WAV file -- BETA version](http://4mscompany.com/STS/firmware/STS-firmware-v1_4beta.wav)
+
 *New Features:*
 
+  * Reduced latency by pre-loading each sample file in a bank the first time each sample is played. 
+     * Latency from trigger until audio output as low as 0.7ms (with Trigger Delay turned to 0, see below)
+     * The first time a sample is played after the bank is changed, latency is typically 5ms (may be more depending on wav file's sampling rate and bit depth). Subsequent times the sample is triggered the latency is 0.7ms
+  * Variable "Trigger Delay" to compensate for slew/lag when using a CV Sequencer with Sample CV or 1V/oct jacks
+     * This feature also allows for futher latency reduction, since v1.3 and earlier had a built-in delay of about 14ms
+  	  * After receiving a trigger on the Play jack, the STS will wait the specified delay period before reading the 1V/oct and Sample CV jacks.
+     * Hold Edit and turn Rec Sample knob. The knob's numbers 1-10 correspond to a delay amount:
+        * PCB v1.0a: ranges from 0ms delay (knob at 1), to 14.3ms delay (knob at 10) 
+        * PCB v1.1: ranges from 0ms delay (knob at 1), to 1.9ms delay (knob at 8), 4.1ms (knob at 9), 8.2ms (knob at 10)
+     * _Note: If upgrading the v1.4 causes your sequencer and STS to not play well together, set the Trigger Delay to "8" or higher_ 
+     
   * Can turning monitoring on or off for left and right channels separately.
      * Pressing PLAY on one channel while monitoring is on will turn monitoring off for just that channel.
      * Only works in Mono mode.
      * Monitor LED blinks to indicate split monitoring.
      * _Typical use would be to patch Right OUT -> Left IN, then Left OUT -> mixer. Then record the right channel's playback._
   * Can set the default bank to be loaded at start-up.
-     * Hold down Edit + Bank 1 + Bank 2 + left PLAY (Save) for 1 second. Current bank selection will be the saved as the default after power on. 
+     * Hold down Edit + Bank 1 + Bank 2 + left PLAY (Save) for 1 second. Current bank selection will be saved as the default after power on. 
      
 
 ----
@@ -44,7 +59,7 @@ Without a computer:
 
 *Released:* (beta released Sept 26, 2017)
 
-*Download:* [Firmware v1.3 WAV file -- BETA version](http://4mscompany.com/STS/firmware/STS-firmware-v1_3RC.wav)
+*Download:* [Firmware v1.3 WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_3RC.wav)
 
 *New Features:*
  
@@ -81,7 +96,7 @@ Without a computer:
     * Setting is saved in settings file on microSD card
     
   * Holding Edit+Rec+RecBank resets tracking compensation values to 1.0000
-    * Updating to v1.2 firmware automatically sets tracking to 1.0000 the first time it is loaded (this is necessary because tracking is calculated differently in v1.2)
+    * Updating from v1.0 or v1.1 to v1.2 or later automatically sets tracking to 1.0000 the first time it is loaded (this is necessary because tracking is calculated differently in v1.2 and later)
 
   * Auto Stop On Sample Change:  "Always keep playing" mode added. There are now three Auto Stop modes. The modes determine what happens when the sample is changed while a sample is being played.
     * Red = Always Stop: The sample instantly stops playing. If looping is on, the new sample starts playing immediately.
