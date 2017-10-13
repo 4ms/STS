@@ -101,7 +101,8 @@ uint32_t 		play_buff_bufferedamt	[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 //ToDo: make this a struct
 uint32_t 		sample_file_startpos	[NUM_PLAY_CHAN]; //file position where we began playback. 
 uint32_t		sample_file_endpos		[NUM_PLAY_CHAN]; //file position where we will end playback. endpos > startpos when REV==0, endpos < startpos when REV==1
-uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN]; //current file position being read. This is always inc/decrementing from startpos towards endpos
+
+uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //current file position being read. Must match the actual open file's position. This is always inc/decrementing from startpos towards endpos
 
 
 enum PlayLoadTriage play_load_triage;
@@ -241,14 +242,14 @@ void toggle_reverse(uint8_t chan)
 	if (i_param[chan][REV])
 	{
 		i_param[chan][REV] = 0;
-		sample_file_curpos[chan] = cache_high[chan][samplenum];
-		play_buff[chan][samplenum]->in = map_cache_to_buffer(cache_high[chan][samplenum], samples[banknum][samplenum].sampleByteSize, cache_low[chan][samplenum], cache_map_pt[chan][samplenum], play_buff[chan][samplenum]);
+		sample_file_curpos[chan][samplenum] = cache_high[chan][samplenum];
+		play_buff[chan][samplenum]->in 		= map_cache_to_buffer(cache_high[chan][samplenum], samples[banknum][samplenum].sampleByteSize, cache_low[chan][samplenum], cache_map_pt[chan][samplenum], play_buff[chan][samplenum]);
 	}
 	else
 	{
 		i_param[chan][REV] = 1;
-		sample_file_curpos[chan] = cache_low[chan][samplenum];
-		play_buff[chan][samplenum]->in = cache_map_pt[chan][samplenum]; //cache_map_pt is the map of cache_low
+		sample_file_curpos[chan][samplenum] = cache_low[chan][samplenum];
+		play_buff[chan][samplenum]->in		= cache_map_pt[chan][samplenum]; //cache_map_pt is the map of cache_low
 	}
 
 	//Swap the endpos with the startpos
@@ -262,7 +263,7 @@ void toggle_reverse(uint8_t chan)
 	//This gets us ready to start playing from the new position
 	if (fil[chan][samplenum].obj.id > 0)
 	{
-		res = goto_filepos(sample_file_curpos[chan]); //uses samplenum and banknum to find startOfData
+		res = goto_filepos(sample_file_curpos[chan][samplenum]); //uses samplenum and banknum to find startOfData
 
 		if (res!=FR_OK)
 			g_error |= FILE_SEEK_FAIL;
@@ -422,7 +423,7 @@ void start_playing(uint8_t chan)
 			sample_file_startpos[chan] = align_addr(f_tell(&fil[chan][samplenum]) - s_sample->startOfData, s_sample->blockAlign);
 		}
 
-		sample_file_curpos[chan] 					= sample_file_startpos[chan];
+		sample_file_curpos[chan][samplenum] 		= sample_file_startpos[chan];
 		cache_low[chan][samplenum] 					= sample_file_startpos[chan];
 		cache_high[chan][samplenum] 				= sample_file_startpos[chan];
 		cache_map_pt[chan][samplenum] 				= play_buff[chan][samplenum]->min;
@@ -724,11 +725,11 @@ void read_storage_to_buffer(void)
 				//clear the error flag
 				g_error &= ~(FILE_READ_FAIL_1 << chan);
 			}
-			else //If no file read error... [?? what are we doing here???]
+			else //If no file read error... [?? FixMe: what are we doing here???]
 			{
 
-				if ( (!i_param[chan][REV] && (sample_file_curpos[chan] < s_sample->inst_end))
-				 	|| (i_param[chan][REV] && (sample_file_curpos[chan] > s_sample->inst_start)) )
+				if ( (!i_param[chan][REV] && (sample_file_curpos[chan][samplenum] < s_sample->inst_end))
+				 	|| (i_param[chan][REV] && (sample_file_curpos[chan][samplenum] > s_sample->inst_start)) )
 					is_buffered_to_file_end[chan][samplenum] = 0;
 			}
 
@@ -754,7 +755,7 @@ void read_storage_to_buffer(void)
 				))
 			{
 
-				if (sample_file_curpos[chan] > s_sample->sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
+				if (sample_file_curpos[chan][samplenum] > s_sample->sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
 				{
 					g_error |= FILE_WAVEFORMATERR;
 					play_state[chan] = SILENT;
@@ -762,7 +763,7 @@ void read_storage_to_buffer(void)
 				}
 
 
-				else if (sample_file_curpos[chan] > s_sample->inst_end) //FixMe: Does this need a if (REV), as above?
+				else if (sample_file_curpos[chan][samplenum] > s_sample->inst_end) //FixMe: Does this need a if (REV), as above?
 				{
 					is_buffered_to_file_end[chan][samplenum] = 1;
 				}
@@ -774,7 +775,7 @@ void read_storage_to_buffer(void)
 					//
 					if (i_param[chan][REV]==0)
 					{
-						rd = s_sample->inst_end -  sample_file_curpos[chan];
+						rd = s_sample->inst_end -  sample_file_curpos[chan][samplenum];
 
 						if (rd > READ_BLOCK_SIZE) rd = READ_BLOCK_SIZE;
 
@@ -792,10 +793,10 @@ void read_storage_to_buffer(void)
 							is_buffered_to_file_end[chan][samplenum] = 1; 
 						}
 
-						//sample_file_curpos[chan] += br;
-						sample_file_curpos[chan] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
+						//sample_file_curpos[chan][samplenum] += br;
+						sample_file_curpos[chan][samplenum] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
 
-						if (sample_file_curpos[chan] >= s_sample->inst_end)
+						if (sample_file_curpos[chan][samplenum] >= s_sample->inst_end)
 						{
 							is_buffered_to_file_end[chan][samplenum] = 1;
 						}
@@ -807,8 +808,8 @@ void read_storage_to_buffer(void)
 					//
 					else
 					{
-						if (sample_file_curpos[chan] > s_sample->inst_start)
-							rd = sample_file_curpos[chan] - s_sample->inst_start;
+						if (sample_file_curpos[chan][samplenum] > s_sample->inst_start)
+							rd = sample_file_curpos[chan][samplenum] - s_sample->inst_start;
 						else
 							rd = 0;
 
@@ -823,7 +824,7 @@ void read_storage_to_buffer(void)
 							if (res || (f_tell(&fil[chan][samplenum])!=(t_fptr - READ_BLOCK_SIZE)))
 								g_error |= LSEEK_FPTR_MISMATCH;
 							
-							sample_file_curpos[chan] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
+							sample_file_curpos[chan][samplenum] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
 
 						}
 						else //rd < READ_BLOCK_SIZE: read the first block (which is the last to be read, since we're reversing)
@@ -832,8 +833,8 @@ void read_storage_to_buffer(void)
 							//align rd to 24
 
 							//Jump to the beginning
-							sample_file_curpos[chan] = s_sample->inst_start;
-							res = goto_filepos(sample_file_curpos[chan]);
+							sample_file_curpos[chan][samplenum] = s_sample->inst_start;
+							res = goto_filepos(sample_file_curpos[chan][samplenum]);
 							if (res!=FR_OK)
 								g_error |= FILE_SEEK_FAIL;
 
@@ -902,7 +903,7 @@ void read_storage_to_buffer(void)
 							if (i_param[chan][REV])
 								CB_offset_in_address(play_buff[chan][samplenum], (rd * 2) / s_sample->sampleByteSize, 1);
 
-							cache_low[chan][samplenum] 		= sample_file_curpos[chan]; 
+							cache_low[chan][samplenum] 		= sample_file_curpos[chan][samplenum]; 
 							cache_map_pt[chan][samplenum] 	= play_buff[chan][samplenum]->in;
 
 							if ((cache_high[chan][samplenum] - cache_low[chan][samplenum]) > cache_size[chan][samplenum])
@@ -910,7 +911,7 @@ void read_storage_to_buffer(void)
 						} 
 						else {
 
-							cache_high[chan][samplenum] 		= sample_file_curpos[chan];
+							cache_high[chan][samplenum] 		= sample_file_curpos[chan][samplenum];
 
 							if ((cache_high[chan][samplenum] - cache_low[chan][samplenum]) > cache_size[chan][samplenum])
 							{
@@ -1247,13 +1248,13 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 	} //if play_state
 
-	//FixMe: play_buff_bufferedamt might not be set after changing a sample
-	if (	(play_state[0]==PLAYING && (play_buff_bufferedamt[0][samplenum] < 15000)) ||
-			(play_state[1]==PLAYING && (play_buff_bufferedamt[1][samplenum] < 15000)) )
+	// //FixMe: samplenum is not necessarily set at this point in the function
+	// if (	(play_state[0]==PLAYING && (play_buff_bufferedamt[0][samplenum] < 15000)) ||
+	// 		(play_state[1]==PLAYING && (play_buff_bufferedamt[1][samplenum] < 15000)) )
 
-		play_load_triage = PRIORITIZE_PLAYING;
-	else
-		play_load_triage = NO_PRIORITY;
+	// 	play_load_triage = PRIORITIZE_PLAYING;
+	// else
+	// 	play_load_triage = NO_PRIORITY;
 
 DEBUG1_OFF;
 

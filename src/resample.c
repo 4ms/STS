@@ -15,7 +15,6 @@
 #include "circular_buffer.h"
 
 extern uint8_t flags[NUM_FLAGS];
-//extern enum g_Errors g_error;
 
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 

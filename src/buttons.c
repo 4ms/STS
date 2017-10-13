@@ -219,7 +219,7 @@ void Button_Debounce_IRQHandler(void)
 								// We have to detect the knob as moving to make the combo ACTIVE
 								if (g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state == COMBO_INACTIVE)
 									g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].latched_value = bracketed_potadc[START1_POT];
-															}
+							}
 							break;
 
 						case Rev2:
@@ -465,7 +465,6 @@ void Button_Debounce_IRQHandler(void)
 
 									case Rev1:
 										if ( all_buttons_except( UP, (1<<Rev1)|(1<<Edit) ) )
-//										if (button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
 											if(global_mode[EDIT_MODE])
 											{
@@ -498,7 +497,6 @@ void Button_Debounce_IRQHandler(void)
 									//Short-press REC: Enable/disable recording, or Toggle monitoring
 									case Rec:
 										if ( all_buttons_except( UP, (1<<Rec) ) )
-										//if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Play1]==UP && button_state[Play2]==UP && button_state[RecBank]==UP)
 										{
 											flags[ToggleMonitor] = 1;
 										}
@@ -506,12 +504,12 @@ void Button_Debounce_IRQHandler(void)
 
 									case Play1:
 										if ( all_buttons_except( UP, (1<<Play1)|(1<<Edit) ) )
-										// if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
 											if (global_mode[EDIT_MODE])
 											{
 												check_enabled_banks();
 												flags[RewriteIndex] 		= WHITE;
+												flags[SaveUserSettings] 	= 1;
 												flags[SkipProcessButtons] 	= 2;
 												save_flash_params(0);
 											}
@@ -522,7 +520,6 @@ void Button_Debounce_IRQHandler(void)
 
 									case Play2:
 										if ( all_buttons_except( UP, (1<<Play2)|(1<<Edit) ) )
-//										if (button_state[Rev1]==UP && button_state[Rev2]==UP && button_state[Bank1]==UP && button_state[Bank2]==UP && button_state[Rec]==UP && button_state[RecBank]==UP)
 										{
 											if (global_mode[EDIT_MODE])
 											{

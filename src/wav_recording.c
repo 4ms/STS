@@ -479,8 +479,10 @@ void write_buffer_to_storage(void)
 
 		case (RECORDING):
 		//read a block from rec_buff->out
-			if (play_load_triage==0)
-			{
+		
+			//FixMe: Enable load triaging
+			// if (play_load_triage==0)
+			if (1){
 				buffer_lead = CB_distance(rec_buff, 0);
 
 				if (buffer_lead > WRITE_BLOCK_SIZE)
