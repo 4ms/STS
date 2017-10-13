@@ -129,8 +129,8 @@ void init_params(void)
 		flags[i]=0;
 	}
 
-	global_params.play_trig_delay 				= calc_trig_delay(global_mode[TRIG_DELAY], PCB_version);
-	global_params.play_trig_latch_pitch_time 	= calc_pitch_latch_time(global_mode[TRIG_DELAY], PCB_version);
+	global_params.play_trig_delay 				= calc_trig_delay(global_mode[TRIG_DELAY]);
+	global_params.play_trig_latch_pitch_time 	= calc_pitch_latch_time(global_mode[TRIG_DELAY]);
 
 }
 
@@ -753,6 +753,16 @@ void update_params(void)
 			other_bank_bkc->combo_state = COMBO_INACTIVE;
 
 
+
+
+		// Sample Pot+CV
+		//
+		// Sample knob: If we're not doing a button+knob combo, just change the sample
+		//
+
+		// Use the pot adc for the samplepot value if there's no combo active
+		// Or else use the latched value if there's an active combo happening
+		//
 		if (this_bank_bkc->combo_state == COMBO_INACTIVE && other_bank_bkc->combo_state == COMBO_INACTIVE)
 			sample_pot = bracketed_potadc[SAMPLE1_POT+chan];
 		else
@@ -762,13 +772,6 @@ void update_params(void)
 			else
 				sample_pot = other_bank_bkc->latched_value;
 		}
-
-
-		// Sample Pot+CV
-		//
-		// Sample knob: If we're not doing a button+knob combo, just change the sample
-		//
-
 
 		edit_bkc 	= &g_button_knob_combo[bkc_Edit][bkc_Sample2];
 
@@ -790,9 +793,6 @@ void update_params(void)
 			flags[PlaySample1Changed + chan] = 1;
 
 			//Set a flag to initiate a bright flash on the Play button
-			//
-			//We first have to know if there is a sample in the new place,
-			//by seeing if there is a non-blank filename
 			if (samples[ i_param[chan][BANK] ][ new_val ].filename[0] == 0) //not a valid sample
 			{
 				flags[PlaySample1Changed_empty + chan] = 6;
@@ -916,10 +916,10 @@ void update_params(void)
 			t_trig_delay_val = new_val + 1; //convert detents 0..9 to 1..10
 			if ( t_trig_delay_val != global_mode[TRIG_DELAY] )
 			{
-				global_params.play_trig_delay 				= calc_trig_delay( t_trig_delay_val, PCB_version );
-				global_params.play_trig_latch_pitch_time 	= calc_pitch_latch_time( t_trig_delay_val, PCB_version );
+				global_params.play_trig_delay 				= calc_trig_delay( t_trig_delay_val );
+				global_params.play_trig_latch_pitch_time 	= calc_pitch_latch_time( t_trig_delay_val );
 
-				flags[ChangedTrigDelay] = t_trig_delay_val;
+				flags[ChangedTrigDelay] = 1;
 				global_mode[TRIG_DELAY] = t_trig_delay_val;
 
 				flags32[SaveUserSettingsLater] = 0x800000; //10-15s
@@ -1016,12 +1016,12 @@ void process_mode_flags(void)
 			flags[Play2Trig] 			= 1;
 			flags[Play2TrigDelaying]	= 0;
 			flags[LatchVoltOctCV2]		= 0;
-			DEBUG3_OFF;
+			// DEBUG3_OFF;
 		}
 	}
 	if (flags[Play2Trig])
 	{
-		DEBUG3_OFF;
+		// DEBUG3_OFF;
 		start_playing(1);
 		flags[Play2Trig]	 = 0;
 		flags[LatchVoltOctCV2] = 0;		
@@ -1141,34 +1141,34 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 }
 
 
-//PCB version 1.0 (==0): 64..640
-//PCB version 1.1 (==1): 8..64, 100, 120
+//PCB version 1.0 (==0): 0..630
+//PCB version 1.1 (==1): 0..84, 180, 360
 
-uint32_t calc_trig_delay(uint8_t detent_num, uint8_t pcb_version)
+uint32_t calc_trig_delay(uint8_t trig_delay_setting)
 {
-	if (detent_num > 10 || detent_num < 1) detent_num = 1; //range assertation
+	if (trig_delay_setting > 10 || trig_delay_setting < 1) trig_delay_setting = 1; //range assertation
 
-	if ( pcb_version == 0 )		return (detent_num*64);
-	if ( pcb_version == 1 )		{
-		if (detent_num<=8)	return (detent_num*8);
-		if (detent_num==9)	return 100;
-		if (detent_num==10)	return 120;
+	if ( PCB_version == 0 )		return ((trig_delay_setting-1)*70);
+	if ( PCB_version == 1 )		{
+		if (trig_delay_setting<=8)	return (trig_delay_setting*12) - 8;
+		if (trig_delay_setting==9)	return 180;
+		if (trig_delay_setting==10)	return 360;
 	}
 	return(0);
 }
 
-//PCB version 1.0 (==0): 32..320
-//PCB version 1.1 (==1): 0..144
+//PCB version 1.0 (==0): 0..315
+//PCB version 1.1 (==1): 0..42, 50, 60
 
-uint32_t calc_pitch_latch_time(uint8_t detent_num, uint8_t pcb_version)
+uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting)
 {
-	if (detent_num > 10 || detent_num < 1) detent_num = 1; //range assertation
+	if (trig_delay_setting > 10 || trig_delay_setting < 1) trig_delay_setting = 1; //range assertation
 
-	if ( pcb_version == 0 )		return (detent_num*32);
-	if ( pcb_version == 1 )		{
-		if (detent_num<=8)	return (detent_num*4);
-		if (detent_num==9)	return 50;
-		if (detent_num==10)	return 60;
+	if ( PCB_version == 0 )		return ((trig_delay_setting-1)*35);
+	if ( PCB_version == 1 )		{
+		if (trig_delay_setting<=8)	return ((trig_delay_setting-1)*6);
+		if (trig_delay_setting==9)	return 50;
+		if (trig_delay_setting==10)	return 60;
 	}
 	return(0);
 }

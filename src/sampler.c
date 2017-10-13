@@ -301,6 +301,8 @@ void start_playing(uint8_t chan)
 	float rs;
 	//uint8_t file_loaded;
 
+	// DEBUG2_ON;
+
 	samplenum = i_param[chan][SAMPLE];
 	banknum = i_param[chan][BANK];
 	s_sample = &(samples[banknum][samplenum]);
@@ -308,14 +310,7 @@ void start_playing(uint8_t chan)
 	if (s_sample->filename[0] == 0)
 		return;
 
-	//file_loaded = 0;
-
-	//Todo: is it necessary to check for change bank and change sample here?
-	//check_change_bank(chan);
-
-	// Todo: The If() could be removed. But should we do something if the sample we're about to play is not the same one we just played on this channel?
-	if ( samplenum != sample_num_now_playing[chan] )
-		sample_num_now_playing[chan] = samplenum;
+	sample_num_now_playing[chan] = samplenum;
 
 	if ( banknum != sample_bank_now_playing[chan] )
 	{
@@ -337,8 +332,6 @@ void start_playing(uint8_t chan)
 		if (res == FR_NOT_ENOUGH_CORE) {g_error |= FILE_CANNOT_CREATE_CLTBL;} //ToDo: Log this error
 		else if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan][samplenum]);play_state[chan] = SILENT;return;}
 		
-		//file_loaded = 1;
-
 		//Check the file is really as long as the sampleSize says it is
 		if (f_size(&fil[chan][samplenum]) < (s_sample->startOfData + s_sample->sampleSize))
 		{
@@ -394,16 +387,6 @@ void start_playing(uint8_t chan)
 	{
 		CB_init(play_buff[chan][samplenum], i_param[chan][REV]);
 
-		//Reload the sample file (important to do, in case card has been removed)
-		// if (!file_loaded)
-		// {
-		// 	res = reload_sample_file(&fil[chan][samplenum], s_sample);
-		// 	if (res != FR_OK)	{g_error |= FILE_OPEN_FAIL;play_state[chan] = SILENT;return;}
-
-		// 	res = create_linkmap(&fil[chan][samplenum], chan, samplenum);
-		// 	if (res != FR_OK) {g_error |= FILE_CANNOT_CREATE_CLTBL; f_close(&fil[chan][samplenum]);play_state[chan] = SILENT;return;}
-		// }
-
 		//Seek to the file position where we will start reading
 		res = goto_filepos(sample_file_startpos[chan]);
 
@@ -453,18 +436,19 @@ void start_playing(uint8_t chan)
 		global_mode[MONITOR_RECORDING] = MONITOR_OFF;
 
 	//DEBUG
-	str_cpy(dbg_sample.filename , s_sample->filename);
-	dbg_sample.sampleSize 		= s_sample->sampleSize;
-	dbg_sample.sampleByteSize	= s_sample->sampleByteSize;
-	dbg_sample.sampleRate 		= s_sample->sampleRate;
-	dbg_sample.numChannels 		= s_sample->numChannels;
-	dbg_sample.startOfData 		= s_sample->startOfData;
-	dbg_sample.blockAlign 		= s_sample->blockAlign;
-	dbg_sample.PCM 				= s_sample->PCM;
-	dbg_sample.inst_start 		= s_sample->inst_start;
-	dbg_sample.inst_end 		= s_sample->inst_end;
-	dbg_sample.inst_size 		= s_sample->inst_size;
-	dbg_sample.inst_gain 		= s_sample->inst_gain;
+	// str_cpy(dbg_sample.filename , s_sample->filename);
+	// dbg_sample.sampleSize 		= s_sample->sampleSize;
+	// dbg_sample.sampleByteSize	= s_sample->sampleByteSize;
+	// dbg_sample.sampleRate 		= s_sample->sampleRate;
+	// dbg_sample.numChannels 		= s_sample->numChannels;
+	// dbg_sample.startOfData 		= s_sample->startOfData;
+	// dbg_sample.blockAlign 		= s_sample->blockAlign;
+	// dbg_sample.PCM 				= s_sample->PCM;
+	// dbg_sample.inst_start 		= s_sample->inst_start;
+	// dbg_sample.inst_end 		= s_sample->inst_end;
+	// dbg_sample.inst_size 		= s_sample->inst_size;
+	// dbg_sample.inst_gain 		= s_sample->inst_gain;
+	// DEBUG2_OFF;
 }
 
 
@@ -699,7 +683,7 @@ void read_storage_to_buffer(void)
 	check_change_bank(0);
 	check_change_bank(1);
 
-	DEBUG0_ON;
+	// DEBUG0_ON;
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
 
@@ -939,7 +923,7 @@ void read_storage_to_buffer(void)
 
 		} //play_state != SILENT, FADEDOWN
 	} //for (chan)
-	DEBUG0_OFF;
+	// DEBUG0_OFF;
 }
 
 void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
@@ -964,7 +948,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
 
-	DEBUG1_ON;
+//	DEBUG1_ON;
 
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
@@ -1256,7 +1240,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	// else
 	// 	play_load_triage = NO_PRIORITY;
 
-DEBUG1_OFF;
+//DEBUG1_OFF;
 
 }
 

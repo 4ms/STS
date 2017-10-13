@@ -152,8 +152,8 @@ void init_modes(void);
 uint8_t detent_num(uint16_t adc_val);
 uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent);
 
-uint32_t calc_trig_delay(uint8_t detent_num, uint8_t pcb_version);
-uint32_t calc_pitch_latch_time(uint8_t detent_num, uint8_t pcb_version);
+uint32_t calc_trig_delay(uint8_t trig_delay_setting);
+uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting);
 
 
 #define adc_param_update_IRQHandler TIM1_BRK_TIM9_IRQHandler

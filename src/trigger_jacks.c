@@ -76,7 +76,7 @@ void Trigger_Jack_Debounce_IRQHandler(void)
 						break;
 					
 					case TrigJack_Play2:
-						DEBUG3_ON;
+//						DEBUG3_ON;
 						if (play_state[1] == PLAYING) 
 							play_state[1] = PLAY_FADEDOWN;
 
