@@ -28,6 +28,10 @@ Without a computer:
 ----
 #### v1.4
 
+*Released:* (beta released October 13, 2017)
+
+*Download:* [Firmware v1.4 WAV file -- BETA version](http://4mscompany.com/STS/firmware/STS-firmware-v1_4beta.wav)
+
 *New Features:*
 
   * Reduced latency by pre-loading each sample file in a bank the first time each sample is played. 
@@ -55,7 +59,7 @@ Without a computer:
 
 *Released:* (beta released Sept 26, 2017)
 
-*Download:* [Firmware v1.3 WAV file -- BETA version](http://4mscompany.com/STS/firmware/STS-firmware-v1_3RC.wav)
+*Download:* [Firmware v1.3 WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_3RC.wav)
 
 *New Features:*
  
