@@ -34,24 +34,38 @@ Without a computer:
 
 *New Features:*
 
-  * Reduced latency by pre-loading each sample file in a bank the first time each sample is played. 
+  * __Reduced latency__ by pre-loading each sample file in a bank the first time each sample is played. 
      * Latency from trigger until audio output as low as 0.7ms (with Trigger Delay turned to 0, see below)
      * The first time a sample is played after the bank is changed, latency is typically 5ms (may be more depending on wav file's sampling rate and bit depth). Subsequent times the sample is triggered the latency is 0.7ms
-  * Variable "Trigger Delay" to compensate for slew/lag when using a CV Sequencer with Sample CV or 1V/oct jacks
-     * This feature also allows for futher latency reduction, since v1.3 and earlier had a built-in delay of about 14ms
-  	  * After receiving a trigger on the Play jack, the STS will wait the specified delay period before reading the 1V/oct and Sample CV jacks.
-     * Hold Edit and turn Rec Sample knob. The knob's numbers 1-10 correspond to a delay amount:
-        * PCB v1.0a: ranges from 0ms delay (knob at 1), to 14.3ms delay (knob at 10) 
-        * PCB v1.1: ranges from 0ms delay (knob at 1), to 1.9ms delay (knob at 8), 4.1ms (knob at 9), 8.2ms (knob at 10)
-     * _Note: If upgrading the v1.4 causes your sequencer and STS to not play well together, set the Trigger Delay to "8" or higher_ 
+  * __Variable "Trigger Delay"__: Edit + REC Sample knob 
+    * Compensates for slew/lag when using a CV Sequencer with the Play Trig jack and the either the Sample CV or 1V/oct jack
+    * This feature also allows for latency reduction compared to prior firmware versions, which had a built-in delay of about 14ms
+    * After receiving a trigger on the Play jack, the STS will wait the specified delay period before reading the 1V/oct and Sample CV jacks.
+    * To use: Press Edit and turn Rec Sample knob. The knob's numbers (1-10) correspond to a delay amount:
+        * PCB v1.0a: ranges from 0ms delay (knob at 1) to 14.3ms delay (knob at 10) 
+        * PCB v1.1: ranges from 0ms delay (knob at 1) to 1.9ms delay (knob at 8), and extra-long delays of 4.1ms (knob at 9) and 8.2ms (knob at 10)
+    * _Note: If upgrading to v1.4 causes your sequencer and STS to not play well together, set the Trigger Delay to "8" or higher_ 
      
-  * Can turning monitoring on or off for left and right channels separately.
+
+  * __Monitoring on/off per channel__: Left and right channels can monitor the inputs separately.
      * Pressing PLAY on one channel while monitoring is on will turn monitoring off for just that channel.
      * Only works in Mono mode.
      * Monitor LED blinks to indicate split monitoring.
      * _Typical use would be to patch Right OUT -> Left IN, then Left OUT -> mixer. Then record the right channel's playback._
-  * Can set the default bank to be loaded at start-up.
+    
+  * __Start-up banks__: Can set the default bank to be loaded at start-up.
      * Hold down Edit + Bank 1 + Bank 2 + left PLAY (Save) for 1 second. Current bank selection will be saved as the default after power on. 
+  * __Envelopes can be turned off__: Both percussive envelope and longer playback fade in/out envelope
+     * Two types of envelopes can be turned on or off:
+       * Percussive Envelopes: this is the decay-only envelope applied to playback when Length < 50% (actually an attack-only envelope when Reverse is on)
+       * Fade In/Out envelope: this is a very short envelope applied to any sample that's played with Length > 50%. It reduces clicks when starting, stopping, or looping playback.
+     * In System Mode, left channel Reverse button sets the envelope settings:
+       * Orange: Both envelopes enabled (default)
+       * Red: Percussive envelope disabled
+       * Yellow: Fade In/Out envelopes disabled
+       * Off: Both envelopes disabled
+     * Turning off all envelopes is recommended when playing CV sample files (wav files with clocks/gates, sequencer CV, or slow LFO waveshapes, etc).
+     * Turning off Percussive Envelopes is interesting when doing "Granular" patches (see User Manual for example patches)
      
 
 ----
@@ -63,16 +77,17 @@ Without a computer:
 
 *New Features:*
  
-  * Drag-and-dropping WAV files to SD card works better:
+  * __Drag-and-dropping WAV files to SD card works better__:
     * Adding WAV files to an existing folder now adds the files to the bank if there are empty slots.
     * If there are no empty slots, the files can be added using Edit + Next File.
     * On boot, the STS will try to fill empty slots in banks by searching in the bank's folder:
       * If the bank contains files from multiple folders, the lowest-numbered sample file's folder is used. 
 
-  * Holding down Bank 1 + Bank 2 + Edit while tapping REC and REC Bank adjusts 1V/oct cv jack offset.
-    * _This compensates for small DC offsets on the jack which causes the two playback channels to be out of tune with each other and/or the Record channel (even if the Pitch knob is centered). All units are calibrated in the factory, but variations in power supplies and grounding configurations of cases may cause DC offset to appear in a user's system._
-    * REC shifts it downwards, REC Bank shifts it upwards.
-    * Settings are saved in flash (save using Edit + Save after making necessary adjustments).
+  * __Adjust 1V/OCT jack offset__
+    * Hold down Bank 1 + Bank 2 + Edit while tapping either REC or REC Bank button.
+      * REC shifts downwards, REC Bank shifts upwards.
+    * Settings are saved in memory (save using Edit + Save after making necessary adjustments).
+    * If there is a difference in pitch between the audio being monitored and playback, or a difference in playback pitch between channels, then this may need to be adjusted. All units are calibrated in the factory, but variations in power supplies and grounding configurations of cases may cause DC offset to appear in a user's system.
     
 *Fixes:*
 
@@ -88,17 +103,18 @@ Without a computer:
 
 *New Features:*
 
-  * Quantize 1V/oct jack added to System Mode. Each channel can be on/off seperately. Quantization is to semitones (12 notes per octave).
+  * __Quantize 1V/oct jack__ added to System Mode. Each channel can be on/off seperately. Quantization is to semitones (12 notes per octave).
     * In System Mode, tap Bank button for either channel to toggle state.
     * Blue = On (jack is quantized to semitones)
     * Orange = Off (jack is not quantized)
     * Only effects 1V/oct jack, not the Pitch knob
     * Setting is saved in settings file on microSD card
     
-  * Holding Edit+Rec+RecBank resets tracking compensation values to 1.0000
+  * __Reset tracking compensaion__ to 1.0000
+    * Holding Edit+Rec+RecBank  
     * Updating from v1.0 or v1.1 to v1.2 or later automatically sets tracking to 1.0000 the first time it is loaded (this is necessary because tracking is calculated differently in v1.2 and later)
 
-  * Auto Stop On Sample Change:  "Always keep playing" mode added. There are now three Auto Stop modes. The modes determine what happens when the sample is changed while a sample is being played.
+  * __Auto Stop When Sample Changes__:  "Always keep playing" mode added. There are now three Auto Stop modes. The modes determine what happens when the sample is changed while a sample is being played.
     * Red = Always Stop: The sample instantly stops playing. If looping is on, the new sample starts playing immediately.
     * Blue = Change When Looping:  The sample keeps playing normally -- unless it's looping, in which case it stops immediately and the new sample starts.
     * Green = Always Keep Playing: The sample keeps playing normally. If it's looping then the new sample begins when the previous sample reaches the end.
@@ -122,7 +138,7 @@ Without a computer:
 
 *Changes:*
 
-  * On boot, color of lights white index file is loading shows minor version number
+  * On boot, color of lights while index file is loading shows minor version number
   * In System Mode, holding down Reverse displays firmware version on Reverse buttons (White, White = 1.1)
   
 *Fixes:*
@@ -141,8 +157,9 @@ Released: August 10, 2017
   
 
 #### Features for future firmware versions:
-  * System Mode setting to disable envelope when Length < 50%
-  * System Mode setting to disable fade up/down when looping a sample
   * Allow for internally patching OUTs to INs for self-recording
+  * Support AIFF files
+  * Write index file in background, for faster boot time and "Edit+Save" time
+
 
 
