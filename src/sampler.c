@@ -542,10 +542,10 @@ uint32_t calc_stop_point(float length_param, float resample_param, Sample *sampl
 	// length_param <= 50%: fixed envelope 
 	else
 	{
-		//number of samples to play is length*20000, rounded up to multiples of 128
+		//number of samples to play is length*PERC_ENV_FACTOR, rounded up to multiples of 128
 		//times the block align
 		//times the playback resample rate (1.0=44.1kHz), rounded up the the next integer
-		t_f = ((length_param)*20000.0f)/128.0;
+		t_f = ((length_param)*PERC_ENV_FACTOR)/128.0;
 		t_int = (uint32_t)t_f;
 		t_int = (t_int + 2) * 128; //+1 does ceiling(t_f)
 		t_f = (float)t_int;
@@ -996,6 +996,11 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 			if ((play_state[chan] == PLAYING_PERC || play_state[chan] == PLAYING_PERC_FADEDOWN|| play_state[chan] == PAD_SILENCE))
 				resampled_cache_size =0;
 
+			if (dist_to_end < 0) //went past the end of the requested sample playback: length must have changed
+			{
+				if (play_state[chan] == PLAYING || play_state[chan] == PLAYING_PERC || play_state[chan] == PLAY_FADEUP) play_state[chan] = PLAY_FADEDOWN;
+			}
+			else 
 			if (dist_to_end < resampled_cache_size*2)
 			{
 				if (play_state[chan] == PLAYING_PERC)	play_state[chan] = PLAYING_PERC_FADEDOWN;
@@ -1139,7 +1144,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 			 case (PLAYING_PERC_FADEDOWN):
 			 case (PAD_SILENCE):
 
-				decay_inc[chan] = 1.0f/((length)*20000.0f);
+				decay_inc[chan] = 1.0f/((length)*PERC_ENV_FACTOR);
 
 		 		if (play_state[chan]==PLAYING_PERC) 
 		 		{
@@ -1200,8 +1205,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					}
 				}
 
-				//After fading up to full amplitude in a reverse percussive playback, 
-				//Fade back down to silence:
+				//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
 				if (decay_amp_i[chan] >= 1.0f && i_param[chan][REV] && play_state[chan]==PLAYING_PERC)
 					play_state[chan] = PLAY_FADEDOWN;
 				

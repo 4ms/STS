@@ -54,6 +54,8 @@ enum PlayLoadTriage{
 #define READ_BLOCK_SIZE 9216
 
 
+#define PERC_ENV_FACTOR 44100.0f
+
 #define MAX_RS 20 /* over 4 octaves at 44.1k */
 //#define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)
 
