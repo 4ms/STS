@@ -92,8 +92,8 @@ void resample_read16_avg(float rs, CircularBuffer* buf, uint32_t buff_len, uint8
 	{
 		for(outpos=0;outpos<buff_len;outpos++)
 		{
-			out[outpos] = get_16b_sample_avg(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
+			out[outpos] = get_16b_sample_avg(buf->out);
 		}
 		flags[PlayBuff1_Discontinuity+chan] = 1;
 
@@ -105,14 +105,14 @@ void resample_read16_avg(float rs, CircularBuffer* buf, uint32_t buff_len, uint8
 		{
 			flags[PlayBuff1_Discontinuity+chan] = 0;
 
+			safe_inc_play_addr(buf, block_align, chan);
 			x0[ch] = get_16b_sample_avg(buf->out);
-			safe_inc_play_addr(buf, block_align, chan);
 
+			safe_inc_play_addr(buf, block_align, chan);
 			x1[ch] = get_16b_sample_avg(buf->out);
-			safe_inc_play_addr(buf, block_align, chan);
 
-			x2[ch] = get_16b_sample_avg(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
+			x2[ch] = get_16b_sample_avg(buf->out);
 
 			fractional_pos[ch] = 0.0;
 		}
@@ -127,17 +127,17 @@ void resample_read16_avg(float rs, CircularBuffer* buf, uint32_t buff_len, uint8
 
 				//shift samples back one
 				//and read a new sample
+				safe_inc_play_addr(buf, block_align, chan);
 				xm1[ch] 	= get_16b_sample_avg(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x0[ch] 	= get_16b_sample_avg(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_avg(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_avg(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_avg(buf->out);
 
 			}
 			//Optimize for resample rates >= 3
@@ -149,14 +149,14 @@ void resample_read16_avg(float rs, CircularBuffer* buf, uint32_t buff_len, uint8
 				//and read a new sample
 				xm1[ch] 	= x2[ch];
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x0[ch] 	= get_16b_sample_avg(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_avg(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_avg(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_avg(buf->out);
 
 			}
 			//Optimize for resample rates >= 2
@@ -169,11 +169,11 @@ void resample_read16_avg(float rs, CircularBuffer* buf, uint32_t buff_len, uint8
 				xm1[ch] 	= x1[ch];
 				x0[ch] 	= x2[ch];
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_avg(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_avg(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_avg(buf->out);
 
 			}
 			//Optimize for resample rates >= 1
@@ -187,8 +187,8 @@ void resample_read16_avg(float rs, CircularBuffer* buf, uint32_t buff_len, uint8
 				x0[ch] 	= x1[ch];
 				x1[ch] 	= x2[ch];
 
-				x2[ch] 	= get_16b_sample_avg(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_avg(buf->out);
 
 			}
 
@@ -227,8 +227,8 @@ void resample_read16_right(float rs, CircularBuffer* buf, uint32_t buff_len, uin
 	{
 		for(outpos=0;outpos<buff_len;outpos++)
 		{
-			out[outpos] = get_16b_sample_right(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
+			out[outpos] = get_16b_sample_right(buf->out);
 		}
 		flags[PlayBuff1_Discontinuity+chan] = 1;
 
@@ -240,14 +240,14 @@ void resample_read16_right(float rs, CircularBuffer* buf, uint32_t buff_len, uin
 		{
 			flags[PlayBuff1_Discontinuity+chan] = 0;
 
+			safe_inc_play_addr(buf, block_align, chan);
 			x0[ch] = get_16b_sample_right(buf->out);
-			safe_inc_play_addr(buf, block_align, chan);
 
+			safe_inc_play_addr(buf, block_align, chan);
 			x1[ch] = get_16b_sample_right(buf->out);
-			safe_inc_play_addr(buf, block_align, chan);
 
-			x2[ch] = get_16b_sample_right(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
+			x2[ch] = get_16b_sample_right(buf->out);
 
 			fractional_pos[ch] = 0.0;
 		}
@@ -262,17 +262,17 @@ void resample_read16_right(float rs, CircularBuffer* buf, uint32_t buff_len, uin
 
 				//shift samples back one
 				//and read a new sample
+				safe_inc_play_addr(buf, block_align, chan);
 				xm1[ch] 	= get_16b_sample_right(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x0[ch] 	= get_16b_sample_right(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_right(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_right(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_right(buf->out);
 
 			}
 			//Optimize for resample rates >= 3
@@ -284,14 +284,14 @@ void resample_read16_right(float rs, CircularBuffer* buf, uint32_t buff_len, uin
 				//and read a new sample
 				xm1[ch] 	= x2[ch];
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x0[ch] 	= get_16b_sample_right(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_right(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_right(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_right(buf->out);
 
 			}
 			//Optimize for resample rates >= 2
@@ -304,11 +304,11 @@ void resample_read16_right(float rs, CircularBuffer* buf, uint32_t buff_len, uin
 				xm1[ch] 	= x1[ch];
 				x0[ch] 	= x2[ch];
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_right(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_right(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_right(buf->out);
 
 			}
 			//Optimize for resample rates >= 1
@@ -322,8 +322,8 @@ void resample_read16_right(float rs, CircularBuffer* buf, uint32_t buff_len, uin
 				x0[ch] 	= x1[ch];
 				x1[ch] 	= x2[ch];
 
-				x2[ch] 	= get_16b_sample_right(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_right(buf->out);
 
 			}
 
@@ -363,8 +363,8 @@ void resample_read16_left(float rs, CircularBuffer* buf, uint32_t buff_len, uint
 	{
 		for(outpos=0;outpos<buff_len;outpos++)
 		{
-			out[outpos] = get_16b_sample_left(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
+			out[outpos] = get_16b_sample_left(buf->out);
 		}
 		flags[PlayBuff1_Discontinuity+chan] = 1;
 
@@ -376,14 +376,14 @@ void resample_read16_left(float rs, CircularBuffer* buf, uint32_t buff_len, uint
 		{
 			flags[PlayBuff1_Discontinuity+chan] = 0;
 
+			safe_inc_play_addr(buf, block_align, chan);
 			x0[ch] = get_16b_sample_left(buf->out);
-			safe_inc_play_addr(buf, block_align, chan);
 
+			safe_inc_play_addr(buf, block_align, chan);
 			x1[ch] = get_16b_sample_left(buf->out);
-			safe_inc_play_addr(buf, block_align, chan);
 
-			x2[ch] = get_16b_sample_left(buf->out);
 			safe_inc_play_addr(buf, block_align, chan);
+			x2[ch] = get_16b_sample_left(buf->out);
 
 			fractional_pos[ch] = 0.0;
 		}
@@ -398,17 +398,17 @@ void resample_read16_left(float rs, CircularBuffer* buf, uint32_t buff_len, uint
 
 				//shift samples back one
 				//and read a new sample
+				safe_inc_play_addr(buf, block_align, chan);
 				xm1[ch] 	= get_16b_sample_left(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x0[ch] 	= get_16b_sample_left(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_left(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_left(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_left(buf->out);
 
 			}
 			//Optimize for resample rates >= 3
@@ -420,14 +420,14 @@ void resample_read16_left(float rs, CircularBuffer* buf, uint32_t buff_len, uint
 				//and read a new sample
 				xm1[ch] 	= x2[ch];
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x0[ch] 	= get_16b_sample_left(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_left(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_left(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_left(buf->out);
 
 			}
 			//Optimize for resample rates >= 2
@@ -440,11 +440,11 @@ void resample_read16_left(float rs, CircularBuffer* buf, uint32_t buff_len, uint
 				xm1[ch] 	= x1[ch];
 				x0[ch] 	= x2[ch];
 
+				safe_inc_play_addr(buf, block_align, chan);
 				x1[ch] 	= get_16b_sample_left(buf->out);
-				safe_inc_play_addr(buf, block_align, chan);
 
-				x2[ch] 	= get_16b_sample_left(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_left(buf->out);
 
 			}
 			//Optimize for resample rates >= 1
@@ -458,8 +458,8 @@ void resample_read16_left(float rs, CircularBuffer* buf, uint32_t buff_len, uint
 				x0[ch] 	= x1[ch];
 				x1[ch] 	= x2[ch];
 
-				x2[ch] 	= get_16b_sample_left(buf->out);
 				safe_inc_play_addr(buf, block_align, chan);
+				x2[ch] 	= get_16b_sample_left(buf->out);
 
 			}
 
