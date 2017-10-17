@@ -333,7 +333,7 @@ void process_cv_adc(void)
 		//Additional bracketing for special-case of CV jack being near 0V
 		if (i==0 || i==1) //PITCH CV
 		{
-			if (bracketed_cvadc[i] >= 2046 && bracketed_cvadc[i] <= 2050)
+			if (bracketed_cvadc[i] >= 2045 && bracketed_cvadc[i] <= 2050)
 				bracketed_cvadc[i] = 2048;
 		}
 
@@ -608,10 +608,7 @@ void update_params(void)
 
 
 			if (f_param[chan][LENGTH] > 0.990)		f_param[chan][LENGTH] = 1.0;
-
-			// These value seem to work better as they prevent noise in short segments, due to PLAYING_PERC's envelope
-			if (f_param[chan][LENGTH] <= 0.01)	f_param[chan][LENGTH] = 0.01;
-			//if (f_param[chan][LENGTH] <= 0.000244)	f_param[chan][LENGTH] = 0.000244;
+			if (f_param[chan][LENGTH] <= 0.005)	f_param[chan][LENGTH] = 0.005;
 
 
 			//
@@ -657,7 +654,6 @@ void update_params(void)
 			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * voltoct[compensated_pitch_cv];
 
 		}
-
 
 		if (f_param[chan][PITCH] > MAX_RS)
 		    f_param[chan][PITCH] = MAX_RS;
