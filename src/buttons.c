@@ -202,7 +202,22 @@ void Button_Debounce_IRQHandler(void)
 
 
 						case RecBank:
-							if (!global_mode[EDIT_MODE])
+							if (global_mode[EDIT_MODE])
+							{
+								if (button_state[Bank1] >= DOWN && button_state[Bank2] >= DOWN)
+								{
+									if (play_state[0] != SILENT) {system_calibrations->cv_calibration_offset[0] -= 1;}
+									if (play_state[1] != SILENT) {system_calibrations->cv_calibration_offset[1] -= 1;}
+									button_ignore[Bank1] = 1;
+									button_ignore[Bank2] = 1;
+
+								} else 
+								{
+									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
+									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
+								}
+							}
+							else 
 							{
 								//Latch the pot value and reset combo state
 								//We have to detect the knob as moving to make the combo ACTIVE
@@ -232,6 +247,23 @@ void Button_Debounce_IRQHandler(void)
 									g_button_knob_combo[bkc_Reverse2][bkc_StartPos2].latched_value = bracketed_potadc[START2_POT];
 							}
 
+							break;
+
+						case Rec:
+							if (global_mode[EDIT_MODE])
+							{
+								if (button_state[Bank1] >= DOWN && button_state[Bank2] >= DOWN)
+								{
+									if (play_state[0] != SILENT) {system_calibrations->cv_calibration_offset[0] += 1;}
+									if (play_state[1] != SILENT) {system_calibrations->cv_calibration_offset[1] += 1;}
+									button_ignore[Bank1] = 1;
+									button_ignore[Bank2] = 1;
+								} else 
+								{
+									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
+									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
+								}
+							}
 							break;
 
 						case Edit:
@@ -306,65 +338,35 @@ void Button_Debounce_IRQHandler(void)
 							break;
 
 							case Rec:
-								if (global_mode[EDIT_MODE])
-								{
-									if (button_state[Bank1] >= DOWN && button_state[Bank2] >= DOWN)
-									{
-										if (play_state[0] != SILENT) {system_calibrations->cv_calibration_offset[0] += 1;}
-										if (play_state[1] != SILENT) {system_calibrations->cv_calibration_offset[1] += 1;}
-									} else 
-									{
-										if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
-										if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
-									}
-								}
-								else
-								{
-									if (button_state[Rec]<SHORT_PRESSED)
-										flags[RecTrig]=1;
-								}
+								if (button_state[Rec]<SHORT_PRESSED)
+									flags[RecTrig]=1;
 							break;
 
 							case RecBank:
-								if (global_mode[EDIT_MODE])
+								//See if there was a combo button+knob happening
+
+								//this a short-hand version for the combo, just to make code more readable:
+								t_bkc = &g_button_knob_combo[bkc_RecBank][bkc_RecSample];
+								if (t_bkc->combo_state == COMBO_ACTIVE)
 								{
-									if (button_state[Bank1] >= DOWN && button_state[Bank2] >= DOWN)
-									{
-										if (play_state[0] != SILENT) {system_calibrations->cv_calibration_offset[0] -= 1;}
-										if (play_state[1] != SILENT) {system_calibrations->cv_calibration_offset[1] -= 1;}
-									} else 
-									{
-										if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
-										if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
-									}
+									//Change our combo state to inactive
+									//Note: unlike Bank1 and Bank2, we do not latch Rec Sample value after RecBank is released
+									t_bkc->combo_state = COMBO_INACTIVE;
+
+									//Set the rec bank parameter to the hover value
+									i_param[REC][BANK] = t_bkc->hover_value;
+
+									combo_was_active = 1;
 								}
-								else 
+
+								else
+								//No combo, so just increment the Rec Bank
 								{
-									//See if there was a combo button+knob happening
-
-									//this a short-hand version for the combo, just to make code more readable:
-									t_bkc = &g_button_knob_combo[bkc_RecBank][bkc_RecSample];
-									if (t_bkc->combo_state == COMBO_ACTIVE)
-									{
-										//Change our combo state to inactive
-										//Note: unlike Bank1 and Bank2, we do not latch Rec Sample value after RecBank is released
-										t_bkc->combo_state = COMBO_INACTIVE;
-
-										//Set the rec bank parameter to the hover value
-										i_param[REC][BANK] = t_bkc->hover_value;
-
-										combo_was_active = 1;
-									}
-
-									else
-									//No combo, so just increment the Rec Bank
-									{
-										if (i_param[REC][BANK]==(MAX_NUM_BANKS-1)) 	i_param[REC][BANK] = 0;
-										else 										i_param[REC][BANK]++; 
-									}
-
-									flags[RecBankChanged] = 1;
+									if (i_param[REC][BANK]==(MAX_NUM_BANKS-1)) 	i_param[REC][BANK] = 0;
+									else 										i_param[REC][BANK]++; 
 								}
+
+								flags[RecBankChanged] = 1;
 							break;
 
 							case Play1:
