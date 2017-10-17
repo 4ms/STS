@@ -11,6 +11,7 @@
 
 #define LED_PWM_IRQHandler TIM2_IRQHandler
 
+void flicker_endout(uint8_t chan, float play_time);
 
 void blink_all_lights(uint32_t delaytime);
 void chase_all_lights(uint32_t delaytime);

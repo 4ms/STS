@@ -54,7 +54,7 @@ enum PlayLoadTriage{
 #define READ_BLOCK_SIZE 9216
 
 
-#define PERC_ENV_FACTOR 44100.0f
+#define PERC_ENV_FACTOR 40000.0f
 
 #define MAX_RS 20 /* over 4 octaves at 44.1k */
 //#define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)
@@ -69,6 +69,8 @@ void toggle_playing(uint8_t chan);
 void start_playing(uint8_t chan);
 
 void toggle_reverse(uint8_t chan);
+void reverse_file_positions(uint8_t chan, uint8_t samplenum, uint8_t banknum, uint8_t new_dir);
+
 void check_change_bank(uint8_t chan);
 void check_change_sample(void);
 

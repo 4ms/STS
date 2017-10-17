@@ -675,10 +675,12 @@ void update_ButtonLEDs(void)
 							set_ButtonLED_byPaletteFade(ButLEDnum, DIM_RED, DIM_WHITE, tri_13);
 					}
 					else
+					{
 						//Edit Mode, but not Assignment mode --> bank's base color
 						set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10)+1, tri_14);
+					}
 				}
-				else //chan==1
+				else //Edit mode and chan==1
 				{
 					//Edit Mode: Rev2 flashes red/yellow if there's an undo available
 					if (flags[UndoSampleDiffers])
@@ -687,8 +689,34 @@ void update_ButtonLEDs(void)
 						set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
 				}
 			}
-			else
+			else //Not edit mode
 			{
+				if (flags[PercEnvModeChanged]){
+					if (global_mode[PERC_ENVELOPE])
+						set_ButtonLED_byPaletteFade(ButLEDnum, YELLOW, OFF, (float)flags[PercEnvModeChanged] / 100.0);
+					else
+					{
+						if (flags[PercEnvModeChanged]>70)
+							set_ButtonLED_byPalette(ButLEDnum, YELLOW);
+						else
+							set_ButtonLED_byPalette(ButLEDnum, OFF);
+					}
+					flags[PercEnvModeChanged]--;
+				}
+				else
+				if (flags[FadeEnvModeChanged]){
+					if (global_mode[FADEUPDOWN_ENVELOPE])
+						set_ButtonLED_byPaletteFade(ButLEDnum, RED, OFF, (float)flags[FadeEnvModeChanged] / 100.0);
+					else
+					{
+						if (flags[FadeEnvModeChanged]>70)
+							set_ButtonLED_byPalette(ButLEDnum, RED);
+						else
+							set_ButtonLED_byPalette(ButLEDnum, OFF);
+					}
+					flags[FadeEnvModeChanged]--;
+				}
+				else
 				if (i_param[chan][REV]) set_ButtonLED_byPalette(ButLEDnum, CYAN);
 				else					set_ButtonLED_byPalette(ButLEDnum, OFF);
 			}

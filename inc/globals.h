@@ -7,19 +7,15 @@
 #pragma once
 
 /* 
- * 1024 bytes per DMA transfer
- * 512 bytes/half-transfer @ 16 bits/sample = 256 samples per half-transfer
- * 256 samples/half-transfer = 128 samples per channel per half-transfer
- * 128/interrupt @ 44100Hz = interrupt runs every 2.9ms
+ * 128 bytes per DMA transfer
+ * 64 bytes/half-transfer @ 16 bits/sample = 32 samples per half-transfer
+ * 32 samples/half-transfer = 16 samples per channel per half-transfer
+ * 16/interrupt @ 44100Hz = interrupt runs every 0.36ms
  */
 
-//1024 = every 2.9ms
-//256 = every 0.73ms
-//128 = every 0.36ms
-#define codec_BUFF_LEN 128 
-
-#define HT16_BUFF_LEN (codec_BUFF_LEN>>2)		/*32*/
-#define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN>>1) 	/*16*/
+#define codec_BUFF_LEN 		128 
+#define HT16_BUFF_LEN 		(codec_BUFF_LEN>>2)		/*32*/
+#define HT16_CHAN_BUFF_LEN 	(HT16_BUFF_LEN>>1) 		/*16*/
 
 
 
@@ -101,22 +97,26 @@ enum Flags {
 	ShutdownAndBootload,
 	ChangedTrigDelay,
 	SaveUserSettingsLater,
-
+	ChangePlaytoPerc1,		//60
+	ChangePlaytoPerc2,
+	PercEnvModeChanged,
+	FadeEnvModeChanged,
+	
 	NUM_FLAGS
 };
 
 
 //Error codes for g_error
 enum g_Errors{
-	OUT_OF_MEM					=(1<<0),
-	SDCARD_CANT_MOUNT			=(1<<1),
-	SPIERROR_1					=(1<<2),
-	WRITE_SDRAM_ERROR			=(1<<3),
+	READ_BUFF1_OVERRUN			=(1<<0),
+	READ_BUFF2_OVERRUN			=(1<<1),
+	READ_BUFF1_UNDERRUN			=(1<<2),
+	READ_BUFF2_UNDERRUN			=(1<<3),
 	DMA_OVR_ERROR				=(1<<4),
 	sFLASH_BAD_ID				=(1<<5),
 	WRITE_BUFF_OVERRUN			=(1<<6),
-	READ_BUFF1_OVERRUN			=(1<<7),
-	READ_BUFF2_OVERRUN			=(1<<8),
+	OUT_OF_MEM					=(1<<7),
+	SDCARD_CANT_MOUNT			=(1<<8),
 	READ_MEM_ERROR				=(1<<9),
 	WRITE_SDCARD_ERROR			=(1<<10),
 	WRITE_BUFF_UNDERRUN			=(1<<11),

@@ -441,7 +441,7 @@ void Button_Debounce_IRQHandler(void)
 
 					if (long_press[i] > LONG_PRESSED) {
 
-						if (button_state[i]!=LONG_PRESSED)
+						if (button_state[i]!=LONG_PRESSED  && !button_ignore[i])
 						{
 							button_state[i] = LONG_PRESSED;
 
@@ -457,7 +457,7 @@ void Button_Debounce_IRQHandler(void)
 						}
 					}
 					else if (long_press[i] > MED_PRESSED) {
-						if (button_state[i]!=MED_PRESSED)
+						if (button_state[i]!=MED_PRESSED && !button_ignore[i])
 						{
 							button_state[i] = MED_PRESSED;
 							if (!flags[SkipProcessButtons])
@@ -489,7 +489,7 @@ void Button_Debounce_IRQHandler(void)
 						}
 					}
 					else if (long_press[i] > SHORT_PRESSED) {
-						if (button_state[i]!=SHORT_PRESSED)
+						if (button_state[i]!=SHORT_PRESSED  && !button_ignore[i])
 						{
 							button_state[i] = SHORT_PRESSED;
 							if (!flags[SkipProcessButtons])

@@ -67,6 +67,8 @@ uint8_t pot_changed[NUM_POT_ADCS];
 extern uint8_t recording_enabled;
 
 extern enum ButtonStates button_state[NUM_BUTTONS];
+extern uint8_t button_ignore[NUM_BUTTONS];
+
 volatile uint32_t 			sys_tmr;
 
 extern ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
@@ -596,7 +598,7 @@ void update_params(void)
 		//
 
 		//In Edit Mode, don't update channel 1's START and LENGTH normally, they are controlled by the Trim settings
-		if (!(global_mode[EDIT_MODE] && chan==CHAN1))
+		if (!(global_mode[EDIT_MODE] && chan==CHAN1)) //"skip this block if we're in edit mode and this is channel 1"
 		{
 			edit_bkc 	= &g_button_knob_combo[bkc_Edit][bkc_Length2];
 
@@ -607,8 +609,23 @@ void update_params(void)
 				f_param[chan][LENGTH] 	= (bracketed_potadc[LENGTH1_POT+chan] + bracketed_cvadc[LENGTH1_CV+chan]) / 4096.0;
 
 
-			if (f_param[chan][LENGTH] > 0.990)		f_param[chan][LENGTH] = 1.0;
+			if (f_param[chan][LENGTH] > 0.990)	f_param[chan][LENGTH] = 1.0;
 			if (f_param[chan][LENGTH] <= 0.005)	f_param[chan][LENGTH] = 0.005;
+
+			//Toggle envelope modes if Rev1 is held down while Length1 is at an extreme
+			if ((button_state[Rev1]>=MED_PRESSED) && (button_ignore[Rev1]==0) && (chan==CHAN1))
+			{
+				if (bracketed_potadc[LENGTH1_POT]<50)	{
+					global_mode[PERC_ENVELOPE] = !global_mode[PERC_ENVELOPE];
+					button_ignore[Rev1] = 1;
+					flags[PercEnvModeChanged] = 100;
+				}
+				if (bracketed_potadc[LENGTH1_POT]>4000)	{
+					global_mode[FADEUPDOWN_ENVELOPE] = !global_mode[FADEUPDOWN_ENVELOPE];
+					button_ignore[Rev1] = 1;
+					flags[FadeEnvModeChanged] = 100;
+				}
+			}
 
 
 			//
