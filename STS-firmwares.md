@@ -28,9 +28,9 @@ Without a computer:
 ----
 #### v1.4
 
-*Released:* (beta released October 13, 2017)
+*Released:* (beta-1 released October 13, 2017, beta-2 released October 17, 2017)
 
-*Download:* [Firmware v1.4 WAV file -- BETA version](http://4mscompany.com/STS/firmware/STS-firmware-v1_4beta.wav)
+*Download:* [Firmware v1.4 WAV file -- BETA version 2](http://4mscompany.com/STS/firmware/STS-firmware-v1_4beta2.wav)
 
 *New Features:*
 
@@ -66,6 +66,8 @@ Without a computer:
        * Off: Both envelopes disabled
      * Turning off all envelopes is recommended when playing CV sample files (wav files with clocks/gates, sequencer CV, or slow LFO waveshapes, etc).
      * Turning off Percussive Envelopes is interesting when doing "Granular" patches (see User Manual for example patches)
+     * Can toggle Percussive Envelope mode by turning left side Length to 0, and holding left side Reverse for 2 seconds: Reverse button will flash/flicker [Beta v2 only]
+     * Can toggle Fade In/Out Envelope mode by turning left side Length to 100%, and holding left side Reverse for 2 seconds: Reverse button will flash/flicker [Beta v2 only]
      
 
 ----
