@@ -27,11 +27,11 @@ Without a computer:
 
 ----
 
-### v1.4c ###
+### v1.4d ###
 
-*__Released:__* October 19, 2017
+*__Released:__* October 20, 2017
 
-*__Download:__* [Firmware v1.4c WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_4c.wav)
+*__Download:__* [Firmware v1.4d WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_4d.wav)
 
 *__New Features:__*
 
@@ -72,12 +72,13 @@ Without a computer:
      
 *__Fixes:__*
 
-  * After exitting System Mode, right side Length was set to 0, until the knob was moved. Fixed.
+  * After exiting System Mode, right side Length was set to 0, until the knob was moved. Fixed.
 
-    
-(1.4beta-1 released October 13, 2017)
-
-(1.4beta-2 released October 17, 2017)
+----
+Intermediate versions: (1.4beta-1 released October 13, 2017)
+(1.4beta-2 released October 17, 2017: changed Length behavior)
+(1.4c fixed sticky right length knob when exiting system mode)
+(1.4d fixed bug that appeared in v1.4beta2) 
 
 ----
 #### v1.3
