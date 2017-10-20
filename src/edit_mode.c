@@ -582,26 +582,29 @@ void enter_edit_mode(void)
 void exit_edit_mode(void)
 {
 
-	//Continue latching the pot values
-	//This remains latched until pot is moved
-	g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state 		= COMBO_LATCHED;
-	g_button_knob_combo[bkc_Edit][bkc_Length2].combo_state 		= COMBO_LATCHED;
-	g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state 	= COMBO_LATCHED;
-
-	//RecSample pot is not latched, its value returns to the knob position immediately
-	g_button_knob_combo[bkc_Edit][bkc_RecSample].combo_state 	= COMBO_INACTIVE;
-
-	global_mode[EDIT_MODE] = 0;
-
-	i_param[0][LOOPING] = cached_looping;
-	i_param[0][REV]		= cached_rev;
-
-	if (scrubbed_in_edit)
+	if (global_mode[EDIT_MODE])
 	{
-		if (cached_play_state)	flags[Play1Trig] = 1;
-		else if (play_state[0] == PREBUFFERING) 	play_state[0] = SILENT;
-		else if (play_state[0] != SILENT){
-			play_state[0] = PLAY_FADEDOWN;
+		//Continue latching the pot values
+		//This remains latched until pot is moved
+		g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state 		= COMBO_LATCHED;
+		g_button_knob_combo[bkc_Edit][bkc_Length2].combo_state 		= COMBO_LATCHED;
+		g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state 	= COMBO_LATCHED;
+
+		//RecSample pot is not latched, its value returns to the knob position immediately
+		g_button_knob_combo[bkc_Edit][bkc_RecSample].combo_state 	= COMBO_INACTIVE;
+
+		global_mode[EDIT_MODE] = 0;
+
+		i_param[0][LOOPING] = cached_looping;
+		i_param[0][REV]		= cached_rev;
+
+		if (scrubbed_in_edit)
+		{
+			if (cached_play_state)	flags[Play1Trig] = 1;
+			else if (play_state[0] == PREBUFFERING) 	play_state[0] = SILENT;
+			else if (play_state[0] != SILENT){
+				play_state[0] = PLAY_FADEDOWN;
+			}
 		}
 	}
 }

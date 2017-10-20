@@ -279,9 +279,9 @@ void Button_Debounce_IRQHandler(void)
 			//
 			else if (State[i]==0xffff)
 			{
-				if (!flags[SkipProcessButtons])
+				if (!flags[SkipProcessButtons] && !button_ignore[i])
 				{
-					if (button_state[i] != UP && !button_ignore[i])
+					if (button_state[i] != UP)
 					{
 						switch (i)
 						{
@@ -419,6 +419,7 @@ void Button_Debounce_IRQHandler(void)
 						}
 					}
 				}
+
 				if (button_state[i]!=UP && i==Edit)
 					exit_edit_mode();
 				button_state[i] = UP;
