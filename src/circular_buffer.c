@@ -8,18 +8,11 @@ uint8_t CB_offset_in_address(CircularBuffer *b, uint32_t amt, uint8_t subtract)
 
 	if (!subtract)
 	{
-		if ((b->max - b->in) < amt) //same as "if (b->in + amt) > b->max" but doing the math this way avoids overflow in case b->max == 0xFFFFFFFF
+		if ((b->max - b->in) <= amt) //same as "if ((b->in + amt) >= b->max)" but doing the math this way avoids overflow in case b->max == 0xFFFFFFFF
 		{
-			//if (b->out > b->in) 
-			//	b->wrapping = 0;
-			//else 
-				b->wrapping = 1;
-
 			b->in -= b->size - amt;
-
-	//		if (b->wrapping)
-	//			return(1); //warning: already wrapped, and wrapped again!
-	//		else
+			if (b->wrapping) return(1); //warning: already wrapped, and wrapped again!
+			b->wrapping = 1;
 		}
 		else
 			b->in += amt;
@@ -28,21 +21,13 @@ uint8_t CB_offset_in_address(CircularBuffer *b, uint32_t amt, uint8_t subtract)
 	{
 		if ((b->in - b->min) < amt) //same as "if (b->in - amt) < b->min" but avoids using negative numbers in case amt > b->in
 		{
-			//if (b->out > b->in) 
-				b->wrapping = 0;
-			//else 
-			//	b->wrapping = 1;
-
 			b->in += b->size - amt;
-//			if (b->wrapping)
-		//		b->wrapping = 0;
-//			else
-//				return(1); //warning: already unwrapped!
+			if (!b->wrapping)return(1); //warning: already unwrapped!
+			b->wrapping = 0;
 		}
 		else
 			b->in -= amt;
 	}
-
 	return(0);
 }
 
@@ -51,15 +36,11 @@ uint8_t CB_offset_out_address(CircularBuffer *b, uint32_t amt, uint8_t subtract)
 {
 	if (!subtract)
 	{
-		if ((b->max - b->out) < amt) //same as "if (b->out + amt) > b->max" but doing the math this way avoids overflow in case b->max == 0xFFFFFFFF
+		if ((b->max - b->out) <= amt) //same as "if (b->out + amt) > b->max" but doing the math this way avoids overflow in case b->max == 0xFFFFFFFF
 		{
-			//offsetting by amt caused a wrap from max to min
 			b->out -= b->size - amt;
-
-//			if (b->wrapping)
-				b->wrapping = 0;
-//			else
-//				return(1); //warning: already unwrapped!
+			if (!b->wrapping)return(1); //warning: already unwrapped!
+			b->wrapping = 0;
 		}
 		else
 			b->out += amt;
@@ -68,16 +49,13 @@ uint8_t CB_offset_out_address(CircularBuffer *b, uint32_t amt, uint8_t subtract)
 	{
 		if ((b->out - b->min) < amt) //same as "if (b->out - amt) < b->min" but avoids using negative numbers in case amt > b->out
 		{
-			//offsetting by amt caused a wrap from min to max
 			b->out += b->size - amt;
-
+			if (b->wrapping) return(1); //warning: already wrapped, and wrapped again!
 			b->wrapping = 1;
 		}
 		else
 			b->out -= amt;
-
 	}
-
 	return(0);
 }
 

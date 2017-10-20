@@ -35,11 +35,9 @@ static inline int32_t _SSAT16(int32_t x) {asm("ssat %[dst], #16, %[src]" : [dst]
 //
 // DEBUG
 //
-// extern uint32_t WATCH0;
-// extern uint32_t WATCH1;
-// extern uint32_t WATCH2;
-// extern uint32_t WATCH3;
+#ifdef DEBUG_ENABLED
 Sample dbg_sample;
+#endif
 
 //
 // Filesystem:
@@ -377,10 +375,6 @@ void start_playing(uint8_t chan)
 		&& (sample_file_startpos[chan] <= cache_high[chan][samplenum]) )
 	{
 		play_buff[chan][samplenum]->out = map_cache_to_buffer(sample_file_startpos[chan], s_sample->sampleByteSize, cache_low[chan][samplenum], cache_map_pt[chan][samplenum], play_buff[chan][samplenum]);
-
-		// if (play_buff[chan][samplenum]->out < play_buff[chan][samplenum]->in)	play_buff[chan][samplenum]->wrapping = i_param[chan][REV]? 1 : 0;
-		// else																	play_buff[chan][samplenum]->wrapping = i_param[chan][REV]? 0 : 1;
-
 
 		if (f_param[chan][LENGTH] <= 0.5 && i_param[chan][REV])	play_state[chan] = PLAYING_PERC;
 		else													play_state[chan] = PLAY_FADEUP;
