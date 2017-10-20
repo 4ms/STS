@@ -6,13 +6,14 @@
 
 #pragma once
 
-/* 
- * 128 bytes per DMA transfer
- * 64 bytes/half-transfer @ 16 bits/sample = 32 samples per half-transfer
- * 32 samples/half-transfer = 16 samples per channel per half-transfer
- * 16/interrupt @ 44100Hz = interrupt runs every 0.36ms
- */
+//#define DEBUG_ENABLED
 
+
+ // 128 bytes per DMA transfer
+ // 64 bytes/half-transfer @ 16 bits/sample = 32 samples per half-transfer
+ // 32 samples/half-transfer = 16 samples per channel per half-transfer
+ // 16/interrupt @ 44100Hz = interrupt runs every 0.36ms
+ 
 #define codec_BUFF_LEN 		128 
 #define HT16_BUFF_LEN 		(codec_BUFF_LEN>>2)		/*32*/
 #define HT16_CHAN_BUFF_LEN 	(HT16_BUFF_LEN>>1) 		/*16*/
@@ -36,6 +37,9 @@
 #define FORCE_CAL_UNDER_FW_MAJOR_VERSION 0
 #define FORCE_CAL_UNDER_FW_MINOR_VERSION 2
 
+
+// Flags are used for sections of code with different interrupt priorities
+// to communicate that an event occured and/or to schedule an action to occur
 enum Flags {
 	PlaySample1Changed, 	//0
 	PlaySample2Changed,
@@ -175,7 +179,6 @@ do {							\
 
 void check_errors(void);
 
-//extern volatile uint32_t sys_time;
 //#define delay_sys(x) do{register uint32_t donetime=x+systime;__asm__ __volatile__ ("nop\n\t":::"memory");}while(sys_time!=donetime;)
 
 

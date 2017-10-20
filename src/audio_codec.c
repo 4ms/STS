@@ -35,8 +35,6 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	//
 	// Outgoing audio
 	//
-	//play_audio_from_buffer(out[0], 0);
-	//play_audio_from_buffer(out[1], 1);
 
 	play_audio_from_buffer(outL[0], outR[0], 0);
 	play_audio_from_buffer(outL[1], outR[1], 1);

@@ -308,8 +308,6 @@ void start_playing(uint8_t chan)
 	float rs;
 	//uint8_t file_loaded;
 
-	DEBUG0_ON;
-
 	samplenum = i_param[chan][SAMPLE];
 	banknum = i_param[chan][BANK];
 	s_sample = &(samples[banknum][samplenum]);
@@ -441,6 +439,7 @@ void start_playing(uint8_t chan)
 		global_mode[MONITOR_RECORDING] = MONITOR_OFF;
 
 	//DEBUG
+	#ifdef DEBUG_ENABLED
 	str_cpy(dbg_sample.filename , s_sample->filename);
 	dbg_sample.sampleSize 		= s_sample->sampleSize;
 	dbg_sample.sampleByteSize	= s_sample->sampleByteSize;
@@ -453,8 +452,7 @@ void start_playing(uint8_t chan)
 	dbg_sample.inst_end 		= s_sample->inst_end;
 	dbg_sample.inst_size 		= s_sample->inst_size;
 	dbg_sample.inst_gain 		= s_sample->inst_gain;
-
-	DEBUG0_OFF;
+	#endif
 }
 
 

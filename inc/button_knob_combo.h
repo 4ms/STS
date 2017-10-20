@@ -49,8 +49,6 @@ enum ComboStates{
 	COMBO_INACTIVE, //alt feature is inactive, do not latch data
 	COMBO_ACTIVE,	//alt feature is active, pot value is latched for normal feature
 	COMBO_LATCHED  //alt feature is inactive, pot value is still latched for normal feature
-
-
 };
 
 typedef struct ButtonKnobCombo{
