@@ -208,14 +208,15 @@ void Button_Debounce_IRQHandler(void)
 								{
 									if (play_state[0] != SILENT) {system_calibrations->cv_calibration_offset[0] -= 1;}
 									if (play_state[1] != SILENT) {system_calibrations->cv_calibration_offset[1] -= 1;}
-									button_ignore[Bank1] = 1;
-									button_ignore[Bank2] = 1;
+									button_ignore[Bank1] 	= 1;
+									button_ignore[Bank2] 	= 1;
 
 								} else 
 								{
 									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] += 0.001;}
 									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] += 0.001;}
 								}
+								button_ignore[RecBank]	 = 1;
 							}
 							else 
 							{
@@ -263,6 +264,7 @@ void Button_Debounce_IRQHandler(void)
 									if (play_state[0] != SILENT) {system_calibrations->tracking_comp[0] -= 0.001;}
 									if (play_state[1] != SILENT) {system_calibrations->tracking_comp[1] -= 0.001;}
 								}
+								button_ignore[Rec]	 = 1;
 							}
 							break;
 
