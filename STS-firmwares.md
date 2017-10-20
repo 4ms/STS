@@ -26,13 +26,14 @@ Without a computer:
 ###Change log:
 
 ----
-#### v1.4
 
-*Released:* (beta-1 released October 13, 2017, beta-2 released October 17, 2017)
+### v1.4c ###
 
-*Download:* [Firmware v1.4 WAV file -- BETA version 2](http://4mscompany.com/STS/firmware/STS-firmware-v1_4beta2.wav)
+*__Released:__* October 19, 2017
 
-*New Features:*
+*__Download:__* [Firmware v1.4c WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_4c.wav)
+
+*__New Features:__*
 
   * __Reduced latency__ by pre-loading each sample file in a bank the first time each sample is played. 
      * Latency from trigger until audio output as low as 0.7ms (with Trigger Delay turned to 0, see below)
@@ -66,9 +67,17 @@ Without a computer:
        * Off: Both envelopes disabled
      * Turning off all envelopes is recommended when playing CV sample files (wav files with clocks/gates, sequencer CV, or slow LFO waveshapes, etc).
      * Turning off Percussive Envelopes is interesting when doing "Granular" patches (see User Manual for example patches)
-     * Can toggle Percussive Envelope mode by turning left side Length to 0, and holding left side Reverse for 2 seconds: Reverse button will flash/flicker [Beta v2 only]
-     * Can toggle Fade In/Out Envelope mode by turning left side Length to 100%, and holding left side Reverse for 2 seconds: Reverse button will flash/flicker [Beta v2 only]
+     * Can toggle Percussive Envelope mode by turning left side Length to 0, and holding left side Reverse for 2 seconds: Reverse button will flash/flicker
+     * Can toggle Fade In/Out Envelope mode by turning left side Length to 100%, and holding left side Reverse for 2 seconds: Reverse button will flash/flicker
      
+*__Fixes:__*
+
+  * After exitting System Mode, right side Length was set to 0, until the knob was moved. Fixed.
+
+    
+(1.4beta-1 released October 13, 2017)
+
+(1.4beta-2 released October 17, 2017)
 
 ----
 #### v1.3
