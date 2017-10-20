@@ -431,10 +431,8 @@ void start_playing(uint8_t chan)
 	play_led_state[chan]=1;
 
 	if (global_mode[ALLOW_SPLIT_MONITORING] && global_mode[STEREO_MODE]==0)
-	{
 		//Turn off monitoring for just this channel
 		global_mode[MONITOR_RECORDING] &= ~(1<<chan);
-	}
 	else
 		global_mode[MONITOR_RECORDING] = MONITOR_OFF;
 
@@ -515,36 +513,38 @@ uint32_t calc_stop_point(float length_param, float resample_param, Sample *sampl
 	uint32_t fwd_stop_point;
 	uint32_t num_samples_to_play;
 	uint32_t max_play_length;
-	uint32_t seconds;
+	float seconds;
 	float t_f;
 	uint32_t t_int;
 
-	seconds  = sample->sampleRate * sample->blockAlign;
+	seconds  = (float)(sample->sampleRate * sample->blockAlign);
 	max_play_length = sample->inst_end - sample->inst_start; 	// as opposed to taking sample->inst_size because that won't be clipped to the end of a sample file
 
-	// knob > 98%	:  env = play length x100% 
-	// plateau accounts for bracketing error at end of knob course
-	if (length_param > 0.98){num_samples_to_play = max_play_length;}																	// 100% >= knob > 98% -->  play 100%
+	if (length_param > 0.98){num_samples_to_play = max_play_length;}														// 100% >= knob > 98% -->  play 100%
 
 
-	else if (length_param > 0.5 && max_play_length <= (0.625 * seconds))																	// knob >=50% and sample length <= 0.625s
+	else if (length_param > 0.5 && max_play_length <= (0.625 * seconds))													// 98% >= knob >= 50% and sample length <= 0.625s
 	{
-		if (max_play_length <= (0.5 * seconds))	num_samples_to_play = max_play_length;															// sample length <= 0.5s ---> play full sample length
-		else num_samples_to_play = ( ((length_param - 0.5) * (max_play_length-0.5)/(0.98-0.5) ) + 0.5 ) * seconds;								// sample length > 0.5 ---> play full sample length to 0.5s
+		if (max_play_length <= (0.5 * seconds))
+			num_samples_to_play = max_play_length;																			// --- 0 < sample length <= 0.5s ---> play full sample length
+		else 
+			num_samples_to_play = 0.5  * seconds + ((max_play_length - (0.5 * seconds)) * (length_param - 0.5)/(0.98-0.5));	// --- 0.5s < sample length <= 0.625 ---> play between 0.5s and full sample
 	}
 
-	else if (length_param>0.95) {num_samples_to_play = max_play_length * (6.67 * length_param - 5.5366);} 								// 98% >= knob > 55%  --> play 100% to 80%
+	else if (length_param>0.95) {num_samples_to_play = max_play_length * (6.67 * length_param - 5.5366);} 					// 98% >= knob > 95%  --> play bweteen 100% to 80% of full sample
 
-	else if (length_param>0.50) 
+	else if (length_param>0.50) 																							// 95% >= knob > 50%  (and sample length > 0.625s)
 	{
-		if (max_play_length > (5 * seconds) ) 																							// if sample length > 5s
+		if (max_play_length > (5.0 * seconds) ) 																			// --- sample length > 5s
 		{
-			if (length_param>0.85){ num_samples_to_play = 4.5 * seconds + ((length_param-0.85) * 8) * (max_play_length - 4.5 * seconds); } 		// 95% >= knob > 85%  --> play 80%  to 5.5s
-			else{num_samples_to_play = (11.43 * length_param - 5.215) * seconds;} 																// 85% >= knob > 50%  --> play 4.5s to 0.5s
+			if (length_param>0.85)
+				num_samples_to_play = 4.5 * seconds + ((length_param-0.85) * 8) * (max_play_length - 4.5 * seconds);  		// -------- 95% >= knob > 85%  --> play 80%  to 5.5s
+			else
+				num_samples_to_play = (11.43 * length_param - 5.215) * seconds;												// -------- 85% >= knob > 50%  --> play 4.5s to 0.5s
 		}
 
-		else 																															// if sample length <= 5s (must be >0.625s)																										
-			{num_samples_to_play = 0.5 * seconds + (length_param * 1.7778 - 0.8889) * (max_play_length - 0.625 * seconds); } 				// 95% >= knob > 50%  --> play 80% to 0.5s
+		else 																												// --- 5s >= sample length > 0.625s --> play 0.5s to 80%																					
+			num_samples_to_play = 0.5 * seconds + (length_param * 1.7778 - 0.8889) * (max_play_length - 0.625 * seconds); 
 
 	}
 	
@@ -1065,7 +1065,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				if (flags[ChangePlaytoPerc1+chan]){		play_state[chan] = PLAY_FADEDOWN;					//If we just changed from PLAYING to PLAYING_PERC then, do a normal Fadedown or else we'll get annoying PAD_SILENCE
 														flags[ChangePlaytoPerc1+chan]=0;}
 				else
-				if (play_state[chan]==PLAYING_PERC /*&& !i_param[chan][REV]*/)		
+				if (play_state[chan]==PLAYING_PERC /*&& !i_param[chan][REV]*/)
 														play_state[chan] = PLAYING_PERC_FADEDOWN;
 				else									play_state[chan] = PLAY_FADEDOWN;
 			}
@@ -1180,11 +1180,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				}
 
 				if (length>0.5)			play_state[chan]	= PLAYING;
-
-				else{					play_state[chan] 	= PLAYING_PERC;
-					//Advance the decay_amp_i so the timing of a short envelope is the same REV or not REV
-					// if (i_param[chan][REV]==0)	decay_amp_i[chan] -= ((float)HT16_CHAN_BUFF_LEN)/((length)*PERC_ENV_FACTOR);
-				}
+				else					play_state[chan] 	= PLAYING_PERC;
+				
 				DEBUG3_OFF;
 		 	 break;
 
@@ -1197,18 +1194,19 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					outL[i] = _SSAT16(outL[i]);
 					outR[i] = _SSAT16(outR[i]);
 				}
-				if (length<=0.5)	flags[ChangePlaytoPerc1+chan] = 1;//set_play_state(chan, PLAYING_PERC);
+				if (length<=0.5)	flags[ChangePlaytoPerc1+chan] = 1;
 
 		 	 break;
 
 			 case (PLAYING_PERC):
 			 case (PLAYING_PERC_FADEDOWN):
 			 case (PAD_SILENCE):
-			 	DEBUG2_ON;
+			 	
 				decay_inc[chan] = 1.0f/((length)*PERC_ENV_FACTOR);
 
 		 		if (play_state[chan]==PLAYING_PERC) 
 		 		{
+		 			DEBUG2_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
@@ -1234,6 +1232,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				//
 		 		if (play_state[chan]==PLAYING_PERC_FADEDOWN) 
 		 		{
+		 			DEBUG0_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
@@ -1251,8 +1250,16 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 						outL[i] = _SSAT16(outL[i]);
 						outR[i] = _SSAT16(outR[i]);
 					}
+					DEBUG0_OFF;
+					//If the sample is very short, then pad it with silence so we get a consistant end out period
+					// if ( (sample->inst_end - sample->inst_start) < (READ_BLOCK_SIZE*2) )
 
-					play_state[chan]=PAD_SILENCE;
+					// If the end point is the end of the sample data (which happens if the file is very short, or if we're at the end of it)
+					// Then pad it with silence so we keep a constant End Out period when looping
+					if ( sample_file_endpos[chan] == s_sample->inst_end )
+						play_state[chan]=PAD_SILENCE;
+					else
+						decay_amp_i[chan] = 0.0f; //force a sample ending
 				}
 				else
 

@@ -378,14 +378,15 @@ void Button_Debounce_IRQHandler(void)
 								}
 							break;
 
-							// Edit + Next File
 							case Rev1:
-								if (global_mode[EDIT_MODE])
+								// Edit + Next File
+								if (global_mode[EDIT_MODE]) 
 								{
 									//Tell the main loop to find the next sample to assign
 									if (button_state[Rev1]<SHORT_PRESSED)
 										flags[FindNextSampleToAssign] = 1;
 								}
+								//Ignore if exiting rev+start combo
 								else
 								if (g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state == COMBO_ACTIVE)
 									g_button_knob_combo[bkc_Reverse1][bkc_StartPos1].combo_state = COMBO_LATCHED;

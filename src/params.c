@@ -524,7 +524,6 @@ void update_params(void)
 			nudge_trim_size(&samples[banknum][samplenum], pot_delta[LENGTH2_POT]);
 
 			pot_changed[LENGTH2_POT] = 0;
-			//pot_delta[LENGTH2_POT] = 0;
 
 			f_param[0][START] = 0.999f;
 			f_param[0][LENGTH] = 0.201f;
@@ -541,7 +540,6 @@ void update_params(void)
 		{
 			nudge_trim_start(&samples[banknum][samplenum], pot_delta[START2_POT]);
 			pot_changed[START2_POT] = 0;
-			//pot_delta[START2_POT] = 0;
 
 			f_param[0][START] = 0.000f;
 			f_param[0][LENGTH] = 0.201f;
@@ -601,6 +599,7 @@ void update_params(void)
 		if (!(global_mode[EDIT_MODE] && chan==CHAN1)) //"skip this block if we're in edit mode and this is channel 1"
 		{
 			edit_bkc 	= &g_button_knob_combo[bkc_Edit][bkc_Length2];
+			t_f = f_param[chan][LENGTH];
 
 			//Use the latched pot value for channel 2 when in Edit Mode
 			if (edit_bkc->combo_state!=COMBO_INACTIVE && chan==CHAN2)
@@ -611,22 +610,6 @@ void update_params(void)
 
 			if (f_param[chan][LENGTH] > 0.990)	f_param[chan][LENGTH] = 1.0;
 			if (f_param[chan][LENGTH] <= 0.005)	f_param[chan][LENGTH] = 0.005;
-
-			//Toggle envelope modes if Rev1 is held down while Length1 is at an extreme
-			if ((button_state[Rev1]>=MED_PRESSED) && (button_ignore[Rev1]==0) && (chan==CHAN1))
-			{
-				if (bracketed_potadc[LENGTH1_POT]<50)	{
-					global_mode[PERC_ENVELOPE] = !global_mode[PERC_ENVELOPE];
-					button_ignore[Rev1] = 1;
-					flags[PercEnvModeChanged] = 100;
-				}
-				if (bracketed_potadc[LENGTH1_POT]>4000)	{
-					global_mode[FADEUPDOWN_ENVELOPE] = !global_mode[FADEUPDOWN_ENVELOPE];
-					button_ignore[Rev1] = 1;
-					flags[FadeEnvModeChanged] = 100;
-				}
-			}
-
 
 			//
 			// START POT + CV
@@ -649,6 +632,34 @@ void update_params(void)
 			if (f_param[chan][START] > 0.99)		f_param[chan][START] = 1.0;
 			if (f_param[chan][START] <= 0.0003)		f_param[chan][START] = 0.0;
 		}
+
+
+		//
+		// Rev1 + Length1: Envelope Mode on/off
+		//
+		// Toggle envelope modes if Rev1 is held down while Length1 is at an extreme
+		//
+
+		vol_bkc 	= &g_button_knob_combo[bkc_Reverse1][bkc_StartPos1];
+
+		if ( (chan==CHAN1) && 															// Only need to check it for channel 1
+			 (button_state[Rev1]>=MED_PRESSED) &&										// Rev1 button is held down for a while
+			 all_buttons_except(UP, (1<<Rev1)) &&										// No other buttons are down 
+			 (button_ignore[Rev1]==0) && 												// Feature hasn't been activated since last Rev1 button up event
+			 (vol_bkc->combo_state == COMBO_INACTIVE) )									// Ignore if we're doing a Volume button/knob combo
+		{
+			if (bracketed_potadc[LENGTH1_POT]<50)	{
+				global_mode[PERC_ENVELOPE] = !global_mode[PERC_ENVELOPE];
+				button_ignore[Rev1] = 1;
+				flags[PercEnvModeChanged] = 100;
+			}
+			if (bracketed_potadc[LENGTH1_POT]>4000)	{
+				global_mode[FADEUPDOWN_ENVELOPE] = !global_mode[FADEUPDOWN_ENVELOPE];
+				button_ignore[Rev1] = 1;
+				flags[FadeEnvModeChanged] = 100;
+			}
+		}
+
 
 		//
 		// PITCH POT + CV
