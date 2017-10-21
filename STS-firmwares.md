@@ -97,6 +97,7 @@ Intermediate versions: (1.4beta-1 released October 13, 2017)
 (1.4c fixed sticky right length knob when exiting system mode)
 (1.4d fixed bugs that appeared in v1.4beta2) 
 (1.4e fixed bugs that appeared in v1.3) 
+(1.4f more filtering on 1V/oct jacks, and quantized mode plays better with tracking comp setting) 
 
 ----
 #### v1.3
