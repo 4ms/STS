@@ -674,7 +674,8 @@ void update_params(void)
 
 		if (global_mode[QUANTIZE_CH1+chan]) 
 		{
-			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * quantized_semitone_voct(pitch_cv) * system_calibrations->tracking_comp[chan];
+			compensated_pitch_cv = apply_tracking_compensation(pitch_cv, system_calibrations->tracking_comp[chan]);
+			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * quantized_semitone_voct(compensated_pitch_cv);
 		}
 		else
 		{
