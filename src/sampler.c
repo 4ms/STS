@@ -772,7 +772,10 @@ void read_storage_to_buffer(void)
 			//we have to preload four times as much data (2^2) vs (1^1)
 			//
 			pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign * s_sample->numChannels) * pb_adjustment);
-			active_buff_size = pre_buff_size * 8;
+			active_buff_size = pre_buff_size * 4;
+
+			if (active_buff_size > ((play_buff[chan][samplenum]->size * 7) / 10) ) //limit amount of buffering ahead to 90% of buffer size
+				active_buff_size = ((play_buff[chan][samplenum]->size * 7) / 10);
 
 			if (!is_buffered_to_file_end[chan][samplenum] && 
 				(
@@ -946,7 +949,7 @@ void read_storage_to_buffer(void)
 						}
 
 						if (err)
-							g_error |= READ_BUFF1_OVERRUN*(1+chan);
+							g_error |= READ_BUFF1_OVERRUN<<chan;
 
 					}
 
@@ -1068,7 +1071,10 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				play_buff_bufferedamt[chan][samplenum] = CB_distance(play_buff[chan][samplenum], i_param[chan][REV]);
 
 				if (!is_buffered_to_file_end[chan][samplenum] && play_buff_bufferedamt[chan][samplenum] <= resampled_buffer_size)
-					{g_error |= READ_BUFF1_UNDERRUN<<chan; check_errors(); play_state[chan] = PREBUFFERING;}//buffer underrun: tried to read too much out. Try to recover!
+					{
+						g_error |= READ_BUFF1_UNDERRUN<<chan;
+						check_errors();
+						play_state[chan] = PREBUFFERING;}//buffer underrun: tried to read too much out. Try to recover!
 			}
 		}
 
