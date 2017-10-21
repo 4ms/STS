@@ -240,8 +240,8 @@ void init_LowPassCoefs(void)
 	}
 	else
 	{
-		FIR_LPF_SIZE[PITCH1_CV] = 20;
-		FIR_LPF_SIZE[PITCH2_CV] = 20;
+		FIR_LPF_SIZE[PITCH1_CV] = 40;
+		FIR_LPF_SIZE[PITCH2_CV] = 40;
 	}
 
 	FIR_LPF_SIZE[START1_CV] = 20;
@@ -332,10 +332,10 @@ void process_cv_adc(void)
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] + (CV_BRACKET[i]);
 		}
 
-		//Additional bracketing for special-case of CV jack being near 0V
+		//Additional bracketing for special-case of CV jack being near 0V:
 		if (i==0 || i==1) //PITCH CV
 		{
-			if (bracketed_cvadc[i] >= 2045 && bracketed_cvadc[i] <= 2050)
+			if (bracketed_cvadc[i] >= (2048-3) && bracketed_cvadc[i] <= (2048+3))
 				bracketed_cvadc[i] = 2048;
 		}
 
