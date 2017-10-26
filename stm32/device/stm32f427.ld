@@ -1,6 +1,54 @@
 /*
 Linker script for STM32F4xx_1024K_192K
 Modified and commented by: Dan Green <danngreen1@gmail.com>
+
+Sections of memory:
+
+text
+----
+text lives in FLASH memory. It contains:
+-functions/code
+-interrupt vector
+-constant data, such as:
+   const uint8_t table[] = {1,2,3,4,5}; //this results in 5 bytes in the text section
+
+
+
+data
+----
+data is initialized data. It's for global and static variables that are initialized. 
+The variable is part of RAM, and the initialization value is stored in FLASH.
+
+Example:
+int32_t myVar = 0x12345678; //global variable
+
+void myfunc(void){
+  static int8_t myfuncVar = 1;
+  ...
+}
+
+myVar will take up 4 bytes in data. Also, 0x12345678 is constant data so it will take up 4 bytes in text (FLASH)
+myfuncVar will take up 1 byte in data. The value of 1 will take of one byte in text (FLASH)
+
+
+bss
+---
+bss is uninitialized data. The variable lives in RAM.
+All global or static variables without initialization values end up here.
+
+Example:
+int32_t myVar; //global variable
+
+void myfunc(void){
+  static int8_t myfuncVar;
+  ...
+}
+
+Both myfuncVar and myVar will live in bss.
+
+
+More info:
+See https://mcuoneclipse.com/2013/04/14/text-data-and-bss-code-and-data-size-explained/
 */
 
 ENTRY(Reset_Handler)
