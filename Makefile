@@ -83,6 +83,8 @@ LFLAGS  = $(CFLAGS) -Wl,-Map,main.map -T $(LDSCRIPT)
 
 # Uncomment to compile unoptimized:
 
+#LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIPT) 
+LFLAGS  =  -mfloat-abi=hard --specs="nosys.specs" -nostartfiles -T $(LDSCRIPT) 
 
 # Main:
 # $(BUILDDIR)/src/main.o: OPTFLAGS = -O0
