@@ -53,11 +53,9 @@ enum PlayLoadTriage{
 //9216 = 512 * 18 = 24 * 384
 #define READ_BLOCK_SIZE 9216
 
-
 #define PERC_ENV_FACTOR 40000.0f
 
 #define MAX_RS 20 /* over 4 octaves at 44.1k */
-//#define MAX_RS_READ_BUFF_LEN ((codec_BUFF_LEN >> 2) * MAX_RS)
 
 void audio_buffer_init(void);
 void read_storage_to_buffer(void);

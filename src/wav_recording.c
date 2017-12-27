@@ -49,8 +49,6 @@
 extern volatile uint32_t 		sys_tmr;
 extern enum g_Errors 			g_error;
 
-extern uint8_t 					SAMPLINGBYTES;
-
 extern uint8_t					i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern uint8_t					global_mode[NUM_GLOBAL_MODES];
 
@@ -155,9 +153,9 @@ void record_audio_to_buffer(int16_t *src)
 
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
-		WATCH_REC_BUFF = CB_distance(rec_buff, 0);
-		if (WATCH_REC_BUFF == 0) 
-			{DEBUG0_ON;DEBUG0_OFF;}
+		// WATCH_REC_BUFF = CB_distance(rec_buff, 0);
+		// if (WATCH_REC_BUFF == 0) 
+		// 	{DEBUG0_ON;DEBUG0_OFF;}
 
 
 		overrun = 0;
@@ -185,7 +183,7 @@ void record_audio_to_buffer(int16_t *src)
 
 				CB_offset_in_address(rec_buff, 2, 0);
 
- WATCH_REC_BUFF_IN = rec_buff->in;
+				// WATCH_REC_BUFF_IN = rec_buff->in;
 
 				// Flag an buffer overrun condition if the in and out pointers cross
 				// But, don't consider the heads being crossed if they end at the same place
@@ -516,7 +514,7 @@ void write_buffer_to_storage(void)
 					else
 						addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, WRITE_BLOCK_SIZE>>1, 0);
 
-// WATCH_REC_BUFF_OUT = rec_buff->out;
+					// WATCH_REC_BUFF_OUT = rec_buff->out;
 
 					if (addr_exceeded)
 					{
@@ -576,7 +574,7 @@ void write_buffer_to_storage(void)
 				else
 					addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, buffer_lead>>1, 0);
 
-// WATCH_REC_BUFF_OUT = rec_buff->out;
+				// WATCH_REC_BUFF_OUT = rec_buff->out;
 
 				if (!addr_exceeded)
 				{

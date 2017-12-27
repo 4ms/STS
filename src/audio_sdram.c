@@ -36,9 +36,6 @@
 #include "leds.h"
 #include "circular_buffer.h"
 
-
-extern uint8_t SAMPLINGBYTES;
-
 void memory_clear(void)
 {
 	uint32_t i;

@@ -60,8 +60,6 @@ extern uint8_t 				play_led_state[NUM_PLAY_CHAN];
 extern volatile uint32_t 	sys_tmr;
 uint32_t					last_play_start_tmr[NUM_PLAY_CHAN];
 
-uint8_t 					SAMPLINGBYTES=2;
-
 uint32_t 					end_out_ctr[NUM_PLAY_CHAN]={0,0};
 uint32_t 					play_led_flicker_ctr[NUM_PLAY_CHAN]={0,0};
 
@@ -132,8 +130,6 @@ void audio_buffer_init(void)
 {
 	uint8_t i, chan;
 	uint8_t window_num;
-
-	SAMPLINGBYTES=2;
 
 	memory_clear();
 
