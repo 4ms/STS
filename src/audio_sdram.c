@@ -256,55 +256,6 @@ uint32_t memory_write16_cb(CircularBuffer* b, int16_t *wr_buff, uint32_t num_sam
 	return (heads_crossed);
 }
 
-
-
-/*
-//
-// reads from the addr, and mixes that value with the value in wr_buff
-// fade=1.0 means write 100% wr_buff and 0% read.
-// fade=0.5 means write 50% wr_buff and 50% read.
-// fade=0.0 means write 0% wr_buff and 100% read.
-//
-uint32_t memory_fade_write(uint32_t *addr, uint8_t channel, int32_t *wr_buff, uint32_t num_samples, uint8_t decrement, float fade){
-	uint32_t i;
-	int32_t rd;
-	int32_t mix;
-
-	for (i=0;i<num_samples;i++){
-
-		while(SDRAM_IS_BUSY){;}
-
-		//Enforce valid addr range
-		if ((addr[channel]<SDRAM_BASE) || (addr[channel] > (SDRAM_BASE + SDRAM_SIZE)))
-			addr[channel]=SDRAM_BASE;
-
-		//even addresses only
-		addr[channel] = (addr[channel] & 0xFFFFFFFE);
-
-		//read from address
-		if (SAMPLINGBYTES==2)
-			rd = *((int16_t *)(addr[channel]));
-		else
-			rd = *((int32_t *)(addr[channel]));
-
-		mix = ((float)wr_buff[i] * fade) + ((float)rd * (1.0-fade));
-
-		while(SDRAM_IS_BUSY){;}
-
-		if (SAMPLINGBYTES==2)
-			*((int16_t *)addr[channel]) = mix;
-		else
-			*((int32_t *)addr[channel]) = mix;
-
-		addr[channel] = inc_addr(addr[channel], channel, decrement);
-
-	}
-
-	return 0;
-
-}
-*/
-
 uint32_t RAM_test(void){
 
 	uint32_t addr;
