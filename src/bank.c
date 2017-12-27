@@ -1,3 +1,31 @@
+/*
+ * banks.c - bank functions (naming, enabling, and more)
+ *
+ * Author: Dan Green (danngreen1@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
+ */
+
 #include "globals.h"
 #include "params.h"
 #include "dig_pins.h"
@@ -9,7 +37,6 @@
 
 extern uint8_t	i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern uint8_t 	flags[NUM_FLAGS];
-extern enum g_Errors g_error;
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
@@ -17,9 +44,9 @@ extern uint8_t	global_mode[NUM_GLOBAL_MODES];
 
 uint8_t bank_status[MAX_NUM_BANKS];
 
-///
-/// Moving banks
-///
+//
+// Moving banks
+//
 
 void copy_bank(Sample *dst, Sample *src)
 {
@@ -35,9 +62,10 @@ void copy_bank(Sample *dst, Sample *src)
 
 
 //
-// Copy bank+40 to bank+50, bank+40 to bank+40, etc...
-// The goal is to open up bank#=bank so we can place a new set of files in there
+// Copy bank+40 to bank+50, bank+30 to bank+40, etc...
+// The goal is to open up the given bank so we can place a new set of files in there
 // FixMe: This must be changed manually if MAX_NUM_BANKS changes
+//
 void bump_down_banks(uint8_t bank)
 {
 	uint8_t t_bank;
@@ -84,7 +112,7 @@ void bump_down_banks(uint8_t bank)
 
 //
 // Returns the "predominant" path of the samples in a bank
-// FixMe: make go through all samples in the bank, and set path to the most common path
+// Todo: make go through all samples in the bank, and set path to the most common path
 // For now, it sets path to the path of the first non-empty slot
 // Returns 1 if path is set
 // Returns 0 if no slots are filled
@@ -104,6 +132,7 @@ uint8_t get_bank_path(uint8_t bank, char *path)
 			if (str_split(samples[bank][samplenum].filename, '/', path, tmp_filename) == 0)
 				path[0]='\0'; //no slashes exist in filename, so path is the root dir
 
+			// Todo untested code:
 			// path_is_new = 1;
 			// for (i=0;i<candidate_i;i++)
 			// {
@@ -257,6 +286,10 @@ uint8_t bank_to_color_string(uint8_t bank, char *color)
 
 }
 
+
+// Given a bank number, sets color to the default bank name
+// Example: 49 ==> Pearl-4
+
 uint8_t bank_to_color(uint8_t bank, char *color)
 {
 	uint8_t digit1, digit2, len;
@@ -296,6 +329,10 @@ uint8_t bank_to_color(uint8_t bank, char *color)
 		return bank_to_color_string(bank, color);
 }
 
+// Given a color string, return a bank number.
+// If the color string doesn't match any default bank names,
+// return MAX_NUM_BANKS
+//
 uint8_t color_to_bank(char *color)
 {
 	uint8_t i;
@@ -324,8 +361,6 @@ uint8_t color_to_bank(char *color)
 //
 uint8_t get_bank_color_digit(uint8_t bank)
 {
-//	uint8_t digit1;
-
 	if (bank<10) return bank;
 	
 	while (bank>=10) bank-=10;
@@ -355,7 +390,9 @@ uint8_t next_bank(uint8_t bank)
 	return (bank);
 }
 
-//if bank==0xFF, we find the first enabled bank
+// Give a bank number, return the next enabled bank
+// If bank==0xFF, return the first enabled bank
+//
 uint8_t next_enabled_bank(uint8_t bank) 
 {
 	uint8_t orig_bank=bank;
@@ -370,7 +407,9 @@ uint8_t next_enabled_bank(uint8_t bank)
 	return (bank);
 }
 
-// same as next_enabled_bank but wraps around to 0xFF instead
+// Same as next_enabled_bank but acts as if there
+// was an enabled bank number 255 (0xFF) after the last bank
+//
 uint8_t next_enabled_bank_0xFF(uint8_t bank) 
 {
 	do{
@@ -381,6 +420,9 @@ uint8_t next_enabled_bank_0xFF(uint8_t bank)
 	return (bank);
 }
 
+// Given a bank number, returns the previous enabled bank
+// If there are no enabled banks, return 0 (which is the first bank)
+//
 uint8_t prev_enabled_bank(uint8_t bank)
 {
 	uint8_t orig_bank=bank;
@@ -395,6 +437,9 @@ uint8_t prev_enabled_bank(uint8_t bank)
 	return (bank);
 }
 
+// Same as prev_enabled_bank but acts as if there
+// was an enabled bank number 255 (0xFF) before the first bank
+//
 uint8_t prev_enabled_bank_0xFF(uint8_t bank)
 {
 	if (bank == 0xFF) bank=MAX_NUM_BANKS;
@@ -406,7 +451,9 @@ uint8_t prev_enabled_bank_0xFF(uint8_t bank)
 	return (bank);
 }
 
-//if bank==0xFF, we find the first disabled bank
+// Given a bank number, return the next disabled bank
+// If we give bank==0xFF, then return the first disabled bank
+//
 uint8_t next_disabled_bank(uint8_t bank) 
 {
 	uint8_t orig_bank=bank;
@@ -420,6 +467,9 @@ uint8_t next_disabled_bank(uint8_t bank)
 	return (bank);
 }
 
+// Given a bank number, return the previous disabled bank
+// If we give bank==0xFF, then return the first disabled bank
+//
 uint8_t prev_disabled_bank(uint8_t bank) 
 {
 	uint8_t orig_bank=bank;
