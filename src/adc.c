@@ -1,6 +1,31 @@
 /*
- * adc.c - adc setup
+ * adc.c - internal ADC setup for pots and CV jacks
+ *
+ * Author: Dan Green (danngreen1@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
  */
+
 #include "globals.h"
 #include "adc.h"
 
@@ -36,11 +61,11 @@ void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	ADC_InitTypeDef ADC_InitStructure;
 	GPIO_InitTypeDef GPIO_InitStructure;
 
-	/* enable clocks for DMA2, ADC1 ----------------------------------*/
+	// Enable clocks for DMA2, ADC1
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 
-	/* DMA2 stream4 channel0 configuration ----------------------------------*/
+	// DMA2 stream4 channel0 configuration
 	DMA_InitStructure.DMA_Channel = DMA_Channel_0;  
 	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&ADC1->DR;
 	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)ADC_Buffer;
@@ -59,14 +84,14 @@ void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	DMA_Init(DMA2_Stream4, &DMA_InitStructure);
 	DMA_Cmd(DMA2_Stream4, ENABLE);
 
-	/* ADC Common Init ------------------------------------------------------*/
+	// ADC Common Init
 	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
 	ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div8;
 	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled;
 	ADC_CommonInitStructure.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_20Cycles;
 	ADC_CommonInit(&ADC_CommonInitStructure);
 
-	/* ADC1 Init ------------------------------------------------------------*/
+	// ADC1 Init 
 	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
 	ADC_InitStructure.ADC_ScanConvMode = ENABLE;
 	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
@@ -76,7 +101,7 @@ void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	ADC_InitStructure.ADC_NbrOfConversion = num_adcs;
 	ADC_Init(ADC1, &ADC_InitStructure);
 	
-	/* Configure analog input pins ------------------------------------------*/
+	// Configure analog input pins
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC, ENABLE);
 
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
@@ -91,7 +116,7 @@ void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5; //PC2, PC3 = Channel 12, 13, 14, 15
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-	/* ADC1 regular channel configuration -----------------------------------*/ 
+	// ADC1 regular channel configuration
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_6, PITCH1_POT+1, ADC_SampleTime_144Cycles); //[0]: PA6
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_7, PITCH2_POT+1, ADC_SampleTime_144Cycles); //[1]: PA7
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_12, START1_POT+1, ADC_SampleTime_144Cycles); //[2]: PC2
@@ -102,26 +127,12 @@ void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_8, LENGTH2_POT+1, ADC_SampleTime_144Cycles); //[7]: PB0
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_5, RECSAMPLE_POT+1, ADC_SampleTime_144Cycles); //[8]: PA5
 
-
-	//DMA_ITConfig(DMA2_Stream0, DMA_IT_TC, ENABLE);
-   	//NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-	
 	ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
 	ADC_DMACmd(ADC1, ENABLE);
 	ADC_Cmd(ADC1, ENABLE);
 	ADC_SoftwareStartConv(ADC1);
 }
 
-/*
-void DMA2_Stream4_IRQHandler(void)
-{ 
-	if (DMA_GetFlagStatus(DMA2_Stream4, DMA_FLAG_TCIF0) != RESET)
-	{
-		DMA_ClearFlag(DMA2_Stream4, DMA_FLAG_TCIF0);
-		//ADC_SoftwareStartConv(ADC1);
-	}
-}
-*/
 
 void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 {
@@ -130,11 +141,11 @@ void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	ADC_InitTypeDef ADC_InitStructure;
 	GPIO_InitTypeDef GPIO_InitStructure;
 
-	/* enable clocks for DMA2, ADC3  ----------------------------------*/
+	// Enable clocks for DMA2, ADC3 
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC3, ENABLE);
 
-	/* DMA2 stream0 channel2 configuration ----------------------------------*/
+	// DMA2 stream0 channel2 configuration
 	DMA_InitStructure.DMA_Channel = DMA_Channel_2;
 	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&ADC3->DR;
 	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)ADC_Buffer;
@@ -161,7 +172,7 @@ void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 
 	ADC_CommonInit(&ADC_CommonInitStructure);
 
-	/* ADC3 Init ------------------------------------------------------------*/
+	// ADC3 Init
 	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
 	ADC_InitStructure.ADC_ScanConvMode = ENABLE;
 	ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
@@ -171,7 +182,7 @@ void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	ADC_InitStructure.ADC_NbrOfConversion = num_adcs;
 	ADC_Init(ADC3, &ADC_InitStructure);
 
-	/* Configure analog input pins ------------------------------------------*/
+	// Configure analog input pins
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOF, ENABLE);
 
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
@@ -193,26 +204,9 @@ void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	ADC_RegularChannelConfig(ADC3, ADC_Channel_1, SAMPLE1_CV+1, ADC_SampleTime_3Cycles); //PA1
 	ADC_RegularChannelConfig(ADC3, ADC_Channel_2, SAMPLE2_CV+1, ADC_SampleTime_480Cycles); //PA2
 
-	//DMA_ITConfig(DMA2_Stream0, DMA_IT_TC, ENABLE);
-	//NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-
 	ADC_DMARequestAfterLastTransferCmd(ADC3, ENABLE);
 	ADC_DMACmd(ADC3, ENABLE);
 	ADC_Cmd(ADC3, ENABLE);
 	ADC_SoftwareStartConv(ADC3);
 }
 
-
-/*
-void DMA2_Stream0_IRQHandler(void)
-{
-
-	if (DMA_GetFlagStatus(DMA2_Stream0, DMA_FLAG_TCIF2) != RESET)
-	{
-		DMA_ClearFlag(DMA2_Stream0, DMA_FLAG_TCIF2);
-
-		//ADC_SoftwareStartConv(ADC3);
-	}
-
-}
-*/
