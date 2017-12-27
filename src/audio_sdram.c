@@ -1,8 +1,29 @@
 /*
- * audio_memory.c
+ * audio_sdram.c - SDRAM read/write routines for use with circular buffers
  *
- *  Created on: Apr 6, 2015
- *      Author: design
+ * Author: Dan Green (danngreen1@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
  */
 
 #include "globals.h"
@@ -314,37 +335,6 @@ void RAM_startup_test(void)
 {
 	volatile register uint32_t ram_errors=0;
 
-
-	// Testing SDRAM timing:
-	// Results:
-	// reading a 4-byte word takes on average 218ns = 54.5 ns/Byte
-	// reading a 2-byte word takes on average 204ns = 102 ns/Byte
-	//
-	//	volatile uint32_t i32;
-	//	volatile int32_t dummy;
-	//	volatile int32_t dummy16;
-	//
-	//
-	//	for (i32=0;i32<100000;i32++)
-	//	{
-	//		DEBUG0_ON;
-	//		dummy = *((int32_t *)(0xD0000000 + i32*4));
-	//		dummy += *((int32_t *)(0xD0000000 + i32*4 + 500));
-	//		dummy += *((int32_t *)(0xD0000000 + i32*4 + 1500));
-	//		dummy += *((int32_t *)(0xD0000000 + i32*4 + 2000));
-	//		DEBUG0_OFF;
-	//
-	//		DEBUG1_ON;
-	//		dummy16 = *((int16_t *)(0xD1000000 + i32*2));
-	//		dummy16 += *((int16_t *)(0xD1000000 + i32*2 + 500));
-	//		dummy16 += *((int16_t *)(0xD1000000 + i32*2 + 1500));
-	//		dummy16 += *((int16_t *)(0xD1000000 + i32*2 + 2000));
-	//		DEBUG1_OFF;
-	//		if (dummy == 156 || dummy16 == 298)
-	//			DEBUG3_ON;
-	//	}
-
-
 	ram_errors = RAM_test();
 
 	PLAYLED1_ON;
@@ -372,7 +362,6 @@ void RAM_startup_test(void)
 		else if (ram_errors == 0)
 			chase_all_lights(100);
 	}
-
 
 }
 

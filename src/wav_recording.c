@@ -1,3 +1,32 @@
+/*
+ * wav_recording.c - wav file recording routines
+ * also contains recording-related functions for Stereo Triggered Sampler application
+ *
+ * Authors: Dan Green (danngreen1@gmail.com), Hugo Paris (hugoplo@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
+ */
+
 #include "globals.h"
 #include "params.h"
 #include "wavefmt.h"
@@ -33,17 +62,18 @@ extern Sample 					samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
 extern SystemCalibrations 		*system_calibrations;
 
-uint32_t WATCH_REC_BUFF;
-uint32_t WATCH_REC_BUFF_IN;
-uint32_t WATCH_REC_BUFF_OUT;
+// uint32_t WATCH_REC_BUFF;
+// uint32_t WATCH_REC_BUFF_IN;
+// uint32_t WATCH_REC_BUFF_OUT;
 
 #define WRITE_BLOCK_SIZE 	9216
 
 // MAX_REC_SAMPLES = Maximum bytes of sample data
 // WAV file specification limits sample data to 4GB = 0xFFFFFFFF Bytes
 //
-// Assuming our rec buffer is full, we should stop recording when we reach 4GB - (Size of SDRAM Record Buffer)
-// Then we shorten this by two WRITE_BLOCK_SIZEs just to be safe
+// Assuming our rec buffer is full, we should stop recording when we reach
+// 4GB minus the size of SDRAM record buffer.
+// Then we shorten this by two WRITE_BLOCK_SIZEs just to be safe.
 // Note: the wav file itself can exceed 4GB, just the 'data' chunk size must be <=4GB 
 //
 #define MAX_REC_SAMPLES 	(0xFFFFFFFF - REC_BUFF_SIZE - (WRITE_BLOCK_SIZE*2))
@@ -67,7 +97,7 @@ uint8_t				sample_num_now_recording;
 uint8_t				sample_bank_now_recording;
 uint8_t				sample_bytesize_now_recording;
 char 				sample_fname_now_recording[_MAX_LFN];
-WaveHeaderAndChunk	whac_now_recording;
+WaveHeaderAndChunk	whac_now_recording; // whac = "Wave Header And Chunk"
 
 uint8_t 		recording_enabled;
 
@@ -104,16 +134,17 @@ void toggle_recording(void)
 		if (global_mode[ENABLE_RECORDING])
 		{
 			CB_init(rec_buff, 0);
-WATCH_REC_BUFF_IN = rec_buff->in;
-WATCH_REC_BUFF_OUT = rec_buff->out;
+			// WATCH_REC_BUFF_IN = rec_buff->in;
+			// WATCH_REC_BUFF_OUT = rec_buff->out;
 
 			rec_state = CREATING_FILE;
 		}
 	}
 }
 
-//int16_t tmp_buff16[HT16_BUFF_LEN<<1]; //1024 elements, 16b each
-
+// Main routine that handles recording codec input stream (src)
+// to the SDRAM buffer (rec_buff)
+// 
 void record_audio_to_buffer(int16_t *src)
 {
 	uint32_t i;
@@ -122,7 +153,6 @@ void record_audio_to_buffer(int16_t *src)
 	uint16_t topword, bottomword;
 	uint8_t  bottombyte;
 
-//	DEBUG1_ON;
 	if (rec_state==RECORDING || rec_state==CREATING_FILE)
 	{
 		WATCH_REC_BUFF = CB_distance(rec_buff, 0);
@@ -133,9 +163,10 @@ void record_audio_to_buffer(int16_t *src)
 		overrun = 0;
 
 		//
-		// Dump HT16_BUFF_LEN samples of the rx buffer from codec (src) into t_buff
-		// Then write t_buff to sdram at rec_buff
-		//
+		// Dump HT16_BUFF_LEN samples of the rx buffer from codec (src) into rec_buff
+		// This code is optimized by using the SDRAM_IS_BUSY macro, at the expense
+		// of code readibility. The processor cycles saved were crucial!
+		// Todo: additional cycles could be saved by inlining CB_offset_in_address()
 
 		for (i=0; i<HT16_BUFF_LEN; i++)
 		{
@@ -144,8 +175,10 @@ void record_audio_to_buffer(int16_t *src)
 			//
 			if (!global_mode[REC_24BITS])
 			{
+				// 16-bit recording:
+				//
 
-				*((int16_t *)rec_buff->in) = *src++; // + system_calibrations->codec_adc_calibration_dcoffset[i&1];
+				*((int16_t *)rec_buff->in) = *src++;
 				dummy=*src++; //ignore bottom bits
 
 				while(SDRAM_IS_BUSY){;}
@@ -154,12 +187,16 @@ void record_audio_to_buffer(int16_t *src)
 
  WATCH_REC_BUFF_IN = rec_buff->in;
 
-				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) //don't consider the heads being crossed if they end at the same place
+				// Flag an buffer overrun condition if the in and out pointers cross
+				// But, don't consider the heads being crossed if they end at the same place
+				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) 
 					overrun = rec_buff->out;
 			}
 			else
 			{
-				topword 		= (uint16_t)(*src++); // + system_calibrations->codec_adc_calibration_dcoffset[i&1];
+				// 24-bit recording:
+				//
+				topword 		= (uint16_t)(*src++); 
 				bottomword		= (uint16_t)(*src++);
 
 				bottombyte 		= bottomword >> 8;
@@ -172,9 +209,11 @@ void record_audio_to_buffer(int16_t *src)
 				CB_offset_in_address(rec_buff, 2, 0);
 				while(SDRAM_IS_BUSY){;}
 
- WATCH_REC_BUFF_IN = rec_buff->in;
+				// WATCH_REC_BUFF_IN = rec_buff->in;
 
-				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) //don't consider the heads being crossed if they end at the same place
+				// Flag an buffer overrun condition if the in and out pointers cross
+				// But, don't consider the heads being crossed if they end at the same place
+				if ((rec_buff->in == rec_buff->out) && i!=(HT16_BUFF_LEN-1)) 
 					overrun = rec_buff->out;
 			}
 		}
@@ -185,16 +224,17 @@ void record_audio_to_buffer(int16_t *src)
 			check_errors();
 		}
 	}
-//	DEBUG1_OFF;
 }
 
 
-// creates file and writes headerchunk to it
+// Creates a new file and writes a wave header and header chunk to it
+// If it succeeds, it sets the recording state to RECORDING
+// Otherwise, it sets a g_error and returns
+//
 void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 {
 	uint32_t sz;
 	FRESULT res;
-	//WaveHeaderAndChunk whac;
 	uint32_t written;
 	DIR dir;
 
@@ -273,33 +313,10 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 
 }
 
-// FRESULT write_wav_chunk_size(FIL *wavfil, uint32_t file_position, uint32_t chunk_bytes)
-// {
-// 	uint32_t data;
-// 	uint32_t orig_pos;
-// 	uint32_t written;
-// 	FRESULT res;
-
-// 	//cache the original file position
-// 	orig_pos = f_tell(wavfil);
-
-// 	//data chunk size
-// 	data = chunk_bytes;
-// 	res = f_lseek(wavfil, file_position);
-// 	if (res==FR_OK)
-// 	{
-// 		res = f_write(wavfil, &data, 4, &written);
-// 		f_sync(wavfil);
-// 	}
-
-// 	if (res!=FR_OK) {		g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
-// 	if (written!=4)	{		g_error |= FILE_UNEXPECTEDEOF_WRITE; check_errors(); return(FR_INT_ERR);}
-
-// 	//restore the original file position
-// 	res = f_lseek(wavfil, orig_pos);
-// 	return(res);
-// }
-
+// Writes the data chunk size and the file fize into the given wave file
+// The former is written into the RIFF chunk, and the latter is written
+// to the 'data' chunk.
+// 
 FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_size_bytes)
 {
 	uint32_t orig_pos;
@@ -318,9 +335,7 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_siz
 	res = f_lseek(wavfil, 0);
 	if (res==FR_OK)
 	{
-		//DEBUG3_ON;
 		res = f_write(wavfil, &whac_now_recording, sizeof(WaveHeaderAndChunk), &written);
-		//DEBUG3_OFF;
 	}
 
 	if (res!=FR_OK) 							{g_error |= FILE_WRITE_FAIL; check_errors(); return(res);}
@@ -331,9 +346,12 @@ FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_siz
 	return(res);
 }
 
-// Writes comment and firmware in info Chunk + id3 tag
+// Writes comments into the INFO chunk of the given wav file
 // ToDo: This only works for firmware versions 0.0 to 9.9
-// firmware tag limited to 80 char
+// ToDo: firmware tag limited to _MAX_LFN char
+// The firmware version and comment string are set in wav_recording.h
+// and globals.h
+//
 FRESULT write_wav_info_chunk(FIL *wavfil, uint32_t *total_written)
 {
 
@@ -353,23 +371,22 @@ FRESULT write_wav_info_chunk(FIL *wavfil, uint32_t *total_written)
 	str_cat(firmware, firmware, temp_a);
 
 	struct Chunk{
-		// char   title[4];
 		uint32_t len;
 		uint32_t padlen;
 	};
 
 	struct Chunk list_ck, comment_ck, firmware_ck;
 
-	// COMPUTE CHUNK LENGHTS
-	// comment
+	// COMPUTE CHUNK LENGTHS
+	// wav comment
 	comment_ck.len = str_len(WAV_COMMENT);
 	if(comment_ck.len%4) comment_ck.padlen = 4 - (comment_ck.len%4);
 	
-	// firmware
+	// firmware version
 	firmware_ck.len = str_len(firmware);
 	if ((firmware_ck.len)%4) firmware_ck.padlen = 4 - (firmware_ck.len%4);
 
-	// list
+	// list chunk header
 	list_ck.len = comment_ck.len + comment_ck.padlen + firmware_ck.len + firmware_ck.padlen + 3*chunkttl_len + 2*chunkttl_len; // 3x: INFO ICMT ISFT  2x: lenght entry, after title
 
 	*total_written = 0;
@@ -432,6 +449,14 @@ FRESULT write_wav_info_chunk(FIL *wavfil, uint32_t *total_written)
 	return(FR_OK);
 }
 
+// Main routine to handle the recording process from SDRAM to SD Card
+//
+// If we just requested to start recording, it handles creating the new file
+// If we're recording, it writes a block of data from the SDRAM buffer onto the SD Card
+// If we're done recording, it handles closing the file, adding tags, renaming it
+// If we need to close the file because we reached the size limit, but need to 
+// continue recording, it handles all of that.
+//
 void write_buffer_to_storage(void)
 {
 	uint32_t buffer_lead;
@@ -456,7 +481,6 @@ void write_buffer_to_storage(void)
 	}
 
 
-	//DEBUG2_ON;
 
 	// Handle write buffers (transfer SDRAM to SD card)
 	switch (rec_state)
@@ -492,7 +516,7 @@ void write_buffer_to_storage(void)
 					else
 						addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, WRITE_BLOCK_SIZE>>1, 0);
 
-WATCH_REC_BUFF_OUT = rec_buff->out;
+// WATCH_REC_BUFF_OUT = rec_buff->out;
 
 					if (addr_exceeded)
 					{
@@ -501,9 +525,7 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 					}
 						
 					sz = WRITE_BLOCK_SIZE;
-					//DEBUG3_ON;
 					res = f_write(&recfil, rec_buff16, sz, &written);
-					//DEBUG3_OFF;
 
 					if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
 										g_error |= FILE_WRITE_FAIL; check_errors();
@@ -522,9 +544,7 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 												g_error |= FILE_WRITE_FAIL; check_errors();
 												break;}
 					}
-					//DEBUG1_ON;
 					f_sync(&recfil);
-					//DEBUG1_OFF;
 
 					if (res!=FR_OK){	if (g_error & FILE_WRITE_FAIL) {f_close(&recfil); rec_state=REC_OFF;}
 										g_error |= FILE_WRITE_FAIL; check_errors();
@@ -556,7 +576,7 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 				else
 					addr_exceeded = memory_read16_cb(rec_buff, rec_buff16, buffer_lead>>1, 0);
 
-WATCH_REC_BUFF_OUT = rec_buff->out;
+// WATCH_REC_BUFF_OUT = rec_buff->out;
 
 				if (!addr_exceeded)
 				{
@@ -648,15 +668,8 @@ WATCH_REC_BUFF_OUT = rec_buff->out;
 
 
 		case (REC_OFF):
-			// if (recfil.obj.fs!=0)
-			// {
-			// 	//rec_state = CLOSING_FILE;
-			// 	f_close(&recfil);
-			// }
 		break;
 
 
 	}
-	//DEBUG2_OFF;
-
 }
