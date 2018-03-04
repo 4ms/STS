@@ -29,4 +29,6 @@
 #include "button_knob_combo.h"
 
 //ToDo: Rather than a 2D array of values, have a single array of Combos
+//ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBOS];
+
 ButtonKnobCombo g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];

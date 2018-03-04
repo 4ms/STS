@@ -30,6 +30,19 @@
 
 #include <stm32f4xx.h>
 
+//Todo: Use a 1D array of combos button-knobs, instead of 2D array buttons x knobs
+// enum ButtonKnobCombos{
+// 	bkc_Bank1Sample1,
+// 	bkc_Bank1Sample2,
+// 	bkc_Bank2Sample1,
+// 	bks_Bank2Sample2,
+
+// 	bkc_EditLength2,
+// 	bkc_EditStartPos2,
+
+// 	NUM_BUTTON_KNOB_COMBOS
+// }
+
 enum ButtonKnobCombo_Buttons{
 	bkc_Bank1,
 	bkc_Bank2,

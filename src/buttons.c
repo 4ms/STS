@@ -1,3 +1,31 @@
+/*
+ * buttons.c - Handles all button presses (deboucing, short/long holds, etc)
+ *
+ * Author: Dan Green (danngreen1@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
+ */
+
 #include "globals.h"
 #include "params.h"
 #include "dig_pins.h"
@@ -17,9 +45,6 @@
 
 extern ButtonKnobCombo 		g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
-
-enum ButtonStates 			button_state[NUM_BUTTONS];
-uint8_t						button_ignore[NUM_BUTTONS];
 extern uint8_t 				flags[NUM_FLAGS];
 extern uint8_t 				i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
@@ -33,18 +58,16 @@ extern volatile uint32_t 	sys_tmr;
 
 extern uint8_t 				cur_assign_bank;
 extern uint8_t 				bank_status[MAX_NUM_BANKS];
-extern enum 				PlayStates play_state[NUM_PLAY_CHAN];
+extern enum PlayStates 		play_state[NUM_PLAY_CHAN];
 
 extern SystemCalibrations 	*system_calibrations;
 extern enum RecStates		rec_state;
 
-void clear_errors(void)
-{
-	g_error = 0;
-	// SIGNALLED_OFF;
-	// BUSYLED_OFF;
 
-}
+enum ButtonStates 			button_state[NUM_BUTTONS];
+uint8_t						button_ignore[NUM_BUTTONS];
+
+
 void init_buttons(void)
 {
 	uint8_t i;
@@ -57,31 +80,6 @@ void init_buttons(void)
 
 	flags[SkipProcessButtons] = 2;
 
-}
-
-//returns 1 if all buttons are set to state, except for buttons in button_ignore_mask
-uint8_t all_buttons_except(enum ButtonStates state, uint32_t button_ignore_mask)
-{
-	uint8_t i;
-	for (i=0;i<NUM_BUTTONS;i++)
-	{
-		if (button_ignore_mask & (1<<i)) continue; //ignore this button
-		if (button_state[i] != state) return 0; //at least one button not in the mask is not set to state
-	}
-	return 1; //all buttons not in the mask are set to state
-}
-
-//returns 1 if all buttons in the button_mask are set to >= state
-//returns 0 if one or more buttons in the button_mask are < state
-uint8_t all_buttons_atleast(enum ButtonStates state, uint32_t button_mask)
-{
-	uint8_t i;
-	for (i=0;i<NUM_BUTTONS;i++)
-	{
-		if ((button_mask & (1<<i)) && (button_state[i] < state))
-			return 0; //at least one button in the mask is < state
-	}
-	return 1; //all buttons in the mask are >= state
 }
 
 //
@@ -728,5 +726,37 @@ void Button_Debounce_IRQHandler(void)
 	}
 
 
+}
+
+
+//returns 1 if all buttons are set to state, except for buttons in button_ignore_mask
+uint8_t all_buttons_except(enum ButtonStates state, uint32_t button_ignore_mask)
+{
+	uint8_t i;
+	for (i=0;i<NUM_BUTTONS;i++)
+	{
+		if (button_ignore_mask & (1<<i)) continue; //ignore this button
+		if (button_state[i] != state) return 0; //at least one button not in the mask is not set to state
+	}
+	return 1; //all buttons not in the mask are set to state
+}
+
+//returns 1 if all buttons in the button_mask are set to >= state
+//returns 0 if one or more buttons in the button_mask are < state
+uint8_t all_buttons_atleast(enum ButtonStates state, uint32_t button_mask)
+{
+	uint8_t i;
+	for (i=0;i<NUM_BUTTONS;i++)
+	{
+		if ((button_mask & (1<<i)) && (button_state[i] < state))
+			return 0; //at least one button in the mask is < state
+	}
+	return 1; //all buttons in the mask are >= state
+}
+
+void clear_errors(void);
+void clear_errors(void)
+{
+	g_error = 0;
 }
 
