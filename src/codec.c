@@ -215,22 +215,10 @@ const uint8_t codec_init_data_master[] =
 
 __IO uint32_t  CODECTimeout = CODEC_LONG_TIMEOUT;   
 
-
-
-#ifdef USE_DEFAULT_TIMEOUT_CALLBACK
-
 uint32_t Codec_TIMEOUT_UserCallback(void)
 {
-	while (1)
-	{   
-	}
+	return 1; //debug breakpoint or error handling here
 }
-#else
-uint32_t Codec_TIMEOUT_UserCallback(void)
-{
-	return 1;
-}
-#endif
 
 
 void Codec_Deinit(void)
