@@ -53,6 +53,16 @@ uint32_t get_fattime(void){
 
 }
 
+void SysTick_Handler(void)
+{
+	sys_tmr++;
+}
+
+uint32_t GetSysTick(void)
+{
+	return SysTick->VAL;
+}
+
 void init_timekeeper(void){
 	NVIC_InitTypeDef nvic;
 	EXTI_InitTypeDef   EXTI_InitStructure;
@@ -69,6 +79,7 @@ void init_timekeeper(void){
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
+	SysTick_Config(1000);
 
 	nvic.NVIC_IRQChannel = EXTI_CLOCK_IRQ;
 	nvic.NVIC_IRQChannelPreemptionPriority = 0;
@@ -76,6 +87,7 @@ void init_timekeeper(void){
 	nvic.NVIC_IRQChannelCmd = ENABLE;
 
 	NVIC_Init(&nvic);
+
 }
 
 
@@ -134,8 +146,7 @@ void init_LED_PWM_IRQ(void)
 	NVIC_Init(&nvic);
 
 	TIM_TimeBaseStructInit(&tim);
-	tim.TIM_Period = 35000; //168MHz / 2 / 17500 = 4.8kHz (208.3us) ... / 32 =
-//	tim.TIM_Period = 4375; //168MHz / 2 / 4375 = 19.2kHz
+	tim.TIM_Period = 35000; //168MHz / 2 / 35000 = 4.8kHz (208.3us) ... / 32 =
 	tim.TIM_Prescaler = 0;
 	tim.TIM_ClockDivision = 0;
 	tim.TIM_CounterMode = TIM_CounterMode_Up;
