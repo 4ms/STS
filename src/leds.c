@@ -35,7 +35,7 @@ void LED_PWM_IRQHandler(void)
 	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
 	{
 
-		if (global_mode[CALIBRATE]==0 && global_mode[SYSTEM_MODE]==0)
+		if (global_mode[CALIBRATE]==0 && global_mode[SYSTEM_MODE]==0 && global_mode[LED_COLOR_ADJUST]==0)
 		{
 
 			if ((play_led_state[1] && global_mode[STEREO_MODE] || play_led_state[0]) && (loop_led_PWM_ctr<system_calibrations->led_brightness) && !play_led_flicker_ctr[0])

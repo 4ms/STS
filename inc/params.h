@@ -95,7 +95,8 @@ enum GlobalModes
 	STARTUPBANK_CH1,
 	STARTUPBANK_CH2,
 	TRIG_DELAY,
-	
+	LED_COLOR_ADJUST, //led calibration
+
 	NUM_GLOBAL_MODES
 };
 

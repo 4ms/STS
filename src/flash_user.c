@@ -7,6 +7,8 @@
 #include "leds.h"
 #include "timekeeper.h"
 #include "dig_pins.h"
+#include "rgb_leds.h"
+#include "math.h"
 
 SystemCalibrations s_staging_user_params;
 SystemCalibrations *staging_system_calibrations = &s_staging_user_params;
@@ -51,7 +53,9 @@ void factory_reset(void)
 {
 	uint8_t i,fail=0;
 
-	auto_calibrate();
+	set_default_calibration_values();
+	auto_calibrate_cv_jacks();
+	
 	set_firmware_version();
 
 	copy_system_calibrations_into_staging();
@@ -181,6 +185,8 @@ void read_all_system_calibrations_from_FLASH(void)
 	if (staging_system_calibrations->major_firmware_version > 30)
 		invalid_fw_version = 1;
 
+	//Validate settings:
+
 	for (i=0;i<8;i++)
 	{
 		if (invalid_fw_version || staging_system_calibrations->cv_calibration_offset[i] > 100 || staging_system_calibrations->cv_calibration_offset[i] < -100)
@@ -201,6 +207,17 @@ void read_all_system_calibrations_from_FLASH(void)
 	if (invalid_fw_version || staging_system_calibrations->led_brightness > 15 || staging_system_calibrations->led_brightness < 1)
 		staging_system_calibrations->led_brightness = 4;
 
+	for (i=0;i<NUM_RGBBUTTONS;i++)
+	{
+		if (isnan(staging_system_calibrations->rgbled_adjustments[i][0]) || staging_system_calibrations->rgbled_adjustments[i][0] > 5.5 || staging_system_calibrations->rgbled_adjustments[i][0] < 0.1)
+			staging_system_calibrations->rgbled_adjustments[i][0] = 1.0;
+
+		if (isnan(staging_system_calibrations->rgbled_adjustments[i][1]) || staging_system_calibrations->rgbled_adjustments[i][1] > 5.5 || staging_system_calibrations->rgbled_adjustments[i][1] < 0.1)
+			staging_system_calibrations->rgbled_adjustments[i][1] = 1.0;
+
+		if (isnan(staging_system_calibrations->rgbled_adjustments[i][2]) || staging_system_calibrations->rgbled_adjustments[i][2] > 5.5 || staging_system_calibrations->rgbled_adjustments[i][2] < 0.1)
+			staging_system_calibrations->rgbled_adjustments[i][2] = 1.0;
+	}
 }
 
 

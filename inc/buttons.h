@@ -127,6 +127,45 @@
 		!EDIT_BUTTON \
 		)
 
+//Top row during system mode
+#define ENTER_LED_ADJUST_BUTTONS (\
+		PLAY1BUT &&\
+		PLAY2BUT &&\
+		BANK1BUT &&\
+		BANK2BUT &&\
+		!RECBUT &&\
+		!BANKRECBUT &&\
+		!REV1BUT &&\
+		!REV2BUT &&\
+		!EDIT_BUTTON \
+		)
+
+//Edit + Save during led adjust mode
+#define SAVE_LED_ADJUST_BUTTONS (\
+		PLAY1BUT &&\
+		!PLAY2BUT &&\
+		!BANK1BUT &&\
+		!BANK2BUT &&\
+		!RECBUT &&\
+		!BANKRECBUT &&\
+		!REV1BUT &&\
+		!REV2BUT &&\
+		EDIT_BUTTON \
+		)
+
+//Edit + Revert during led adjust mode
+#define CANCEL_LED_ADJUST_BUTTONS (\
+		!PLAY1BUT &&\
+		!PLAY2BUT &&\
+		!BANK1BUT &&\
+		!BANK2BUT &&\
+		!RECBUT &&\
+		!BANKRECBUT &&\
+		!REV1BUT &&\
+		REV2BUT &&\
+		EDIT_BUTTON \
+		)
+
 //Play1 + Bank1 at boot
 #define TEST_LED_BUTTONS (\
 		PLAY1BUT &&\

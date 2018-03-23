@@ -22,6 +22,7 @@
 #include "bank.h"
 #include "button_knob_combo.h"
 #include "system_mode.h"
+#include "led_color_adjust.h"
 
 
 #define MAX_FIR_LPF_SIZE 80
@@ -1217,6 +1218,9 @@ void adc_param_update_IRQHandler(void)
 			update_system_mode();
 			update_system_mode_leds();
 		}
+		else if (global_mode[LED_COLOR_ADJUST])
+			process_led_color_adjust_mode();
+
 		else
 			update_params();
 

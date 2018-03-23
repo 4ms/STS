@@ -52,6 +52,12 @@ const uint8_t driverElement[24] =	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5,
 
 __IO uint32_t  LEDDriverTimeout = LEDDRIVER_LONG_TIMEOUT;
 
+
+static inline uint32_t LEDDriver_startxfer(uint8_t driverAddr);
+static inline uint32_t LEDDriver_senddata(uint8_t data);
+static inline void LEDDriver_endxfer(void);
+
+
 void LEDDriver_GPIO_Init(void)
 {
 	GPIO_InitTypeDef GPIO_InitStructure;
@@ -232,7 +238,7 @@ inline void LEDDriver_endxfer(void){
 
 
 /*
- * Sets one LED element's 10-bit brightness.
+ * Sets one LED element's brightness.
  */
 void LEDDriver_set_one_LED(uint8_t led_number, uint16_t brightness) //sets one LED element
 {
@@ -256,7 +262,7 @@ void LEDDriver_set_one_LED(uint8_t led_number, uint16_t brightness) //sets one L
 /*
  * Sets one RGB LED with a 10+10+10 bit color value
  */
-void LEDDriver_setRGBLED(uint8_t rgbled_number, uint32_t rgb){
+void LEDDriver_setRGBLED_10bit(uint8_t rgbled_number, uint32_t rgb){
 	uint8_t driverAddr;
 	uint8_t led_number;
 
@@ -289,47 +295,7 @@ void LEDDriver_setRGBLED(uint8_t rgbled_number, uint32_t rgb){
 
 }
 
-/*
- * Sets one RGB LED with a 10+10+10 bit color value, shifted to 12+12+12bit values
- */
-void LEDDriver_setRGBLED_12bit(uint8_t rgbled_number, uint32_t rgb){
-	uint8_t driverAddr;
-	uint8_t led_number;
-
-	uint16_t c_red= (rgb >> 20) & 0b1111111111;
-	uint16_t c_green= (rgb >> 10) & 0b1111111111;
-	uint16_t c_blue= rgb & 0b1111111111;
-
-	c_red *= 4;
-	c_green *= 4;
-	c_blue *= 4;
-
-	driverAddr = driverRGBBaseAddress[rgbled_number];
-	led_number = driverRGBBaseElement[rgbled_number];
-
-	LEDDriver_startxfer(driverAddr);
-
-	LEDDriver_senddata(PCA9685_LED0 + (led_number*4)); //4 registers per LED element
-	LEDDriver_senddata(0); //on-time = 0
-	LEDDriver_senddata(0);
-	LEDDriver_senddata(c_red & 0xFF); //off-time = brightness
-	LEDDriver_senddata(c_red >> 8);
-
-	LEDDriver_senddata(0); //on-time = 0 //four senddata commands take 140us
-	LEDDriver_senddata(0);
-	LEDDriver_senddata(c_green & 0xFF); //off-time = brightness
-	LEDDriver_senddata(c_green >> 8);
-
-	LEDDriver_senddata(0); //on-time = 0
-	LEDDriver_senddata(0);
-	LEDDriver_senddata(c_blue & 0xFF); //off-time = brightness
-	LEDDriver_senddata(c_blue >> 8);
-
-	LEDDriver_endxfer();
-
-}
-
-void LEDDriver_setRGBLED_RGB(uint8_t rgbled_number, int16_t c_red, int16_t c_green, int16_t c_blue)
+void LEDDriver_setRGBLED(uint8_t rgbled_number, int16_t c_red, int16_t c_green, int16_t c_blue)
 {
 	uint8_t driverAddr;
 	uint8_t led_number;

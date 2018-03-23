@@ -29,7 +29,10 @@
 #pragma once
 
 #include <stm32f4xx.h>
+#include "rgb_leds.h"
 
+
+//Important! Only add new fields to the end of the SystemCalibrations struct. The order of the fields is crucial for reading from FLASH
 typedef struct SystemCalibrations
 {
 	uint32_t	major_firmware_version;
@@ -41,10 +44,12 @@ typedef struct SystemCalibrations
 	float 		tracking_comp[NUM_PLAY_CHAN];
 	int32_t		pitch_pot_detent_offset[2];
 
+	float		rgbled_adjustments[NUM_RGBBUTTONS][3];
+
 } SystemCalibrations;
 
 void set_default_calibration_values(void);
-void auto_calibrate(void);
+void auto_calibrate_cv_jacks(void);
 void update_calibration(uint8_t user_cal_mode);
 void update_calibration_button_leds(void);
 void update_calibrate_leds(void);

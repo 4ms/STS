@@ -35,9 +35,10 @@
 #include "rgb_leds.h"
 #include "flash_user.h"
 #include "res/LED_palette.h"
+#include "led_color_adjust.h"
 
-SystemCalibrations s_user_params;
-SystemCalibrations *system_calibrations = &s_user_params;
+SystemCalibrations s_system_calibrations;
+SystemCalibrations *system_calibrations = &s_system_calibrations;
 
 extern volatile uint32_t sys_tmr;
 
@@ -72,14 +73,14 @@ void set_default_calibration_values(void)
 
 	for (i=0;i<NUM_CV_ADCS;i++)
 		system_calibrations->cv_calibration_offset[i] = -18;
+
+	set_default_led_color_adjust();
+
 }
 
 
-void auto_calibrate(void)
+void auto_calibrate_cv_jacks(void)
 {
-
-	set_default_calibration_values();
-
 	//delay_ms(7000);
 	delay();
 	delay();
@@ -94,7 +95,6 @@ void auto_calibrate(void)
 	system_calibrations->cv_calibration_offset[5] = -1*(i_smoothed_rawcvadc[5] & 0x0FFF);
 	system_calibrations->cv_calibration_offset[6] = -1*(i_smoothed_rawcvadc[6] & 0x0FFF);
 	system_calibrations->cv_calibration_offset[7] = -1*(i_smoothed_rawcvadc[7] & 0x0FFF);
-
 }
 
 

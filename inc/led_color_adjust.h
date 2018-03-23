@@ -1,5 +1,5 @@
 /*
- * rgb_leds.h - Handles the RGB LEDs of the buttons
+ * led_color_adjust.c - handles color adjustments for leds
  *
  * Author: Dan Green (danngreen1@gmail.com)
  *
@@ -26,40 +26,12 @@
  * -----------------------------------------------------------------------------
  */
 
-#pragma once
 
 #include <stm32f4xx.h>
 
-#define ButtonLED_IRQHandler TIM1_UP_TIM10_IRQHandler
+void init_led_color_adjust(void);
 
+void process_led_color_adjust_mode(void);
 
+void set_default_led_color_adjust(void);
 
-enum Buttons_LEDs {
-	RecBankButtonLED,
-	RecButtonLED,
-	Reverse1ButtonLED,
-	Play1ButtonLED,
-	Bank1ButtonLED,
-	Bank2ButtonLED,
-	Play2ButtonLED,
-	Reverse2ButtonLED,
-
-	NUM_RGBBUTTONS
-};
-
-
-void init_buttonLEDs(void);
-void set_ButtonLED_byRGB(uint8_t LED_id, uint16_t red,  uint16_t green,  uint16_t blue);
-void set_ButtonLED_byPalette(uint8_t LED_id, uint16_t paletteIndex);
-void set_ButtonLED_byPaletteFade(uint8_t LED_id, uint16_t paletteIndexA, uint16_t paletteIndexB, float fade);
-void display_one_ButtonLED(uint8_t LED_id);
-void display_all_ButtonLEDs(void);
-
-void chase_all_buttonLEDs(uint32_t del);
-void fade_all_buttonLEDs(void);
-void all_buttonLEDs_off(void);
-
-void update_one_ButtonLED(uint8_t LED_id);
-void update_all_ButtonLEDs(void);
-
-void display_bank_blink(uint8_t ButLEDnum, uint8_t bank_to_display, uint32_t t);

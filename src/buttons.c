@@ -67,6 +67,11 @@ extern enum RecStates		rec_state;
 enum ButtonStates 			button_state[NUM_BUTTONS];
 uint8_t						button_ignore[NUM_BUTTONS];
 
+void clear_errors(void);
+void clear_errors(void)
+{
+	g_error = 0;
+}
 
 void init_buttons(void)
 {
@@ -754,9 +759,4 @@ uint8_t all_buttons_atleast(enum ButtonStates state, uint32_t button_mask)
 	return 1; //all buttons in the mask are >= state
 }
 
-void clear_errors(void);
-void clear_errors(void)
-{
-	g_error = 0;
-}
 

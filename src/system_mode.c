@@ -14,6 +14,8 @@
 #include "res/LED_palette.h"
 #include "sampler.h"
 #include "buttons.h"
+#include "led_color_adjust.h"
+
 
 extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 extern volatile uint32_t 	sys_tmr;
@@ -81,6 +83,7 @@ void update_system_mode(void)
 {
 	static int32_t sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
 	static int32_t bootloader_buttons_down=0;
+	static int32_t enter_led_adjust_buttons_down = 0;
 
 	static uint32_t last_sys_tmr=0;
 
@@ -184,6 +187,18 @@ void update_system_mode(void)
 		}
 	} else
 		bootloader_buttons_down=0;
+
+	//Check for led adjust mode buttons
+	if (ENTER_LED_ADJUST_BUTTONS)
+	{
+		enter_led_adjust_buttons_down += elapsed_time;
+		if (enter_led_adjust_buttons_down > (BASE_SAMPLE_RATE*3))
+		{
+			global_mode[SYSTEM_MODE] = 0;
+			init_led_color_adjust();
+		}
+	} else
+		enter_led_adjust_buttons_down=0;
 
 
 	if (SYSMODE_BUTTONS)

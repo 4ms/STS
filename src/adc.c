@@ -29,6 +29,10 @@
 #include "globals.h"
 #include "adc.h"
 
+__IO uint16_t potadc_buffer[NUM_POT_ADCS];
+__IO uint16_t cvadc_buffer[NUM_CV_ADCS];
+
+
 void Deinit_Pot_ADC(void)
 {
 
@@ -54,7 +58,7 @@ void Deinit_CV_ADC(void)
 
 }
 
-void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
+void Init_Pot_ADC(void)
 {
 	DMA_InitTypeDef DMA_InitStructure;
 	ADC_CommonInitTypeDef ADC_CommonInitStructure;
@@ -68,9 +72,9 @@ void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	// DMA2 stream4 channel0 configuration
 	DMA_InitStructure.DMA_Channel = DMA_Channel_0;  
 	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&ADC1->DR;
-	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)ADC_Buffer;
+	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)potadc_buffer;
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-	DMA_InitStructure.DMA_BufferSize = num_adcs;
+	DMA_InitStructure.DMA_BufferSize = NUM_POT_ADCS;
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
@@ -98,7 +102,7 @@ void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
 	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
 	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-	ADC_InitStructure.ADC_NbrOfConversion = num_adcs;
+	ADC_InitStructure.ADC_NbrOfConversion = NUM_POT_ADCS;
 	ADC_Init(ADC1, &ADC_InitStructure);
 	
 	// Configure analog input pins
@@ -134,7 +138,7 @@ void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 }
 
 
-void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
+void Init_CV_ADC(void)
 {
 	DMA_InitTypeDef DMA_InitStructure;
 	ADC_CommonInitTypeDef ADC_CommonInitStructure;
@@ -148,9 +152,9 @@ void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	// DMA2 stream0 channel2 configuration
 	DMA_InitStructure.DMA_Channel = DMA_Channel_2;
 	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&ADC3->DR;
-	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)ADC_Buffer;
+	DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)cvadc_buffer;
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-	DMA_InitStructure.DMA_BufferSize = num_adcs;
+	DMA_InitStructure.DMA_BufferSize = NUM_CV_ADCS;
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
@@ -179,7 +183,7 @@ void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs)
 	ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
 	ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
 	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-	ADC_InitStructure.ADC_NbrOfConversion = num_adcs;
+	ADC_InitStructure.ADC_NbrOfConversion = NUM_CV_ADCS;
 	ADC_Init(ADC3, &ADC_InitStructure);
 
 	// Configure analog input pins

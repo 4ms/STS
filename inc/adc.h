@@ -34,12 +34,8 @@ enum CVADCs {
 	NUM_CV_ADCS
 };
 
-
-
-
-
-void Init_Pot_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs);
-void Init_CV_ADC(uint16_t *ADC_Buffer, uint8_t num_adcs);
+void Init_Pot_ADC(void);
+void Init_CV_ADC(void);
 
 void Deinit_Pot_ADC(void);
 void Deinit_CV_ADC(void);

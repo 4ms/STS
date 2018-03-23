@@ -48,8 +48,6 @@ FATFS FatFs;
 
 enum g_Errors g_error = 0;
 
-__IO uint16_t potadc_buffer[NUM_POT_ADCS];
-__IO uint16_t cvadc_buffer[NUM_CV_ADCS];
 
 extern uint8_t global_mode[NUM_GLOBAL_MODES];
 extern uint8_t flags[NUM_FLAGS];
@@ -99,12 +97,11 @@ int main(void) {
 
   LEDDRIVER_OUTPUTENABLE_OFF;
 
-#ifndef HAS_BOOTLOADER
-  NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
-#endif
+	#ifndef HAS_BOOTLOADER 
+	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
+	#endif
 
-  TRACE_init();
-  // ITM_Init(6000000);
+	TRACE_init();
 
   // Codec and I2S/DMA should be disabled before they can properly start up
   Codec_Deinit();
