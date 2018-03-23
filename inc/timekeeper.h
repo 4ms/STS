@@ -10,7 +10,6 @@
 #include <stm32f4xx.h>
 
 void init_timekeeper(void);
-uint32_t GetSysTick(void);
 
 void init_ButtonDebounce_IRQ(void);
 void init_adc_param_update_IRQ(void);

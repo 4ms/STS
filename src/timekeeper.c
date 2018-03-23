@@ -58,11 +58,6 @@ void SysTick_Handler(void)
 	sys_tmr++;
 }
 
-uint32_t GetSysTick(void)
-{
-	return SysTick->VAL;
-}
-
 void init_timekeeper(void){
 	NVIC_InitTypeDef nvic;
 	EXTI_InitTypeDef   EXTI_InitStructure;
