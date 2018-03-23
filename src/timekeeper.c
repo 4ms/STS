@@ -79,7 +79,8 @@ void init_timekeeper(void){
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
-	SysTick_Config(1000);
+	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK);
+	SysTick_Config(SystemCoreClock / 1000); //milliseconds
 
 	nvic.NVIC_IRQChannel = EXTI_CLOCK_IRQ;
 	nvic.NVIC_IRQChannelPreemptionPriority = 0;
