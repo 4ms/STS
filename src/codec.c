@@ -116,6 +116,7 @@
 
 //Reg 4: DACAVOL
 //Reg 5: DACBVOL
+//decimal value 0 to 90 represents +0dB to -90dB output volume
 
 //Reg 6 (ADCCTRL)
 #define DITHER16		(1<<5) /*activates the Dither for 16-Bit Data feature*/
@@ -138,19 +139,9 @@
 #define PART_mask	(0b11110000)
 #define REV_mask	(0b00001111)
 
-#if (BASE_SAMPLE_RATE>50000)
-		#define CS_SPEED DOUBLE_SPEED
-#else
-		#define CS_SPEED SINGLE_SPEED
-#endif
-
-
-const uint8_t codec_init_data_slave_DCinput[] =
+uint8_t codec_init_data_base[] = 
 {
-
-		CS_SPEED
-		| RATIO0
-		| SLAVE
+		RATIO0
 		| DIF_I2S_24b,		//MODECTRL1
 
 		SLOW_FILT_SEL
@@ -162,55 +153,13 @@ const uint8_t codec_init_data_slave_DCinput[] =
 		0b00000000,			//DACBVOL
 
 		ADC_DIF_I2S
-		| HPFDisableA
-		| HPFDisableB 	//ADCCTRL
-
 };
 
-
-const uint8_t codec_init_data_slave[] =
-{
-		CS_SPEED
-		| RATIO0
-		| SLAVE
-		| DIF_I2S_24b,		//MODECTRL1
-
-		SLOW_FILT_SEL
-		| DEEMPH_OFF,		//DACCTRL
-
-		ATAPI_aLbR,			//DACMIX
-
-		0b00000000,			//DACAVOL
-		0b00000000,			//DACBVOL
-
-		ADC_DIF_I2S
-		/*| HPFDisableA
-		| HPFDisableB */	//ADCCTRL
-
-};
-const uint8_t codec_init_data_master[] =
-{
-
-		CS_SPEED
-		| RATIO0
-		| MASTER
-		| DIF_I2S_24b,//MODECTRL1
-
-		SLOW_FILT_SEL
-		| DEEMPH_OFF
-		| SOFT_RAMPUP
-		| SOFT_RAMPDOWN,	//DACCTRL
-
-		ATAPI_aLbR,			//DACMIX
-
-		0b00000000,			//DACAVOL
-		0b00000000,			//DACBVOL
-
-		ADC_DIF_I2S
-	/*	| HPFDisableA
-		| HPFDisableB */	//ADCCTRL
-
-};
+// Private functions:
+uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_TypeDef *CODEC);
+uint32_t Codec_Reset(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DCinput, uint32_t sample_rate);
+uint32_t Codec_TIMEOUT_UserCallback(void);
+void set_i2s_samplerate(uint32_t sample_rate);
 
 
 __IO uint32_t  CODECTimeout = CODEC_LONG_TIMEOUT;   
@@ -220,6 +169,20 @@ uint32_t Codec_TIMEOUT_UserCallback(void)
 	return 1; //debug breakpoint or error handling here
 }
 
+void codec_reboot_new_samplerate(uint32_t sample_rate)
+{
+
+	Codec_Deinit();
+	DeInit_I2S_Clock();
+	DeInit_I2SDMA();
+
+	Codec_GPIO_Init();
+	Codec_AudioInterface_Init(BASE_SAMPLE_RATE);
+	init_audio_dma();
+	Codec_Register_Setup(0, BASE_SAMPLE_RATE);
+
+
+}
 
 void Codec_Deinit(void)
 {
@@ -239,8 +202,16 @@ void Codec_Deinit(void)
 
 }
 
+void Codec_PowerDown(void)
+{
+	uint32_t err=0;
 
-uint32_t Codec_Register_Setup(uint8_t enable_DCinput)
+	err=Codec_WriteRegister(CS4271_REG_MODELCTRL2, PDN, CODEC_I2C); //Control Port Enable and Power Down Enable
+
+}
+
+
+uint32_t Codec_Register_Setup(uint8_t enable_DCinput, uint32_t sample_rate)
 {
 	uint32_t err = 0;
 
@@ -249,13 +220,13 @@ uint32_t Codec_Register_Setup(uint8_t enable_DCinput)
 	CODEC_RESET_HIGH;
 	delay_ms(2);
 
-	err+=Codec_Reset(CODEC_I2C, CODEC_MODE, enable_DCinput);
+	err+=Codec_Reset(CODEC_I2C, CODEC_MODE, enable_DCinput, sample_rate);
 
 	return err;
 }
 
 
-uint32_t Codec_Reset(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DCinput)
+uint32_t Codec_Reset(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DCinput, uint32_t sample_rate)
 {
 	uint8_t i;
 	uint32_t err=0;
@@ -263,25 +234,17 @@ uint32_t Codec_Reset(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DC
 	err+=Codec_WriteRegister(CS4271_REG_MODELCTRL2, CPEN | PDN, CODEC); //Control Port Enable and Power Down Enable
 	
 
-	if (master_slave==CODEC_IS_MASTER)
-	{
-		for(i=0;i<CS4271_NUM_REGS;i++)
-			err+=Codec_WriteRegister(i+1, codec_init_data_master[i], CODEC);
+	if (master_slave == CODEC_IS_MASTER)	codec_init_data_base[0] |= MASTER;
+	else									codec_init_data_base[0] |= SLAVE;
 
-	}
-	else
-	{
-		if (enable_DCinput)
-		{
-			for(i=0;i<CS4271_NUM_REGS;i++)
-				err+=Codec_WriteRegister(i+1, codec_init_data_slave_DCinput[i], CODEC);
-		}
-		else
-		{
-			for(i=0;i<CS4271_NUM_REGS;i++)
-				err+=Codec_WriteRegister(i+1, codec_init_data_slave[i], CODEC);
-		}
-	}
+	if (sample_rate<=50000)					codec_init_data_base[0] |= SINGLE_SPEED;
+	else if (sample_rate<=100000)			codec_init_data_base[0] |= DOUBLE_SPEED;
+	else									codec_init_data_base[0] |= QUAD_SPEED;
+
+	if (enable_DCinput)						codec_init_data_base[4] |= HPFDisableA | HPFDisableB;
+
+
+	for(i=0;i<CS4271_NUM_REGS;i++)			err+=Codec_WriteRegister(i+1, codec_init_data_base[i], CODEC);
 
 	err+=Codec_WriteRegister(CS4271_REG_MODELCTRL2, CPEN, CODEC); //Power Down disable
 
@@ -376,10 +339,55 @@ void Codec_CtrlInterface_Init(void)
 	I2C_Cmd(CODEC_I2C, ENABLE);
 }
 
+void set_i2s_samplerate(uint32_t sample_rate)
+{
+	uint32_t app_PLLI2S_N = 271; 	//default value
+	uint32_t app_PLLI2S_R = 2;		//default value
+	uint32_t app_I2SODD = 0;		//default value
+	uint32_t app_I2SDIV = 6;		//default value
+
+	uint32_t app_PLLI2S_Q = 4; 		//not used for I2S, but must be set
+
+	// PLLI2S_VCO = (HSE_VALUE Or HSI_VALUE / PLL_M) * PLLI2S_N   = 1MHz * PLLI2S_N
+    // I2SCLK = PLLI2S_VCO / PLLI2S_R 
+	// FS = I2SCLK / [(16*2)*((2*I2SDIV)+ODD)*8)] when the channel frame is 16-bit wide
+	// FS = I2SCLK / [(32*2)*((2*I2SDIV)+ODD)*4)] when the channel frame is 32-bit wide
+
+	if (sample_rate==44100){
+		app_PLLI2S_N  	= 271;
+		app_PLLI2S_R 	= 2;
+		app_I2SDIV = 6;
+		app_I2SODD = 0;
+	}
+	else
+	if (sample_rate==48000){
+		app_PLLI2S_N  	= 258;
+		app_PLLI2S_R 	= 3;
+		app_I2SDIV = 3;
+		app_I2SODD = 1;
+	}
+	else
+	if (sample_rate==96000){
+		app_PLLI2S_N  	= 344;
+		app_PLLI2S_R 	= 2;
+		app_I2SDIV = 3;
+		app_I2SODD = 1;
+	}
+
+	RCC_PLLI2SConfig(app_PLLI2S_N, app_PLLI2S_Q, app_PLLI2S_R);
+
+	if (app_I2SODD)	CODEC_I2S->I2SPR |= SPI_I2SPR_ODD;
+	else			CODEC_I2S->I2SPR &= ~SPI_I2SPR_ODD;
+
+	CODEC_I2S->I2SPR &= ~SPI_I2SPR_I2SDIV;
+	CODEC_I2S->I2SPR |= app_I2SDIV;
+
+}
+
 /*
- * Initializes I2S2 and I2S3 peripherals on the STM32
+ * Initializes I2S peripheral
  */
-void Codec_AudioInterface_Init(uint32_t AudioFreq)
+void Codec_AudioInterface_Init(uint32_t sample_rate)
 {
 	I2S_InitTypeDef I2S_InitStructure;
 
@@ -388,7 +396,7 @@ void Codec_AudioInterface_Init(uint32_t AudioFreq)
 
 	// CODEC_I2S peripheral configuration for master TX
 	SPI_I2S_DeInit(CODEC_I2S);
-	I2S_InitStructure.I2S_AudioFreq = AudioFreq;
+	I2S_InitStructure.I2S_AudioFreq = sample_rate;
 	I2S_InitStructure.I2S_Standard = I2S_STANDARD;
 	I2S_InitStructure.I2S_DataFormat = I2S_DataFormat_24b;
 	I2S_InitStructure.I2S_CPOL = I2S_CPOL_High;
@@ -413,10 +421,10 @@ void Codec_AudioInterface_Init(uint32_t AudioFreq)
 	// Initialize the I2S extended channel for RX
 	I2S_FullDuplexConfig(CODEC_I2S_EXT, &I2S_InitStructure);
 
+	set_i2s_samplerate(sample_rate);
+
 	I2S_Cmd(CODEC_I2S, ENABLE);
 	I2S_Cmd(CODEC_I2S_EXT, ENABLE);
-
-
 }
 
 
@@ -475,31 +483,5 @@ void Codec_GPIO_Init(void)
 		gpio.GPIO_Pin = CODEC_I2S_MCK_PIN; GPIO_Init(CODEC_I2S_MCK_GPIO, &gpio);
 
 	}
-
-}
-
-
-/*
- * This must be called before Codec_AudioInterface_Init() because the I2S2CLKConfig must happen before APB1 for I2S2 periph is turned on
- *
- * Must uncomment the line in stm32f4xx_conf.h:
- * #define I2S_EXTERNAL_CLOCK_VAL   7000000
- */
-void init_i2s_clkin(void){
-
-	GPIO_InitTypeDef gpio;
-
-	// Enable I2S2 clock in:
-	RCC_I2SCLKConfig(RCC_I2S2CLKSource_Ext);
-
-	//I2S2 CLK_IN is PC9
-	gpio.GPIO_Pin = GPIO_Pin_9;
-	gpio.GPIO_Mode = GPIO_Mode_AF;
-	gpio.GPIO_Speed = GPIO_Speed_100MHz;
-	gpio.GPIO_OType = GPIO_OType_PP;
-	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOC, &gpio);
-
-	GPIO_PinAFConfig(GPIOC, GPIO_PinSource9, CODEC_I2S_GPIO_AF);
 
 }

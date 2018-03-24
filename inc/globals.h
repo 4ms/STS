@@ -23,7 +23,6 @@
 //Note: If the BASE_SAMPLE_RATE changes, we may have also change:
 // -'make wav' section in Makefile
 // -PLLI2S_N and PLLI2S_R in system_stm32f4xx.c
-// -sys_tmr's timing will change, so have to update LED flashing rates, etc
 // -bootloader's sample rate
 
 #define BASE_SAMPLE_RATE 44100

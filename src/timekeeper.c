@@ -15,11 +15,11 @@
 
 volatile uint32_t sys_tmr;
 
-inline void inc_tmrs(void);
-void inc_tmrs(void)
-{
-	sys_tmr++; //at 48kHz, it resets after 24 hours, 51 minutes, 18.4853333 seconds
-}
+// inline void inc_tmrs(void);
+// void inc_tmrs(void)
+// {
+// 	sys_tmr++; //at 48kHz, it resets after 24 hours, 51 minutes, 18.4853333 seconds
+// }
 
 
 uint32_t get_fattime(void){
@@ -59,44 +59,12 @@ void SysTick_Handler(void)
 }
 
 void init_timekeeper(void){
-	NVIC_InitTypeDef nvic;
-	EXTI_InitTypeDef   EXTI_InitStructure;
-
 	//Set Priority Grouping mode to 2-bits for priority and 2-bits for sub-priority
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
 
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-
-	SYSCFG_EXTILineConfig(EXTI_CLOCK_GPIO, EXTI_CLOCK_pin);
-	EXTI_InitStructure.EXTI_Line = EXTI_CLOCK_line;
-	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
-	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-	EXTI_Init(&EXTI_InitStructure);
-
+	//Start SysTick
 	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK);
-	SysTick_Config(SystemCoreClock / 1000); //milliseconds
-
-	nvic.NVIC_IRQChannel = EXTI_CLOCK_IRQ;
-	nvic.NVIC_IRQChannelPreemptionPriority = 0;
-	nvic.NVIC_IRQChannelSubPriority = 0;
-	nvic.NVIC_IRQChannelCmd = ENABLE;
-
-	NVIC_Init(&nvic);
-
-}
-
-
-
-// Sample Clock EXTI line (I2S2 LRCLK)
-void EXTI_Handler(void)
-{
-	if(EXTI_GetITStatus(EXTI_CLOCK_line) != RESET)
-	{
-		inc_tmrs();
-
-		EXTI_ClearITPendingBit(EXTI_CLOCK_line);
-	}
+	SysTick_Config(SystemCoreClock / 44100); //updates about the same as a 44.1kHz sample rate, so one sys_tmr value is one 22.6us
 }
 
 

@@ -215,7 +215,7 @@ int main(void) {
   Codec_GPIO_Init();
   Codec_AudioInterface_Init(BASE_SAMPLE_RATE);
   init_audio_dma();
-  Codec_Register_Setup(0);
+  Codec_Register_Setup(0, BASE_SAMPLE_RATE);
 
   // Initialize parameters/modes
   init_adc_param_update_IRQ();

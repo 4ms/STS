@@ -31,11 +31,10 @@ void set_codec_callback(void (*cb)(int16_t *, int16_t *)) {
 
 void init_audio_dma(void)
 {
-	RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
-	RCC_PLLI2SCmd(ENABLE);
-
 	Init_I2SDMA();
 
+	RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
+	RCC_PLLI2SCmd(ENABLE);
 }
 
 
@@ -65,10 +64,10 @@ void Init_I2SDMA(void)
 {
 	uint32_t Size = codec_BUFF_LEN;
 
-	/* Enable the DMA clock */
+	//Enable DMA clock
 	RCC_AHB1PeriphClockCmd(AUDIO_I2S2_DMA_CLOCK, ENABLE);
 
-	/* Configure the TX DMA Stream */
+	//Configure TX DMA stream
 	DMA_Cmd(AUDIO_I2S2_DMA_STREAM, DISABLE);
 	DMA_DeInit(AUDIO_I2S2_DMA_STREAM);
 
@@ -89,18 +88,16 @@ void Init_I2SDMA(void)
 	dma_tx.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
 	DMA_Init(AUDIO_I2S2_DMA_STREAM, &dma_tx);
 
-	//Try TX error checking:
+	//Enable interrupt for TX error checking:
 	DMA_ITConfig(AUDIO_I2S2_DMA_STREAM, DMA_IT_FE | DMA_IT_TE | DMA_IT_DME, ENABLE);
 
-	/* Enable the I2S DMA request */
+	// Enable the I2S DMA request
 	SPI_I2S_DMACmd(CODEC_I2S, SPI_I2S_DMAReq_Tx, ENABLE);
 
-
-	/* Configure the RX DMA Stream */
+	// Configure the RX DMA Stream
 	DMA_Cmd(AUDIO_I2S2_EXT_DMA_STREAM, DISABLE);
 	DMA_DeInit(AUDIO_I2S2_EXT_DMA_STREAM);
 
-	/* Set the parameters to be configured */
 	dma_rx.DMA_Channel = AUDIO_I2S2_EXT_DMA_CHANNEL;
 	dma_rx.DMA_PeripheralBaseAddr = AUDIO_I2S2_EXT_DMA_DREG;
 	dma_rx.DMA_Memory0BaseAddr = (uint32_t)&rx_buffer;
@@ -118,18 +115,18 @@ void Init_I2SDMA(void)
 	dma_rx.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
 	DMA_Init(AUDIO_I2S2_EXT_DMA_STREAM, &dma_rx);
 
+
+	// Configure interrupt for RX 
 	DMA_ITConfig(AUDIO_I2S2_EXT_DMA_STREAM, DMA_IT_TC | DMA_IT_HT | DMA_IT_FE | DMA_IT_TE | DMA_IT_DME, ENABLE);
 
-	/* I2S RX DMA IRQ Channel configuration */
-
 	nvic_i2s2ext.NVIC_IRQChannel = AUDIO_I2S2_EXT_DMA_IRQ;
-	nvic_i2s2ext.NVIC_IRQChannelPreemptionPriority = 1; //was 2
+	nvic_i2s2ext.NVIC_IRQChannelPreemptionPriority = 1;
 	nvic_i2s2ext.NVIC_IRQChannelSubPriority = 1;
 	nvic_i2s2ext.NVIC_IRQChannelCmd = ENABLE;
 
 	NVIC_Init(&nvic_i2s2ext);
 
-	//NVIC_EnableIRQ(AUDIO_I2S2_EXT_DMA_IRQ);
+	//Keep RX IRQ disabled until we're ready to start the audio
 	NVIC_DisableIRQ(AUDIO_I2S2_EXT_DMA_IRQ);
 
 	SPI_I2S_DMACmd(CODEC_I2S_EXT, SPI_I2S_DMAReq_Rx, ENABLE);
