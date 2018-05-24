@@ -132,6 +132,9 @@ void init_params(void)
 		flags[i]=0;
 	}
 
+	global_params.record_sample_rate			= 44100; //default for now
+	global_params.f_record_sample_rate			= (float)(global_params.record_sample_rate);
+
 	global_params.play_trig_delay 				= calc_trig_delay(global_mode[TRIG_DELAY]);
 	global_params.play_trig_latch_pitch_time 	= calc_pitch_latch_time(global_mode[TRIG_DELAY]);
 

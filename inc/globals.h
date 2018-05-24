@@ -20,13 +20,7 @@
 
 
 
-//Note: If the BASE_SAMPLE_RATE changes, we may have also change:
-// -'make wav' section in Makefile
-// -PLLI2S_N and PLLI2S_R in system_stm32f4xx.c
-// -bootloader's sample rate
-
-#define BASE_SAMPLE_RATE 44100
-#define f_BASE_SAMPLE_RATE 44100.0 /*float version*/
+#define ONE_SECOND 44100
 
 //Update the FW Version anytime FLASH RAM settings format is changed
 #define FW_MAJOR_VERSION 1

@@ -120,6 +120,10 @@ LFLAGS  = $(CFLAGS) -Wl,-Map,main.map -T $(LDSCRIPT)
 # $(BUILDDIR)/src/dig_pins.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/rgb_leds.o: OPTFLAGS = -O0
 
+# Audio Stream
+build/src/codec.o: CFLAGS = $(C0FLAGS)
+build/src/i2s.o: CFLAGS = $(C0FLAGS)
+
 # Misc:
 # $(BUILDDIR)/src/circular_buffer.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/audio_util.o: OPTFLAGS = -O0

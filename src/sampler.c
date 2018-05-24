@@ -51,6 +51,7 @@ extern float 				f_param[NUM_PLAY_CHAN][NUM_F_PARAMS];
 extern uint8_t				i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 
 extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
+extern GlobalParams			global_params;
 
 extern uint8_t 				flags[NUM_FLAGS];
 extern enum 				g_Errors g_error;
@@ -205,7 +206,7 @@ void toggle_reverse(uint8_t chan)
 		// To acheive the right behavior, we need to make a decision about how much difference between triggers is considered "simulataneous"
 		// We just estimate this at 100ms (ToDo: should this be longer or shorter? The QCDEXP has a min delay of 135ms, so it should be less than that)
 		//
-		if ((sys_tmr - last_play_start_tmr[chan]) < (f_BASE_SAMPLE_RATE*0.1)) //100ms
+		if ((sys_tmr - last_play_start_tmr[chan]) < (global_params.f_record_sample_rate*0.1)) //100ms
 		{
 			// See if the endpos is within the cache,
 			// Then we can just play from that point
@@ -349,7 +350,7 @@ void start_playing(uint8_t chan)
 
 
 	//Calculate our actual resampling rate
-	rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / f_BASE_SAMPLE_RATE);
+	rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / global_params.f_record_sample_rate);
 
 	//Determine starting and ending addresses
 	if (i_param[chan][REV])
@@ -756,7 +757,7 @@ void read_storage_to_buffer(void)
 			//
 			// Calculate the amount to pre-buffer before we play:
 			//
-			pb_adjustment = f_param[chan][PITCH] * (float)s_sample->sampleRate / f_BASE_SAMPLE_RATE ;
+			pb_adjustment = f_param[chan][PITCH] * (float)s_sample->sampleRate / global_params.f_record_sample_rate;
 
 			//Calculate how many bytes we need to pre-load in our buffer
 			//
@@ -1039,8 +1040,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 		//Calculate our actual resampling rate, based on the sample rate of the file being played
 
-		if (s_sample->sampleRate == BASE_SAMPLE_RATE)	rs = f_param[chan][PITCH];
-		else											rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / f_BASE_SAMPLE_RATE);
+		if (s_sample->sampleRate == global_params.record_sample_rate)	rs = f_param[chan][PITCH];
+		else															rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / global_params.f_record_sample_rate);
 
 
 		// FixMe: Consider moving this to a new function that's called after play_audio_buffer()

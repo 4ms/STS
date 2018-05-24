@@ -37,6 +37,7 @@ main.c
 #include "wav_recording.h"
 
 #define HAS_BOOTLOADER
+#define DEBUG_ENABLED
 
 // These must match what's in startup_stm32f4xx.s:
 #define BOOTLOADER_MAGIC_CODE 0xBADDCAFE
@@ -49,9 +50,11 @@ FATFS FatFs;
 enum g_Errors g_error = 0;
 
 
-extern uint8_t global_mode[NUM_GLOBAL_MODES];
-extern uint8_t flags[NUM_FLAGS];
-extern uint32_t flags32[NUM_FLAGS];
+extern uint8_t 		global_mode[NUM_GLOBAL_MODES];
+extern GlobalParams	global_params;
+
+extern uint8_t 		flags[NUM_FLAGS];
+extern uint32_t 	flags32[NUM_FLAGS];
 
 extern SystemCalibrations *system_calibrations;
 
@@ -76,15 +79,16 @@ uint8_t check_bootloader_keys(void) {
 }
 
 void deinit_all(void);
-void deinit_all(void) {
-  f_mount(0, "", 0);
-  SD_DeInit();
-  Deinit_CV_ADC();
-  Deinit_Pot_ADC();
-  Codec_Deinit();
-  DeInit_I2S_Clock();
-  DeInit_I2SDMA();
-  deinit_dig_inouts();
+void deinit_all(void)
+{
+	f_mount(0, "", 0);
+	SD_DeInit();
+	Deinit_CV_ADC();
+	Deinit_Pot_ADC();
+	codec_resetpin_low();
+	stop_audio_clock_source();
+	deinit_audio_dma();
+	deinit_dig_inouts();
 }
 
 int main(void) {
@@ -98,24 +102,27 @@ int main(void) {
   LEDDRIVER_OUTPUTENABLE_OFF;
 
 	#ifndef HAS_BOOTLOADER 
-	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
+		NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x0000);
 	#endif
 
-	TRACE_init();
+	#ifdef DEBUG_ENABLED
+		TRACE_init();
+	#endif
 
-  // Codec and I2S/DMA should be disabled before they can properly start up
-  Codec_Deinit();
-  DeInit_I2S_Clock();
-  DeInit_I2SDMA();
-  delay();
+	//Codec and I2S/DMA should be disabled before they can properly start up
+    codec_resetpin_low();
+    stop_audio_clock_source();
+	deinit_audio_dma();
+	delay();
 
-#ifdef HAS_BOOTLOADER
-  if (check_bootloader_keys()) {
-    BOOTLOADER_MAGIC_ADDRESS = BOOTLOADER_MAGIC_CODE;
-    NVIC_SystemReset();
-  }
-  NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
-#endif
+	#ifdef HAS_BOOTLOADER
+		if (check_bootloader_keys())
+		{
+			BOOTLOADER_MAGIC_ADDRESS = BOOTLOADER_MAGIC_CODE;
+			NVIC_SystemReset();
+		}
+		NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
+	#endif
 
   init_dig_inouts();
 
@@ -187,6 +194,7 @@ int main(void) {
                 FORCE_CAL_UNDER_FW_MINOR_VERSION)) {
     LEDDRIVER_OUTPUTENABLE_ON;
 
+
     if (do_hardware_test()) {
       global_mode[CALIBRATE] = 1;
       do_factory_reset = 960000; // run normally for about 6 seconds before
@@ -211,11 +219,11 @@ int main(void) {
   Init_Pot_ADC((uint16_t *)potadc_buffer, NUM_POT_ADCS);
   Init_CV_ADC((uint16_t *)cvadc_buffer, NUM_CV_ADCS);
 
-  // Initialize Codec
-  Codec_GPIO_Init();
-  Codec_AudioInterface_Init(BASE_SAMPLE_RATE);
-  init_audio_dma();
-  Codec_Register_Setup(0, BASE_SAMPLE_RATE);
+	//Initialize Codec
+	codec_init_gpio();
+	codec_init_i2s(global_params.record_sample_rate);
+	init_audio_dma();
+	codec_setup_registers(0, global_params.record_sample_rate);
 
   // Initialize parameters/modes
   init_adc_param_update_IRQ();
@@ -249,6 +257,7 @@ int main(void) {
   // request unaltered backup of index @ boot
   flags[BootBak] = 1;
 
+	
   // Turn on button LEDs for bank loading
   LEDDRIVER_OUTPUTENABLE_ON;
 
@@ -260,7 +269,7 @@ int main(void) {
     backup_sampleindex_file();
 
   set_codec_callback(process_audio_block_codec);
-  Start_I2SDMA();
+  start_audio_stream();
 
   delay();
 

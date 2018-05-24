@@ -25,7 +25,7 @@ volatile uint32_t sys_tmr;
 uint32_t get_fattime(void){
 	uint32_t secs, mins, hours, days, month;
 
-	secs = sys_tmr/BASE_SAMPLE_RATE;
+	secs = sys_tmr/ONE_SECOND;
 	mins = 10;
 	hours = 21;
 	days = 22;
@@ -64,7 +64,7 @@ void init_timekeeper(void){
 
 	//Start SysTick
 	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK);
-	SysTick_Config(SystemCoreClock / 44100); //updates about the same as a 44.1kHz sample rate, so one sys_tmr value is one 22.6us
+	SysTick_Config(SystemCoreClock / ONE_SECOND); //updates about the same as a 44.1kHz sample rate, so one sys_tmr value is one 22.6us
 }
 
 

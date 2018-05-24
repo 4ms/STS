@@ -51,6 +51,7 @@ extern enum g_Errors 			g_error;
 
 extern uint8_t					i_param[NUM_ALL_CHAN][NUM_I_PARAMS];
 extern uint8_t					global_mode[NUM_GLOBAL_MODES];
+extern GlobalParams				global_params;
 
 extern uint8_t 					flags[NUM_FLAGS];
 
@@ -229,7 +230,7 @@ void record_audio_to_buffer(int16_t *src)
 // If it succeeds, it sets the recording state to RECORDING
 // Otherwise, it sets a g_error and returns
 //
-void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
+void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels, uint32_t sample_rate)
 {
 	uint32_t sz;
 	FRESULT res;
@@ -273,7 +274,7 @@ void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels)
 	sample_fname_now_recording[sz++] = 0;
 
 
-	create_waveheader(&whac_now_recording.wh, &whac_now_recording.fc, bitsPerSample, numChannels);
+	create_waveheader(&whac_now_recording.wh, &whac_now_recording.fc, bitsPerSample, numChannels, sample_rate);
 	create_chunk(ccDATA, 0, &whac_now_recording.wc);
 
 	sz = sizeof(WaveHeaderAndChunk);
@@ -495,7 +496,7 @@ void write_buffer_to_storage(void)
 			if (global_mode[REC_24BITS])	sample_bytesize_now_recording = 3;
 			else							sample_bytesize_now_recording = 2;
 
-			create_new_recording(8*sample_bytesize_now_recording, 2);
+			create_new_recording(8*sample_bytesize_now_recording, 2, global_params.record_sample_rate);
 
 			break;
 
@@ -633,19 +634,21 @@ void write_buffer_to_storage(void)
 				}
 
 				str_cpy(samples[sample_bank_now_recording][sample_num_now_recording].filename, sample_fname_now_recording);
-				samples[sample_bank_now_recording][sample_num_now_recording].sampleSize = samplebytes_recorded;
-				samples[sample_bank_now_recording][sample_num_now_recording].sampleByteSize = sample_bytesize_now_recording;
-				samples[sample_bank_now_recording][sample_num_now_recording].sampleRate = BASE_SAMPLE_RATE;
-				samples[sample_bank_now_recording][sample_num_now_recording].numChannels = 2;
-				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign = 2*sample_bytesize_now_recording;
-				samples[sample_bank_now_recording][sample_num_now_recording].startOfData = 44;
-				samples[sample_bank_now_recording][sample_num_now_recording].PCM = 1;
-				samples[sample_bank_now_recording][sample_num_now_recording].file_found = 1;
+				
+				samples[sample_bank_now_recording][sample_num_now_recording].sampleSize 	= samplebytes_recorded;
+				samples[sample_bank_now_recording][sample_num_now_recording].sampleByteSize	= sample_bytesize_now_recording;
+				samples[sample_bank_now_recording][sample_num_now_recording].sampleRate 	= global_params.record_sample_rate;
+				samples[sample_bank_now_recording][sample_num_now_recording].numChannels 	= 2;
+				samples[sample_bank_now_recording][sample_num_now_recording].blockAlign 	= 2*sample_bytesize_now_recording;
+				samples[sample_bank_now_recording][sample_num_now_recording].startOfData 	= 44;
+				samples[sample_bank_now_recording][sample_num_now_recording].PCM 			= 1;
 
-				samples[sample_bank_now_recording][sample_num_now_recording].inst_start = 0;
-				samples[sample_bank_now_recording][sample_num_now_recording].inst_end = samplebytes_recorded;
-				samples[sample_bank_now_recording][sample_num_now_recording].inst_size = samplebytes_recorded;
-				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain = 1.0f;
+				samples[sample_bank_now_recording][sample_num_now_recording].file_found 	= 1;
+
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_start 	= 0;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_end 		= samplebytes_recorded;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_size 		= samplebytes_recorded;
+				samples[sample_bank_now_recording][sample_num_now_recording].inst_gain 		= 1.0f;
 
 				enable_bank(sample_bank_now_recording);
 

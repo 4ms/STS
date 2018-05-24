@@ -29,38 +29,30 @@ void set_codec_callback(void (*cb)(int16_t *, int16_t *)) {
 }
 
 
-void init_audio_dma(void)
-{
-	Init_I2SDMA();
-
-	RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
-	RCC_PLLI2SCmd(ENABLE);
-}
-
-
-void Start_I2SDMA(void)
+void start_audio_stream(void)
 {
 	NVIC_EnableIRQ(AUDIO_I2S2_EXT_DMA_IRQ);
 }
+void stop_audio_stream(void)
+{
+	NVIC_DisableIRQ(AUDIO_I2S2_EXT_DMA_IRQ);
+}
 
-void DeInit_I2S_Clock(void){
+void start_audio_clock_source(void)
+{
+	RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
+	RCC_PLLI2SCmd(ENABLE);
+}
+void stop_audio_clock_source(void){
 
 	RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
 	RCC_PLLI2SCmd(DISABLE);
 }
 
-void DeInit_I2SDMA(void)
-{
-	RCC_AHB1PeriphClockCmd(AUDIO_I2S2_DMA_CLOCK, DISABLE);
-	DMA_Cmd(AUDIO_I2S2_DMA_STREAM, DISABLE);
-	DMA_DeInit(AUDIO_I2S2_DMA_STREAM);
-
-	DMA_Cmd(AUDIO_I2S2_EXT_DMA_STREAM, DISABLE);
-	DMA_DeInit(AUDIO_I2S2_EXT_DMA_STREAM);
-}
 
 
-void Init_I2SDMA(void)
+
+void init_audio_dma(void)
 {
 	uint32_t Size = codec_BUFF_LEN;
 
@@ -145,9 +137,42 @@ void Init_I2SDMA(void)
 
 }
 
-/**
-  * I2S2 DMA interrupt for RX data
-  */
+
+void deinit_audio_dma(void)
+{
+	//don't disable DMA1 because other periphs are using it
+	//RCC_AHB1PeriphClockCmd(AUDIO_I2S2_DMA_CLOCK, DISABLE); 
+
+	//Disable the interrupt for audio DMA
+	stop_audio_stream();
+
+	//Disable the I2S DMA request
+	SPI_I2S_DMACmd(CODEC_I2S, SPI_I2S_DMAReq_Tx, DISABLE);
+	SPI_I2S_DMACmd(CODEC_I2S_EXT, SPI_I2S_DMAReq_Rx, DISABLE);
+
+	//Disable the DMA Stream for RX and TX
+	DMA_Cmd(AUDIO_I2S2_DMA_STREAM, DISABLE);
+	DMA_DeInit(AUDIO_I2S2_DMA_STREAM);
+
+	DMA_Cmd(AUDIO_I2S2_EXT_DMA_STREAM, DISABLE);
+	DMA_DeInit(AUDIO_I2S2_EXT_DMA_STREAM);
+
+	deinit_i2s();
+}
+void deinit_i2s(void)
+{
+	I2S_Cmd(CODEC_I2S, DISABLE);
+	I2S_Cmd(CODEC_I2S_EXT, DISABLE);
+
+	//Disable the I2S clock
+	RCC_APB1PeriphClockCmd(CODEC_I2S_CLK, DISABLE);
+}
+
+
+
+//
+// I2S2 DMA interrupt for RX data
+//
 void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 {
 	int16_t *src, *dst, sz;
@@ -196,9 +221,9 @@ void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 
 }
 
-/*
- * I2S2 DMA interrupt for TX data
- */
+//
+// I2S2 DMA interrupt for TX data
+//
 void DMA1_Stream4_IRQHandler(void)
 {
 	uint32_t err=0;

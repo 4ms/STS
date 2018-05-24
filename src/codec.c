@@ -156,38 +156,70 @@ uint8_t codec_init_data_base[] =
 };
 
 // Private functions:
-uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_TypeDef *CODEC);
-uint32_t Codec_Reset(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DCinput, uint32_t sample_rate);
-uint32_t Codec_TIMEOUT_UserCallback(void);
-void set_i2s_samplerate(uint32_t sample_rate);
+uint32_t codec_write_one_register(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_TypeDef *CODEC);
+uint32_t codec_write_all_registers(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DCinput, uint32_t sample_rate);
+uint32_t codec_timeout_callback(void);
+void 	set_i2s_samplerate(uint32_t sample_rate);
 
 
 __IO uint32_t  CODECTimeout = CODEC_LONG_TIMEOUT;   
 
-uint32_t Codec_TIMEOUT_UserCallback(void)
+uint32_t codec_timeout_callback(void)
 {
 	return 1; //debug breakpoint or error handling here
 }
 
+
+	 //   	//...and bring it all back up
+		// init_SAI_clock(sample_rate);
+
+		// codec_GPIO_init();
+		// codec_SAI_init(sample_rate);
+		// init_audio_DMA();
+
+		// codec_I2C_init();
+		// codec_register_setup(0, sample_rate);
+
+		// start_audio();
+
+
+
 void codec_reboot_new_samplerate(uint32_t sample_rate)
 {
+	static uint32_t last_sample_rate;
 
-	Codec_Deinit();
-	DeInit_I2S_Clock();
-	DeInit_I2SDMA();
+	if (sample_rate!=44100 && sample_rate!=48000 && sample_rate!=88200 && sample_rate!=96000)
+		sample_rate = 44100;
 
-	Codec_GPIO_Init();
-	Codec_AudioInterface_Init(BASE_SAMPLE_RATE);
-	init_audio_dma();
-	Codec_Register_Setup(0, BASE_SAMPLE_RATE);
+	//Do nothing if the sample_rate did not change
+	if (last_sample_rate != sample_rate)
+	{
+		last_sample_rate = sample_rate; 
 
+		codec_powerdown(); 									//issue I2C command to power codec down
+		//RCC_APB1PeriphClockCmd(CODEC_I2C_CLK, DISABLE);	//Disable I2C clock
+		codec_resetpin_low();								//Pull codec RESET pin low
+		delay();
 
+		stop_audio_clock_source();							//Disable PLLI2S
+		deinit_audio_dma();									//Disable DMA stream, interrupts
+		delay();
+
+		codec_init_gpio();
+		codec_init_i2s(sample_rate);
+		init_audio_dma();
+		codec_setup_registers(0, sample_rate);
+
+		start_audio_stream();
+	}
 }
 
-void Codec_Deinit(void)
+void codec_resetpin_low(void)
 {
 	GPIO_InitTypeDef gpio;
 
+
+	//Enable GPIO for RESET pin
 	RCC_AHB1PeriphClockCmd(CODEC_RESET_RCC, ENABLE);
 
 	gpio.GPIO_Mode = GPIO_Mode_OUT;
@@ -197,41 +229,39 @@ void Codec_Deinit(void)
 
 	gpio.GPIO_Pin = CODEC_RESET_pin; GPIO_Init(CODEC_RESET_GPIO, &gpio);
 
+	//Pull the RESET pin low
 	CODEC_RESET_LOW;
 
 
 }
 
-void Codec_PowerDown(void)
+void codec_powerdown(void)
 {
-	uint32_t err=0;
-
-	err=Codec_WriteRegister(CS4271_REG_MODELCTRL2, PDN, CODEC_I2C); //Control Port Enable and Power Down Enable
-
+	codec_write_one_register(CS4271_REG_MODELCTRL2, PDN, CODEC_I2C); //Control Port Enable and Power Down Enable
 }
 
 
-uint32_t Codec_Register_Setup(uint8_t enable_DCinput, uint32_t sample_rate)
+uint32_t codec_setup_registers(uint8_t enable_DCinput, uint32_t sample_rate)
 {
 	uint32_t err = 0;
 
-	Codec_CtrlInterface_Init();
+	codec_init_i2c();
 
 	CODEC_RESET_HIGH;
 	delay_ms(2);
 
-	err+=Codec_Reset(CODEC_I2C, CODEC_MODE, enable_DCinput, sample_rate);
+	err+=codec_write_all_registers(CODEC_I2C, CODEC_MODE, enable_DCinput, sample_rate);
 
 	return err;
 }
 
 
-uint32_t Codec_Reset(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DCinput, uint32_t sample_rate)
+uint32_t codec_write_all_registers(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DCinput, uint32_t sample_rate)
 {
 	uint8_t i;
 	uint32_t err=0;
 	
-	err+=Codec_WriteRegister(CS4271_REG_MODELCTRL2, CPEN | PDN, CODEC); //Control Port Enable and Power Down Enable
+	err+=codec_write_one_register(CS4271_REG_MODELCTRL2, CPEN | PDN, CODEC); //Control Port Enable and Power Down Enable
 	
 
 	if (master_slave == CODEC_IS_MASTER)	codec_init_data_base[0] |= MASTER;
@@ -244,15 +274,15 @@ uint32_t Codec_Reset(I2C_TypeDef *CODEC, uint8_t master_slave, uint8_t enable_DC
 	if (enable_DCinput)						codec_init_data_base[4] |= HPFDisableA | HPFDisableB;
 
 
-	for(i=0;i<CS4271_NUM_REGS;i++)			err+=Codec_WriteRegister(i+1, codec_init_data_base[i], CODEC);
+	for(i=0;i<CS4271_NUM_REGS;i++)			err+=codec_write_one_register(i+1, codec_init_data_base[i], CODEC);
 
-	err+=Codec_WriteRegister(CS4271_REG_MODELCTRL2, CPEN, CODEC); //Power Down disable
+	err+=codec_write_one_register(CS4271_REG_MODELCTRL2, CPEN, CODEC); //Power Down disable
 
 	return err;
 }
 
 
-uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_TypeDef *CODEC)
+uint32_t codec_write_one_register(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_TypeDef *CODEC)
 {
 	uint32_t result = 0;
 	
@@ -264,7 +294,7 @@ uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_Ty
 	while(I2C_GetFlagStatus(CODEC, I2C_FLAG_BUSY))
 	{
 		if((CODECTimeout--) == 0)
-			return Codec_TIMEOUT_UserCallback();
+			return codec_timeout_callback();
 	}
 
 	/* Start the config sequence */
@@ -275,7 +305,7 @@ uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_Ty
 	while (!I2C_CheckEvent(CODEC, I2C_EVENT_MASTER_MODE_SELECT))
 	{
 		if((CODECTimeout--) == 0)
-			return Codec_TIMEOUT_UserCallback();
+			return codec_timeout_callback();
 	}
 
 	/* Transmit the slave address and enable writing operation */
@@ -286,7 +316,7 @@ uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_Ty
 	while (!I2C_CheckEvent(CODEC, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
 	{
 		if((CODECTimeout--) == 0)
-			return Codec_TIMEOUT_UserCallback();
+			return codec_timeout_callback();
 	}
 
 	/* Transmit the first address for write operation */
@@ -297,7 +327,7 @@ uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_Ty
 	while (!I2C_CheckEvent(CODEC, I2C_EVENT_MASTER_BYTE_TRANSMITTING))
 	{
 		if((CODECTimeout--) == 0)
-			return Codec_TIMEOUT_UserCallback();
+			return codec_timeout_callback();
 	}
 
 	/* Prepare the register value to be sent */
@@ -308,7 +338,7 @@ uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_Ty
 	while(!I2C_GetFlagStatus(CODEC, I2C_FLAG_BTF))
 	{
 		if((CODECTimeout--) == 0)
-			return Codec_TIMEOUT_UserCallback();
+			return codec_timeout_callback();
 	}
 
 	/* End the configuration sequence */
@@ -321,7 +351,7 @@ uint32_t Codec_WriteRegister(uint8_t RegisterAddr, uint8_t RegisterValue, I2C_Ty
 /*
  * Initializes I2C peripheral for both codecs
  */
-void Codec_CtrlInterface_Init(void)
+void codec_init_i2c(void)
 {
 	I2C_InitTypeDef I2C_InitStructure;
 
@@ -367,6 +397,13 @@ void set_i2s_samplerate(uint32_t sample_rate)
 		app_I2SODD = 1;
 	}
 	else
+	if (sample_rate==88200){
+		app_PLLI2S_N  	= 271;
+		app_PLLI2S_R 	= 2;
+		app_I2SDIV = 3;
+		app_I2SODD = 0;
+	}
+	else
 	if (sample_rate==96000){
 		app_PLLI2S_N  	= 344;
 		app_PLLI2S_R 	= 2;
@@ -387,9 +424,14 @@ void set_i2s_samplerate(uint32_t sample_rate)
 /*
  * Initializes I2S peripheral
  */
-void Codec_AudioInterface_Init(uint32_t sample_rate)
+void codec_init_i2s(uint32_t sample_rate)
 {
 	I2S_InitTypeDef I2S_InitStructure;
+
+	// stop_audio_clock_source();
+	// set_i2s_samplerate(sample_rate);
+
+	start_audio_clock_source();
 
 	// Enable the CODEC_I2S peripheral clock
 	RCC_APB1PeriphClockCmd(CODEC_I2S_CLK, ENABLE);
@@ -428,7 +470,7 @@ void Codec_AudioInterface_Init(uint32_t sample_rate)
 }
 
 
-void Codec_GPIO_Init(void)
+void codec_init_gpio(void)
 {
 	GPIO_InitTypeDef gpio;
 

@@ -57,7 +57,7 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 		return (0);
 }
 
-void create_waveheader(WaveHeader *w, WaveFmtChunk *f, uint8_t bitsPerSample, uint8_t numChannels)
+void create_waveheader(WaveHeader *w, WaveFmtChunk *f, uint8_t bitsPerSample, uint8_t numChannels, uint32_t sample_rate)
 {
 	if (bitsPerSample != 8 && bitsPerSample != 16 && bitsPerSample != 24 && bitsPerSample != 32)
 		bitsPerSample = 16;
@@ -73,8 +73,8 @@ void create_waveheader(WaveHeader *w, WaveFmtChunk *f, uint8_t bitsPerSample, ui
 	f->fmtSize		= 16;
 	f->audioFormat	= 1;
 	f->numChannels	= numChannels;
-	f->sampleRate	= BASE_SAMPLE_RATE;
-	f->byteRate		= (BASE_SAMPLE_RATE * numChannels * (bitsPerSample/8)); //sampleRate * blockAlign
+	f->sampleRate	= sample_rate;
+	f->byteRate		= (sample_rate * numChannels * (bitsPerSample/8)); //sampleRate * blockAlign
 	f->blockAlign	= numChannels * (bitsPerSample/8);
 	f->bitsPerSample= bitsPerSample;
 }

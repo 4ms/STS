@@ -96,9 +96,10 @@ enum GlobalModes
 	STARTUPBANK_CH2,
 	TRIG_DELAY,
 	LED_COLOR_ADJUST, //led calibration
-
+	
 	NUM_GLOBAL_MODES
 };
+
 
 enum AutoStopModes
 {
@@ -116,17 +117,28 @@ enum MonitorModes
 };
 
 
-// play_trig_delay / BASE_SAMPLE_RATE is the delay in sec from detecting a trigger to calling start_playing()
+// play_trig_delay / ONE_SECOND is the delay in sec from detecting a trigger to calling start_playing()
 // This is required to let Sample CV settle (due to the hardware LPF).
 //
 // play_trig_latch_pitch_time is how long the PITCH CV is latched when a play trigger is received
 // This allows for a CV/gate sequencer to settle, and the internal LPF to settle, before using the new CV value
 // This reduces slew and "indecision" when a step is advanced on the sequencer
 
+
+enum RecordingSampleRates
+{
+	REC_44K = 44100,
+	REC_48K = 48000,
+	REC_88K = 88200,
+	REC_96K = 96000
+};
+
 typedef struct GlobalParams
 {
-	uint32_t	play_trig_delay;
-	uint32_t	play_trig_latch_pitch_time;
+	uint32_t					play_trig_delay;
+	uint32_t					play_trig_latch_pitch_time;
+	enum RecordingSampleRates	record_sample_rate;
+	float						f_record_sample_rate; //pre-converted to float to speed up calculations
 
 } GlobalParams;
 

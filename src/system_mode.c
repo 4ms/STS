@@ -15,20 +15,30 @@
 #include "sampler.h"
 #include "buttons.h"
 #include "led_color_adjust.h"
+#include "codec.h"
 
 
 extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
+extern GlobalParams			global_params;
+
 extern volatile uint32_t 	sys_tmr;
 extern uint8_t 				flags[NUM_FLAGS];
 extern enum PlayStates 		play_state[NUM_PLAY_CHAN];
 enum ButtonStates 			button_state[NUM_BUTTONS];
 uint8_t 					button_armed[NUM_BUTTONS];
 
+GlobalParams				undo_global_params;
+uint8_t 					undo_global_mode[NUM_GLOBAL_MODES];
+
+#define INITIAL_BUTTONS_DOWN (-1)
+int32_t sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
+
 void enter_system_mode(void)
 {
 	global_mode[SYSTEM_MODE] = 1;
 	play_state[0] = SILENT;
 	play_state[1] = SILENT;
+	sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
 }
 
 void exit_system_mode(uint8_t do_save)
@@ -36,13 +46,22 @@ void exit_system_mode(uint8_t do_save)
 
 	if (do_save)
 	{
+		global_params.f_record_sample_rate =  (float)(global_params.record_sample_rate);
+		codec_reboot_new_samplerate(global_params.record_sample_rate);
+
 		save_flash_params(5);
 		flags[SaveUserSettings] = 1;
+
+		//Reset state for the next time we enter system mode
+		sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
+
+		 //indicate we're ready to pass over control of buttons once all buttons are released
+		flags[SkipProcessButtons] = 2;
+
 	}
 	global_mode[SYSTEM_MODE] = 0;
 }
 
-#define INITIAL_BUTTONS_DOWN -1
 
 //returns 1 if the button is detected as being pressed for the first time
 uint8_t check_button_pressed(uint8_t button)
@@ -63,13 +82,15 @@ uint8_t check_button_pressed(uint8_t button)
 	return(0);
 }
 
-uint8_t 	undo_global_mode[NUM_GLOBAL_MODES];
 
 void save_globals_undo_state(void)
 {
 	uint8_t i;
 	for(i=0;i<NUM_GLOBAL_MODES;i++)
 		undo_global_mode[i] = global_mode[i];
+
+	undo_global_params.record_sample_rate = global_params.record_sample_rate;
+
 }
 
 void restore_globals_undo_state(void)
@@ -77,11 +98,13 @@ void restore_globals_undo_state(void)
 	uint8_t i;
 	for(i=0;i<NUM_GLOBAL_MODES;i++)
 		global_mode[i] = undo_global_mode[i];
+
+	global_params.record_sample_rate = undo_global_params.record_sample_rate;
+
 }
 
 void update_system_mode(void)
 {
-	static int32_t sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
 	static int32_t bootloader_buttons_down=0;
 	static int32_t enter_led_adjust_buttons_down = 0;
 
@@ -104,6 +127,17 @@ void update_system_mode(void)
 		//
 
 		//Rec : Toggle 24-bit mode
+		if (check_button_pressed(RecBank))
+		{	
+			if (global_params.record_sample_rate == REC_44K) 				global_params.record_sample_rate = REC_48K;
+			else
+			if (global_params.record_sample_rate == REC_48K)				global_params.record_sample_rate = REC_88K;
+			else
+			if (global_params.record_sample_rate == REC_88K) 				global_params.record_sample_rate = REC_96K;
+			else															global_params.record_sample_rate = REC_44K;
+		}
+
+		//Rec Bank: Toggle Sample Rate for recording
 		if (check_button_pressed(Rec)){	
 			if (global_mode[REC_24BITS]) 									global_mode[REC_24BITS] = 0;
 			else															global_mode[REC_24BITS] = 1; 
@@ -149,12 +183,6 @@ void update_system_mode(void)
 		{
 			//Save and Exit
 			exit_system_mode(1);
-
-			//Reset state for the next time we enter system mode
-			sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
-
-			 //indicate we're ready to pass over control of buttons once all buttons are released
-			flags[SkipProcessButtons] = 2;
 		}
 
 		//Edit+Rev2 : Revert
@@ -169,7 +197,7 @@ void update_system_mode(void)
 	{
 		bootloader_buttons_down += elapsed_time;
 		
-		if (bootloader_buttons_down > (BASE_SAMPLE_RATE*3))
+		if (bootloader_buttons_down > 120000)
 		{
 			flags[ShutdownAndBootload] = 1;
 
@@ -192,7 +220,7 @@ void update_system_mode(void)
 	if (ENTER_LED_ADJUST_BUTTONS)
 	{
 		enter_led_adjust_buttons_down += elapsed_time;
-		if (enter_led_adjust_buttons_down > (BASE_SAMPLE_RATE*3))
+		if (enter_led_adjust_buttons_down > 120000)
 		{
 			global_mode[SYSTEM_MODE] = 0;
 			init_led_color_adjust();
@@ -215,33 +243,21 @@ void update_system_mode(void)
 		{
 			sysmode_buttons_down += elapsed_time;
 			//Hold buttons down for a while ==> save and exit
-			if (sysmode_buttons_down >= (BASE_SAMPLE_RATE * 3))
+			if (sysmode_buttons_down >= 120000)
 			{
 				//Save and Exit
 				exit_system_mode(1);
-
-				//Reset state for the next time we enter system mode
-				sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
-
-				 //indicate we're ready to pass over control of buttons once all buttons are released
-				flags[SkipProcessButtons] = 2;
 			}
 		}
 	} else
 	{
 		//Release buttons too early ===> revert+exit
-		if (sysmode_buttons_down > 10 && sysmode_buttons_down < (BASE_SAMPLE_RATE * 3))
+		if (sysmode_buttons_down > 10 && (sysmode_buttons_down < 120000))
 		{
 			restore_globals_undo_state();
 
 			//Exit without saving
 			exit_system_mode(0);
-
-			//Reset state for the next time we enter system mode
-			sysmode_buttons_down=INITIAL_BUTTONS_DOWN;
-
-			 //indicate we're ready to pass over control of buttons once all buttons are released
-			flags[SkipProcessButtons] = 2;
 		}
 		//buttons were detected up, exit the INITIAL_BUTTONS_DOWN state
 		else if (NO_BUTTONS)
@@ -288,6 +304,12 @@ void update_system_mode_button_leds(void)
 {
 	if (flags[ShutdownAndBootload] != 1)
 	{
+		if (global_params.record_sample_rate==REC_48K) 					set_ButtonLED_byPalette(RecBankButtonLED, YELLOW); //Rec 48k
+		else
+		if (global_params.record_sample_rate==REC_88K) 					set_ButtonLED_byPalette(RecBankButtonLED, CYAN); //Rec 88k
+		else
+		if (global_params.record_sample_rate==REC_96K) 					set_ButtonLED_byPalette(RecBankButtonLED, BLUE); //Rec 96k
+		else						 									set_ButtonLED_byPalette(RecBankButtonLED, ORANGE); //Rec 44.1k
 
 		if (global_mode[REC_24BITS]) 									set_ButtonLED_byPalette(RecButtonLED, BLUE); //24bit recording
 		else															set_ButtonLED_byPalette(RecButtonLED, ORANGE); //16bit recording
@@ -306,7 +328,6 @@ void update_system_mode_button_leds(void)
 		if (global_mode[QUANTIZE_CH2]) 									set_ButtonLED_byPalette(Bank2ButtonLED, BLUE); //Ch2 quantized to semitones
 		else															set_ButtonLED_byPalette(Bank2ButtonLED, ORANGE); //Ch2 not quantized
 
-		set_ButtonLED_byPalette(RecBankButtonLED, ORANGE);
 
 		if (button_state[Edit] >= DOWN && all_buttons_except(UP, (1<<Edit)))
 		{
