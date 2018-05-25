@@ -1,8 +1,29 @@
 /*
- * timekeeper.c
+ * timekeeper.c - routines that run on timer-based interrupts
  *
- *  Created on: Mar 29, 2015
- *      Author: design
+ * Authors: Dan Green (danngreen1@gmail.com), Hugo Paris (hugoplo@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
  */
 
 #include "globals.h"
@@ -12,15 +33,7 @@
 #include "leds.h"
 #include "dig_pins.h"
 
-
 volatile uint32_t sys_tmr;
-
-// inline void inc_tmrs(void);
-// void inc_tmrs(void)
-// {
-// 	sys_tmr++; //at 48kHz, it resets after 24 hours, 51 minutes, 18.4853333 seconds
-// }
-
 
 uint32_t get_fattime(void){
 	uint32_t secs, mins, hours, days, month;
@@ -49,8 +62,6 @@ uint32_t get_fattime(void){
 			| ((uint32_t)hours << 11)
 			| ((uint32_t)mins << 5)
 			| ((uint32_t)secs >> 1);
-
-
 }
 
 void SysTick_Handler(void)
@@ -66,7 +77,6 @@ void init_timekeeper(void){
 	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK);
 	SysTick_Config(SystemCoreClock / ONE_SECOND); //updates about the same as a 44.1kHz sample rate, so one sys_tmr value is one 22.6us
 }
-
 
 
 void init_adc_param_update_IRQ(void)
@@ -143,7 +153,6 @@ void init_ButtonDebounce_IRQ(void)
 	TIM_TimeBaseInit(TIM4, &tim);
 	TIM_ITConfig(TIM4, TIM_IT_Update, ENABLE);
 	TIM_Cmd(TIM4, ENABLE);
-
 }
 
 void init_ButtonLED_IRQ(void)
@@ -168,7 +177,6 @@ void init_ButtonLED_IRQ(void)
 	//Run every 5ms (200Hz)
 	//Prescale = 31 --> 168MHz / 32 = 5.25MHz
 	//Period = 26249 --> 5.25MHz / 26250 = 200Hz
-
 
 	TIM_TimeBaseStructInit(&tim);
 	tim.TIM_Period = 26249;
@@ -204,12 +212,10 @@ void init_TrigJackDebounce_IRQ(void)
 	TIM_TimeBaseInit(TIM5, &tim);
 	TIM_ITConfig(TIM5, TIM_IT_Update, ENABLE);
 	TIM_Cmd(TIM5, ENABLE);
-
 }
 
 void init_SDIO_read_IRQ(void)
 {
-
 	TIM_TimeBaseInitTypeDef  tim;
 
 	NVIC_InitTypeDef nvic;
@@ -231,5 +237,4 @@ void init_SDIO_read_IRQ(void)
 	TIM_TimeBaseInit(TIM7, &tim);
 	TIM_ITConfig(TIM7, TIM_IT_Update, ENABLE);
 	TIM_Cmd(TIM7, ENABLE);
-
 }

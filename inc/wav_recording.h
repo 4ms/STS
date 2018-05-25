@@ -1,6 +1,5 @@
 /*
  * wav_recording.h - wav file recording routines
- * also contains recording-related functions for Stereo Triggered Sampler application
  *
  * Authors: Dan Green (danngreen1@gmail.com), Hugo Paris (hugoplo@gmail.com)
  *
@@ -51,5 +50,3 @@ void init_rec_buff(void);
 void create_new_recording(uint8_t bitsPerSample, uint8_t numChannels, uint32_t sample_rate);
 FRESULT write_wav_info_chunk(FIL *wavfil, uint32_t *total_written);
 FRESULT write_wav_size(FIL *wavfil, uint32_t data_chunk_bytes, uint32_t file_size_bytes);
-
-

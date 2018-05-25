@@ -98,12 +98,6 @@ void SDRAM_Init(void)
 	FMC_Bank5_6->SDCMR 	 = 1 | FMC_SDCMR_CTB2 | (1 << 5);
 
 	// Initialization step 4
-/*	do {
-	  register unsigned int i;
-	  for (i = 0; i < 1000000; ++i)
-	    __asm__ __volatile__ ("nop\n\t":::"memory");
-	} while (0);
-*/
 	delay();
 	delay();
 
