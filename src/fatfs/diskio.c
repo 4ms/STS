@@ -176,7 +176,7 @@ DRESULT disk_ioctl (
 /*-----------------------------------------------------------------------*/
 /* Get time for fatfs for files                                          */
 /*-----------------------------------------------------------------------*/
-__weak DWORD get_fattime(void) {
+__attribute__((weak)) DWORD get_fattime(void) {
 	/* Returns current time packed into a DWORD variable */
 	return	  ((DWORD)(2016 - 1980) << 25)	/* Year 2016 */
 			| ((DWORD)2 << 21)				/* Month 2 */

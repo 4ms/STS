@@ -16,3 +16,5 @@ fpu_lib.mk
 firmwares/
 flashScript.jlink
 notes/
+
+*.wav
