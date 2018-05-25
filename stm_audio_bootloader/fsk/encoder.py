@@ -93,7 +93,7 @@ class FskEncoder(object):
     return self._encode(symbol_stream)
 
   def code(self, data, page_size=1024, blank_duration=0.06):
-    yield numpy.zeros((1.0 * self._sr, 1)).ravel()
+    yield numpy.zeros((1 * self._sr, 1)).ravel()
     yield self._code_blank(1.0)
     if len(data) % page_size != 0:
       tail = page_size - (len(data) % page_size)
