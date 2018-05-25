@@ -1,9 +1,35 @@
 /*
- * dig_inouts.c
+ * dig_pins.c - Digital (GPIO) pin setup
+ *
+ * Author: Dan Green (danngreen1@gmail.com)
+ * Original idea for algoritm from https://www.kvraudio.com/forum/viewtopic.php?t=195315
+ * Optimized and translated for int32_t by Dan Green
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
  */
 
-#include <audio_sdram.h>
-#include <sampler.h>
+#include "audio_sdram.h"
+#include "sampler.h"
 #include "globals.h"
 #include "adc.h"
 #include "params.h"
@@ -11,59 +37,6 @@
 #include "dig_pins.h"
 #include "buttons.h"
 
-extern __IO uint16_t potadc_buffer[NUM_POT_ADCS];
-
-void test_noise(void)
-{
-	uint32_t i,j;
-
-	GPIO_InitTypeDef gpio;
-
-	GPIO_StructInit(&gpio);
-
-	/* Configure PC.08, PC.09, PC.10, PC.11 pins: D0, D1, D2, D3 pins */
-	gpio.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11;
-	gpio.GPIO_Speed = GPIO_Speed_50MHz;
-	gpio.GPIO_Mode = GPIO_Mode_OUT;
-	gpio.GPIO_OType = GPIO_OType_PP;
-	gpio.GPIO_PuPd = GPIO_PuPd_UP;
-	GPIO_Init(GPIOC, &gpio);
-
-	/* Configure PD.02 CMD line */
-	gpio.GPIO_Pin = GPIO_Pin_2;
-	GPIO_Init(GPIOD, &gpio);
-
-	/* Configure PC.12 pin: CLK pin */
-	gpio.GPIO_Pin = GPIO_Pin_12;
-	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOC, &gpio);
-
-	j=0;
-	while (1)
-	{
-		i=potadc_buffer[0]*100;while(i--){;}
-		GPIOC->BSRRL = GPIO_Pin_8;
-		GPIOC->BSRRL = GPIO_Pin_9;
-		GPIOC->BSRRL = GPIO_Pin_10;
-		GPIOC->BSRRL = GPIO_Pin_11;
-		GPIOC->BSRRL = GPIO_Pin_12;
-		GPIOD->BSRRL = GPIO_Pin_2;
-
-		i=potadc_buffer[0]*100;while(i--){;}
-		GPIOC->BSRRH = GPIO_Pin_8;
-		GPIOC->BSRRH = GPIO_Pin_9;
-		GPIOC->BSRRH = GPIO_Pin_10;
-		GPIOC->BSRRH = GPIO_Pin_11;
-		GPIOC->BSRRH = GPIO_Pin_12;
-		GPIOD->BSRRH = GPIO_Pin_2;
-
-		j++;if (j==1000){
-			j=0;
-			i=2000000;while(i--){;}
-		}
-	}
-
-}
 
 uint8_t get_PCB_version(void)
 {
@@ -141,13 +114,6 @@ void init_dig_inouts(void){
 	gpio.GPIO_Pin = REV1JACK_pin;	GPIO_Init(REV1JACK_GPIO, &gpio);
 	gpio.GPIO_Pin = REV2JACK_pin;	GPIO_Init(REV2JACK_GPIO, &gpio);
 
-
-	//Switch
-	// gpio.GPIO_Pin = STEREOSW_T1_pin;	GPIO_Init(STEREOSW_T1_GPIO, &gpio);
-	// gpio.GPIO_Pin = STEREOSW_T2_pin;	GPIO_Init(STEREOSW_T2_GPIO, &gpio);
-
-
-
 	//Configure outputs
 	gpio.GPIO_Mode = GPIO_Mode_OUT;
 	gpio.GPIO_OType = GPIO_OType_PP;
@@ -172,7 +138,6 @@ void init_dig_inouts(void){
 	BUSYLED_OFF;
 
 	//DEBUG pins
-
 	gpio.GPIO_Pin = DEBUG0;	GPIO_Init(DEBUG0_GPIO, &gpio);
 	gpio.GPIO_Pin = DEBUG1;	GPIO_Init(DEBUG1_GPIO, &gpio);
 	gpio.GPIO_Pin = DEBUG2;	GPIO_Init(DEBUG2_GPIO, &gpio);
@@ -181,16 +146,6 @@ void init_dig_inouts(void){
 	DEBUG1_OFF;
 	DEBUG2_OFF;
 	DEBUG3_OFF;
-
-	//JUMPERS
-
-	gpio.GPIO_PuPd = GPIO_PuPd_UP;
-
-//	gpio.GPIO_Pin = JUMPER_1_pin;	GPIO_Init(JUMPER_1_GPIO, &gpio);
-//	gpio.GPIO_Pin = JUMPER_2_pin;	GPIO_Init(JUMPER_2_GPIO, &gpio);
-//	gpio.GPIO_Pin = JUMPER_3_pin;	GPIO_Init(JUMPER_3_GPIO, &gpio);
-//	gpio.GPIO_Pin = JUMPER_4_pin;	GPIO_Init(JUMPER_4_GPIO, &gpio);
-
 
 }
 
@@ -280,16 +235,6 @@ void test_dig_inouts(void)
 	t=RECTRIGJACK;
 	if (t) PLAYLED1_ON;
 	PLAYLED1_OFF;
-
-	while (0){
-		// t=STEREOSW;
-		// if (t==SW_MONO) {PLAYLED1_ON;PLAYLED2_OFF;SIGNALLED_OFF;}
-		// else if (t==SW_LR) {PLAYLED1_OFF;PLAYLED2_ON;SIGNALLED_OFF;}
-		// else if (t==SW_LINK) {SIGNALLED_ON;PLAYLED1_OFF;PLAYLED2_OFF;}
-
-	}
-
-
 }
 
 

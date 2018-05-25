@@ -16,11 +16,11 @@ main.c
 #include "bank.h"
 #include "buttons.h"
 #include "calibration.h"
+#include "user_flash_settings.h"
 #include "codec.h"
 #include "dig_pins.h"
 #include "edit_mode.h"
 #include "ff.h"
-#include "flash_user.h"
 #include "hardware_tests.h"
 #include "i2s.h"
 #include "leds.h"
@@ -37,7 +37,7 @@ main.c
 #include "wav_recording.h"
 
 #define HAS_BOOTLOADER
-#define DEBUG_ENABLED
+//#define DEBUG_ENABLED
 
 // These must match what's in startup_stm32f4xx.s:
 #define BOOTLOADER_MAGIC_CODE 0xBADDCAFE

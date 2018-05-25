@@ -6,9 +6,6 @@
 
 #pragma once
 
-//#define DEBUG_ENABLED
-
-
  // 128 bytes per DMA transfer
  // 64 bytes/half-transfer @ 16 bits/sample = 32 samples per half-transfer
  // 32 samples/half-transfer = 16 samples per channel per half-transfer
@@ -17,7 +14,6 @@
 #define codec_BUFF_LEN 		128 
 #define HT16_BUFF_LEN 		(codec_BUFF_LEN>>2)		/*32*/
 #define HT16_CHAN_BUFF_LEN 	(HT16_BUFF_LEN>>1) 		/*16*/
-
 
 
 #define ONE_SECOND 44100
@@ -168,7 +164,6 @@ do {							\
 
 
 #define CCMDATA __attribute__ ((section (".ccmdata")))
-//#define CCMDATA
 
 void check_errors(void);
 

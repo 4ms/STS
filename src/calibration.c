@@ -33,7 +33,7 @@
 #include "adc.h"
 #include "params.h"
 #include "rgb_leds.h"
-#include "flash_user.h"
+#include "user_flash_settings.h"
 #include "res/LED_palette.h"
 #include "led_color_adjust.h"
 

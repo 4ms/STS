@@ -1,7 +1,7 @@
 /*
  * circular_buffer.c - routines for handling circular buffers 
  *
- * Author: Dan Green (danngreen1@gmail.com)
+ * Author: Dan Green (danngreen1@gmail.com) 2017
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

@@ -1,5 +1,5 @@
 /*
- * flash.c -
+ * flash.c - Interface for reading/writing internal FLASH on STM32 chip
  *
  * Author: Dan Green (danngreen1@gmail.com)
  *
@@ -29,6 +29,7 @@
 #include "globals.h"
 #include "flash.h"
 
+#ifdef STM32F427_437xx
 static uint32_t kSectorBaseAddress[] = {
   0x08000000,
   0x08004000,
@@ -43,6 +44,9 @@ static uint32_t kSectorBaseAddress[] = {
   0x080C0000,
   0x080E0000
 };
+#else
+#error "Unknown chip. Please set the flash sector addresses in flash.c"
+#endif
 
 FLASH_Status flash_erase_sector(uint32_t address)
 {

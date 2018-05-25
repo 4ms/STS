@@ -1,5 +1,5 @@
 /*
- * flash_user.h
+ * user_flash_settings.h
  *
  *  Created on: Mar 4, 2016
  *      Author: design
@@ -17,5 +17,3 @@ void copy_system_calibrations_into_staging(void);
 void write_all_system_calibrations_to_FLASH(void);
 void read_all_system_calibrations_from_FLASH(void);
 void apply_firmware_specific_adjustments(void);
-
-

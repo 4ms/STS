@@ -6,7 +6,7 @@
 #include "dig_pins.h"
 #include "params.h"
 #include "calibration.h"
-#include "flash_user.h"
+#include "user_flash_settings.h"
 #include "adc.h"
 #include "buttons.h"
 #include "system_mode.h"

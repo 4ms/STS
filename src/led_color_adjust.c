@@ -31,7 +31,7 @@
 #include "calibration.h"
 #include "rgb_leds.h"
 #include "dig_pins.h"
-#include "flash_user.h"
+#include "user_flash_settings.h"
 #include "buttons.h"
 #include "res/LED_palette.h"
 #include "params.h"

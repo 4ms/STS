@@ -1,5 +1,31 @@
 /*
- * dig_inouts.h
+ * dig_pins.h - Digital (GPIO) pin setup
+ *
+ * Author: Dan Green (danngreen1@gmail.com)
+ * Original idea for algoritm from https://www.kvraudio.com/forum/viewtopic.php?t=195315
+ * Optimized and translated for int32_t by Dan Green
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
  */
 
 #pragma once
@@ -117,25 +143,6 @@
 #define EXTI_CLOCK_IRQ EXTI15_10_IRQn
 #define EXTI_Handler EXTI15_10_IRQHandler
 
-
-/*
-#define JUMPER_1_GPIO GPIOD
-#define JUMPER_1_pin GPIO_Pin_5
-#define JUMPER_1 (!(JUMPER_1_GPIO->IDR & JUMPER_1_pin))
-
-#define JUMPER_2_GPIO GPIOD
-#define JUMPER_2_pin GPIO_Pin_6
-#define JUMPER_2 (!(JUMPER_2_GPIO->IDR & JUMPER_2_pin))
-
-#define JUMPER_3_GPIO GPIOA
-#define JUMPER_3_pin GPIO_Pin_8
-#define JUMPER_3 (!(JUMPER_3_GPIO->IDR & JUMPER_3_pin))
-
-
-#define JUMPER_4_GPIO GPIOC
-#define JUMPER_4_pin GPIO_Pin_7
-#define JUMPER_4 (!(JUMPER_4_GPIO->IDR & JUMPER_4_pin))
-*/
 
 #define PCBVERSION_A_pin GPIO_Pin_13
 #define PCBVERSION_A_GPIO GPIOC

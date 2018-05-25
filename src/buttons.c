@@ -41,7 +41,7 @@
 #include "sampler.h"
 #include "res/LED_palette.h"
 #include "wav_recording.h"
-#include "flash_user.h"
+#include "user_flash_settings.h"
 
 extern ButtonKnobCombo 		g_button_knob_combo[NUM_BUTTON_KNOB_COMBO_BUTTONS][NUM_BUTTON_KNOB_COMBO_KNOBS];
 
