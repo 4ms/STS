@@ -155,7 +155,7 @@ void load_empty_slots(void)
 
 //Go through all banks and samples,
 //If file_found==0, then look for a file to fill the slot:
-//If samples[][].filename == "path/to/file.wav":
+//For example, let samples[][].filename == "path/to/file.wav": 
 // - Scan all .wav files in path alphabetically (path/*.wav), in two passes:
 //   --First pass: Look for a .wav file that isn't assigned anywhere
 //   --Second pass: Look for a .wav file that isn't assigned in this bank (but may be assigned in some other bank)

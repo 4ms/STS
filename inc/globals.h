@@ -28,6 +28,9 @@
 
 #pragma once
 
+#define DEBUG_ENABLED
+
+
  // 128 bytes per DMA transfer
  // 64 bytes/half-transfer @ 16 bits/sample = 32 samples per half-transfer
  // 32 samples/half-transfer = 16 samples per channel per half-transfer

@@ -37,7 +37,6 @@ main.c
 #include "wav_recording.h"
 
 #define HAS_BOOTLOADER
-//#define DEBUG_ENABLED
 
 // These must match what's in startup_stm32f4xx.s:
 #define BOOTLOADER_MAGIC_CODE 0xBADDCAFE

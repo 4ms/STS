@@ -211,7 +211,7 @@ uint8_t find_filename_in_all_banks(uint8_t bank, char *filename)
 	
 	do{
 		if (find_filename_in_bank(bank, filename) != 0xFF)
-			return(bank);
+			return(bank); 
 
 		bank=next_enabled_bank(bank);	
 	} while(bank!=orig_bank);
