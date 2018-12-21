@@ -1,3 +1,10 @@
+//=================================================================================================
+// STM32F429I-Discovery SDRAM configuration
+// Author : Radoslaw Kwiecien
+// e-mail : radek@dxp.pl
+// http://en.radzio.dxp.pl/stm32f429idiscovery/
+// Date : 24.11.2013
+//=================================================================================================
 #include "globals.h"
 #include "gpiof4.h"
 #include "sdram_driver.h"

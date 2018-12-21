@@ -1,5 +1,5 @@
 /*
- * sampler.c - Playback of audio
+ * sampler.c - Main functionality for audio playback
  *
  * Author: Dan Green (danngreen1@gmail.com)
  *
@@ -50,6 +50,7 @@
 #include "circular_buffer_cache.h"
 #include "bank.h"
 #include "leds.h"
+#include "fatfs_util.h"
 
 static inline int32_t _SSAT16(int32_t x);
 static inline int32_t _SSAT16(int32_t x) {asm("ssat %[dst], #16, %[src]" : [dst] "=r" (x) : [src] "r" (x)); return x;}

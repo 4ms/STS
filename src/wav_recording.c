@@ -44,7 +44,8 @@
 #include "dig_pins.h"
 #include "bank.h"
 #include "calibration.h"
-#include "sts_fs_index.h"
+#include "sts_sampleindex.h"
+#include "fatfs_util.h"
 
 extern volatile uint32_t 		sys_tmr;
 extern enum g_Errors 			g_error;

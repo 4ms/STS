@@ -1,5 +1,5 @@
 /*
- * system_mode.h - System Mode, where user can edit global system parameters
+ * fatfs_util.h - add-ons for FATFS
  *
  * Author: Dan Green (danngreen1@gmail.com)
  *
@@ -29,14 +29,7 @@
 #pragma once
 
 #include <stm32f4xx.h>
+#include "ff.h"
 
-void enter_system_mode(void);
-void exit_system_mode(uint8_t do_save);
-void update_system_mode(void);
-void update_system_mode_leds(void);
-void update_system_mode_button_leds(void);
-void save_globals_undo_state(void);
-void restore_globals_undo_state(void);
-
-
-
+FRESULT reload_sdcard(void);
+FRESULT create_linkmap(FIL *fil, uint8_t chan, uint8_t samplenum);

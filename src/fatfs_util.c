@@ -1,5 +1,6 @@
+
 /*
- * system_mode.h - System Mode, where user can edit global system parameters
+ * fatfs_util.c - add-ons for FATFS
  *
  * Author: Dan Green (danngreen1@gmail.com)
  *
@@ -26,17 +27,42 @@
  * -----------------------------------------------------------------------------
  */
 
-#pragma once
+#include "globals.h"
+#include "fatfs_util.h"
 
-#include <stm32f4xx.h>
-
-void enter_system_mode(void);
-void exit_system_mode(uint8_t do_save);
-void update_system_mode(void);
-void update_system_mode_leds(void);
-void update_system_mode_button_leds(void);
-void save_globals_undo_state(void);
-void restore_globals_undo_state(void);
+extern FATFS FatFs;
+extern enum g_Errors g_error;
 
 
+FRESULT reload_sdcard(void)
+{
+	FRESULT res;
 
+	res = f_mount(&FatFs, "", 1);
+	if (res != FR_OK)
+	{
+		//can't mount
+		g_error |= SDCARD_CANT_MOUNT;
+		res = f_mount(&FatFs, "", 0);
+		return(FR_DISK_ERR);
+	}
+	return (FR_OK);
+}
+
+//
+// Create a fast-lookup table (linkmap)
+//
+#define SZ_TBL 256
+CCMDATA DWORD chan_clmt[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK][SZ_TBL];
+
+FRESULT create_linkmap(FIL *fil, uint8_t chan, uint8_t samplenum)
+{
+	FRESULT res;
+
+	fil->cltbl = chan_clmt[chan][samplenum];
+	chan_clmt[chan][samplenum][0] = SZ_TBL;
+
+	res = f_lseek(fil, CREATE_LINKMAP);
+
+	return (res);
+}

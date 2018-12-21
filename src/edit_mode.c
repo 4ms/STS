@@ -39,7 +39,7 @@
 #include "edit_mode.h"
 #include "bank.h"
 #include "sample_file.h"
-#include "sts_fs_index.h"
+#include "sts_sampleindex.h"
 #include "adc.h"
 #include "button_knob_combo.h"
 

@@ -31,7 +31,7 @@
 #include "dig_pins.h"
 #include "buttons.h"
 #include "sts_filesystem.h"
-#include "sts_fs_index.h"
+#include "sts_sampleindex.h"
 #include "edit_mode.h"
 #include "calibration.h"
 #include "bank.h"

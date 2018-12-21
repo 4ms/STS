@@ -1,7 +1,7 @@
 /*
- * system_mode.h - System Mode, where user can edit global system parameters
+ * sts_sampleindex.c - interface to the sample index file
  *
- * Author: Dan Green (danngreen1@gmail.com)
+ * Author: Hugo Paris (hugoplho@gmail.com), Dan Green (danngreen1@gmail.com)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,14 +29,27 @@
 #pragma once
 
 #include <stm32f4xx.h>
+#include "ff.h"
 
-void enter_system_mode(void);
-void exit_system_mode(uint8_t do_save);
-void update_system_mode(void);
-void update_system_mode_leds(void);
-void update_system_mode_button_leds(void);
-void save_globals_undo_state(void);
-void restore_globals_undo_state(void);
+#define USE_BACKUP_FILE 1
+#define USE_INDEX_FILE  0
+#define ALL_BANKS MAX_NUM_BANKS
 
+#define	SAMPLE_SLOT 1
+#define	PLAY_START	2
+#define	PLAY_SIZE	3
+#define	PLAY_GAIN	4
 
+#define	PLAYDATTAG_SLOT 	"- sample slot"
+#define	PLAYDATTAG_START 	"- play start"
+#define	PLAYDATTAG_SIZE 	"- play size"
+#define	PLAYDATTAG_GAIN 	"- play gain"
+
+FRESULT write_sampleindex_file(void);
+uint8_t write_samplelist(void);
+uint8_t index_write_wrapper(void);
+FRESULT backup_sampleindex_file(void);
+uint8_t load_sampleindex_file(uint8_t use_backup, uint8_t banks);
+
+uint8_t check_sampleindex_valid(char *indexfilename);
 

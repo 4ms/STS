@@ -1,6 +1,29 @@
 /*
- * sts_filesystem.c
+ * sts_filesystem.c - Bank and folder system for STS
  *
+ * Author: Dan Green (danngreen1@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
  * Startup procedure: All button LEDs turn colors to indicate present operation:
  * Load index file: some color representing minor version number
  * Look for missing files and new folders: ORANGE
@@ -11,6 +34,8 @@
  *
  *
  */
+
+
 
 #include "globals.h"
 #include "params.h"
@@ -23,9 +48,10 @@
 #include "wavefmt.h"
 #include "sample_file.h"
 #include "bank.h"
-#include "sts_fs_index.h"
+#include "sts_sampleindex.h"
 #include "sts_fs_renaming_queue.h"
 #include "res/LED_palette.h"
+#include "fatfs_util.h"
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 //extern char index_bank_path[MAX_NUM_BANKS][_MAX_LFN];
@@ -39,6 +65,110 @@ extern uint8_t 				global_mode[NUM_GLOBAL_MODES];
 extern FATFS 				FatFs;
 
 CCMDATA Sample				test_bank[NUM_SAMPLES_PER_BANK];
+
+//Private:
+void load_empty_slots(void);
+
+uint8_t load_all_banks(uint8_t force_reload)
+{
+	/*
+	 * Startup procedure: All button LEDs turn colors to indicate present operation:
+	 * Load index file: WHITE
+	 * Look for missing files and new folders: YELLOW
+	 * --Or: No index found, create all new banks from folders: BLUE
+	 * Write index file: RED
+	 * Write html file: ORANGE
+	 * Done: OFF
+	 */
+
+	FRESULT res;
+	FRESULT queue_valid;
+
+	//Load the index file:
+	if (FW_MINOR_VERSION==0)		flags[RewriteIndex]=YELLOW;
+	else if (FW_MINOR_VERSION==1)	flags[RewriteIndex]=GREEN;
+	else if (FW_MINOR_VERSION==2)	flags[RewriteIndex]=CYAN;
+	else if (FW_MINOR_VERSION==3)	flags[RewriteIndex]=BLUE;
+	else if (FW_MINOR_VERSION==4)	flags[RewriteIndex]=PINK;
+	else if (FW_MINOR_VERSION==5)	flags[RewriteIndex]=RED;
+	else if (FW_MINOR_VERSION==6)	flags[RewriteIndex]=ORANGE;
+	else if (FW_MINOR_VERSION==7)	flags[RewriteIndex]=AQUA;
+	else if (FW_MINOR_VERSION==8)	flags[RewriteIndex]=DIM_RED;
+	else if (FW_MINOR_VERSION==9)	flags[RewriteIndex]=CYANER;
+
+
+	//Load the index file, marking files found or not found with samples[][].file_found = 1/0;
+	if (!force_reload)
+		force_reload = load_sampleindex_file(USE_INDEX_FILE, MAX_NUM_BANKS);
+
+	if (!force_reload) //sampleindex file was ok
+	{	
+		//Look for new folders and missing files
+		flags[RewriteIndex]=ORANGE;
+
+		// Update the list of banks that are enabled
+		// Banks with no file_found will be disabled (but filenames will be preserved, for use in load_missing_files)
+		check_enabled_banks();
+
+		// Check for new folders, and turn them into banks if possible
+		load_new_folders();
+
+		// Check for files that have file_found==0
+		// Look for a file to fill this slot
+		load_missing_files();
+
+		// Check for empty slots
+		load_empty_slots();
+	}
+
+	else //sampleindex file was not ok, or we requested to force a full reload from disk
+	{
+
+		// Ignore index and create new banks from disk:
+		flags[RewriteIndex]=WHITE;
+
+		//initialize the renaming queue
+		queue_valid = clear_renaming_queue();
+
+		//First pass: load all the banks that have default folder names
+		load_banks_by_default_colors();
+
+		//Second pass: look for folders that start with a bank name, example "Red - My Samples/"
+		load_banks_by_color_prefix();
+
+		//Third pass: go through all remaining folders and try to assign them to banks
+		load_banks_with_noncolors();
+
+		//process the folders/banks that need to be renamed
+		if (queue_valid==FR_OK) 
+			process_renaming_queue();
+	}
+
+
+	// Write samples struct to index
+	// ... so sample info gets updated with latest .wav header content
+	// Buttons are red for index file, then orange for html file
+
+	res = index_write_wrapper(); //the wrapper sets flags[RewriteIndex] to ORANGE during html file write
+
+	// Done re-indexing (buttons are normal)
+	flags[RewriteIndex]=0;
+
+	// check if there was an error writing to index file
+	// ToDo: push this to error log
+	if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors(); return 0;}
+
+
+	//Verify the channels are set to enabled banks, and correct if necessary
+	if (!is_bank_enabled(i_param[0][BANK])) 
+		i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
+
+	if (!is_bank_enabled(i_param[1][BANK])) 
+		i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
+
+	return 1;
+}
+
 
 
 FRESULT check_sys_dir(void)
@@ -75,23 +205,9 @@ FRESULT check_sys_dir(void)
 	return(FR_OK);
 }
 
-FRESULT reload_sdcard(void)
-{
-	FRESULT res;
-
-	res = f_mount(&FatFs, "", 1);
-	if (res != FR_OK)
-	{
-		//can't mount
-		g_error |= SDCARD_CANT_MOUNT;
-		res = f_mount(&FatFs, "", 0);
-		return(FR_DISK_ERR);
-	}
-	return (FR_OK);
-}
 
 
-//Go through all enabled banks, looking for empty sample slots
+//Go through all enabled banks, looking for empty sample slots 
 //Search within the bank's folder, looking for a file to fill the slot
 //
 void load_empty_slots(void)
@@ -731,96 +847,6 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *path_noslash)
 	return(sample_num);
 }
 
-
-uint8_t load_all_banks(uint8_t force_reload)
-{
-	FRESULT res;
-	FRESULT queue_valid;
-
-	//Load the index file:
-	if (FW_MINOR_VERSION==0)		flags[RewriteIndex]=YELLOW;
-	else if (FW_MINOR_VERSION==1)	flags[RewriteIndex]=GREEN;
-	else if (FW_MINOR_VERSION==2)	flags[RewriteIndex]=CYAN;
-	else if (FW_MINOR_VERSION==3)	flags[RewriteIndex]=BLUE;
-	else if (FW_MINOR_VERSION==4)	flags[RewriteIndex]=PINK;
-	else if (FW_MINOR_VERSION==5)	flags[RewriteIndex]=RED;
-	else if (FW_MINOR_VERSION==6)	flags[RewriteIndex]=ORANGE;
-	else if (FW_MINOR_VERSION==7)	flags[RewriteIndex]=AQUA;
-	else if (FW_MINOR_VERSION==8)	flags[RewriteIndex]=DIM_RED;
-	else if (FW_MINOR_VERSION==9)	flags[RewriteIndex]=CYANER;
-
-
-	//Load the index file, marking files found or not found with samples[][].file_found = 1/0;
-	if (!force_reload)
-		force_reload = load_sampleindex_file(USE_INDEX_FILE, MAX_NUM_BANKS);
-
-	if (!force_reload) //sampleindex file was ok
-	{
-		//Look for new folders and missing files
-		flags[RewriteIndex]=ORANGE;
-
-		// Update the list of banks that are enabled
-		// Banks with no file_found will be disabled (but filenames will be preserved, for use in load_missing_files)
-		check_enabled_banks();
-
-		// Check for new folders, and turn them into banks if possible
-		load_new_folders();
-
-		// Check for files that have file_found==0
-		// Look for a file to fill this slot
-		load_missing_files();
-
-		// Check for empty slots
-		load_empty_slots();
-	}
-
-	else //sampleindex file was not ok, or we requested to force a full reload from disk
-	{
-
-		// Ignore index and create new banks from disk:
-		flags[RewriteIndex]=WHITE;
-
-		//initialize the renaming queue
-		queue_valid = clear_renaming_queue();
-
-		//First pass: load all the banks that have default folder names
-		load_banks_by_default_colors();
-
-		//Second pass: look for folders that start with a bank name, example "Red - My Samples/"
-		load_banks_by_color_prefix();
-
-		//Third pass: go through all remaining folders and try to assign them to banks
-		load_banks_with_noncolors();
-
-		//process the folders/banks that need to be renamed
-		if (queue_valid==FR_OK)
-			process_renaming_queue();
-	}
-
-
-	// Write samples struct to index
-	// ... so sample info gets updated with latest .wav header content
-	// Buttons are red for index file, then orange for html file
-
-	res = index_write_wrapper(); //the wrapper sets flags[RewriteIndex] to ORANGE during html file write
-
-	// Done re-indexing (buttons are normal)
-	flags[RewriteIndex]=0;
-
-	// check if there was an error writing to index file
-	// ToDo: push this to error log
-	if (res) {g_error |= CANNOT_WRITE_INDEX; check_errors(); return 0;}
-
-
-	//Verify the channels are set to enabled banks, and correct if necessary
-	if (!is_bank_enabled(i_param[0][BANK]))
-		i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
-
-	if (!is_bank_enabled(i_param[1][BANK]))
-		i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
-
-	return 1;
-}
 
 
 
