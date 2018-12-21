@@ -114,6 +114,18 @@
 		BANK2BUT \
 		)
 
+#define VIDEO_DIM_BUTTONS (\
+		PLAY1BUT &&\
+		PLAY2BUT &&\
+		!REV1BUT &&\
+		!REV2BUT &&\
+		RECBUT &&\
+		!BANKRECBUT &&\
+		!EDIT_BUTTON &&\
+		!BANK1BUT &&\
+		!BANK2BUT \
+		)
+
 //Rec and RecBank during cal mode
 #define SAVE_CALIBRATE_BUTTONS (\
 		!PLAY1BUT &&\

@@ -182,7 +182,12 @@ int main(void) {
     flags[SkipProcessButtons] = 1;
     global_mode[CALIBRATE] = 1;
   }
-
+	
+	else if (VIDEO_DIM_BUTTONS)
+	{
+		global_mode[VIDEO_DIM] = 7;
+		system_calibrations->led_brightness = 1;
+	}
   // First boot: Run a hardware test, calibrate, and do a factory reset
   else if (!valid_fw_version ||
            (system_calibrations->major_firmware_version <
@@ -242,6 +247,7 @@ int main(void) {
     set_firmware_version();
     write_all_system_calibrations_to_FLASH();
   }
+
 
   flags[SystemModeButtonsDown] = 0;
 

@@ -97,6 +97,8 @@ enum GlobalModes
 	TRIG_DELAY,
 	LED_COLOR_ADJUST, //led calibration
 	
+	VIDEO_DIM,	//dim button LEDs for shooting videos
+
 	NUM_GLOBAL_MODES
 };
 

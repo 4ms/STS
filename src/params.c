@@ -151,6 +151,8 @@ void init_modes(void)
 	global_mode[ASSIGN_MODE] = 0;
 
 	global_mode[ALLOW_SPLIT_MONITORING] = 1;
+	global_mode[VIDEO_DIM] = 0;
+
 }
 
 

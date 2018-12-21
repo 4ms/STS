@@ -183,6 +183,13 @@ void display_one_ButtonLED(uint8_t LED_id)
 	if (g>4095) g = 4095;
 	if (b>4095) b = 4095;
 
+	if (global_mode[VIDEO_DIM]>0)
+	{
+		r = r/global_mode[VIDEO_DIM];
+		g = g/global_mode[VIDEO_DIM];
+		b = b/global_mode[VIDEO_DIM];
+	}
+
 	if (LED_id ==  Play1ButtonLED || LED_id == Play2ButtonLED)
 		LEDDriver_setRGBLED(LED_id, r, b, g); // swapped b and g for Play buttons
 	else
@@ -328,15 +335,9 @@ void update_ButtonLEDs(void)
 	uint8_t ButLEDnum;
 	uint8_t chan;
 	uint8_t bank_to_display;
-	//uint32_t tm=sys_tmr & 0x3FFF; //14-bit counter
-	//uint32_t tm_7 = sys_tmr & 0x7F; //7-bit counter
-	//uint32_t tm_12 = sys_tmr & 0xFFF; //12-bit counter
 	uint32_t tm_13 = sys_tmr & 0x1FFF; //13-bit counter
 	uint32_t tm_14 = sys_tmr & 0x3FFF; //14-bit counter
-//	uint32_t tm_15 = sys_tmr & 0x7FFF; //15-bit counter
 	uint32_t tm_16 = sys_tmr & 0xFFFF; //16-bit counter
-	//float tri_16;
-	//float tri_15;
 	float tri_14;
 	float tri_13;
 
