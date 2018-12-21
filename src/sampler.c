@@ -1,7 +1,30 @@
 /*
- * sampler.c
+ * sampler.c - Playback of audio
+ *
+ * Author: Dan Green (danngreen1@gmail.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * See http://creativecommons.org/licenses/MIT/ for more information.
+ *
+ * -----------------------------------------------------------------------------
  */
-
 
 #include "globals.h"
 #include "audio_sdram.h"
@@ -105,8 +128,6 @@ uint32_t 		sample_file_curpos		[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //current 
 
 enum PlayLoadTriage play_load_triage;
 
-#define SET_FILE_POS(c, b, s)	f_lseek(&fil[c][s], samples[b][s].startOfData + sample_file_curpos[c][s]);\
-								if(fil[c][s].fptr != (samples[b][s].startOfData + sample_file_curpos[c][s]) ) g_error|=LSEEK_FPTR_MISMATCH;
 
 
 //
@@ -125,6 +146,17 @@ FIL fil[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 // Sample info
 //
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
+
+
+// inline FRESULT SET_FILE_POS(uint8_t c, uint8_t b, uint8_t s)
+// { 
+// 	FRESULT r = f_lseek(&fil[c][s], samples[b][s].startOfData + sample_file_curpos[c][s]);
+// 	if(fil[c][s].fptr != (samples[b][s].startOfData + sample_file_curpos[c][s]) ) g_error|=LSEEK_FPTR_MISMATCH;
+// 	return r;
+// }
+#define SET_FILE_POS(c, b, s)	f_lseek(&fil[c][s], samples[b][s].startOfData + sample_file_curpos[c][s]);\
+								if(fil[c][s].fptr != (samples[b][s].startOfData + sample_file_curpos[c][s]) ) g_error|=LSEEK_FPTR_MISMATCH;
+
 
 
 void audio_buffer_init(void)
@@ -164,7 +196,6 @@ void audio_buffer_init(void)
 
 	flags[PlayBuff1_Discontinuity] = 1;
 	flags[PlayBuff2_Discontinuity] = 1;
-
 }
 
 
@@ -378,7 +409,11 @@ void start_playing(uint8_t chan)
 	}
 	else //...otherwise, start buffering from scratch
 	{
-		play_state[chan]=PREBUFFERING;
+		// DEBUG0_ON;
+
+		// Set state to silent so we don't run play_audio_buffer(), which could result in a glitch since the playbuff and cache values are being changed
+		play_state[chan]=SILENT;
+
 		CB_init(play_buff[chan][samplenum], i_param[chan][REV]);
 
 		//Seek to the file position where we will start reading
@@ -406,6 +441,9 @@ void start_playing(uint8_t chan)
 		cache_map_pt[chan][samplenum] 				= play_buff[chan][samplenum]->min;
 		cache_size[chan][samplenum]					= (play_buff[chan][samplenum]->size>>1) * s_sample->sampleByteSize;
 		is_buffered_to_file_end[chan][samplenum] 	= 0;
+
+		play_state[chan]=PREBUFFERING;
+		// DEBUG0_OFF;
 	}
 
 	last_play_start_tmr[chan]	= sys_tmr; //used by toggle_reverse() to see if we hit a reverse trigger right after a play trigger
@@ -719,11 +757,11 @@ void read_storage_to_buffer(void)
 	check_change_bank(0);
 	check_change_bank(1);
 
-	// DEBUG0_ON;
+	// DEBUG1_ON;
 	for (chan=0;chan<NUM_PLAY_CHAN;chan++)
 	{
 
-		if (play_state[chan] != SILENT && play_state[chan] != PLAY_FADEDOWN && play_state[chan] != RETRIG_FADEDOWN)
+		if ((play_state[chan] != SILENT) && (play_state[chan] != PLAY_FADEDOWN) && (play_state[chan] != RETRIG_FADEDOWN))
 		{
 			samplenum = sample_num_now_playing[chan];
 			banknum = sample_bank_now_playing[chan];
@@ -761,23 +799,22 @@ void read_storage_to_buffer(void)
 
 			//Calculate how many bytes we need to pre-load in our buffer
 			//
-			//Note of interest: blockAlign already includes numChannels, so we essentially square it in the calc below.
-			//The reason is that we plow through the bytes in play_buff twice as fast if it's stereo,
-			//and since it takes twice as long to load stereo data from the sd card,
-			//we have to preload four times as much data (2^2) vs (1^1)
-			//
+																				//Note of interest: blockAlign already includes numChannels, so we essentially square it in the calc below.
+																				//The reason is that we plow through the bytes in play_buff twice as fast if it's stereo,
+																				//and since it takes twice as long to load stereo data from the sd card,
+																				//we have to preload four times as much data (2^2) vs (1^1)
+																				//
 			pre_buff_size = (uint32_t)((float)(BASE_BUFFER_THRESHOLD * s_sample->blockAlign * s_sample->numChannels) * pb_adjustment);
 			active_buff_size = pre_buff_size * 4;
 
-			if (active_buff_size > ((play_buff[chan][samplenum]->size * 7) / 10) ) //limit amount of buffering ahead to 90% of buffer size
+			if (active_buff_size > ((play_buff[chan][samplenum]->size * 7) / 10) ) //limit amount of buffering ahead to 70% of buffer size
 				active_buff_size = ((play_buff[chan][samplenum]->size * 7) / 10);
 
-			if (!is_buffered_to_file_end[chan][samplenum] && 
-				(
+			if (!is_buffered_to_file_end[chan][samplenum] && (
 					(play_state[chan]==PREBUFFERING && (play_buff_bufferedamt[chan][samplenum] < pre_buff_size)) ||
-					(play_state[chan]!=PREBUFFERING && (play_buff_bufferedamt[chan][samplenum] < active_buff_size))
-				))
+					(play_state[chan]!=PREBUFFERING && (play_buff_bufferedamt[chan][samplenum] < active_buff_size))    ))
 			{
+				// DEBUG2_ON;
 
 				if (sample_file_curpos[chan][samplenum] > s_sample->sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
 				{
@@ -949,7 +986,7 @@ void read_storage_to_buffer(void)
 					}
 
 				}
-
+				// DEBUG2_OFF;
 			}
 
 			//Check if we've prebuffered enough to start playing
@@ -963,7 +1000,7 @@ void read_storage_to_buffer(void)
 
 		} //play_state != SILENT, FADEDOWN
 	} //for (chan)
-	// DEBUG0_OFF;
+	// DEBUG1_OFF;
 }
 
 
@@ -1021,7 +1058,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
 
-	// DEBUG0_ON;
+	// DEBUG3_ON;
 
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT)
@@ -1137,7 +1174,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 			 case (PLAY_FADEDOWN):
 			 case (RETRIG_FADEDOWN):
-			 	DEBUG1_ON;
+			 	// DEBUG1_ON;
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
 				 	if (global_mode[FADEUPDOWN_ENVELOPE])	env = (float)(HT16_CHAN_BUFF_LEN-i) / (float)HT16_CHAN_BUFF_LEN;
@@ -1158,11 +1195,11 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 					flags[Play1But+chan] = 1;
 
 				play_state[chan] = SILENT;
-				DEBUG1_OFF;
+				// DEBUG1_OFF;
 			break;
 
 			 case (PLAY_FADEUP):
-			 DEBUG3_ON;
+			 // DEBUG3_ON;
 				for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 				{
 					if (global_mode[FADEUPDOWN_ENVELOPE])	env = (float)i / (float)HT16_CHAN_BUFF_LEN;
@@ -1178,7 +1215,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				if (length>0.5)			play_state[chan]	= PLAYING;
 				else					play_state[chan] 	= PLAYING_PERC;
 				
-				DEBUG3_OFF;
+				// DEBUG3_OFF;
 		 	 break;
 
 			 case (PLAYING):
@@ -1202,7 +1239,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 
 		 		if (play_state[chan]==PLAYING_PERC) 
 		 		{
-		 			DEBUG2_ON;
+		 			// DEBUG2_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
@@ -1220,7 +1257,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 						outL[i] = _SSAT16(outL[i]);
 						outR[i] = _SSAT16(outR[i]);
 					}
-					DEBUG2_OFF;
+					// DEBUG2_OFF;
 				} else
 
 				// Fade down to silence before going to PAD_SILENCE mode or ending the playback
@@ -1228,7 +1265,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 				//
 		 		if (play_state[chan]==PLAYING_PERC_FADEDOWN) 
 		 		{
-		 			DEBUG0_ON;
+		 			// DEBUG0_ON;
 					for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 					{
 						if (i_param[chan][REV])	decay_amp_i[chan] += decay_inc[chan];
@@ -1246,7 +1283,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 						outL[i] = _SSAT16(outL[i]);
 						outR[i] = _SSAT16(outR[i]);
 					}
-					DEBUG0_OFF;
+					// DEBUG0_OFF;
 					//If the sample is very short, then pad it with silence so we get a consistant end out period
 					// if ( (sample->inst_end - sample->inst_start) < (READ_BLOCK_SIZE*2) )
 
@@ -1307,7 +1344,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan)
 	// else
 	// 	play_load_triage = NO_PRIORITY;
 
-// DEBUG0_OFF;
+	// DEBUG3_OFF;
 
 }
 
