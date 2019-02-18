@@ -36,6 +36,7 @@ enum Settings
 	NoSetting,
 	StereoMode,
 	RecordSampleBits,
+	RecordSampleRate,
 	AutoStopSampleChange,
 	PlayStopsLengthFull,
 	QuantizeChannel1,

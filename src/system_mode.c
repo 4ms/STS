@@ -240,7 +240,6 @@ void update_system_mode(void)
 	} else
 		bootloader_buttons_down=0;
 
-	//Check for led adjust mode buttons
 	if (ENTER_LED_ADJUST_BUTTONS)
 	{
 		enter_led_adjust_buttons_down += elapsed_time;

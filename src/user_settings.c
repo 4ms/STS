@@ -35,6 +35,7 @@
 
 extern uint8_t 			global_mode[NUM_GLOBAL_MODES];
 
+extern GlobalParams			global_params;
 
 //
 //WIP: standardized structure for user settings
@@ -96,6 +97,7 @@ FRESULT save_user_settings(void)
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## [STEREO MODE] can be \"stereo\" or \"mono\" (default)\n");
 		f_printf(&settings_file, "## [RECORD SAMPLE BITS] can be 24 or 16 (default)\n");
+		f_printf(&settings_file, "## [RECORD SAMPLE RATE] can be 96k, 88.2k, 48k, or 44.1k (default)\n");
 		f_printf(&settings_file, "## [AUTO STOP ON SAMPLE CHANGE] can be \"No\", \"Looping Only\" or \"Yes\" (default)\n");
 		f_printf(&settings_file, "## [PLAY BUTTON STOPS WITH LENGTH AT FULL] can be \"No\" or \"Yes\" (default)\n");
 		f_printf(&settings_file, "## [QUANTIZE CHANNEL 1 1V/OCT JACK] can be \"Yes\" or \"No\" (default)\n");
@@ -124,6 +126,19 @@ FRESULT save_user_settings(void)
 			f_printf(&settings_file, "24\n\n");
 		else
 			f_printf(&settings_file, "16\n\n");
+
+		// Write the record sample rate setting
+		f_printf(&settings_file, "[RECORD SAMPLE RATE]\n");
+
+		if (global_params.record_sample_rate == REC_48K)
+			f_printf(&settings_file, "48k\n\n");
+		else if (global_params.record_sample_rate == REC_88K)
+			f_printf(&settings_file, "88.2k\n\n");
+		else if (global_params.record_sample_rate == REC_96K)
+			f_printf(&settings_file, "96k\n\n");
+		else 
+			f_printf(&settings_file, "44.1k\n\n");
+
 
 		// Write the Auto Stop on Sample Change mode setting
 		f_printf(&settings_file, "[AUTO STOP ON SAMPLE CHANGE]\n");
@@ -182,6 +197,7 @@ FRESULT save_user_settings(void)
 		f_printf(&settings_file, "%d\n\n", global_mode[TRIG_DELAY]);
 
 
+
 		res = f_close(&settings_file);
 	}
 
@@ -234,6 +250,12 @@ FRESULT read_user_settings(void)
 				if (str_startswith_nocase(read_buffer, "[RECORD SAMPLE BITS]"))
 				{
 					cur_setting_found = RecordSampleBits; //24bit recording mode section detected
+					continue;
+				}
+
+				if (str_startswith_nocase(read_buffer, "[RECORD SAMPLE RATE"))
+				{
+					cur_setting_found = RecordSampleRate; //Sample rate section detected
 					continue;
 				}
 
@@ -305,6 +327,22 @@ FRESULT read_user_settings(void)
 				else
 				//if (str_startswith_nocase(read_buffer, "16"))
 					global_mode[REC_24BITS] = 0;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found==RecordSampleRate)
+			{
+				if (str_startswith_nocase(read_buffer, "48"))
+					global_params.record_sample_rate = REC_48K;
+				else
+				if (str_startswith_nocase(read_buffer, "88"))
+					global_params.record_sample_rate = REC_88K;
+				else
+				if (str_startswith_nocase(read_buffer, "96"))
+					global_params.record_sample_rate = REC_96K;
+				else
+					global_params.record_sample_rate = REC_44K;
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}

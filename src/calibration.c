@@ -114,7 +114,7 @@ void update_calibration(uint8_t user_cal_mode)
 
 	//Check if Pitch pot is not centered (either the knob is not set to the center,
 	//or the detent calibration is incorrectly set
-	//or the hardware is faulty
+	//or the hardware is faulty)
 	//Use the PLAY light to show if we detect a non-centered calibrated value
 	t = bracketed_potadc[PITCH_POT*2] + system_calibrations->pitch_pot_detent_offset[0];
 	if (t > 2152 || t < 1957)		playbut1_color = RED; 		//red: out of pitch=1.0 range
