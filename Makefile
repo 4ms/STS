@@ -101,7 +101,7 @@ AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4
 LDSCRIPT = $(DEVICE)/$(LOADFILE)
 
 #Use fpu/nosys.specs for standard C functions such as malloc(), memcpy()
-LFLAGS  =  -mfloat-abi=hard --specs="fpu/nosys.specs" -nostartfiles -T $(LDSCRIPT) 
+LFLAGS  =  -mfloat-abi=hard --specs="nosys.specs" -nostartfiles -T $(LDSCRIPT) 
 
 
 #vpath %.c src
