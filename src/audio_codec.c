@@ -68,15 +68,9 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	play_audio_from_buffer(outL[CHAN2], outR[CHAN2], CHAN2);
 
 
-	// Coding style note:
-	// The following code looks ugly! But there's a reason...
-	// It is intentionally written in boiler-plate style in order minimize execution time.
-	// The code could be made more readable and maintainable by having one for() loop
-	// and putting the if(global_mode[...]) statements inside the loop.
-	// However, since global_mode cannot change inside the loop, calcuating these if()'s
-	// on each cycle wastes valuable processor cycles.
-	// The compiler's optimizer did not remove these unnecessary comparisons,
-	// thus we do it manually (at the expense of readability).
+	// The following could be made more readable and maintainable by having one for() loop
+	// and putting the if(global_mode[...]) statements inside the loop, but execution
+	// time increases dramatically, since multiple compares are done in the inner loop
 	//
 	if (global_mode[CALIBRATE])
 	{
@@ -97,8 +91,6 @@ void process_audio_block_codec(int16_t *src, int16_t *dst)
 	{
 		// Monitor both channels:
 		// Send the input signal (src) to the output jacks (dst)
-		// Apply the dc offset calibration value, which means we stand a chance
-		// of nasty wrap-around clipping, so we must check for saturation
 		//
 		for (i=0;i<HT16_CHAN_BUFF_LEN;i++)
 		{
