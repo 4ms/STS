@@ -95,7 +95,7 @@ uint8_t get_PCB_version(void)
 	if (pulled_up && pulled_down) return(1); //always high: PCB version 1.1
 	if (pulled_up && !pulled_down) return(0); //floating: PCB version 1.0
 
-	if (!pulled_up && !pulled_down) return(0xFF); //always low: reserved for future PCB version
+	if (!pulled_up && !pulled_down) return(2); //always low: reserved for future PCB version
 	if (!pulled_up && pulled_down) return(0xFF); //high when pulled low, low when pulled high: invalid
 
 	return(0xFF); //unknown version
