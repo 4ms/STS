@@ -2,11 +2,11 @@
  * sts_filesystem.c
  *
  * Startup procedure: All button LEDs turn colors to indicate present operation:
- * Load index file: WHITE
- * Look for missing files and new folders: YELLOW
- * --Or: No index found, create all new banks from folders: BLUE
- * Write index file: RED
- * Write html file: ORANGE
+ * Load index file: some color representing minor version number
+ * Look for missing files and new folders: ORANGE
+ * --Or: No index found, create all new banks from folders: WHITE
+ * Write index file: MAGENTA
+ * Write html file: LAVENDER
  * Done: OFF
  * 
  * 
