@@ -425,7 +425,7 @@ FRESULT read_user_settings(void)
 			if (cur_setting_found==TrigDelay)
 			{
 				global_mode[TRIG_DELAY] = str_xt_int(read_buffer);
-				if (global_mode[TRIG_DELAY] < 1 || global_mode[TRIG_DELAY] > 10) global_mode[TRIG_DELAY] = 8;
+				if (global_mode[TRIG_DELAY] < 1 || global_mode[TRIG_DELAY] > 20) global_mode[TRIG_DELAY] = 8;
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}

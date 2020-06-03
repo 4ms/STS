@@ -1198,13 +1198,14 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent)
 
 uint32_t calc_trig_delay(uint8_t trig_delay_setting)
 {
-	if (trig_delay_setting > 10 || trig_delay_setting < 1) trig_delay_setting = 1; //range assertation
+	if (trig_delay_setting > 20 || trig_delay_setting < 1) trig_delay_setting = 8; //range assertation
 
 	if ( PCB_version == 0 )		return ((trig_delay_setting-1)*70);
 	if ( PCB_version > 0 )		{
 		if (trig_delay_setting<=8)	return (trig_delay_setting*12) - 8;
 		if (trig_delay_setting==9)	return 180;
 		if (trig_delay_setting==10)	return 360;
+		if (trig_delay_setting>10)	return (trig_delay_settings*72);
 	}
 	return(0);
 }
