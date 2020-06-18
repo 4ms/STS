@@ -3,10 +3,11 @@
 
 uint8_t is_valid_wav_header(WaveHeader sample_header)
 {
-	if (	sample_header.RIFFId 		!= ccRIFF			//'RIFF'
-			|| sample_header.fileSize		 < 16			//File size - 8
-			|| sample_header.WAVEId 		!= ccWAVE		//'WAVE'
-		)
+	if (sample_header.RIFFId != ccRIFF) //"RIFF"
+		return 0;
+	else if (sample_header.fileSize < 16)
+		return 0;
+	else if (sample_header.WAVEId != ccWAVE) //"WAVE"
 		return 0;
 	else
 		return 1;
@@ -33,6 +34,14 @@ uint8_t is_valid_format_chunk(WaveFmtChunk fmt_chunk)
 				||
 					(	fmt_chunk.audioFormat	== 0xFFFE		//Extended format (float) format and 32-bit
 					&&	fmt_chunk.bitsPerSample	== 32
+					)
+				||
+					(	fmt_chunk.audioFormat	== 0xFFFE		//Exteneded format and 16-bit
+					&&	fmt_chunk.bitsPerSample	== 16 
+					)
+				||
+					(	fmt_chunk.audioFormat	== 0xFFFE		//Exteneded format and 24-bit
+					&&	fmt_chunk.bitsPerSample	== 24 
 					)
 				)
 
