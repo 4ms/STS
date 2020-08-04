@@ -26,12 +26,29 @@ Without a computer:
 ###Change log:
 
 ----
+### v1.4g ###
+
+*__Released:__* August 4, 2020
+
+*__Download:__* [Firmware v1.4g](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.4g.wav)
+
+*__Bug Fix:__*
+
+  * __Sequencing Start Pos Glitch Fixed__: Using a sequenced CV into Start Pos with gates/triggers into Play Trig would sometimes play the wrong start position if Length was < 50% and triggers were fired fast enough. Fixed.
+
+----
+
+Intermediate versions:
+
+(1.4f released June 17, 2020. Improved performance of start-up sequence, and more types of "extended" wav file formats supported)
+
+----
 
 ### v1.4e ###
 
 *__Released:__* October 20, 2017
 
-*__Download:__* [Firmware v1.4e WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_4e.wav)
+*__Download:__* (not available, please use v1.4g)
 
 *__New Features:__*
 
@@ -86,7 +103,7 @@ Intermediate versions: (1.4beta-1 released October 13, 2017)
 
 *Released:* (beta released Sept 26, 2017)
 
-*Download:* [Firmware v1.3 WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_3RC.wav)
+*Download:* [Firmware v1.3 WAV file](http://4mscompany.com/media/STS/firmware/STS-firmware-v1.3.zip)
 
 *New Features:*
  
@@ -112,7 +129,7 @@ Intermediate versions: (1.4beta-1 released October 13, 2017)
 
 *Released:* (released Sept 8, 2017)
 
-*Download:* [Firmware v1.2 WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_2RC.wav)
+*Download:* [Firmware v1.2 WAV file](http://4mscompany.com/media/STS/firmware/STS-firmware-v1.2.zip)
 
 *New Features:*
 
@@ -147,7 +164,7 @@ Intermediate versions: (1.4beta-1 released October 13, 2017)
 
 *Released:* August 28, 2017
 
-*Download:* [Firmware v1.1 WAV file](http://4mscompany.com/STS/firmware/STS-firmware-v1_1.wav)
+*Download:* [Firmware v1.1 WAV file](http://4mscompany.com/media/STS/firmware/STS-firmware-v1.1.zip)
 
 *Changes:*
 
