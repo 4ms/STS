@@ -144,7 +144,6 @@ void audio_buffer_init(void)
 		{
 			play_buff[chan][i] 				= &(splay_buff[chan][i]);
 
-
 			window_num = (chan * NUM_SAMPLES_PER_BANK) + i;
 
 			play_buff[chan][i]->min			= PLAY_BUFF_START + (window_num * PLAY_BUFF_SLOT_SIZE);
@@ -382,6 +381,7 @@ void start_playing(uint8_t chan)
 	}
 	else //...otherwise, start buffering from scratch
 	{
+		play_state[chan]=PREBUFFERING;
 		CB_init(play_buff[chan][samplenum], i_param[chan][REV]);
 
 		//Seek to the file position where we will start reading
@@ -409,8 +409,6 @@ void start_playing(uint8_t chan)
 		cache_map_pt[chan][samplenum] 				= play_buff[chan][samplenum]->min;
 		cache_size[chan][samplenum]					= (play_buff[chan][samplenum]->size>>1) * s_sample->sampleByteSize;
 		is_buffered_to_file_end[chan][samplenum] 	= 0;
-
-		play_state[chan]=PREBUFFERING;
 	}
 
 	last_play_start_tmr[chan]	= sys_tmr; //used by toggle_reverse() to see if we hit a reverse trigger right after a play trigger
@@ -960,9 +958,10 @@ void read_storage_to_buffer(void)
 			//Check if we've prebuffered enough to start playing
 			if ((is_buffered_to_file_end[chan][samplenum] || play_buff_bufferedamt[chan][samplenum] >= pre_buff_size) && play_state[chan] == PREBUFFERING)
 			{
-				if (f_param[chan][LENGTH] <= 0.5 && i_param[chan][REV])	play_state[chan] = PLAYING_PERC;
-				else													play_state[chan] = PLAY_FADEUP;
-
+				if (f_param[chan][LENGTH] <= 0.5 && i_param[chan][REV])
+					play_state[chan] = PLAYING_PERC;
+				else
+					play_state[chan] = PLAY_FADEUP;
 			}
 
 		} //play_state != SILENT, FADEDOWN
