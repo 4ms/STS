@@ -1,4 +1,3 @@
-#Based on https://github.com/nitsky/stm32-example 
 #Modified by Dan Green http://github.com/4ms
 
 BINARYNAME = main
