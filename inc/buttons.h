@@ -69,6 +69,8 @@
 		!PLAY2BUT \
 		)
 
+#define HARDWARETEST_BUTTONS RAMTEST_BUTTONS
+
 //Play's + Rec's at boot
 #define ENTER_CALIBRATE_BUTTONS (\
 		PLAY1BUT &&\

@@ -10,6 +10,7 @@ main.c
 #include "sdram_driver.h"
 
 #include "audio_sdram.h"
+#include "audio_codec.h"
 #include "codec.h"
 #include "i2s.h"
 #include "adc.h"
@@ -33,6 +34,7 @@ main.c
 #include "system_mode.h"
 #include "stm32f4_discovery_sdio_sd.h"
 #include "user_settings.h"
+#include "hardware_tests.h"
 
 #define HAS_BOOTLOADER
 
@@ -150,7 +152,7 @@ int main(void)
 
 	//Initialize SDRAM memory
 	SDRAM_Init();
-	if (RAMTEST_BUTTONS) RAM_startup_test();
+	if (HARDWARETEST_BUTTONS) do_hardware_test();
 	delay();
 
 
@@ -259,6 +261,7 @@ int main(void)
   	// Backup index file (unless we are booting for the first time)
     if (!do_factory_reset) backup_sampleindex_file();
 
+	set_codec_callback(process_audio_block_codec);
 	Start_I2SDMA();
 
 	delay();
