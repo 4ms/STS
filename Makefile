@@ -49,10 +49,9 @@ ELF = $(BUILDDIR)/$(BINARYNAME).elf
 HEX = $(BUILDDIR)/$(BINARYNAME).hex
 BIN = $(BUILDDIR)/$(BINARYNAME).bin
 
-CCACHE = bear
 ARCH = arm-none-eabi
-CC = $(CCACHE) $(ARCH)-gcc
-CXX = $(CCACHE) $(ARCH)-g++
+CC = $(ARCH)-gcc
+CXX =$(ARCH)-g++
 LD = $(ARCH)-g++
 AS = $(ARCH)-as
 OBJCPY = $(ARCH)-objcopy
@@ -136,28 +135,28 @@ $(HEX): $(ELF)
 	@$(OBJCPY) --output-target=ihex $< $@
 
 $(ELF): $(OBJECTS)
-	@echo "Linking..."
-	@$(LD) $(LFLAGS) -o $@ $(OBJECTS)
+	#echo "Linking..."
+	$(LD) $(LFLAGS) -o $@ $(OBJECTS)
 
 $(BUILDDIR)/%.o: %.c $(BUILDDIR)/%.d
 	@mkdir -p $(dir $@)
-	@echo "Compiling:" $<
-	@$(CC) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $< -o $@
+	#echo "Compiling:" $<
+	$(CC) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $< -o $@
 
 $(BUILDDIR)/%.o: %.cc $(BUILDDIR)/%.d
 	@mkdir -p $(dir $@)
-	@echo "Compiling:" $<
-	@$(CXX) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
+	#echo "Compiling:" $<
+	$(CXX) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
 
 $(BUILDDIR)/%.o: %.cpp $(BUILDDIR)/%.d
 	@mkdir -p $(dir $@)
-	@echo "Compiling:" $<
-	@$(CXX) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
+	#echo "Compiling:" $<
+	$(CXX) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
 
 $(BUILDDIR)/%.o: %.s
 	@mkdir -p $(dir $@)
-	@echo "Compiling:" $<
-	@$(AS) $(AFLAGS) $< -o $@ > $(addprefix $(BUILDDIR)/, $(addsuffix .lst, $(basename $<)))
+	#echo "Compiling:" $<
+	$(AS) $(AFLAGS) $< -o $@ > $(addprefix $(BUILDDIR)/, $(addsuffix .lst, $(basename $<)))
 
 combo: $(COMBO).hex 
 $(COMBO).hex:  $(BOOTLOADER_HEX) $(BIN) $(HEX) 
