@@ -33,6 +33,7 @@ extern "C" {
 #include "globals.h"
 #include "leds.h"
 #include "audio_sdram.h"
+#include "rgb_leds.h"
 }
 #include "hardware_tests.h"
 #include "hardware_test_audio.h"
@@ -91,7 +92,7 @@ void animate_success(void) {
 // At the end, all leds turn on
 void test_single_leds(void)
 {
-	const uint8_t numLEDs = 7;
+	const uint8_t numLEDs = 4;
 	LEDTester check{numLEDs};
 
 	check.assign_led_onoff_func(set_led);
@@ -113,6 +114,48 @@ void test_single_leds(void)
 }
 
 void test_rgb_leds(void) {
+
+	PLAYLED1_OFF;
+	SIGNALLED_ON;
+	BUSYLED_ON;
+	PLAYLED2_ON;
+
+	LEDDriver_Init(2);
+
+	SIGNALLED_OFF;
+	BUSYLED_OFF;
+	PLAYLED2_OFF;
+
+	int colorseq[] = {RED, BLUE, GREEN, CYAN, MAGENTA, YELLOW, WHITE};
+
+	for (c : colorseq) {
+		for (int i=0; i<NUM_RGBBUTTONS; i++)
+			set_ButtonLED_byPalette(i, c);
+		display_all_ButtonLEDs();
+		pause_until_button();
+	}
+
+
+
+	const uint8_t numLEDs = NUM_RGBBUTTONS;
+	LEDTester check{numLEDs};
+
+	check.assign_led_onoff_func(set_rgb_led);
+
+	check.reset();
+	pause_until_button_pressed();
+	pause_until_button_released();
+
+	while (!check.is_done()) {
+		check.next_led();
+		pause_until_button_pressed();
+		pause_until_button_released();
+	}
+
+	all_leds_on();
+	pause_until_button_pressed();
+	pause_until_button_released();
+	all_leds_off();
 
 }
 

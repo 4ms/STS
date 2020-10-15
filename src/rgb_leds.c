@@ -193,7 +193,7 @@ void test_all_buttonLEDs(void)
 
 	for(i=0;i<(NUM_LED_PALETTE-1);i++)
 	{
-		for (t=0.0;t<=1.0;t+=0.005)
+		for (t=0.0f;t<=1.0f;t+=0.005f)
 		{
 			for (j=0;j<8;j++)
 			{

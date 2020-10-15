@@ -1,31 +1,43 @@
 #include "hardware_test_util.h"
+#include "pca9685_driver.h"
+#include "rgb_leds.h"
 extern "C" {
 #include "dig_pins.h"
 #include "globals.h"
 }
-
 
 uint8_t hardwaretest_continue_button(void) {
 	return PLAY1BUT;
 }
 
 void pause_until_button_pressed(void) {
-	delay_ms(80);
+	delay_ms(10);
 	while (!hardwaretest_continue_button()) {;}
 }
 
 void pause_until_button_released(void) {
-	delay_ms(80);
+	delay_ms(10);
 	while (hardwaretest_continue_button()) {;}
+}
+
+void pause_until_button(void) {
+	pause_until_button_pressed();
+	pause_until_button_released();
 }
 
 void flash_mainbut_until_pressed(void) {
 	while (1) {
 		PLAYLED1_OFF;
-		delay_ms(200);
+		delay_ms(50);
 		if (hardwaretest_continue_button()) break;
+		delay_ms(50);
+		if (hardwaretest_continue_button()) break;
+
 		PLAYLED1_ON;
-		delay_ms(200);
+		delay_ms(50);
+		if (hardwaretest_continue_button()) break;
+		delay_ms(50);
+		if (hardwaretest_continue_button()) break;
 	}
 	PLAYLED1_ON;
 	pause_until_button_released();
@@ -72,6 +84,21 @@ void set_button_led(uint8_t button_num, bool turn_on) {
 	// 	if (button_num==3) LED_INF2_OFF;
 	// 	if (button_num==4) LED_REV2_OFF;
 	// }
+}
+
+const uint8_t led_map[] = {
+	Play1ButtonLED,
+	Bank1ButtonLED,
+	Bank2ButtonLED,
+	Play2ButtonLED,
+	Reverse1ButtonLED,
+	RecButtonLED,
+	RecBankButtonLED,
+	Reverse2ButtonLED
+};
+
+void set_rgb_led(uint8_t led_num, bool turn_on) {
+	LEDDriver_set_one_LED(led_map[led_num], turn_on ? 1023 : 0);
 }
 
 void set_led(uint8_t led_num, bool turn_on) {

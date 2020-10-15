@@ -13,6 +13,7 @@ const float neg_five_volts = -one_volt * 6.4f;
 
 uint8_t hardwaretest_continue_button(void);
 void pause_until_button_pressed(void);
+void pause_until_button(void);
 void pause_until_button_released(void);
 void flash_mainbut_until_pressed(void);
 bool check_for_longhold_button(void);

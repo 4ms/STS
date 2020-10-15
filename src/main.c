@@ -152,7 +152,8 @@ int main(void)
 
 	//Initialize SDRAM memory
 	SDRAM_Init();
-	if (HARDWARETEST_BUTTONS) do_hardware_test();
+	// if (HARDWARETEST_BUTTONS) 
+		do_hardware_test();
 	delay();
 
 
