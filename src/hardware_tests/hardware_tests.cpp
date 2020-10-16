@@ -29,25 +29,24 @@
 extern "C" {
 #include "dig_pins.h"
 //#include "RAM_test.h"
+#include "audio_sdram.h"
 #include "flash.h"
 #include "globals.h"
-#include "leds.h"
-#include "audio_sdram.h"
-#include "rgb_leds.h"
 }
-#include "hardware_tests.h"
-#include "hardware_test_audio.h"
-#include "hardware_test_switches_buttons.h"
 #include "hardware_test_adc.h"
+#include "hardware_test_audio.h"
 #include "hardware_test_gates.h"
+#include "hardware_test_switches_buttons.h"
 #include "hardware_test_util.h"
+#include "hardware_test_leds.h"
+#include "hardware_tests.h"
 
-#include "LEDTester.h"
 
-uint16_t _abs(int16_t val) {return (val<0) ? -val : val;}
+uint16_t _abs(int16_t val)
+{
+	return (val < 0) ? -val : val;
+}
 
-static void test_single_leds(void);
-static void test_rgb_leds(void);
 static void test_RAM(void);
 static void test_sdcard(void);
 
@@ -59,13 +58,13 @@ void do_hardware_test(void)
 	pause_until_button_released();
 
 	test_single_leds();
-	test_rgb_leds();
-	test_codec_init();
-	test_audio_out();
-	test_audio_in();
+	// test_rgb_leds();
+	// test_codec_init();
+	// test_audio_out();
+	// test_audio_in();
 
-	if (!check_for_longhold_button())
-		test_RAM();
+	// if (!check_for_longhold_button())
+	// 	test_RAM();
 
 	test_buttons();
 
@@ -83,97 +82,28 @@ void do_hardware_test(void)
 	}
 }
 
-void animate_success(void) {
+void animate_success(void)
+{
 	chase_all_lights(100);
 }
 
 
-// The continue button is pressed to illuminate each LED, one at a time
-// At the end, all leds turn on
-void test_single_leds(void)
+void test_RAM(void)
 {
-	const uint8_t numLEDs = 4;
-	LEDTester check{numLEDs};
-
-	check.assign_led_onoff_func(set_led);
-
-	check.reset();
-	pause_until_button_pressed();
-	pause_until_button_released();
-
-	while (!check.is_done()) {
-		check.next_led();
-		pause_until_button_pressed();
-		pause_until_button_released();
-	}
-
-	all_leds_on();
-	pause_until_button_pressed();
-	pause_until_button_released();
-	all_leds_off();
-}
-
-void test_rgb_leds(void) {
-
-	PLAYLED1_OFF;
-	SIGNALLED_ON;
-	BUSYLED_ON;
-	PLAYLED2_ON;
-
-	LEDDriver_Init(2);
-
-	SIGNALLED_OFF;
-	BUSYLED_OFF;
-	PLAYLED2_OFF;
-
-	int colorseq[] = {RED, BLUE, GREEN, CYAN, MAGENTA, YELLOW, WHITE};
-
-	for (c : colorseq) {
-		for (int i=0; i<NUM_RGBBUTTONS; i++)
-			set_ButtonLED_byPalette(i, c);
-		display_all_ButtonLEDs();
-		pause_until_button();
-	}
-
-
-
-	const uint8_t numLEDs = NUM_RGBBUTTONS;
-	LEDTester check{numLEDs};
-
-	check.assign_led_onoff_func(set_rgb_led);
-
-	check.reset();
-	pause_until_button_pressed();
-	pause_until_button_released();
-
-	while (!check.is_done()) {
-		check.next_led();
-		pause_until_button_pressed();
-		pause_until_button_released();
-	}
-
-	all_leds_on();
-	pause_until_button_pressed();
-	pause_until_button_released();
-	all_leds_off();
-
-}
-
-void test_RAM(void) {
 	set_led(0, true);
 
 	SDRAM_Init();
 
 	uint32_t errs = RAM_test();
 
-	if (errs>0) {
-		const uint32_t bailout_time=100; //5 seconds
+	if (errs > 0) {
+		const uint32_t bailout_time = 100; // 5 seconds
 		uint32_t ctr = bailout_time;
 		while (ctr) {
 			blink_all_lights(50);
 			if (hardwaretest_continue_button())
 				ctr--;
-			else 
+			else
 				ctr = bailout_time;
 		}
 	}
@@ -181,7 +111,5 @@ void test_RAM(void) {
 	flash_mainbut_until_pressed();
 }
 
-void test_sdcard(void) {
-
-}
+void test_sdcard(void) {}
 

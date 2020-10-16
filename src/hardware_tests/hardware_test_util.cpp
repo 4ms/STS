@@ -1,9 +1,9 @@
 #include "hardware_test_util.h"
-#include "pca9685_driver.h"
 #include "rgb_leds.h"
 extern "C" {
 #include "dig_pins.h"
 #include "globals.h"
+#include "pca9685_driver.h"
 }
 
 uint8_t hardwaretest_continue_button(void) {
@@ -67,38 +67,6 @@ bool read_button_state(uint8_t button_num) {
 	if (button_num==4) return BANKRECBUT ? 1 : 0;
 	if (button_num==4) return REV2BUT ? 1 : 0;
 	else return 0;
-}
-
-void set_button_led(uint8_t button_num, bool turn_on) {
-	// if (turn_on) {
-	// 	if (button_num==0) PLAYLED1_ON;
-	// 	if (button_num==1) LED_REV1_ON;
-	// 	if (button_num==2) LED_INF1_ON;
-	// 	if (button_num==3) LED_INF2_ON;
-	// 	if (button_num==4) LED_REV2_ON;
-	// }
-	// else {
-	// 	if (button_num==0) PLAYLED1_OFF;
-	// 	if (button_num==1) LED_REV1_OFF;
-	// 	if (button_num==2) LED_INF1_OFF;
-	// 	if (button_num==3) LED_INF2_OFF;
-	// 	if (button_num==4) LED_REV2_OFF;
-	// }
-}
-
-const uint8_t led_map[] = {
-	Play1ButtonLED,
-	Bank1ButtonLED,
-	Bank2ButtonLED,
-	Play2ButtonLED,
-	Reverse1ButtonLED,
-	RecButtonLED,
-	RecBankButtonLED,
-	Reverse2ButtonLED
-};
-
-void set_rgb_led(uint8_t led_num, bool turn_on) {
-	LEDDriver_set_one_LED(led_map[led_num], turn_on ? 1023 : 0);
 }
 
 void set_led(uint8_t led_num, bool turn_on) {
