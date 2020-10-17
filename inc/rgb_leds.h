@@ -38,7 +38,6 @@ void test_all_buttonLEDs(void);
 void all_buttonLEDs_off(void);
 
 void update_one_ButtonLED(uint8_t ButtonLED_number);
-void update_all_ButtonLEDs(void);
 
 uint32_t display_bank_blink(uint8_t ButLEDnum, uint8_t bank_to_display, uint32_t t);
 

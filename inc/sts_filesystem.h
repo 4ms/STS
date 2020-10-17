@@ -48,7 +48,7 @@ uint8_t load_banks_by_color_prefix(void);
 uint8_t load_banks_by_default_colors(void);
 uint8_t load_banks_with_noncolors(void);
 
-FRESULT load_all_banks(uint8_t force_reload);
+uint8_t load_all_banks(uint8_t force_reload);
 
 uint8_t load_bank_from_disk(Sample *sample_bank, char *path_noslash);
 
