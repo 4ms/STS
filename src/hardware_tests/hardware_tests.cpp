@@ -39,6 +39,7 @@ extern "C" {
 #include "hardware_test_switches_buttons.h"
 #include "hardware_test_util.h"
 #include "hardware_test_leds.h"
+#include "hardware_test_sdcard.h"
 #include "hardware_tests.h"
 
 
@@ -48,7 +49,6 @@ uint16_t _abs(int16_t val)
 }
 
 static void test_RAM(void);
-static void test_sdcard(void);
 
 static void test_input_jacks(void);
 static void animate_success(void);
@@ -110,6 +110,4 @@ void test_RAM(void)
 
 	flash_mainbut_until_pressed();
 }
-
-void test_sdcard(void) {}
 

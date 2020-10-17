@@ -129,9 +129,7 @@ int main(void)
 	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x8000);
 	#endif
 
-    //Initialize digital in/out pins
     init_dig_inouts();
-     //test_dig_inouts();
 
     PCB_version = get_PCB_version();
     
@@ -150,8 +148,8 @@ int main(void)
 
 	init_timekeeper();
 
-	//Initialize SDRAM memory
 	SDRAM_Init();
+
 	// if (HARDWARETEST_BUTTONS) 
 		do_hardware_test();
 	delay();
