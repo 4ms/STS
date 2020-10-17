@@ -34,6 +34,7 @@ void test_gate_outs() {
 	STSEndout1 endout1_out {80, 0.25, 0, kEmpiricalSampleRate};
 	STSEndout2 endout2_out {120, 0.75, 0, kEmpiricalSampleRate};
 
+
 	set_led(0, true);
 	set_led(3, true);
 	pause_until_button_released();

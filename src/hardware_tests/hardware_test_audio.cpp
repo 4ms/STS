@@ -91,7 +91,7 @@ void test_audio_out(void) {
 
 	Start_I2SDMA();
 
-	flash_mainbut_until_pressed();
+	pause_until_button();
 
 	PLAYLED1_OFF;
 	PLAYLED2_OFF;
