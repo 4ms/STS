@@ -1,6 +1,7 @@
 #include "hardware_test_util.h"
-#include "rgb_leds.h"
 extern "C" {
+#include "LED_palette.h"
+#include "rgb_leds.h"
 #include "dig_pins.h"
 #include "globals.h"
 #include "pca9685_driver.h"
@@ -27,21 +28,22 @@ void pause_until_button(void) {
 
 void flash_mainbut_until_pressed(void) {
 	while (1) {
-		PLAYLED1_OFF;
+		set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+		display_all_ButtonLEDs();
+
 		delay_ms(50);
 		if (hardwaretest_continue_button()) break;
 		delay_ms(50);
 		if (hardwaretest_continue_button()) break;
 
-		PLAYLED1_ON;
+		set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
+		display_all_ButtonLEDs();
 		delay_ms(50);
 		if (hardwaretest_continue_button()) break;
 		delay_ms(50);
 		if (hardwaretest_continue_button()) break;
 	}
-	PLAYLED1_ON;
 	pause_until_button_released();
-	PLAYLED1_OFF;
 }
 
 bool check_for_longhold_button(void) {
