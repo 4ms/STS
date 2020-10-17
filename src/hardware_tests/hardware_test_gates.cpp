@@ -16,37 +16,36 @@ const unsigned kNumRepeats = 100;
 const uint16_t BlockSz = HT16_CHAN_BUFF_LEN;
 
 class STSGateInChecker : public IGateInChecker {
+
+	using STSCodecCB = CodecCallbacks<int16_t, HT16_CHAN_BUFF_LEN>;
+
 public:
-	STSGateInChecker() 
+	STSGateInChecker()
 		: IGateInChecker(kNumGateIns)
 	{
-		gate_out_state = 0;
-		set_codec_callback(manual_control_audio_outs_cb);
+		STSCodecCB::leftStream = &manual_codec_cb;
+		STSCodecCB::rightStream = &manual_codec_cb;
+
+		set_codec_callback(STSCodecCB::testWavesOut);
 		set_num_toggles(kNumRepeats);
 	}
 
 private:
-	static inline uint16_t gate_out_state;
-	static void manual_control_audio_outs_cb(int16_t *src, int16_t *dst) {
-		for (uint16_t i=0; i<BlockSz/2; i++) {
-			*dst++ = gate_out_state;
-			*dst++ = 0;
-			*dst++ = 0;
-			*dst++ = 0;
-			(void)(*src);//unused
-		}
-	}
+	ManualValue manual_codec_cb;
 
 protected:
 	virtual void _set_test_signal(bool state) {
-		gate_out_state = state ? 31000 : 0;
-		if (state) set_led(0, true);
-		else set_led(0, false);
+		manual_codec_cb.set_val(state ? 31000.0f : 0.0f);
+		//gate_out_state = state ? 31000 : 0;
+		if (state)
+			set_led(0, true);
+		else
+			set_led(0, false);
 		delay_ms(1); //allow for latency of DAC output
 	}
 
 	virtual bool _read_gate(uint8_t gate_num) {
-		if (gate_num==0) 
+		if (gate_num==0)
 			return (PLAY1JACK!=0);
 		else if (gate_num==1)
 			return (REV1JACK!=0);
@@ -61,16 +60,18 @@ protected:
 	}
 
 	virtual void _set_indicator(uint8_t indicator_num, bool newstate) {
-		if (indicator_num==0) 
-			set_led(0, newstate);
+		if (indicator_num==0)
+			set_ButtonLED_byPalette(Play1ButtonLED, newstate ? RED : OFF);
 		else if (indicator_num==1)
 			set_ButtonLED_byPalette(Reverse1ButtonLED, newstate ? RED : OFF);
 		else if (indicator_num==2)
 			set_ButtonLED_byPalette(Reverse2ButtonLED, newstate ? RED : OFF);
 		else if (indicator_num==3)
-			set_led(1, newstate);
+			set_ButtonLED_byPalette(RecButtonLED, newstate ? RED : OFF);
 		else if (indicator_num==4)
-			set_led(3, newstate);
+			set_ButtonLED_byPalette(Play2ButtonLED, newstate ? RED : OFF);
+
+		display_all_ButtonLEDs();
 	}
 
 	virtual void _set_error_indicator(uint8_t channel, ErrorType err) {
@@ -93,15 +94,17 @@ protected:
 				break;
 
 			case ErrorType::StuckHigh:
+				set_led(0, false);
 				set_led(3, true);
-				//flash_ping_until_pressed();
-				//delay_ms(150);
+				flash_mainbut_until_pressed();
+				delay_ms(150);
 				break;
 
 			case ErrorType::StuckLow:
 				set_led(0, true);
-				// flash_ping_until_pressed();
-				// delay_ms(150);
+				set_led(3, false);
+				 flash_mainbut_until_pressed();
+				 delay_ms(150);
 				break;
 		}
 	}
@@ -111,6 +114,7 @@ void test_gate_ins() {
 	STSGateInChecker checker;
 
 	checker.reset();
+
 	while (checker.check()) {;}
 
 	if (checker.get_error() != STSGateInChecker::ErrorType::None) {
