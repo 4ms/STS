@@ -15,7 +15,12 @@ class STSButtonChecker : public IButtonChecker {
 public:
 	STSButtonChecker()
 		: IButtonChecker(kNumSTSButtons)
-	{}
+	{
+		LEDDriver_Init(2);
+		LEDDRIVER_OUTPUTENABLE_ON;
+		init_buttonLEDs();
+	}
+
 	~STSButtonChecker() {}
 
 	virtual bool _read_button(uint8_t button_num)
