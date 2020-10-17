@@ -16,16 +16,16 @@ extern uint16_t cvadc_buffer[NUM_CV_ADCS];
 static CenterFlatRamp flatRampWaveBiPolar;
 static CenterFlatRamp flatRampWaveUniPolar;
 
+using STSCodecCB = CodecCallbacks<int16_t, HT16_CHAN_BUFF_LEN>;
+
 void send_LFOs_to_audio_outs() {
-	flatRampWaveBiPolar.init(2.f, 0.2f, five_volts, neg_five_volts, 0.f, 48000.f);
-	flatRampWaveUniPolar.init(2.f, 0.2f, five_volts, zero_volts, 0.f, 48000.f);
+	flatRampWaveBiPolar.init(2.f, 0.2f, five_volts, neg_five_volts, 0.f, SAMPLERATE);
+	flatRampWaveUniPolar.init(2.f, 0.2f, five_volts, zero_volts, 0.f, SAMPLERATE);
 
-	CodecCallbacks_TwoCodecs::leftOutCodec1 = nullptr;
-	CodecCallbacks_TwoCodecs::rightOutCodec1 = nullptr;
-	CodecCallbacks_TwoCodecs::leftOutCodec2 = &flatRampWaveBiPolar;
-	CodecCallbacks_TwoCodecs::rightOutCodec2 = &flatRampWaveUniPolar;
+	STSCodecCB::leftStream = &flatRampWaveBiPolar;
+	STSCodecCB::rightStream = &flatRampWaveUniPolar;
 
-	//set_codec_callback(CodecCallbacks_TwoCodecs::testWavesOut);
+	set_codec_callback(STSCodecCB::testWavesOut);
 }
 
 const uint8_t adc_map[NUM_POT_ADCS+NUM_CV_ADCS] = {
@@ -155,7 +155,7 @@ void test_pots_and_CV() {
 		}
 
 		set_led(2, true);
-		delay_ms(350);
+		delay_ms(50);
 		set_led(2, false);
 	}
 }
