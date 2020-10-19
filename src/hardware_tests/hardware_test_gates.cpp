@@ -34,17 +34,16 @@ private:
 	ManualValue manual_codec_cb;
 
 protected:
-	virtual void _set_test_signal(bool state) {
+	virtual void set_test_signal(bool state) {
 		manual_codec_cb.set_val(state ? 31000.0f : 0.0f);
-		//gate_out_state = state ? 31000 : 0;
 		if (state)
 			set_led(0, true);
 		else
 			set_led(0, false);
-		delay_ms(1); //allow for latency of DAC output
+		delay_ms(2); //allow for latency of DAC output
 	}
 
-	virtual bool _read_gate(uint8_t gate_num) {
+	virtual bool read_gate(uint8_t gate_num) {
 		if (gate_num==0)
 			return (PLAY1JACK!=0);
 		else if (gate_num==1)
@@ -59,7 +58,7 @@ protected:
 			return false;
 	}
 
-	virtual void _set_indicator(uint8_t indicator_num, bool newstate) {
+	virtual void set_indicator(uint8_t indicator_num, bool newstate) {
 		if (indicator_num==0)
 			set_ButtonLED_byPalette(Play1ButtonLED, newstate ? RED : OFF);
 		else if (indicator_num==1)
@@ -74,7 +73,7 @@ protected:
 		display_all_ButtonLEDs();
 	}
 
-	virtual void _set_error_indicator(uint8_t channel, ErrorType err) {
+	virtual void set_error_indicator(uint8_t channel, ErrorType err) {
 		switch (err) {
 			case ErrorType::None:
 				all_leds_off();
