@@ -183,8 +183,20 @@ ifneq "$(MAKECMDGOALS)" "clean"
 -include $(DEPS)
 endif
 
-flash: $(BIN)
-	st-flash write $(BIN) 0x8008000
+flash: $(HEX)
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nloadfile ./build/main.hex\nr\nq" > flashScript.jlink
+	JLinkExe -CommanderScript flashScript.jlink
+
+eraseflash:
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nerase 0x08000000, 0x08100000\nq" > flashScript.jlink
+	JLinkExe -CommanderScript flashScript.jlink
+
+comboflash: $(COMBO).hex
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nloadfile $(COMBO).hex\nq" > flashScript.jlink
+	JLinkExe -CommanderScript flashScript.jlink
+
+# flash: $(BIN)
+# 	st-flash write $(BIN) 0x8008000
 
 clean:
 	rm -rf build
@@ -195,3 +207,4 @@ fsk-wav: $(BIN)
 	python2 stm_audio_bootloader/fsk/encoder.py \
 		-s 44100 -b 16 -n 8 -z 4 -p 256 -g 16384 -k 1800 \
 		$(BIN)
+
