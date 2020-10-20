@@ -119,11 +119,11 @@ void test_pots_and_CV() {
 		checker.reset();
 
 		while (!done) {
-			uint16_t adcval = (adc_i<NUM_POT_ADCS) ? potadc_buffer[cur_adc]: cvadc_buffer[cur_adc];
+			uint16_t adcval = (adc_i<NUM_POT_ADCS) ? potadc_buffer[cur_adc]: cvadc_buffer[cur_adc]; //virtual get_val()
 			checker.set_adcval(adcval);
 
 			if (adc_i>=NUM_POT_ADCS) {
-				zeroes_ok = check_max_one_cv_is_nonzero(300);
+				zeroes_ok = check_max_one_cv_is_nonzero(300); //use bounds.width
 				if (!zeroes_ok) {
 					show_multiple_nonzeros_error();
 					checker.reset();
@@ -134,6 +134,7 @@ void test_pots_and_CV() {
 			}
 
 			auto status = checker.check();
+			//virtual display_status(chan, ADCCheckStatus)
 			if (status==ADCCHECK_AT_MIN){
 				set_led(0, false);
 			}
@@ -144,7 +145,7 @@ void test_pots_and_CV() {
 				set_led(1, false);
 			}
 			else if (status==ADCCHECK_ELSEWHERE){
-				set_led(3, true);
+				set_led(1, true);
 			}
 			else if (status==ADCCHECK_FULLY_COVERED){
 				done = true;
@@ -154,6 +155,7 @@ void test_pots_and_CV() {
 				done = true;
 		}
 
+		//virtual handle_channel_done()
 		set_led(2, true);
 		delay_ms(50);
 		set_led(2, false);
