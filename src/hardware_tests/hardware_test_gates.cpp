@@ -28,19 +28,24 @@ public:
 
 		set_codec_callback(STSCodecCB::testWavesOut);
 		set_num_toggles(kNumRepeats);
+
+		cont_button_state = 0;
 	}
 
+
 private:
-	ManualValue manual_codec_cb;
+	static inline ManualValue manual_codec_cb;
+	int cont_button_state;
+	int blink_ctr;
 
 protected:
 	virtual void set_test_signal(bool state) {
 		manual_codec_cb.set_val(state ? 31000.0f : 0.0f);
-		if (state)
-			set_led(0, true);
-		else
-			set_led(0, false);
-		delay_ms(2); //allow for latency of DAC output
+		// if (state)
+		// 	set_led(0, true);
+		// else
+		// 	set_led(0, false);
+		delay_ms(1); //allow for latency of DAC output
 	}
 
 	virtual bool read_gate(uint8_t gate_num) {
@@ -60,17 +65,45 @@ protected:
 
 	virtual void set_indicator(uint8_t indicator_num, bool newstate) {
 		if (indicator_num==0)
-			set_ButtonLED_byPalette(Play1ButtonLED, newstate ? RED : OFF);
+			set_led(0, newstate);
+			//set_ButtonLED_byPalette(Play1ButtonLED, newstate ? RED : OFF);
 		else if (indicator_num==1)
-			set_ButtonLED_byPalette(Reverse1ButtonLED, newstate ? RED : OFF);
+			set_ButtonLED_byPalette(Reverse1ButtonLED, newstate ? WHITE : OFF);
 		else if (indicator_num==2)
-			set_ButtonLED_byPalette(Reverse2ButtonLED, newstate ? RED : OFF);
+			set_ButtonLED_byPalette(RecButtonLED, newstate ? WHITE : OFF);
 		else if (indicator_num==3)
-			set_ButtonLED_byPalette(RecButtonLED, newstate ? RED : OFF);
+			set_ButtonLED_byPalette(Reverse2ButtonLED, newstate ? WHITE : OFF);
 		else if (indicator_num==4)
-			set_ButtonLED_byPalette(Play2ButtonLED, newstate ? RED : OFF);
+			set_led(3, newstate);
+			//set_ButtonLED_byPalette(Play2ButtonLED, newstate ? WHITE : OFF);
 
 		display_all_ButtonLEDs();
+	}
+
+	virtual void signal_jack_done(uint8_t chan) {
+		cont_button_state = 0;
+		set_ButtonLED_byPalette(Play1ButtonLED, YELLOW);
+		display_all_ButtonLEDs();
+	}
+
+	virtual bool is_ready_to_read_jack(uint8_t chan) {
+		if (hardwaretest_continue_button()) {
+			cont_button_state = 1;
+			return false;
+		}
+		else {
+			if (cont_button_state == 1) {
+				set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+				display_all_ButtonLEDs();
+				return true;
+			}
+			else {
+				set_ButtonLED_byPalette(Play1ButtonLED, ((blink_ctr++ & 0xFFFF) < 0x8000) ? YELLOW : OFF);
+				display_all_ButtonLEDs();
+
+				return false;
+			}
+		}
 	}
 
 	virtual void set_error_indicator(uint8_t channel, ErrorType err) {
@@ -93,17 +126,23 @@ protected:
 				break;
 
 			case ErrorType::StuckHigh:
-				set_led(0, false);
-				set_led(3, true);
+				set_ButtonLED_byPalette(Bank2ButtonLED, RED);
+				display_all_ButtonLEDs();
 				flash_mainbut_until_pressed();
 				delay_ms(150);
+				set_ButtonLED_byPalette(Bank2ButtonLED, OFF);
+				display_all_ButtonLEDs();
+				clear_error();
 				break;
 
 			case ErrorType::StuckLow:
-				set_led(0, true);
-				set_led(3, false);
-				 flash_mainbut_until_pressed();
-				 delay_ms(150);
+				set_ButtonLED_byPalette(Bank1ButtonLED, RED);
+				display_all_ButtonLEDs();
+				flash_mainbut_until_pressed();
+				delay_ms(150);
+				set_ButtonLED_byPalette(Bank1ButtonLED, OFF);
+				display_all_ButtonLEDs();
+				clear_error();
 				break;
 		}
 	}
@@ -112,20 +151,24 @@ protected:
 void test_gate_ins() {
 	STSGateInChecker checker;
 
+	checker.set_num_toggles(100);
 	checker.reset();
 
 	while (checker.check()) {;}
 
-	if (checker.get_error() != STSGateInChecker::ErrorType::None) {
-		while (!hardwaretest_continue_button()) {
-			blink_all_lights(400);
-			blink_all_lights(400);
-			blink_all_lights(400);
-			blink_all_lights(400);
-			flash_mainbut_until_pressed();
-			delay_ms(150);
-		}
-	}
+	// if (checker.get_error() != STSGateInChecker::ErrorType::None) {
+	// 	while (!hardwaretest_continue_button()) {
+	// 		blink_all_lights(400);
+	// 		blink_all_lights(400);
+	// 		blink_all_lights(400);
+	// 		blink_all_lights(400);
+	// 		flash_mainbut_until_pressed();
+	// 		delay_ms(150);
+	// 	}
+	// }
+
+	set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+	display_all_ButtonLEDs();
 
 	all_leds_off();
 	delay_ms(150);
