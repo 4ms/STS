@@ -57,12 +57,10 @@
 		)
 
 
-//Rev's + Bank's + Rec's at boot
+//Rev's + Rec's at boot
 #define RAMTEST_BUTTONS (\
 		REV1BUT &&\
 		REV2BUT &&\
-		BANK1BUT &&\
-		BANK2BUT &&\
 		BANKRECBUT &&\
 		RECBUT &\
 		!PLAY1BUT &&\
