@@ -18,8 +18,7 @@ class STSLEDTester : public ILEDTester {
 
 	virtual void pause_between_steps() override
 	{
-		pause_until_button_pressed();
-		pause_until_button_released();
+		pause_until_button();
 	}
 
 public:
@@ -32,12 +31,14 @@ public:
 // At the end, all leds turn on
 void test_single_leds(void)
 {
+
 	const uint8_t numLEDs = 4;
 	STSLEDTester check{numLEDs};
+	check.run_test();
+	pause_until_button();
 
 	all_leds_on();
-	pause_until_button_pressed();
-	pause_until_button_released();
+	pause_until_button();
 	all_leds_off();
 }
 
@@ -89,7 +90,7 @@ void test_rgb_leds(void)
 	flash_mainbut_until_pressed();
 
 	if (EDIT_BUTTON) {
-		test_all_buttonLEDs();
+		fade_all_buttonLEDs();
 		all_buttonLEDs_off();
 
 		STSRGBLEDTester rgb_tester(NUM_RGBBUTTONS * 3);
