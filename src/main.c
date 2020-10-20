@@ -187,11 +187,14 @@ int main(void)
     	|| (	(system_calibrations->major_firmware_version == FORCE_CAL_UNDER_FW_MAJOR_VERSION) \
     	 	&& 	 system_calibrations->minor_firmware_version < FORCE_CAL_UNDER_FW_MINOR_VERSION)	) 
     {
-    	LEDDRIVER_OUTPUTENABLE_ON; //turn on for RAM Test
+    	LEDDRIVER_OUTPUTENABLE_ON;
 
-    	do_hardware_test();
-		global_mode[CALIBRATE] = 1;
-		do_factory_reset = 960000; //run normally for about 6 seconds before calibrating the CV jacks
+    	if (do_hardware_test()) {
+			global_mode[CALIBRATE] = 1;
+			do_factory_reset = 960000; //run normally for about 6 seconds before calibrating the CV jacks
+		} else {
+			while (1) ; //halt
+		}
     }
 
 	if (TEST_LED_BUTTONS) fade_all_buttonLEDs();
@@ -329,9 +332,6 @@ int main(void)
     	if (do_factory_reset)
     		if (!(--do_factory_reset))
     			factory_reset();
-
-
-
 	}
 
 	return(1);

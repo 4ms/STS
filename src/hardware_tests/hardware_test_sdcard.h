@@ -1,2 +1,2 @@
 #pragma once
-void test_sdcard(void);
+bool test_sdcard(void);

@@ -21,14 +21,15 @@ static const int datasize = 4096;
 static const char tmp_name[7] = "hwtest";
 static auto encode = [](int x){return static_cast<uint8_t>((x*7+3) & 0xFF);};
 
-void test_sdcard(void) {
+bool test_sdcard(void) {
 	setup();
 	create_tmp_dir();
 	if (create_tmp_file()) {
 		if (read_tmp_file())
-			return;
+			return true;
 	}
 	flash_mainbut_until_pressed();
+	return false;
 }
 
 void setup() {

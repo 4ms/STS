@@ -53,7 +53,7 @@ static void test_RAM(void);
 static void test_input_jacks(void);
 static void animate_success(void);
 
-void do_hardware_test(void)
+uint8_t do_hardware_test(void)
 {
 	pause_until_button_released();
 
@@ -73,13 +73,18 @@ void do_hardware_test(void)
 	test_gate_ins();
 	test_gate_outs();
 
-	test_sdcard();
+	if (!test_sdcard())
+		return 0;
 
 	pause_until_button_released();
 
-	while (1) {
+	while (!hardwaretest_continue_button()) {
 		animate_success();
 	}
+
+	pause_until_button_released();
+
+	return 1;
 }
 
 void animate_success(void)

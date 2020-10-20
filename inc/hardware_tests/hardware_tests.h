@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 uint8_t key_combo_enter_hardwaretest(void);
-void do_hardware_test(void);
+uint8_t do_hardware_test(void);
 
 #ifdef __cplusplus
 }
