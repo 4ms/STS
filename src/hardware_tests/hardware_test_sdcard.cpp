@@ -24,9 +24,10 @@ static auto encode = [](int x){return static_cast<uint8_t>((x*7+3) & 0xFF);};
 void test_sdcard(void) {
 	setup();
 	create_tmp_dir();
-	if (create_tmp_file()) 
-		read_tmp_file();
-
+	if (create_tmp_file()) {
+		if (read_tmp_file())
+			return;
+	}
 	flash_mainbut_until_pressed();
 }
 
