@@ -119,18 +119,20 @@ LFLAGS  = $(CFLAGS) -Wl,-Map,main.map -T $(LDSCRIPT)
 # $(BUILDDIR)/src/circular_buffer.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/audio_util.o: OPTFLAGS = -O0
 
-$(BUILDDIR)/src/hardware_tests/hardware_tests.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_tests.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/hardware_tests/hardware_test_adc.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/hardware_tests/hardware_test_audio.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/hardware_tests/hardware_test_gate_outs.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/hardware_tests/hardware_test_gates.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/hardware_tests/hardware_test_switches.o: OPTFLAGS = -O0
 # $(BUILDDIR)/src/hardware_tests/hardware_test_sdcard.o: OPTFLAGS = -O0
-$(BUILDDIR)/src/hardware_tests/hardware_test_util.o: OPTFLAGS = -O0
-#$(BUILDDIR)/src/hardware_tests/src/hardware_test_adc.o: OPTFLAGS = -O0
-#$(BUILDDIR)/src/hardware_test_switches_buttons.o: OPTFLAGS = -O0
-$(BUILDDIR)/src/hardware_test_gates.o: OPTFLAGS = -O0
-$(BUILDDIR)/libhwtests/src/GateInChecker.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_util.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/src/hardware_test_adc.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_test_switches_buttons.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_gates.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_gate_outs.o: OPTFLAGS = -O0
+# $(BUILDDIR)/libhwtests/src/GateInChecker.o: OPTFLAGS = -O0
+# $(BUILDDIR)/libhwtests/src/GateOutput.o: OPTFLAGS = -O0
 
 DEPFLAGS = -MMD -MP -MF $(BUILDDIR)/$(basename $<).d
 

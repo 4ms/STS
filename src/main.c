@@ -150,7 +150,7 @@ int main(void)
 
 	SDRAM_Init();
 
-	// if (HARDWARETEST_BUTTONS) 
+	if (HARDWARETEST_BUTTONS) 
 		do_hardware_test();
 	delay();
 
@@ -170,7 +170,30 @@ int main(void)
 	LEDDriver_Init(2); //2 = # of LED driver chips
 	all_buttonLEDs_off();
 
-	if (TEST_LED_BUTTONS) test_all_buttonLEDs();
+	global_mode[CALIBRATE] = 0;
+
+	valid_fw_version = load_flash_params();
+	
+	//Check for calibration buttons on boot
+	if (ENTER_CALIBRATE_BUTTONS)
+    {
+    	flags[SkipProcessButtons] = 1;
+    	global_mode[CALIBRATE] = 1;
+    }
+
+ 	//First boot: Run a hardware test, calibrate, and do a factory reset 
+    else if (!valid_fw_version \
+    	|| (system_calibrations->major_firmware_version  < FORCE_CAL_UNDER_FW_MAJOR_VERSION) \
+    	|| (	(system_calibrations->major_firmware_version == FORCE_CAL_UNDER_FW_MAJOR_VERSION) \
+    	 	&& 	 system_calibrations->minor_firmware_version < FORCE_CAL_UNDER_FW_MINOR_VERSION)	) 
+    {
+    	LEDDRIVER_OUTPUTENABLE_ON; //turn on for RAM Test
+
+    	do_hardware_test();
+		global_mode[CALIBRATE] = 1;
+		do_factory_reset = 960000; //run normally for about 6 seconds before calibrating the CV jacks
+    }
+
 	if (TEST_LED_BUTTONS) fade_all_buttonLEDs();
 	
 	init_buttonLEDs();
@@ -192,7 +215,6 @@ int main(void)
 	Codec_Register_Setup(0);
 
 	//Initialize parameters/modes
-	global_mode[CALIBRATE] = 0;
 	init_adc_param_update_IRQ();
 
 	set_default_user_settings();
@@ -200,32 +222,6 @@ int main(void)
 	init_params();
 	init_modes();
 	
-	//Read the FLASH memory for user params, system calibration settings, etc
-	valid_fw_version = load_flash_params();
-
-	//Check for calibration buttons on boot
-	if (ENTER_CALIBRATE_BUTTONS)
-    {
-    	flags[SkipProcessButtons] = 1;
-    	global_mode[CALIBRATE] = 1;
-    }
-
- 	//Check the RAM chip and do a factory reset if we detect a pre-production version of firmware
-    else if (!valid_fw_version \
-    	|| (system_calibrations->major_firmware_version  < FORCE_CAL_UNDER_FW_MAJOR_VERSION) \
-    	|| (	(system_calibrations->major_firmware_version == FORCE_CAL_UNDER_FW_MAJOR_VERSION) \
-    	 	&& 	 system_calibrations->minor_firmware_version < FORCE_CAL_UNDER_FW_MINOR_VERSION)	) 
-    {
-    	LEDDRIVER_OUTPUTENABLE_ON; //turn on for RAM Test
-    	if (RAM_test()==0)
-    	{
-    		global_mode[CALIBRATE] = 1;
-    		do_factory_reset = 960000; //run normally for about 6 seconds before calibrating the CV jacks
-    	}
-    	else
-    		while(1) blink_all_lights(100); //RAM Test failed: It's on the fritz!
-
-    }
 
     // If we detect a different version, update the firmware version in FLASH
    	if ( 	system_calibrations->major_firmware_version != FW_MAJOR_VERSION
