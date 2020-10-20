@@ -14,8 +14,10 @@ struct STSEndout1 : public IGateOutput {
 		: IGateOutput(freq, pulse_width, initial_phase, sample_rate) {}
 
 	virtual void gate_out(bool state) {
-		if (state) ENDOUT1_ON;
-		else ENDOUT1_OFF;
+		if (state) 
+			ENDOUT1_ON;
+		else 
+			ENDOUT1_OFF;
 	}
 };
 
@@ -24,8 +26,10 @@ struct STSEndout2 : public IGateOutput {
 		: IGateOutput(freq, pulse_width, initial_phase, sample_rate) {}
 
 	virtual void gate_out(bool state) {
-		if (state) ENDOUT2_ON;
-		else ENDOUT2_OFF;
+		if (state) 
+			ENDOUT2_ON;
+		else 
+			ENDOUT2_OFF;
 	}
 };
 

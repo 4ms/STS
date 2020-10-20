@@ -9,8 +9,8 @@ void test_buttons(void)
 	checker.reset();
 
 	//values assume 420ns per check
-	checker.set_min_steady_state_time(1200);
-	checker.set_allowable_noise(800);
+	checker.set_min_steady_state_time(2400);
+	checker.set_allowable_noise(1500);
 
 	bool is_running = true;
 	while (is_running) {
