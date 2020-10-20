@@ -58,13 +58,13 @@ void do_hardware_test(void)
 	pause_until_button_released();
 
 	test_single_leds();
-	// test_rgb_leds();
-	// test_codec_init();
-	// test_audio_out();
-	// test_audio_in();
+	test_rgb_leds();
+	test_codec_init();
+	test_audio_out();
+	test_audio_in();
 
-	// if (!check_for_longhold_button())
-	// 	test_RAM();
+	if (!check_for_longhold_button())
+		test_RAM();
 
 	test_buttons();
 
