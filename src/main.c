@@ -171,6 +171,7 @@ int main(void)
 	all_buttonLEDs_off();
 
 	if (TEST_LED_BUTTONS) test_all_buttonLEDs();
+	if (TEST_LED_BUTTONS) fade_all_buttonLEDs();
 	
 	init_buttonLEDs();
 	init_ButtonLED_IRQ();

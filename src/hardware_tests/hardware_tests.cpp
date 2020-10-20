@@ -84,7 +84,7 @@ void do_hardware_test(void)
 
 void animate_success(void)
 {
-	chase_all_lights(100);
+	chase_all_buttonLEDs(20);
 }
 
 

@@ -173,13 +173,8 @@ void all_buttonLEDs_off(void)
 		LEDDriver_setRGBLED(j,0 );
 	}
 }
-/*
- * test_all_buttonLEDs()
- *
- * Test all the buttons
- *
- */
-void test_all_buttonLEDs(void)
+
+void fade_all_buttonLEDs(void)
 {
 	uint8_t i, j;
 	float t=0.0f;
@@ -202,6 +197,20 @@ void test_all_buttonLEDs(void)
 
 			display_all_ButtonLEDs();
 		}
+	}
+}
+
+void chase_all_buttonLEDs(uint32_t del)
+{
+	uint8_t i, j;
+
+	LEDDRIVER_OUTPUTENABLE_ON;
+
+	for (j=0;j<(NUM_RGBBUTTONS*3);j++)
+	{
+		delay_ms(del);
+		for (i=0; i<(NUM_RGBBUTTONS*3); i++)
+			LEDDriver_set_one_LED(i, i==j ? 2000: 0);
 	}
 }
 
