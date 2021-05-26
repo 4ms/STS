@@ -44,6 +44,7 @@ void flash_mainbut_until_pressed(void) {
 		if (hardwaretest_continue_button()) break;
 	}
 	pause_until_button_released();
+	set_ButtonLED_byPalette(Play1ButtonLED, OFF);
 }
 
 bool check_for_longhold_button(void) {
