@@ -173,10 +173,12 @@ void init_dig_inouts(void){
 
 	//DEBUG pins
 
+#ifdef DEBUG_ENABLED
 	gpio.GPIO_Pin = DEBUG0;	GPIO_Init(DEBUG0_GPIO, &gpio);
 	gpio.GPIO_Pin = DEBUG1;	GPIO_Init(DEBUG1_GPIO, &gpio);
 	gpio.GPIO_Pin = DEBUG2;	GPIO_Init(DEBUG2_GPIO, &gpio);
 	gpio.GPIO_Pin = DEBUG3;	GPIO_Init(DEBUG3_GPIO, &gpio);
+#endif
 	DEBUG0_OFF;
 	DEBUG1_OFF;
 	DEBUG2_OFF;
