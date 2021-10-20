@@ -38,5 +38,9 @@ void UART_send(const char *str, uint32_t len) {
     // wait until Transfer Complete flag is set
     while (USART_GetFlagStatus(USART2, USART_FLAG_TC) != SET)
       ;
+	
+    // wait until TX fifo empty flag is set
+    while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) != SET)
+      ;
   }
 }

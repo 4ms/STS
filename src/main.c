@@ -272,10 +272,11 @@ int main(void) {
   init_SDIO_read_IRQ();
 
   UART_init();
-  char data[2];
-  data[0] = 'A';
-  data[1] = 'B';
-  UART_send(data, 2);
+  char data[3];
+  data[0] = 0b00001111;
+  data[1] = 0b11001100;
+  data[2] = 0b10101010;
+  UART_send(data, 3);
 
   // Main loop
   // All routines accessing the SD card should run here
@@ -308,6 +309,9 @@ int main(void) {
     }
 
     process_mode_flags();
+    if (EDIT_BUTTON) 
+		UART_send(data, 3);
+
 
     if (flags[RewriteIndex]) {
       res = index_write_wrapper();
