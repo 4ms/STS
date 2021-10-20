@@ -36,6 +36,8 @@ main.c
 #include "user_settings.h"
 #include "wav_recording.h"
 
+#include "uart.h"
+
 #define HAS_BOOTLOADER
 
 // These must match what's in startup_stm32f4xx.s:
@@ -268,6 +270,12 @@ int main(void) {
   delay();
 
   init_SDIO_read_IRQ();
+
+  UART_init();
+  char data[2];
+  data[0] = 'A';
+  data[1] = 'B';
+  UART_send(data, 2);
 
   // Main loop
   // All routines accessing the SD card should run here
