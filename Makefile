@@ -49,7 +49,9 @@ ELF = $(BUILDDIR)/$(BINARYNAME).elf
 HEX = $(BUILDDIR)/$(BINARYNAME).hex
 BIN = $(BUILDDIR)/$(BINARYNAME).bin
 
-ARCH = arm-none-eabi
+TOOLCHAIN_DIR ?= 
+
+ARCH = $(TOOLCHAIN_DIR)/arm-none-eabi
 CC = $(ARCH)-gcc
 CXX =$(ARCH)-g++
 LD = $(ARCH)-g++
