@@ -1,4 +1,4 @@
 [submodule "libhwtests"]
 	path = libhwtests
-	url = git@github.com:4ms/libhwtests.git
+	url = https://github.com/4ms/libhwtests.git
 	branch = master
