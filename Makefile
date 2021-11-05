@@ -49,7 +49,7 @@ ELF = $(BUILDDIR)/$(BINARYNAME).elf
 HEX = $(BUILDDIR)/$(BINARYNAME).hex
 BIN = $(BUILDDIR)/$(BINARYNAME).bin
 
-TOOLCHAIN_DIR ?= /Users/design/4ms/stm32/gcc-arm-none-eabi-8-2018-q4-major/bin/
+TOOLCHAIN_DIR ?= 
 
 ARCH = $(TOOLCHAIN_DIR)arm-none-eabi
 CC = $(ARCH)-gcc
