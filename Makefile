@@ -68,7 +68,7 @@ CFLAGS += -mcpu=cortex-m4
 CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16 
 CFLAGS += -DARM_MATH_CM4 -D'__FPU_PRESENT=1' -DUSE_STDPERIPH_DRIVER
 CFLAGS += -I. $(INCLUDES)
-CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion
+CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion -fcommon
 CFLAGS += -ffreestanding
 CFLAGS += --specs=nosys.specs
 
