@@ -186,15 +186,15 @@ ifneq "$(MAKECMDGOALS)" "clean"
 endif
 
 flash: $(HEX)
-	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nloadfile ./build/main.hex\nr\nq" > flashScript.jlink
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nloadfile ./build/main.hex\nr\nq" > flashScript.jlink
 	JLinkExe -CommanderScript flashScript.jlink
 
 eraseflash:
-	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nerase 0x08000000, 0x08100000\nq" > flashScript.jlink
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nerase 0x08000000, 0x08100000\nq" > flashScript.jlink
 	JLinkExe -CommanderScript flashScript.jlink
 
 comboflash: $(COMBO).hex
-	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nloadfile $(COMBO).hex\nq" > flashScript.jlink
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nloadfile $(COMBO).hex\nq" > flashScript.jlink
 	JLinkExe -CommanderScript flashScript.jlink
 
 # flash: $(BIN)
