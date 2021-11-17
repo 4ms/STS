@@ -71,6 +71,7 @@ CFLAGS += -I. $(INCLUDES)
 CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion -fcommon
 CFLAGS += -ffreestanding
 CFLAGS += --specs=nosys.specs
+CFLAGS += -DHSE_VALUE=16000000
 
 CXXFLAGS = -std=c++17
 CXXFLAGS += -Wno-register
