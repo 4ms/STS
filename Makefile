@@ -198,8 +198,8 @@ comboflash: $(COMBO).hex
 	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nloadfile $(COMBO).hex\nq" > flashScript.jlink
 	JLinkExe -CommanderScript flashScript.jlink
 
-# flash: $(BIN)
-# 	st-flash write $(BIN) 0x8008000
+stflash: $(BIN)
+	st-flash write $(BIN) 0x8008000
 
 clean:
 	rm -rf build
