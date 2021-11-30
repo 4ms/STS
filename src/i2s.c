@@ -22,6 +22,13 @@ volatile int16_t rx_buffer[codec_BUFF_LEN];
 
 uint32_t tx_buffer_start, rx_buffer_start;
 
+static void (*audio_callback)(int16_t *, int16_t *);
+
+void set_codec_callback(void (*cb)(int16_t *, int16_t *)) {
+	audio_callback = cb;
+}
+
+
 void init_audio_dma(void)
 {
 	RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
@@ -171,7 +178,7 @@ void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 		src = (int16_t *)(rx_buffer_start) +sz;
 		dst = (int16_t *)(tx_buffer_start) +sz;
 
-		process_audio_block_codec(src, dst);
+		audio_callback(src, dst);
 
 		DMA_ClearFlag(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_TC);
 	}
@@ -184,12 +191,12 @@ void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 		src = (int16_t *)(rx_buffer_start);
 		dst = (int16_t *)(tx_buffer_start);
 
-		process_audio_block_codec(src, dst);
+		audio_callback(src, dst);
 
 		DMA_ClearFlag(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_HT);
 	}
 	//DEBUG0_OFF;
-	
+
 }
 
 /*

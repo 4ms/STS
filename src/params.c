@@ -139,13 +139,13 @@ void init_params(void)
 //initializes modes that aren't read from flash ram or disk
 void init_modes(void)
 {
-	global_mode[CALIBRATE] = 0;
+	//global_mode[CALIBRATE] = 0;
 	global_mode[SYSTEM_MODE] = 0;
 	global_mode[MONITOR_RECORDING] = MONITOR_OFF;
 	global_mode[ENABLE_RECORDING] = 0;
 	global_mode[EDIT_MODE] = 0;
 	global_mode[ASSIGN_MODE] = 0;
-	
+
 	global_mode[ALLOW_SPLIT_MONITORING] = 1;
 }
 
@@ -157,17 +157,17 @@ void init_LowPassCoefs(void)
 
 	t=300.0;
 
-	RAWCV_LPF_COEF[PITCH1_CV] = 1.0-(1.0/t);
-	RAWCV_LPF_COEF[PITCH2_CV] = 1.0-(1.0/t);
+	RAWCV_LPF_COEF[PITCH1_CV] = 1.0f-(1.0f/t);
+	RAWCV_LPF_COEF[PITCH2_CV] = 1.0f-(1.0f/t);
 
-	RAWCV_LPF_COEF[START1_CV] = 1.0-(1.0/t);
-	RAWCV_LPF_COEF[START2_CV] = 1.0-(1.0/t);
+	RAWCV_LPF_COEF[START1_CV] = 1.0f-(1.0f/t);
+	RAWCV_LPF_COEF[START2_CV] = 1.0f-(1.0f/t);
 
-	RAWCV_LPF_COEF[LENGTH1_CV] = 1.0-(1.0/t);
-	RAWCV_LPF_COEF[LENGTH2_CV] = 1.0-(1.0/t);
+	RAWCV_LPF_COEF[LENGTH1_CV] = 1.0f-(1.0f/t);
+	RAWCV_LPF_COEF[LENGTH2_CV] = 1.0f-(1.0f/t);
 
-	RAWCV_LPF_COEF[SAMPLE1_CV] = 1.0-(1.0/t);
-	RAWCV_LPF_COEF[SAMPLE2_CV] = 1.0-(1.0/t);
+	RAWCV_LPF_COEF[SAMPLE1_CV] = 1.0f-(1.0f/t);
+	RAWCV_LPF_COEF[SAMPLE2_CV] = 1.0f-(1.0f/t);
 
 	CV_BRACKET[PITCH1_CV] = 5;
 	CV_BRACKET[PITCH2_CV] = 5;
@@ -183,22 +183,22 @@ void init_LowPassCoefs(void)
 
 	t=20.0; //50.0 = about 100ms to turn a knob fully
 
-	POT_LPF_COEF[PITCH1_POT] = 1.0-(1.0/t);
-	POT_LPF_COEF[PITCH2_POT] = 1.0-(1.0/t);
+	POT_LPF_COEF[PITCH1_POT] = 1.0f-(1.0f/t);
+	POT_LPF_COEF[PITCH2_POT] = 1.0f-(1.0f/t);
 
 	t=50.0;
 
-	POT_LPF_COEF[START1_POT] = 1.0-(1.0/t);
-	POT_LPF_COEF[START2_POT] = 1.0-(1.0/t);
+	POT_LPF_COEF[START1_POT] = 1.0f-(1.0f/t);
+	POT_LPF_COEF[START2_POT] = 1.0f-(1.0f/t);
 
-	POT_LPF_COEF[LENGTH1_POT] = 1.0-(1.0/t);
-	POT_LPF_COEF[LENGTH2_POT] = 1.0-(1.0/t);
+	POT_LPF_COEF[LENGTH1_POT] = 1.0f-(1.0f/t);
+	POT_LPF_COEF[LENGTH2_POT] = 1.0f-(1.0f/t);
 
 
-	POT_LPF_COEF[SAMPLE1_POT] = 1.0-(1.0/t);
-	POT_LPF_COEF[SAMPLE2_POT] = 1.0-(1.0/t);
+	POT_LPF_COEF[SAMPLE1_POT] = 1.0f-(1.0f/t);
+	POT_LPF_COEF[SAMPLE2_POT] = 1.0f-(1.0f/t);
 
-	POT_LPF_COEF[RECSAMPLE_POT] = 1.0-(1.0/t);
+	POT_LPF_COEF[RECSAMPLE_POT] = 1.0f-(1.0f/t);
 
 
 
@@ -462,7 +462,7 @@ float quantized_semitone_voct(uint32_t adcval)
 	{
 		//First, set oct_mult
 		//oct_mult should be 32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.125, 0.0625, 0.03125 to indicate the root note of the octave we're in
-		octave_mult=32.0; 
+		octave_mult=32.0;
 		for (oct=5;oct>=-5;oct--)
 		{
 			root_adc = 2048-(OCTAVE_ADC_WIDTH*oct);
@@ -506,7 +506,7 @@ void update_params(void)
 	ButtonKnobCombo *vol_bkc; //pointer to Rev+Start combo actions
 
 	recording_enabled=1;
-	
+
 
 	//
 	// Edit mode
@@ -517,8 +517,8 @@ void update_params(void)
 		banknum = i_param[0][BANK];
 
 		//
-		// Trim Size 
-		// 
+		// Trim Size
+		//
 		if (pot_changed[LENGTH2_POT])
 		{
 			nudge_trim_size(&samples[banknum][samplenum], pot_delta[LENGTH2_POT]);
@@ -531,11 +531,11 @@ void update_params(void)
 			i_param[0][REV] = 0;
 			if (play_state[0] == SILENT) flags[Play1Trig] = 1;
 		}
-		
+
 
 		//
 		// Trim Start
-		// 
+		//
 		if (pot_changed[START2_POT])
 		{
 			nudge_trim_start(&samples[banknum][samplenum], pot_delta[START2_POT]);
@@ -550,14 +550,14 @@ void update_params(void)
 
 
 		//
-		// Gain (sample ch2 pot): 
+		// Gain (sample ch2 pot):
 		// 0.1x when pot is at 0%
 		// 1x when pot is at 50%
 		// 5x when pot is at 100%
 		//
 		if (pot_changed[SAMPLE2_POT])
 		{
-			if (bracketed_potadc[SAMPLE2_POT] < 2020) 
+			if (bracketed_potadc[SAMPLE2_POT] < 2020)
 				t_f = (bracketed_potadc[SAMPLE2_POT] / 2244.44f) + 0.1; //0.1 to 1.0
 			else if (bracketed_potadc[SAMPLE2_POT] < 2080)
 				t_f = 1.0;
@@ -608,8 +608,8 @@ void update_params(void)
 				f_param[chan][LENGTH] 	= (bracketed_potadc[LENGTH1_POT+chan] + bracketed_cvadc[LENGTH1_CV+chan]) / 4096.0;
 
 
-			if (f_param[chan][LENGTH] > 0.990)	f_param[chan][LENGTH] = 1.0;
-			if (f_param[chan][LENGTH] <= 0.005)	f_param[chan][LENGTH] = 0.005;
+			if (f_param[chan][LENGTH] > 0.990f)	f_param[chan][LENGTH] = 1.0;
+			if (f_param[chan][LENGTH] <= 0.005f)	f_param[chan][LENGTH] = 0.005;
 
 			//
 			// START POT + CV
@@ -621,16 +621,16 @@ void update_params(void)
 			//Use the latched pot value for channel 2 when Edit combo is active
 			if (edit_bkc->combo_state != COMBO_INACTIVE && chan==CHAN2)
 				f_param[chan][START] 	= (edit_bkc->latched_value + bracketed_cvadc[START2_CV]) / 4096.0;
-			else
 			//Use the latched pot value when Volume combo is active
-			if (vol_bkc->combo_state != COMBO_INACTIVE)
+			else if (vol_bkc->combo_state != COMBO_INACTIVE)
 				f_param[chan][START] 	= (vol_bkc->latched_value + bracketed_cvadc[START1_CV+chan]) / 4096.0;
 			else
 				f_param[chan][START] 	= (bracketed_potadc[START1_POT+chan] + bracketed_cvadc[START1_CV+chan]) / 4096.0;
 
-
-			if (f_param[chan][START] > 0.99)		f_param[chan][START] = 1.0;
-			if (f_param[chan][START] <= 0.0003)		f_param[chan][START] = 0.0;
+			if (f_param[chan][START] > 0.99f)		
+				f_param[chan][START] = 1.0;
+			if (f_param[chan][START] <= 0.0003f)		
+				f_param[chan][START] = 0.0;
 		}
 
 
@@ -644,7 +644,7 @@ void update_params(void)
 
 		if ( (chan==CHAN1) && 															// Only need to check it for channel 1
 			 (button_state[Rev1]>=MED_PRESSED) &&										// Rev1 button is held down for a while
-			 all_buttons_except(UP, (1<<Rev1)) &&										// No other buttons are down 
+			 all_buttons_except(UP, (1<<Rev1)) &&										// No other buttons are down
 			 (button_ignore[Rev1]==0) && 												// Feature hasn't been activated since last Rev1 button up event
 			 (vol_bkc->combo_state == COMBO_INACTIVE) )									// Ignore if we're doing a Volume button/knob combo
 		{
@@ -672,7 +672,7 @@ void update_params(void)
 		if(flags[LatchVoltOctCV1+chan]) 	pitch_cv = voct_latch_value[chan];
 		else								pitch_cv = bracketed_cvadc[PITCH1_CV+chan];
 
-		if (global_mode[QUANTIZE_CH1+chan]) 
+		if (global_mode[QUANTIZE_CH1+chan])
 		{
 			compensated_pitch_cv = apply_tracking_compensation(pitch_cv, system_calibrations->tracking_comp[chan]);
 			f_param[chan][PITCH] = pitch_pot_lut[t_pitch_potadc] * quantized_semitone_voct(compensated_pitch_cv);
@@ -689,7 +689,7 @@ void update_params(void)
 
 
 
-		// 
+		//
 		// Change bank with Bank + Sample combo
 		//
 		// Holding Bank X's button while turning a Sample knob changes channel X's bank
@@ -727,7 +727,7 @@ void update_params(void)
 							flags[PlayBankHover1Changed + chan] = 3;
 							this_bank_bkc->hover_value = trial_bank;
 							other_bank_bkc->hover_value = trial_bank;
-						}		
+						}
 					}
 				}
 
@@ -752,19 +752,19 @@ void update_params(void)
 		}
 
 		//
-		// Update combo Bank+Sample pot's latch status 
+		// Update combo Bank+Sample pot's latch status
 		//
 		//The combo to latch is the other channel's Bank button with this channel's Sample knob
 		//because:
 		//this Bank + this Sample changes this bank, so it's ok to not latch sample value
 		//other Bank + other Sample changes the other bank, same reason as above
 		//this Bank + other Sample will be handled in this for loop
-		if (chan==CHAN1) 
-		{	
+		if (chan==CHAN1)
+		{
 			this_bank_bkc 	= &g_button_knob_combo[bkc_Bank2][bkc_Sample1];
 			other_bank_bkc = &g_button_knob_combo[bkc_Bank1][bkc_Sample1];
 		}
-		else				
+		else
 		{
 			this_bank_bkc 	= &g_button_knob_combo[bkc_Bank1][bkc_Sample2];
 			other_bank_bkc = &g_button_knob_combo[bkc_Bank2][bkc_Sample2];
@@ -858,7 +858,7 @@ void update_params(void)
 				//Just because combo is active, doesn't mean we're updating the volume param yet..
 				//...we have to get within +/-4% of current volume before we start tracking the pot
 				//...this prevents volume pops when the combo begins
-				if (t_f > -0.04 && t_f < 0.04) 
+				if (t_f > -0.04 && t_f < 0.04)
 					vol_bkc->value_crossed = 1;
 			}
 			if (vol_bkc->value_crossed)
@@ -901,8 +901,8 @@ void update_params(void)
 
 		// If the combo is active, then use the RecSample pot to update the Hover value
 		// (which becomes the RecBank param when we release the button)
-		//	
-		else			
+		//
+		else
 		{
 			//Calcuate the (tentative) new bank, based on the new_val and the current hover_value
 			trial_bank = get_bank_color_digit(this_bank_bkc->hover_value) + (new_val*10);
@@ -914,7 +914,7 @@ void update_params(void)
 			{
 				flags[RecBankHoverChanged] = 3;
 				this_bank_bkc->hover_value = trial_bank;
-			}		
+			}
 		}
 	}
 
@@ -1014,11 +1014,11 @@ void process_mode_flags(void)
 		else
 			flags[LatchVoltOctCV1] = 1;
 
-		if ((sys_tmr - play_trig_timestamp[0]) > global_params.play_trig_delay) 
+		if ((sys_tmr - play_trig_timestamp[0]) > global_params.play_trig_delay)
 		{
 			flags[Play1Trig] 			= 1;
 			flags[Play1TrigDelaying]	= 0;
-			flags[LatchVoltOctCV1] 		= 0;		
+			flags[LatchVoltOctCV1] 		= 0;
 		}
 	}
 	if (flags[Play1Trig])
@@ -1049,7 +1049,7 @@ void process_mode_flags(void)
 		// DEBUG3_OFF;
 		start_playing(1);
 		flags[Play2Trig]	 = 0;
-		flags[LatchVoltOctCV2] = 0;		
+		flags[LatchVoltOctCV2] = 0;
 	}
 
 	if (flags[RecTrig]==1)
@@ -1089,7 +1089,7 @@ void process_mode_flags(void)
 		else
 		{
 			i_param[0][LOOPING] = 1;
-			if (play_state[0] == SILENT) 
+			if (play_state[0] == SILENT)
 				flags[Play1But] = 1;
 		}
 
@@ -1107,7 +1107,7 @@ void process_mode_flags(void)
 		else
 		{
 			i_param[1][LOOPING] = 1;
-			if (play_state[1] == SILENT) 
+			if (play_state[1] == SILENT)
 				flags[Play2But] = 1;
 		}
 	}

@@ -1,15 +1,12 @@
-#Based on https://github.com/nitsky/stm32-example 
-#Modified by Dan Green http://github.com/4ms
-
 BINARYNAME = main
+
+STARTUP = startup_stm32f427_modern.s
+SYSTEM = system_stm32f4xx.c
+LOADFILE = stm32f427_modern.ld
 
 COMBO = build/combo
 BOOTLOADER_DIR = ../STS-bootloader
 BOOTLOADER_HEX = ../STS-bootloader/bootloader.hex
-
-STARTUP = startup_stm32f427_437xx.s
-SYSTEM = system_stm32f4xx.c
-LOADFILE = stm32f427.ld
 
 DEVICE = stm32/device
 CORE = stm32/core
@@ -21,130 +18,160 @@ SOURCES += $(wildcard $(PERIPH)/src/*.c)
 SOURCES += $(DEVICE)/src/$(STARTUP)
 SOURCES += $(DEVICE)/src/$(SYSTEM)
 SOURCES += $(wildcard src/*.c)
+SOURCES += $(wildcard libhwtests/src/*.c)
+SOURCES += $(wildcard libhwtests/src/*.cc)
+SOURCES += $(wildcard libhwtests/src/*.cpp)
+SOURCES += $(wildcard src/hardware_tests/*.c)
+SOURCES += $(wildcard src/hardware_tests/*.cc)
+SOURCES += $(wildcard src/hardware_tests/*.cpp)
+
 SOURCES += $(wildcard src/fatfs/*.c)
 SOURCES += $(wildcard src/fatfs/drivers/*.c)
 SOURCES += $(wildcard src/fatfs/option/*.c)
 
 OBJECTS = $(addprefix $(BUILDDIR)/, $(addsuffix .o, $(basename $(SOURCES))))
+DEPS = $(OBJECTS:.o=.d)
+
+# show:
+# 	echo $(OBJECTS)
 
 INCLUDES += -I$(DEVICE)/include \
 			-I$(CORE)/include \
 			-I$(PERIPH)/include \
-			-I inc \
-			-I inc/res \
-			-I inc/fatfs \
-			-I inc/fatfs/drivers
-
+			-Iinc \
+			-Iinc/res \
+			-Iinc/fatfs \
+			-Iinc/fatfs/drivers \
+			-Iinc/hardware_tests \
+			-Ilibhwtests/inc \
 
 ELF = $(BUILDDIR)/$(BINARYNAME).elf
 HEX = $(BUILDDIR)/$(BINARYNAME).hex
 BIN = $(BUILDDIR)/$(BINARYNAME).bin
 
-ARCH = arm-none-eabi
-#CC = colorgcc
-#CC = gccfilter -a -c $(ARCH)-gcc
+TOOLCHAIN_DIR ?= 
+
+ARCH = $(TOOLCHAIN_DIR)/arm-none-eabi
 CC = $(ARCH)-gcc
-##Use -gcc instead of -ld
-LD = $(ARCH)-gcc -Wl,-Map,build/main.map
-#LD = $(ARCH)-ld -v -Map main.map
+CXX =$(ARCH)-g++
+LD = $(ARCH)-g++
 AS = $(ARCH)-as
 OBJCPY = $(ARCH)-objcopy
 OBJDMP = $(ARCH)-objdump
 GDB = $(ARCH)-gdb
-SZ = $(ARCH)-size
 
-SZOPTS = -d
+OPTFLAGS = -O3 -fno-tree-loop-distribute-patterns -fno-schedule-insns  -fno-schedule-insns2 
 
-C0FLAGS  = -O0 -g -Wall
-C0FLAGS += -mlittle-endian -mthumb 
-C0FLAGS +=  -I. -DARM_MATH_CM4 -D'__FPU_PRESENT=1'  $(INCLUDES)  -DUSE_STDPERIPH_DRIVER
-C0FLAGS += -mcpu=cortex-m4 -mfloat-abi=hard
-C0FLAGS +=  -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion 
-
-
-#CFLAGS = -g2 -O1 \
-          -fthread-jumps \
-          -falign-functions  -falign-jumps \
-          -falign-loops  -falign-labels \
-          -fcaller-saves \
-          -fcrossjumping \
-          -fcse-follow-jumps  -fcse-skip-blocks \
-          -fdelete-null-pointer-checks \
-          -fexpensive-optimizations \
-          -fgcse  -fgcse-lm  \
-          -findirect-inlining \
-          -foptimize-sibling-calls \
-          -fpeephole2 \
-          -fregmove \
-          -freorder-blocks  -freorder-functions \
-          -frerun-cse-after-loop  \
-          -fsched-interblock  -fsched-spec \
-          -fstrict-aliasing -fstrict-overflow \
-          -ftree-switch-conversion \
-          -ftree-pre \
-          -ftree-vrp \
-          -finline-functions -funswitch-loops -fpredictive-commoning -fgcse-after-reload -ftree-vectorize
-          
-# Causes Freeze on run: -fschedule-insns  -fschedule-insns2 
-CFLAGS = -O3 -g2 -fno-tree-loop-distribute-patterns -fno-schedule-insns  -fno-schedule-insns2 
-
-
+CFLAGS = -g2
 CFLAGS += -mlittle-endian -mthumb 
-CFLAGS += -I. -DARM_MATH_CM4 -D'__FPU_PRESENT=1'  $(INCLUDES)  -DUSE_STDPERIPH_DRIVER
-CFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard
-CFLAGS += -mfpu=fpv4-sp-d16 -fsingle-precision-constant -Wdouble-promotion 
-CFLAGS += -fstack-usage -fstack-check
-#CFLAGS += --specs=rdimon.specs -lgcc -lc -lm -lrdimon
+CFLAGS += -mcpu=cortex-m4 
+CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16 
+CFLAGS += -DARM_MATH_CM4 -D'__FPU_PRESENT=1' -DUSE_STDPERIPH_DRIVER
+CFLAGS += -I. $(INCLUDES)
+CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion -fcommon
+CFLAGS += -ffreestanding
+CFLAGS += --specs=nosys.specs
+CFLAGS += -DHSE_VALUE=16000000
 
-AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4 
+CXXFLAGS = -std=c++17
+CXXFLAGS += -Wno-register
+
+AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4
 
 LDSCRIPT = $(DEVICE)/$(LOADFILE)
-
-#Use fpu/nosys.specs for standard C functions such as malloc(), memcpy()
-LFLAGS  =  -mfloat-abi=hard --specs="nosys.specs" -nostartfiles -T $(LDSCRIPT) 
-
-
-#vpath %.c src
+LFLAGS  = $(CFLAGS) -Wl,-Map,main.map -T $(LDSCRIPT)
 
 # Uncomment to compile unoptimized:
 
+
 # Main:
-# build/src/main.o: CFLAGS = $(C0FLAGS)
+# $(BUILDDIR)/src/main.o: OPTFLAGS = -O0
 
 # STS Filesystem:
-# build/src/sts_filesystem.o: CFLAGS = $(C0FLAGS) 
-# build/src/sts_fs_index.o: CFLAGS = $(C0FLAGS)
-# build/src/sample_file.o: CFLAGS = $(C0FLAGS)
-# build/src/wavefmt.o: CFLAGS = $(C0FLAGS)
-# build/src/file_util.o: CFLAGS = $(C0FLAGS)
-# build/src/bank.o: CFLAGS = $(C0FLAGS) 
+# $(BUILDDIR)/src/sts_filesystem.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/sts_fs_index.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/sample_file.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/wavefmt.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/file_util.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/bank.o: OPTFLAGS = -O0
 
 # FAT Filesystem
-# build/src/fatfs/ff.o: CFLAGS = $(C0FLAGS)
-# build/src/fatfs/diskio.o: CFLAGS = $(C0FLAGS)
-# build/src/fatfs/drivers/stm32f4_discovery_sdio_sd.o: CFLAGS = $(C0FLAGS)
+# $(BUILDDIR)/src/fatfs/ff.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/fatfs/diskio.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/fatfs/drivers/stm32f4_discovery_sdio_sd.o: OPTFLAGS = -O0
 
 # Playback/Record:
-# build/src/resample.o: CFLAGS = $(C0FLAGS)
-# build/src/sampler.o: CFLAGS = $(C0FLAGS)
-# build/src/wav_recording.o: CFLAGS = $(C0FLAGS)
+# $(BUILDDIR)/src/resample.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/sampler.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/wav_recording.o: OPTFLAGS = -O0
 
 # Special Modes:
-# build/src/edit_mode.o: CFLAGS = $(C0FLAGS)
-# build/src/flash_user.o: CFLAGS = $(C0FLAGS)
-# build/src/calibration.o: CFLAGS = $(C0FLAGS)
-# build/src/system_mode.o: CFLAGS = $(C0FLAGS)
-# build/src/user_settings.o: CFLAGS = $(C0FLAGS)
+# $(BUILDDIR)/src/edit_mode.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/flash_user.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/calibration.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/system_mode.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/user_settings.o: OPTFLAGS = -O0
 
 # I/O:
-# build/src/buttons.o: CFLAGS = $(C0FLAGS)
-# build/src/params.o: CFLAGS = $(C0FLAGS)
-# build/src/dig_pins.o: CFLAGS = $(C0FLAGS)
-# build/src/rgb_leds.o: CFLAGS = $(C0FLAGS)
+# $(BUILDDIR)/src/buttons.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/params.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/dig_pins.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/rgb_leds.o: OPTFLAGS = -O0
 
 # Misc:
-# build/src/circular_buffer.o: CFLAGS = $(C0FLAGS)
-# build/src/audio_util.o: CFLAGS = $(C0FLAGS)
+# $(BUILDDIR)/src/circular_buffer.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/audio_util.o: OPTFLAGS = -O0
+
+# $(BUILDDIR)/src/hardware_tests/hardware_tests.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_adc.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_audio.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_gate_outs.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_gates.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_switches.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_sdcard.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_util.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/src/hardware_test_adc.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_test_switches_buttons.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_gates.o: OPTFLAGS = -O0
+# $(BUILDDIR)/src/hardware_tests/hardware_test_gate_outs.o: OPTFLAGS = -O0
+# $(BUILDDIR)/libhwtests/src/GateInChecker.o: OPTFLAGS = -O0
+# $(BUILDDIR)/libhwtests/src/GateOutput.o: OPTFLAGS = -O0
+
+DEPFLAGS = -MMD -MP -MF $(BUILDDIR)/$(basename $<).d
+
+all: Makefile $(BIN) $(HEX)
+
+$(BIN): $(ELF)
+	@$(OBJCPY) -O binary $< $@
+	@$(OBJDMP) -x --syms $< > $(addsuffix .dmp, $(basename $<))
+	ls -l $@ $<
+
+$(HEX): $(ELF)
+	@$(OBJCPY) --output-target=ihex $< $@
+
+$(ELF): $(OBJECTS)
+	@echo "Linking..."
+	@$(LD) $(LFLAGS) -o $@ $(OBJECTS)
+
+$(BUILDDIR)/%.o: %.c $(BUILDDIR)/%.d
+	@mkdir -p $(dir $@)
+	@echo "Compiling:" $<
+	@$(CC) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $< -o $@
+
+$(BUILDDIR)/%.o: %.cc $(BUILDDIR)/%.d
+	@mkdir -p $(dir $@)
+	@echo "Compiling:" $<
+	@$(CXX) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
+
+$(BUILDDIR)/%.o: %.cpp $(BUILDDIR)/%.d
+	@mkdir -p $(dir $@)
+	@echo "Compiling:" $<
+	@$(CXX) -c $(DEPFLAGS) $(OPTFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
+
+$(BUILDDIR)/%.o: %.s
+	@mkdir -p $(dir $@)
+	@echo "Compiling:" $<
+	@$(AS) $(AFLAGS) $< -o $@ > $(addprefix $(BUILDDIR)/, $(addsuffix .lst, $(basename $<)))
 
 combo: $(COMBO).hex 
 $(COMBO).hex:  $(BOOTLOADER_HEX) $(BIN) $(HEX) 
@@ -152,46 +179,35 @@ $(COMBO).hex:  $(BOOTLOADER_HEX) $(BIN) $(HEX)
 	awk -f $(BOOTLOADER_DIR)/util/merge_hex.awk > $(COMBO).hex
 	$(OBJCPY) -I ihex -O binary $(COMBO).hex $(COMBO).bin
 
-all: Makefile $(BIN) $(HEX)
 
-$(BIN): $(ELF)
-	$(OBJCPY) -O binary $< $@
-	$(OBJDMP) -x --syms $< > $(addsuffix .dmp, $(basename $<))
-	ls -l $@ $<
+%.d: ;
 
+ifneq "$(MAKECMDGOALS)" "clean"
+-include $(DEPS)
+endif
 
-$(HEX): $(ELF)
-	$(OBJCPY) --output-target=ihex $< $@
-	$(SZ) $(SZOPTS) $(ELF)
+flash: $(HEX)
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nloadfile ./build/main.hex\nr\nq" > flashScript.jlink
+	JLinkExe -CommanderScript flashScript.jlink
 
-$(ELF): $(OBJECTS) 
-	$(LD) $(LFLAGS) -o $@ $(OBJECTS)
+eraseflash:
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nerase 0x08000000, 0x08100000\nq" > flashScript.jlink
+	JLinkExe -CommanderScript flashScript.jlink
 
+comboflash: $(COMBO).hex
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nloadfile $(COMBO).hex\nq" > flashScript.jlink
+	JLinkExe -CommanderScript flashScript.jlink
 
-$(BUILDDIR)/%.o: %.c $(wildcard inc/*.h) $(wildcard inc/res/*.h)
-	mkdir -p $(dir $@)
-	$(CC) -c $(CFLAGS) $< -o $@
-
-
-$(BUILDDIR)/%.o: %.s
-	mkdir -p $(dir $@)
-	$(AS) $(AFLAGS) $< -o $@ > $(addprefix $(BUILDDIR)/, $(addsuffix .lst, $(basename $<)))
-
-
-flash: $(BIN)
-	st-flash write $(BIN) 0x8000000
+stflash: $(BIN)
+	st-flash write $(BIN) 0x8008000
 
 clean:
 	rm -rf build
 	
 wav: fsk-wav
 
-qpsk-wav: $(BIN)
-	python2 stm_audio_bootloader/qpsk/encoder.py \
-		-t stm32f4 -s 44100 -b 12000 -c 6000 -p 256 \
-		$(BIN)
-
 fsk-wav: $(BIN)
 	python2 stm_audio_bootloader/fsk/encoder.py \
 		-s 44100 -b 16 -n 8 -z 4 -p 256 -g 16384 -k 1800 \
 		$(BIN)
+

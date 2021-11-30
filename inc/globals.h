@@ -168,7 +168,7 @@ do {							\
 
 #define delay_ms(x)						\
 do {							\
-  register unsigned int i;				\
+  volatile unsigned int i;				\
   for (i = 0; i < (25000*x); ++i)				\
     __asm__ __volatile__ ("nop\n\t":::"memory");	\
 } while (0)

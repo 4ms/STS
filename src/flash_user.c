@@ -91,7 +91,7 @@ uint32_t load_flash_params(void)
 		src = (uint8_t *)staging_system_calibrations;
 		for (i=0;i<sizeof(SystemCalibrations);i++)
 			*dst++ = *src++;
-		
+	
 		return (1); //Valid firmware version found
 	} else
 	{

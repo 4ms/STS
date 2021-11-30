@@ -153,19 +153,10 @@ void display_all_ButtonLEDs(void)
 		//Update each LED that has a different color
 		if ((cached_ButLED_color[i][0] != ButLED_color[i][0]) || (cached_ButLED_color[i][1] != ButLED_color[i][1]) || (cached_ButLED_color[i][2] != ButLED_color[i][2]))
 		{
-#ifdef BIG_PLAY_BUTTONS
 			if (i ==  Play1ButtonLED || i == Play2ButtonLED)
 				LEDDriver_setRGBLED_RGB(i, ButLED_color[i][0]*4, ButLED_color[i][2]*4, ButLED_color[i][1]*4); // swapped [1] and [2]
 			else
-	#ifdef FROSTED_BUTTONS
 				LEDDriver_setRGBLED_RGB(i, ButLED_color[i][0]*4, ButLED_color[i][1]*4, ButLED_color[i][2]*4);
-	#else
-				LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
-	#endif
-
-#else
-			LEDDriver_setRGBLED(i, ( ButLED_color[i][0] <<20) | ( ButLED_color[i][1] <<10) | ButLED_color[i][2] );
-#endif
 			cached_ButLED_color[i][0]=ButLED_color[i][0];
 			cached_ButLED_color[i][1]=ButLED_color[i][1];
 			cached_ButLED_color[i][2]=ButLED_color[i][2];
@@ -182,13 +173,8 @@ void all_buttonLEDs_off(void)
 		LEDDriver_setRGBLED(j,0 );
 	}
 }
-/*
- * test_all_buttonLEDs()
- *
- * Test all the buttons
- *
- */
-void test_all_buttonLEDs(void)
+
+void fade_all_buttonLEDs(void)
 {
 	uint8_t i, j;
 	float t=0.0f;
@@ -202,7 +188,7 @@ void test_all_buttonLEDs(void)
 
 	for(i=0;i<(NUM_LED_PALETTE-1);i++)
 	{
-		for (t=0.0;t<=1.0;t+=0.005)
+		for (t=0.0f;t<=1.0f;t+=0.005f)
 		{
 			for (j=0;j<8;j++)
 			{
@@ -211,6 +197,20 @@ void test_all_buttonLEDs(void)
 
 			display_all_ButtonLEDs();
 		}
+	}
+}
+
+void chase_all_buttonLEDs(uint32_t del)
+{
+	uint8_t i, j;
+
+	LEDDRIVER_OUTPUTENABLE_ON;
+
+	for (j=0;j<(NUM_RGBBUTTONS*3);j++)
+	{
+		delay_ms(del);
+		for (i=0; i<(NUM_RGBBUTTONS*3); i++)
+			LEDDriver_set_one_LED(i, i==j ? 2000: 0);
 	}
 }
 

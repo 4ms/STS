@@ -8,8 +8,8 @@
  * Write index file: MAGENTA
  * Write html file: LAVENDER
  * Done: OFF
- * 
- * 
+ *
+ *
  */
 
 #include "globals.h"
@@ -46,7 +46,7 @@ FRESULT check_sys_dir(void)
 	FRESULT res;
 	DIR	dir;
 
-    res = f_opendir(&dir, SYS_DIR);
+	res = f_opendir(&dir, SYS_DIR);
 
 	//If it doesn't exist, create it
 	if (res==FR_NO_PATH)
@@ -62,7 +62,7 @@ FRESULT check_sys_dir(void)
 		{
 			res = f_opendir(&dir, SYS_DIR);
 
-			if (res==FR_NO_PATH) 
+			if (res==FR_NO_PATH)
 				res = f_mkdir(SYS_DIR);
 		}
 	}
@@ -91,7 +91,7 @@ FRESULT reload_sdcard(void)
 }
 
 
-//Go through all enabled banks, looking for empty sample slots 
+//Go through all enabled banks, looking for empty sample slots
 //Search within the bank's folder, looking for a file to fill the slot
 //
 void load_empty_slots(void)
@@ -122,13 +122,13 @@ void load_empty_slots(void)
 				find_next_ext_in_dir_alpha(0, 0, 0, FIND_ALPHA_INIT_FOLDER); 				// Initialize alphabetical folder search
 				samples[bank][samplenum].file_found = 0;
 
-				while (!samples[bank][samplenum].file_found) 								
+				while (!samples[bank][samplenum].file_found)
 				{																			//Search alphabetically for any wav file in bankpath
-					res = find_next_ext_in_dir_alpha(bankpath_noslash, ".wav", filename, FIND_ALPHA_DONT_INIT);	
+					res = find_next_ext_in_dir_alpha(bankpath_noslash, ".wav", filename, FIND_ALPHA_DONT_INIT);
 					if (res!=FR_OK)		{samplenum=NUM_SAMPLES_PER_BANK; break;}			//When we hit the end of the folder, stop searching this bank [exit while() and for() loops]
 
 					str_cat(fullpath, bankpath, filename);									//Append filename to path
-																							
+
 					if (find_filename_in_bank(bank, fullpath) != 0xFF) continue;			//Skip files that are already used in this bank
 
 					res = f_open(&temp_file, fullpath, FA_READ);							//Open the file
@@ -153,13 +153,13 @@ void load_empty_slots(void)
 
 
 
-//Go through all banks and samples, 
+//Go through all banks and samples,
 //If file_found==0, then look for a file to fill the slot:
-//If samples[][].filename == "path/to/file.wav": 
+//If samples[][].filename == "path/to/file.wav":
 // - Scan all .wav files in path alphabetically (path/*.wav), in two passes:
 //   --First pass: Look for a .wav file that isn't assigned anywhere
 //   --Second pass: Look for a .wav file that isn't assigned in this bank (but may be assigned in some other bank)
-// - If still none found, keep file_found=0 and exit 
+// - If still none found, keep file_found=0 and exit
 //
 void load_missing_files(void)
 {
@@ -188,7 +188,7 @@ void load_missing_files(void)
 					path[0]='\0'; //root dir
 					str_cpy(filename, samples[bank][samplenum].filename);
 				}
- 
+
 				//Create a copy of path string that doesn't end in a slash
 				str_cpy(path_noslash, path);
 				trim_slash(path_noslash);
@@ -203,16 +203,16 @@ void load_missing_files(void)
 				while (!samples[bank][samplenum].file_found) 								// for each file not found:
 				{
 																							//Search alphabetically for any wav file in original file's path
-					res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename, FIND_ALPHA_DONT_INIT);	
+					res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename, FIND_ALPHA_DONT_INIT);
 
-					if (res!=FR_OK)															//First pass: When our alphabetical search hits the end of the folder, 
+					if (res!=FR_OK)															//First pass: When our alphabetical search hits the end of the folder,
 					{																		//initialize the search and do another pass
 						if (first_pass) {first_pass=0; find_next_ext_in_dir_alpha(0, 0, 0, FIND_ALPHA_INIT_FOLDER);}
 						else break;															//Second pass: When we hit the end of the folder, stop searching
-					}													
+					}
 
 					str_cat(fullpath, path, filename);										//Append filename to path
-																							
+
 					if (first_pass){
 						if (find_filename_in_all_banks(bank, fullpath) != 0xFF) continue;}	//First pass: skip files that are used in *any* bank
 					else{
@@ -228,11 +228,11 @@ void load_missing_files(void)
 						{
 							str_cpy(samples[bank][samplenum].filename, fullpath);			//Set the filename (full path)
 							samples[bank][samplenum].file_found = 1;						//Mark it as found
-							enable_bank(bank); 
+							enable_bank(bank);
 						}
 					}
 					f_close(&temp_file);
-			
+
 				}
 
 
@@ -256,7 +256,7 @@ void load_missing_files(void)
 //Given a path to a directory, see if any of the files in it are assigned to a sample slot
 //
 //Instead of going through each file in the directory in the filesystem
-//and checking all the sample slots if it matches a filename, 
+//and checking all the sample slots if it matches a filename,
 //it's faster to search the samples[][] array for filenames that begin with this directory path + "/"
 //
 //Returns 1 if some sample slot uses this directory
@@ -279,7 +279,7 @@ uint8_t dir_contains_assigned_samples(char *path)
 		{
 			if (samples[bank][samplenum].filename[0] != 0)
 				if (str_startswith_nocase(samples[bank][samplenum].filename, path) == 1) //
-					return(1); //found! at least one sample filename begins with path 
+					return(1); //found! at least one sample filename begins with path
 		}
 	}
 
@@ -298,7 +298,7 @@ void load_new_folders(void)
 	char 	default_bankname[_MAX_LFN];
 	uint8_t bank;
 	uint8_t bank_loaded;
-	uint8_t l; 
+	uint8_t l;
 	uint8_t checked_root=0;
 
 	//reset dir object, so it can be used by get_next_dir
@@ -326,7 +326,7 @@ void load_new_folders(void)
 
 
 		}
-		else 
+		else
 		{
 			//Get the name of the next folder inside the root dir
 			res = get_next_dir(&root_dir, "", foldername);
@@ -346,12 +346,12 @@ void load_new_folders(void)
 			if (dir_contains_assigned_samples(foldername)) continue;
 		}
 
-		//If we got here, we found a directory that contains wav files, and none of the files are assigned as samples 
+		//If we got here, we found a directory that contains wav files, and none of the files are assigned as samples
 		//Now we will try to add this as a new bank
 
 		//Strip the ending slash
 		foldername[l]='\0';
-		
+
 		//Try to load it as a bank, to make sure there's actually some valid files inside (i.e. headers are not corrupted)
 		if (load_bank_from_disk(test_bank, foldername))
 		{
@@ -408,16 +408,16 @@ uint8_t load_banks_by_default_colors(void)
 		// Color
 		if (load_bank_from_disk((samples[bank]), bankname))
 		{
-			enable_bank(bank); 
+			enable_bank(bank);
 			banks_loaded++;
 		}
-		else 
+		else
 		{
 			// COLOR
 			str_to_upper(bankname, bankname_case);
 			if (load_bank_from_disk((samples[bank]), bankname_case))
 			{
-				enable_bank(bank); 
+				enable_bank(bank);
 				banks_loaded++;
 			}
 			else
@@ -426,9 +426,9 @@ uint8_t load_banks_by_default_colors(void)
 				str_to_lower(bankname, bankname_case);
 				if (load_bank_from_disk((samples[bank]), bankname_case))
 				{
-					enable_bank(bank); 
+					enable_bank(bank);
 					banks_loaded++;
-				}				
+				}
 				else{disable_bank(bank);}
 			}
 		}
@@ -453,7 +453,7 @@ uint8_t load_banks_by_color_prefix(void)
 
 
 	banks_loaded=0;
-	
+
 	rootdir.obj.fs = 0; //get_next_dir() needs us to do this, to reset it
 
 	while (1)
@@ -555,7 +555,7 @@ uint8_t load_banks_by_color_prefix(void)
 								default_bankname[len++] = ' ';
 								default_bankname[len++] = '-';
 								default_bankname[len++] = ' ';
-								
+
 								//trim spaces and dashes off the beginning of the suffix
 								while(foldername[existing_prefix_len]==' ' || foldername[existing_prefix_len]=='-') existing_prefix_len++;
 
@@ -565,7 +565,7 @@ uint8_t load_banks_by_color_prefix(void)
 
 								break; //exit inner while loop and continue with the next folder
 							}
-						} 
+						}
 						bank+=10;
 					}
 				}
@@ -592,7 +592,7 @@ uint8_t load_banks_with_noncolors(void)
 	DIR testdir;
 
 	banks_loaded=0;
-	
+
 	checked_root = 0;
 	rootdir.obj.fs = 0; //get_next_dir() needs us to do this, to reset it
 
@@ -603,7 +603,7 @@ uint8_t load_banks_with_noncolors(void)
 			checked_root = 1; //only check root the first time
 			foldername[0] = '\0'; //root
 		}
-		else 
+		else
 		{
 			//Find the next directory in the root folder
 			res = get_next_dir(&rootdir, "", foldername);
@@ -648,7 +648,7 @@ uint8_t load_banks_with_noncolors(void)
 					//e.g. "Door knockers" becomes "Cyan-3 - Door knockers"
 					len=bank_to_color(bank, default_bankname);
 					default_bankname[len++] = ' ';
-					// if (bank<10) 
+					// if (bank<10)
 					// {
 						default_bankname[len++] = '-';
 						default_bankname[len++] = ' ';
@@ -658,7 +658,7 @@ uint8_t load_banks_with_noncolors(void)
 					append_rename_queue(bank, foldername, default_bankname);
 
 					break; //continue with the next folder
-				} 
+				}
 				else
 					break; //if load_bank_from_disk() fails for this foldername, try the next folder
 			}
@@ -707,13 +707,13 @@ uint8_t load_bank_from_disk(Sample *sample_bank, char *path_noslash)
 	sample_num  = 0;
 	filename[0] = 0;
 
-	find_next_ext_in_dir_alpha(path_noslash, ".wav", 0, FIND_ALPHA_INIT_FOLDER);				// Initialize alphabetical searching in folder 				
+	find_next_ext_in_dir_alpha(path_noslash, ".wav", 0, FIND_ALPHA_INIT_FOLDER);				// Initialize alphabetical searching in folder
 
 	while (sample_num < NUM_SAMPLES_PER_BANK)													// for every sample slot in bank
 	{
 		res = find_next_ext_in_dir_alpha(path_noslash, ".wav", filename, FIND_ALPHA_DONT_INIT); // find next file alphabetically
 		if (res!=FR_OK){break;}																	// Stop if no more files found/available
-				
+
 		str_cpy(&(path[path_len]), filename);													//Append filename to path
 		res = f_open(&temp_file, path, FA_READ);												//Open file
 		f_sync(&temp_file);
@@ -755,7 +755,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 		force_reload = load_sampleindex_file(USE_INDEX_FILE, MAX_NUM_BANKS);
 
 	if (!force_reload) //sampleindex file was ok
-	{	
+	{
 		//Look for new folders and missing files
 		flags[RewriteIndex]=ORANGE;
 
@@ -793,7 +793,7 @@ uint8_t load_all_banks(uint8_t force_reload)
 		load_banks_with_noncolors();
 
 		//process the folders/banks that need to be renamed
-		if (queue_valid==FR_OK) 
+		if (queue_valid==FR_OK)
 			process_renaming_queue();
 	}
 
@@ -813,10 +813,10 @@ uint8_t load_all_banks(uint8_t force_reload)
 
 
 	//Verify the channels are set to enabled banks, and correct if necessary
-	if (!is_bank_enabled(i_param[0][BANK])) 
+	if (!is_bank_enabled(i_param[0][BANK]))
 		i_param[0][BANK] = next_enabled_bank(i_param[0][BANK]);
 
-	if (!is_bank_enabled(i_param[1][BANK])) 
+	if (!is_bank_enabled(i_param[1][BANK]))
 		i_param[1][BANK] = next_enabled_bank(i_param[1][BANK]);
 
 	return 1;
@@ -911,7 +911,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 		{
 			res = f_opendir(&dir, path);
 
-			if (res==FR_NO_PATH) 
+			if (res==FR_NO_PATH)
 			{
 				res = f_mkdir(path);
 				res = f_opendir(&dir, path);
@@ -935,7 +935,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 
 	//Compute the slot prefix
 	// intToStr(sample_num+1, slot_str, 2);
-	// str_cat(slot_prefix, "Slot", slot_str); 
+	// str_cat(slot_prefix, "Slot", slot_str);
 	// str_cat(slot_prefix, slot_prefix, "-");
 	slot_prefix[0]='\0';
 
@@ -953,7 +953,7 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 		{
 			f_closedir(&dir);
 
-			//filesystem error reading directory, 
+			//filesystem error reading directory,
 			//Just use a timestamp to be safe
 			sz = str_len(path);
 			path[sz++] = '/';
@@ -967,13 +967,13 @@ uint8_t new_filename(uint8_t bank, uint8_t sample_num, char *path)
 			path[sz++] = 0;
 
 			return (res);
-		} 
-		if (res==0xFF) 
+		}
+		if (res==0xFF)
 		{
 			//no more .wav files found
 			//exit the while loop
 			f_closedir(&dir);
-			break; 
+			break;
 		}
 		if (filename[0])
 		{
@@ -1050,15 +1050,15 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 {
 	DIR 		rootdir;
 	FRESULT 	res, res_dir;
-	char 		fullpath[_MAX_LFN+1];	
-	// char 		fname[_MAX_LFN+1];	
-	char 		dumpedpath[_MAX_LFN+1];	
+	char 		fullpath[_MAX_LFN+1];
+	// char 		fname[_MAX_LFN+1];
+	char 		dumpedpath[_MAX_LFN+1];
 	char* 		fileonly;
-	char 		fileonly_ptr[_MAX_LFN+1];	
+	char 		fileonly_ptr[_MAX_LFN+1];
 
 	// str_cpy(fname,filename);
 
-	// OPEN FILE FROM PROVIDED FOLDER	
+	// OPEN FILE FROM PROVIDED FOLDER
 
 	// initialize full path to file
 	str_cat(fullpath, folderpath, filename);
@@ -1069,14 +1069,14 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 
 	// if file loaded properly, move on
 	if (res==FR_OK)
-	{					
-		str_cpy(filename, fullpath); 
+	{
+		str_cpy(filename, fullpath);
 		return(0);
 	}
 
 	// otherwise...
 	else
-	{		
+	{
 		// OPEN FILE FROM ROOT - AS WRITTEN IN INDEX
 		// try opening file supposing its path is in the name field
 		res = f_open(fp, filename, FA_READ);
@@ -1084,20 +1084,20 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 
 		// if file was found
 		// return 3: folderpath/filename was incorrect, but filename worked
-		// pre-pend a slash and exit function 
+		// pre-pend a slash and exit function
 		if (res==FR_OK) {
 			str_cat(fullpath, "/", filename);
 			str_cpy(filename, fullpath);
 			return(3);
 		}
-	
+
 		// OPEN FILE FROM ROOT - FILE.WAV ONLY
 		// ...Otherwise, Remove any existing path before wav file name
 		fileonly = fileonly_ptr;
 		str_split(filename, '/', dumpedpath, fileonly);
 
 		// if there was a path before filename
-		if (fileonly[0]!=0) 
+		if (fileonly[0]!=0)
 		{
 
 			// try opening file name only, from root
@@ -1106,7 +1106,7 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 
 			// if file was found
 			// return 3: folderpath/filename was incorrect, but filename worked
-			// pre-pend a slash and exit function 
+			// pre-pend a slash and exit function
 			if (res==FR_OK) {
 				str_cat(fullpath, "/", filename);
 				str_cpy(filename, fullpath);
@@ -1114,14 +1114,14 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 			}
 		}
 
-		// if file wasn't found 
+		// if file wasn't found
 		rootdir.obj.fs = 0; //get_next_dir() needs us to do this, to reset it
 
 		// OPEN FILE FROM SD CARD FOLDERS
 		// Until file opens properly
 		while (res!=FR_OK)
 		{
-			
+
 			// try every folder in the folder tree
 			// ... faster this way (don't have to check for alternate spellings/upper-lower case etc...)
 			// ... there shouldn't be any duplicate files within the folder tree anyway
@@ -1135,32 +1135,32 @@ uint8_t fopen_checked(FIL *fp, char* folderpath, char* filename)
 
 			// if another folder was found
 			if (res_dir == FR_OK)
-			{	
+			{
 				// concatenate folder path and file name
 				str_cat	(folderpath, folderpath, "/");
 				str_cat	(fullpath, folderpath, filename);
 
 				// try opening file from new path
 				res = f_open(fp, fullpath, FA_READ);
-				f_close(fp);					
-				
+				f_close(fp);
+
 				// if file was found
-				// return "1: path was incorrect, and corrected" 
-				// exit function 
-				if(res == FR_OK) 
+				// return "1: path was incorrect, and corrected"
+				// exit function
+				if(res == FR_OK)
 				{
-					str_cpy(filename, fullpath); 
+					str_cpy(filename, fullpath);
 					return(1);
 				}
 			}
 
-			// Otherwise, stop searching 
+			// Otherwise, stop searching
 			else
 			{
 				// return "2: path couldn't be corrected"
-				// exit function 
+				// exit function
 				return(2);
-			}  
+			}
 		}
 	}
 	return(3); //unknown-- this is here to prevent compiler warning
