@@ -68,9 +68,10 @@ CFLAGS += -mcpu=cortex-m4
 CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16 
 CFLAGS += -DARM_MATH_CM4 -D'__FPU_PRESENT=1' -DUSE_STDPERIPH_DRIVER
 CFLAGS += -I. $(INCLUDES)
-CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion
+CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion -fcommon
 CFLAGS += -ffreestanding
 CFLAGS += --specs=nosys.specs
+CFLAGS += -DHSE_VALUE=16000000
 
 CXXFLAGS = -std=c++17
 CXXFLAGS += -Wno-register
@@ -186,15 +187,15 @@ ifneq "$(MAKECMDGOALS)" "clean"
 endif
 
 flash: $(HEX)
-	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nloadfile ./build/main.hex\nr\nq" > flashScript.jlink
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nloadfile ./build/main.hex\nr\nq" > flashScript.jlink
 	JLinkExe -CommanderScript flashScript.jlink
 
 eraseflash:
-	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nerase 0x08000000, 0x08100000\nq" > flashScript.jlink
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nerase 0x08000000, 0x08100000\nq" > flashScript.jlink
 	JLinkExe -CommanderScript flashScript.jlink
 
 comboflash: $(COMBO).hex
-	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nloadfile $(COMBO).hex\nq" > flashScript.jlink
+	@printf "device STM32F427ZG\nspeed 4000kHz\nif SWD\nr\nloadfile $(COMBO).hex\nq" > flashScript.jlink
 	JLinkExe -CommanderScript flashScript.jlink
 
 # flash: $(BIN)
