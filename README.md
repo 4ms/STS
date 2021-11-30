@@ -92,14 +92,17 @@ Make sure git is installed on your system. (OSX: type `brew install git` into th
 
 Create a work directory, and enter it.
 
-Clone this project (STS), stmlib, and the stm-audio-bootloader projects:
+Clone this project (STS) and the required submodule (which is libhwtest)
 
 	git clone https://github.com/4ms/STS.git
+	cd STS
+	git submodule update --init
 	
 If you don't need to change the bootloader firmware or generate a .wav file for updating firmware, then you can skip to **Compiling**.
 
 Otherwise, if you want to modify the audio bootloader firmware, or create .wav files for sharing your custom firmware with others, then clone these projects as well:
 
+	cd ..         ## if you were in the STS dir, go up one level
 	git clone https://github.com/4ms/sts-bootloader.git  
 	git clone https://github.com/4ms/stmlib.git
 	git clone https://github.com/4ms/stm-audio-bootloader.git
