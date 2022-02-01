@@ -50,8 +50,12 @@ HEX = $(BUILDDIR)/$(BINARYNAME).hex
 BIN = $(BUILDDIR)/$(BINARYNAME).bin
 
 TOOLCHAIN_DIR ?= 
+ARCH ?= $(TOOLCHAIN_DIR)/arm-none-eabi
 
-ARCH = $(TOOLCHAIN_DIR)/arm-none-eabi
+ifneq ($(ARM_NONE_EABI_PATH),"")
+	ARCH = $(ARM_NONE_EABI_PATH)
+endif
+
 CC = $(ARCH)-gcc
 CXX =$(ARCH)-g++
 LD = $(ARCH)-g++
