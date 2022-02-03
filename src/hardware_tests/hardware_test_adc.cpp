@@ -53,8 +53,8 @@ void setup_adc() {
 	Deinit_Pot_ADC();
 	Deinit_CV_ADC();
 
-	Init_Pot_ADC((uint16_t *)potadc_buffer, NUM_POT_ADCS);
-	Init_CV_ADC((uint16_t *)cvadc_buffer, NUM_CV_ADCS);
+	Init_Pot_ADC();
+	Init_CV_ADC();
 }
 
 bool check_max_one_cv_is_nonzero(uint16_t width) {

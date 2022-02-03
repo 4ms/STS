@@ -34,10 +34,10 @@ void test_codec_init(void) {
 	all_leds_off();
 	pause_until_button_released();
 
-	Codec_GPIO_Init();
+	codec_init_gpio();
 
 	PLAYLED1_ON;
-	Codec_AudioInterface_Init(SAMPLERATE);
+	codec_init_i2s(SAMPLERATE);
 	PLAYLED1_OFF;
 
 	PLAYLED1_ON;
@@ -48,7 +48,7 @@ void test_codec_init(void) {
 
 	uint32_t err;
 	BUSYLED_ON;
-	err = Codec_Register_Setup(0);
+	err = codec_setup_registers(0, SAMPLERATE);
 	if (err) {
 		const uint32_t bailout_time=50; //5 seconds
 		uint32_t ctr = bailout_time;
@@ -89,7 +89,7 @@ void test_audio_out(void) {
 	STSCodecCB::rightStream = &testWaves[1];
 	set_codec_callback(STSCodecCB::testWavesOut);
 
-	Start_I2SDMA();
+	start_audio_stream();
 
 	pause_until_button();
 

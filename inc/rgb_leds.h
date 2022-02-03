@@ -56,7 +56,7 @@ void display_one_ButtonLED(uint8_t LED_id);
 void display_all_ButtonLEDs(void);
 
 void chase_all_buttonLEDs(uint32_t del);
-void fade_all_buttonLEDs(void);
+void test_all_buttonLEDs(void);
 void all_buttonLEDs_off(void);
 
 void update_one_ButtonLED(uint8_t LED_id);

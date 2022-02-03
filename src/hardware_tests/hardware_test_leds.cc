@@ -90,7 +90,7 @@ void test_rgb_leds(void)
 	flash_mainbut_until_pressed();
 
 	if (EDIT_BUTTON) {
-		fade_all_buttonLEDs();
+		test_all_buttonLEDs();
 		all_buttonLEDs_off();
 
 		STSRGBLEDTester rgb_tester(NUM_RGBBUTTONS * 3);

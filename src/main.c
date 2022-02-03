@@ -236,7 +236,7 @@ int main(void) {
   }
 
   if (TEST_LED_BUTTONS)
-    fade_all_buttonLEDs();
+    test_all_buttonLEDs();
 
   init_buttonLEDs();
   init_ButtonLED_IRQ();
@@ -246,8 +246,8 @@ int main(void) {
   Deinit_Pot_ADC();
   Deinit_CV_ADC();
   init_LowPassCoefs();
-  Init_Pot_ADC((uint16_t *)potadc_buffer, NUM_POT_ADCS);
-  Init_CV_ADC((uint16_t *)cvadc_buffer, NUM_CV_ADCS);
+  Init_Pot_ADC();
+  Init_CV_ADC();
 
 	//Initialize Codec
 	codec_init_gpio();
