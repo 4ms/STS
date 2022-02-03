@@ -29,6 +29,7 @@
 #pragma once
 
 #include <stm32f4xx.h>
+#include "globals.h"
 #include "rgb_leds.h"
 
 

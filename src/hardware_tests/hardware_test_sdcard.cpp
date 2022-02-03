@@ -1,6 +1,7 @@
 #include "hardware_test_util.h"
 #include "str_util.h"
 extern "C" {
+#include "fatfs_util.h"
 #include "LED_palette.h"
 #include "dig_pins.h"
 #include "ff.h"

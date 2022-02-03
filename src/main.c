@@ -52,6 +52,7 @@
 #include "rgb_leds.h"
 #include "sampler.h"
 #include "bank.h"
+#include "led_color_adjust.h"
 #include "sts_filesystem.h"
 #include "sts_sampleindex.h"
 #include "system_mode.h"
