@@ -26,14 +26,11 @@
  * -----------------------------------------------------------------------------
  */
 
-
 #pragma once
 
-#include <stm32f4xx.h>
 #include "ff.h"
+#include <stm32f4xx.h>
 
 FRESULT clear_renaming_queue(void);
 FRESULT append_rename_queue(uint8_t bank, char *orig_name, char *new_name);
 FRESULT process_renaming_queue(void);
-
-

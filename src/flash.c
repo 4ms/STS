@@ -26,36 +26,33 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "globals.h"
 #include "flash.h"
+#include "globals.h"
 
 #ifdef STM32F427_437xx
-static uint32_t kSectorBaseAddress[] = {
-  0x08000000,
-  0x08004000,
-  0x08008000,
-  0x0800C000,
-  0x08010000,
-  0x08020000,
-  0x08040000,
-  0x08060000,
-  0x08080000,
-  0x080A0000,
-  0x080C0000,
-  0x080E0000
-};
+static uint32_t kSectorBaseAddress[] = {0x08000000,
+										0x08004000,
+										0x08008000,
+										0x0800C000,
+										0x08010000,
+										0x08020000,
+										0x08040000,
+										0x08060000,
+										0x08080000,
+										0x080A0000,
+										0x080C0000,
+										0x080E0000};
 #else
 #error "Unknown chip. Please set the flash sector addresses in flash.c"
 #endif
 
-FLASH_Status flash_erase_sector(uint32_t address)
-{
+FLASH_Status flash_erase_sector(uint32_t address) {
 	uint8_t i;
 	FLASH_Status status;
 
 	FLASH_Unlock();
-	FLASH_ClearFlag(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR |
-				  FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR|FLASH_FLAG_PGSERR);
+	FLASH_ClearFlag(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR |
+					FLASH_FLAG_PGSERR);
 	for (i = 0; i < 12; ++i) {
 		if (address == kSectorBaseAddress[i]) {
 			status |= FLASH_EraseSector(i * 8, VoltageRange_3);
@@ -64,75 +61,62 @@ FLASH_Status flash_erase_sector(uint32_t address)
 	FLASH_Lock();
 
 	return status;
-
 }
 
-FLASH_Status flash_open_erase_sector(uint32_t address)
-{
+FLASH_Status flash_open_erase_sector(uint32_t address) {
 	uint8_t i;
 	FLASH_Status status;
 
 	for (i = 0; i < 12; ++i) {
 		if (address == kSectorBaseAddress[i]) {
-		  status |= FLASH_EraseSector(i * 8, VoltageRange_3);
+			status |= FLASH_EraseSector(i * 8, VoltageRange_3);
 		}
 	}
 	return status;
 }
 
-void flash_begin_open_program(void)
-{
+void flash_begin_open_program(void) {
 	FLASH_Unlock();
-	FLASH_ClearFlag(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR |
-				  FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR|FLASH_FLAG_PGSERR);
+	FLASH_ClearFlag(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR |
+					FLASH_FLAG_PGSERR);
 }
 
-FLASH_Status flash_open_program_byte(uint8_t byte, uint32_t address)
-{
+FLASH_Status flash_open_program_byte(uint8_t byte, uint32_t address) {
 	return FLASH_ProgramByte(address, byte);
 }
 
-FLASH_Status flash_open_program_word(uint32_t word, uint32_t address)
-{
+FLASH_Status flash_open_program_word(uint32_t word, uint32_t address) {
 	return FLASH_ProgramWord(address, word);
 }
 
-void flash_end_open_program(void)
-{
+void flash_end_open_program(void) {
 	FLASH_Lock();
 }
 
-
 //size is in # of bytes
-FLASH_Status flash_open_program_array(uint8_t* arr, uint32_t address, uint32_t size)
-{
+FLASH_Status flash_open_program_array(uint8_t *arr, uint32_t address, uint32_t size) {
 	FLASH_Status status;
 
-	while(size--) {
+	while (size--) {
 		status |= FLASH_ProgramByte(address, *arr++);
 		address++;
 	}
 	return status;
-
 }
 
 //size in # of bytes
-void flash_read_array(uint8_t* arr, uint32_t address, uint32_t size)
-{
+void flash_read_array(uint8_t *arr, uint32_t address, uint32_t size) {
 
-	while(size--) {
-		*arr++ = (uint8_t)(*(__IO uint32_t*)address);
+	while (size--) {
+		*arr++ = (uint8_t)(*(__IO uint32_t *)address);
 		address++;
 	}
 }
 
-uint32_t flash_read_word(uint32_t address)
-{
-    return( *(__IO uint32_t*)address);
+uint32_t flash_read_word(uint32_t address) {
+	return (*(__IO uint32_t *)address);
 }
 
-uint8_t flash_read_byte(uint32_t address)
-{
-    return((uint8_t) (*(__IO uint32_t*)address));
+uint8_t flash_read_byte(uint32_t address) {
+	return ((uint8_t)(*(__IO uint32_t *)address));
 }
-

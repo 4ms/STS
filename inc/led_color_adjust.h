@@ -26,7 +26,6 @@
  * -----------------------------------------------------------------------------
  */
 
-
 #include <stm32f4xx.h>
 
 void init_led_color_adjust(void);
@@ -34,4 +33,3 @@ void init_led_color_adjust(void);
 void process_led_color_adjust_mode(void);
 
 void set_default_led_color_adjust(void);
-

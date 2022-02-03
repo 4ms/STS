@@ -32,8 +32,6 @@
 
 #define ButtonLED_IRQHandler TIM1_UP_TIM10_IRQHandler
 
-
-
 enum Buttons_LEDs {
 	RecBankButtonLED,
 	RecButtonLED,
@@ -47,9 +45,8 @@ enum Buttons_LEDs {
 	NUM_RGBBUTTONS
 };
 
-
 void init_buttonLEDs(void);
-void set_ButtonLED_byRGB(uint8_t LED_id, uint16_t red,  uint16_t green,  uint16_t blue);
+void set_ButtonLED_byRGB(uint8_t LED_id, uint16_t red, uint16_t green, uint16_t blue);
 void set_ButtonLED_byPalette(uint8_t LED_id, uint16_t paletteIndex);
 void set_ButtonLED_byPaletteFade(uint8_t LED_id, uint16_t paletteIndexA, uint16_t paletteIndexB, float fade);
 void display_one_ButtonLED(uint8_t LED_id);

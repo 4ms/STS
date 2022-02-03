@@ -28,10 +28,10 @@
 
 #pragma once
 
-#include <stm32f4xx.h>
 #include "sample_file.h"
+#include <stm32f4xx.h>
 
-enum AssignmentStates{
+enum AssignmentStates {
 	ASSIGN_OFF,
 	ASSIGN_IN_FOLDER,
 	ASSIGN_UNUSED_IN_ROOT,
@@ -40,7 +40,6 @@ enum AssignmentStates{
 
 	ASSIGN_BLANK
 };
-
 
 uint8_t enter_assignment_mode(void);
 void exit_assignment_mode(void);
@@ -52,7 +51,6 @@ uint8_t next_assigned_sample(void);
 
 FRESULT init_unassigned_scan(Sample *s_sample, uint8_t samplenum, uint8_t banknum);
 void init_assigned_scan(void);
-
 
 void copy_sample(uint8_t dst_bank, uint8_t dst_sample, uint8_t src_bank, uint8_t src_sample);
 

@@ -28,18 +28,16 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "audio_sdram.h"
-#include "sampler.h"
-#include "globals.h"
-#include "adc.h"
-#include "params.h"
-#include "timekeeper.h"
 #include "dig_pins.h"
+#include "adc.h"
+#include "audio_sdram.h"
 #include "buttons.h"
+#include "globals.h"
+#include "params.h"
+#include "sampler.h"
+#include "timekeeper.h"
 
-
-uint8_t get_PCB_version(void)
-{
+uint8_t get_PCB_version(void) {
 	uint8_t pulled_up, pulled_down;
 
 	GPIO_InitTypeDef gpio;
@@ -65,26 +63,26 @@ uint8_t get_PCB_version(void)
 	delay_ms(20);
 	pulled_down = PCBVERSION_A ? 1 : 0;
 
-	if (pulled_up && pulled_down) return(1); //always high: PCB version 1.1
-	if (pulled_up && !pulled_down) return(0); //floating: PCB version 1.0
+	if (pulled_up && pulled_down)
+		return (1); //always high: PCB version 1.1
+	if (pulled_up && !pulled_down)
+		return (0); //floating: PCB version 1.0
 
-	if (!pulled_up && !pulled_down) return(2); //always low: reserved for future PCB version
-	if (!pulled_up && pulled_down) return(0xFF); //high when pulled low, low when pulled high: invalid
+	if (!pulled_up && !pulled_down)
+		return (2); //always low: reserved for future PCB version
+	if (!pulled_up && pulled_down)
+		return (0xFF); //high when pulled low, low when pulled high: invalid
 
-	return(0xFF); //unknown version
-
+	return (0xFF); //unknown version
 }
 
-void deinit_dig_inouts(void)
-{
+void deinit_dig_inouts(void) {
 	RCC_AHB1PeriphClockCmd(ALL_GPIO_RCC, DISABLE);
 	RCC_DeInit();
-
 }
-void init_dig_inouts(void){
+void init_dig_inouts(void) {
 	GPIO_InitTypeDef gpio;
 	GPIO_StructInit(&gpio);
-
 
 	RCC_AHB1PeriphClockCmd(ALL_GPIO_RCC, ENABLE);
 
@@ -93,26 +91,39 @@ void init_dig_inouts(void){
 	gpio.GPIO_Speed = GPIO_Low_Speed;
 	gpio.GPIO_PuPd = GPIO_PuPd_UP;
 
-
 	//Buttons
-	gpio.GPIO_Pin = REV1BUT_pin;	GPIO_Init(REV1BUT_GPIO, &gpio);
-	gpio.GPIO_Pin = REV2BUT_pin;	GPIO_Init(REV2BUT_GPIO, &gpio);
-	gpio.GPIO_Pin = PLAY1BUT_pin;	GPIO_Init(PLAY1BUT_GPIO, &gpio);
-	gpio.GPIO_Pin = PLAY2BUT_pin;	GPIO_Init(PLAY2BUT_GPIO, &gpio);
-	gpio.GPIO_Pin = RECBUT_pin;	GPIO_Init(RECBUT_GPIO, &gpio);
-	gpio.GPIO_Pin = BANK1BUT_pin;	GPIO_Init(BANK1BUT_GPIO, &gpio);
-	gpio.GPIO_Pin = BANK2BUT_pin;	GPIO_Init(BANK2BUT_GPIO, &gpio);
-	gpio.GPIO_Pin = BANKRECBUT_pin;	GPIO_Init(BANKRECBUT_GPIO, &gpio);
-	gpio.GPIO_Pin = EDIT_BUTTON_pin;	GPIO_Init(EDIT_BUTTON_GPIO, &gpio);
+	gpio.GPIO_Pin = REV1BUT_pin;
+	GPIO_Init(REV1BUT_GPIO, &gpio);
+	gpio.GPIO_Pin = REV2BUT_pin;
+	GPIO_Init(REV2BUT_GPIO, &gpio);
+	gpio.GPIO_Pin = PLAY1BUT_pin;
+	GPIO_Init(PLAY1BUT_GPIO, &gpio);
+	gpio.GPIO_Pin = PLAY2BUT_pin;
+	GPIO_Init(PLAY2BUT_GPIO, &gpio);
+	gpio.GPIO_Pin = RECBUT_pin;
+	GPIO_Init(RECBUT_GPIO, &gpio);
+	gpio.GPIO_Pin = BANK1BUT_pin;
+	GPIO_Init(BANK1BUT_GPIO, &gpio);
+	gpio.GPIO_Pin = BANK2BUT_pin;
+	GPIO_Init(BANK2BUT_GPIO, &gpio);
+	gpio.GPIO_Pin = BANKRECBUT_pin;
+	GPIO_Init(BANKRECBUT_GPIO, &gpio);
+	gpio.GPIO_Pin = EDIT_BUTTON_pin;
+	GPIO_Init(EDIT_BUTTON_GPIO, &gpio);
 
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
 	//Trigger input jacks
-	gpio.GPIO_Pin = PLAY1JACK_pin;	GPIO_Init(PLAY1JACK_GPIO, &gpio);
-	gpio.GPIO_Pin = PLAY2JACK_pin;	GPIO_Init(PLAY2JACK_GPIO, &gpio);
-	gpio.GPIO_Pin = RECTRIGJACK_pin; GPIO_Init(RECTRIGJACK_GPIO, &gpio);
-	gpio.GPIO_Pin = REV1JACK_pin;	GPIO_Init(REV1JACK_GPIO, &gpio);
-	gpio.GPIO_Pin = REV2JACK_pin;	GPIO_Init(REV2JACK_GPIO, &gpio);
+	gpio.GPIO_Pin = PLAY1JACK_pin;
+	GPIO_Init(PLAY1JACK_GPIO, &gpio);
+	gpio.GPIO_Pin = PLAY2JACK_pin;
+	GPIO_Init(PLAY2JACK_GPIO, &gpio);
+	gpio.GPIO_Pin = RECTRIGJACK_pin;
+	GPIO_Init(RECTRIGJACK_GPIO, &gpio);
+	gpio.GPIO_Pin = REV1JACK_pin;
+	GPIO_Init(REV1JACK_GPIO, &gpio);
+	gpio.GPIO_Pin = REV2JACK_pin;
+	GPIO_Init(REV2JACK_GPIO, &gpio);
 
 	//Configure outputs
 	gpio.GPIO_Mode = GPIO_Mode_OUT;
@@ -120,37 +131,46 @@ void init_dig_inouts(void){
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 
 	//Trigger Out jacks
-	gpio.GPIO_Pin = ENDOUT1_pin;	GPIO_Init(ENDOUT1_GPIO, &gpio);
-	gpio.GPIO_Pin = ENDOUT2_pin;	GPIO_Init(ENDOUT2_GPIO, &gpio);
+	gpio.GPIO_Pin = ENDOUT1_pin;
+	GPIO_Init(ENDOUT1_GPIO, &gpio);
+	gpio.GPIO_Pin = ENDOUT2_pin;
+	GPIO_Init(ENDOUT2_GPIO, &gpio);
 
-	gpio.GPIO_Pin = EDIT_BUTTONREF_pin;	GPIO_Init(EDIT_BUTTONREF_GPIO, &gpio);
+	gpio.GPIO_Pin = EDIT_BUTTONREF_pin;
+	GPIO_Init(EDIT_BUTTONREF_GPIO, &gpio);
 	EDIT_BUTTONREF_OFF;
 
 	//LEDs
-	gpio.GPIO_Pin = PLAYLED1_pin;	GPIO_Init(PLAYLED1_GPIO, &gpio);
-	gpio.GPIO_Pin = PLAYLED2_pin;	GPIO_Init(PLAYLED2_GPIO, &gpio);
-	gpio.GPIO_Pin = SIGNALLED_pin;	GPIO_Init(SIGNALLED_GPIO, &gpio);
-	gpio.GPIO_Pin = BUSYLED_pin;	GPIO_Init(BUSYLED_GPIO, &gpio);
-	
+	gpio.GPIO_Pin = PLAYLED1_pin;
+	GPIO_Init(PLAYLED1_GPIO, &gpio);
+	gpio.GPIO_Pin = PLAYLED2_pin;
+	GPIO_Init(PLAYLED2_GPIO, &gpio);
+	gpio.GPIO_Pin = SIGNALLED_pin;
+	GPIO_Init(SIGNALLED_GPIO, &gpio);
+	gpio.GPIO_Pin = BUSYLED_pin;
+	GPIO_Init(BUSYLED_GPIO, &gpio);
+
 	PLAYLED1_OFF;
 	PLAYLED2_OFF;
 	SIGNALLED_OFF;
 	BUSYLED_OFF;
 
 	//DEBUG pins
-	gpio.GPIO_Pin = DEBUG0;	GPIO_Init(DEBUG0_GPIO, &gpio);
-	gpio.GPIO_Pin = DEBUG1;	GPIO_Init(DEBUG1_GPIO, &gpio);
-	gpio.GPIO_Pin = DEBUG2;	GPIO_Init(DEBUG2_GPIO, &gpio);
-	gpio.GPIO_Pin = DEBUG3;	GPIO_Init(DEBUG3_GPIO, &gpio);
+	gpio.GPIO_Pin = DEBUG0;
+	GPIO_Init(DEBUG0_GPIO, &gpio);
+	gpio.GPIO_Pin = DEBUG1;
+	GPIO_Init(DEBUG1_GPIO, &gpio);
+	gpio.GPIO_Pin = DEBUG2;
+	GPIO_Init(DEBUG2_GPIO, &gpio);
+	gpio.GPIO_Pin = DEBUG3;
+	GPIO_Init(DEBUG3_GPIO, &gpio);
 	DEBUG0_OFF;
 	DEBUG1_OFF;
 	DEBUG2_OFF;
 	DEBUG3_OFF;
-
 }
 
-void test_dig_inouts(void)
-{
+void test_dig_inouts(void) {
 	uint32_t t;
 
 	DEBUG0_ON;
@@ -183,58 +203,68 @@ void test_dig_inouts(void)
 	ENDOUT2_ON;
 	ENDOUT2_OFF;
 
-
-	t=REV1BUT;
-	if (t) PLAYLED1_ON;
+	t = REV1BUT;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=REV2BUT;
-	if (t) PLAYLED1_ON;
+	t = REV2BUT;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=PLAY1BUT;
-	if (t) PLAYLED1_ON;
+	t = PLAY1BUT;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=PLAY2BUT;
-	if (t) PLAYLED1_ON;
+	t = PLAY2BUT;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=RECBUT;
-	if (t) PLAYLED1_ON;
+	t = RECBUT;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=BANK1BUT;
-	if (t) PLAYLED1_ON;
+	t = BANK1BUT;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=BANK2BUT;
-	if (t) PLAYLED1_ON;
+	t = BANK2BUT;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=BANKRECBUT;
-	if (t) PLAYLED1_ON;
+	t = BANKRECBUT;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=REV1JACK;
-	if (t) PLAYLED1_ON;
+	t = REV1JACK;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=REV2JACK;
-	if (t) PLAYLED1_ON;
+	t = REV2JACK;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=PLAY1JACK;
-	if (t) PLAYLED1_ON;
+	t = PLAY1JACK;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=PLAY2JACK;
-	if (t) PLAYLED1_ON;
+	t = PLAY2JACK;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 
-	t=RECTRIGJACK;
-	if (t) PLAYLED1_ON;
+	t = RECTRIGJACK;
+	if (t)
+		PLAYLED1_ON;
 	PLAYLED1_OFF;
 }
-
-

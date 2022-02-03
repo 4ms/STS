@@ -41,7 +41,4 @@
 =-864691128455135232
 */
 
-
 void init_compressor(uint32_t max_sample_val, float threshold_percent);
-
-

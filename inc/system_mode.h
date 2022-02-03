@@ -37,6 +37,3 @@ void update_system_mode_leds(void);
 void update_system_mode_button_leds(void);
 void save_globals_undo_state(void);
 void restore_globals_undo_state(void);
-
-
-
