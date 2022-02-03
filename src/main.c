@@ -52,12 +52,14 @@
 #include "rgb_leds.h"
 #include "sampler.h"
 #include "bank.h"
-#include "sts_fs_index.h"
 #include "sts_filesystem.h"
-#include "sts_fs_index.h"
+#include "sts_sampleindex.h"
 #include "system_mode.h"
 #include "timekeeper.h"
 #include "user_settings.h"
+#include "fatfs_util.h"
+#include "wav_recording.h"
+#include "stm32f4_discovery_sdio_sd.h"
 
 #define HAS_BOOTLOADER
 
@@ -206,11 +208,11 @@ int main(void) {
     global_mode[CALIBRATE] = 1;
   }
 	
-	else if (VIDEO_DIM_BUTTONS)
-	{
-		global_mode[VIDEO_DIM] = 7;
-		system_calibrations->led_brightness = 1;
-	}
+  else if (VIDEO_DIM_BUTTONS)
+  {
+	global_mode[VIDEO_DIM] = 7;
+	system_calibrations->led_brightness = 1;
+  }
   // First boot: Run a hardware test, calibrate, and do a factory reset
   else if (!valid_fw_version ||
            (system_calibrations->major_firmware_version <
