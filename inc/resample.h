@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "circular_buffer.h"
 #include <stm32f4xx.h>
 
 void resample_read16_left(

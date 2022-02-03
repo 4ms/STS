@@ -26,7 +26,7 @@
  * -----------------------------------------------------------------------------
  */
 #pragma once
-
+#include "circular_buffer.h"
 #include <stm32f4xx.h>
 
 uint32_t map_cache_to_buffer(

@@ -27,6 +27,7 @@
  */
 
 #pragma once
+#include <stm32f4xx.h>
 
 //void ITM_Init(uint32_t SWOSpeed);
 void ITM_SendValue(int port, uint32_t value);
