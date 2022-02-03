@@ -383,7 +383,7 @@ uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt) {
 
 		//round float_val to nearest integer
 		cv_adcval = (uint32_t)float_val;
-		if ((float_val - cv_adcval) >= 0.5)
+		if ((float_val - cv_adcval) >= 0.5f)
 			cv_adcval++;
 
 		cv_adcval += 2048;
@@ -393,7 +393,7 @@ uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt) {
 
 		//round float_val to nearest integer
 		cv_adcval = (uint32_t)float_val;
-		if ((float_val - cv_adcval) >= 0.5)
+		if ((float_val - cv_adcval) >= 0.5f)
 			cv_adcval++;
 
 		cv_adcval = 2048 - cv_adcval;
@@ -409,8 +409,8 @@ uint32_t apply_tracking_compensation(int32_t cv_adcval, float cal_amt) {
 // Returns a semitone-quantized tuning amount, given an ADC value
 //
 #define TWELFTH_ROOT_TWO 1.059463094
-#define SEMITONE_ADC_WIDTH 34.0
-#define OCTAVE_ADC_WIDTH (SEMITONE_ADC_WIDTH * 12.0)
+#define SEMITONE_ADC_WIDTH 34.0f
+#define OCTAVE_ADC_WIDTH (SEMITONE_ADC_WIDTH * 12.f)
 
 float quantized_semitone_voct(uint32_t adcval) {
 	int8_t oct;
@@ -442,7 +442,7 @@ float quantized_semitone_voct(uint32_t adcval) {
 			oct_mult >>= 1; //drop down an octave
 		}
 
-		root_adc_midpt = root_adc - (SEMITONE_ADC_WIDTH / 2.0);
+		root_adc_midpt = root_adc - (SEMITONE_ADC_WIDTH / 2.f);
 		semitone_mult = 1.0;
 		for (semitone = 0; semitone < 12; semitone++) {
 			if (adcval > (root_adc_midpt - (int32_t)(SEMITONE_ADC_WIDTH * (float)semitone)))
@@ -462,7 +462,7 @@ float quantized_semitone_voct(uint32_t adcval) {
 			octave_mult = octave_mult / 2; //drop down an octave
 		}
 
-		root_adc_midpt = root_adc - (SEMITONE_ADC_WIDTH / 2.0);
+		root_adc_midpt = root_adc - (SEMITONE_ADC_WIDTH / 2.f);
 		semitone_mult = 1.0;
 		for (semitone = 0; semitone < 12; semitone++) {
 			if (adcval > (root_adc_midpt - (int32_t)(SEMITONE_ADC_WIDTH * (float)semitone)))
@@ -542,11 +542,11 @@ void update_params(void) {
 		//
 		if (pot_changed[SAMPLE2_POT]) {
 			if (bracketed_potadc[SAMPLE2_POT] < 2020)
-				t_f = (bracketed_potadc[SAMPLE2_POT] / 2244.44f) + 0.1; //0.1 to 1.0
+				t_f = (bracketed_potadc[SAMPLE2_POT] / 2244.44f) + 0.1f; //0.1 to 1.0
 			else if (bracketed_potadc[SAMPLE2_POT] < 2080)
-				t_f = 1.0;
+				t_f = 1.0f;
 			else
-				t_f = (bracketed_potadc[SAMPLE2_POT] - 1577.5) / 503.5f; //1.0 to 5.0
+				t_f = (bracketed_potadc[SAMPLE2_POT] - 1577.5f) / 503.5f; //1.0 to 5.0
 			set_sample_gain(&samples[banknum][samplenum], t_f);
 		}
 
@@ -818,13 +818,13 @@ void update_params(void) {
 		// Update the volume param when the combo is active
 		if (vol_bkc->combo_state == COMBO_ACTIVE) {
 			if (!vol_bkc->value_crossed) {
-				t_f = f_param[chan][VOLUME] - (bracketed_potadc[START1_POT + chan] / 4096.0);
+				t_f = f_param[chan][VOLUME] - (bracketed_potadc[START1_POT + chan] / 4096.f);
 
 				//Value-crossing enables VOLUME
 				//Just because combo is active, doesn't mean we're updating the volume param yet..
 				//...we have to get within +/-4% of current volume before we start tracking the pot
 				//...this prevents volume pops when the combo begins
-				if (t_f > -0.04 && t_f < 0.04)
+				if (t_f > -0.04f && t_f < 0.04f)
 					vol_bkc->value_crossed = 1;
 			}
 			if (vol_bkc->value_crossed)
@@ -1098,7 +1098,7 @@ uint32_t calc_trig_delay(uint8_t trig_delay_setting) {
 		if (trig_delay_setting == 10)
 			return 360;
 		if (trig_delay_setting > 10)
-			return (trig_delay_settings * 72);
+			return (trig_delay_setting * 72);
 	}
 	return (0);
 }
