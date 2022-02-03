@@ -153,9 +153,8 @@ int main(void) {
 
   PCB_version = get_PCB_version();
 
-  if (PCB_version ==
-      0xFF) // invalid version: display error code: all LEDs on for a second
-  {
+  if (PCB_version == 0xFF) {
+  	// invalid version: display error code: all LEDs on for a second
     timeout_boot = 0x08000000;
     PLAYLED1_ON;
     PLAYLED2_ON;
@@ -180,6 +179,7 @@ int main(void) {
 
   if (HARDWARETEST_BUTTONS)
     do_hardware_test();
+
   delay();
 
   timeout_boot = 0x00800000;
@@ -208,7 +208,6 @@ int main(void) {
     flags[SkipProcessButtons] = 1;
     global_mode[CALIBRATE] = 1;
   }
-	
   else if (VIDEO_DIM_BUTTONS)
   {
 	global_mode[VIDEO_DIM] = 7;
@@ -216,14 +215,12 @@ int main(void) {
   }
   // First boot: Run a hardware test, calibrate, and do a factory reset
   else if (!valid_fw_version ||
-           (system_calibrations->major_firmware_version <
-            FORCE_CAL_UNDER_FW_MAJOR_VERSION) ||
-           ((system_calibrations->major_firmware_version ==
-             FORCE_CAL_UNDER_FW_MAJOR_VERSION) &&
+           (system_calibrations->major_firmware_version < FORCE_CAL_UNDER_FW_MAJOR_VERSION) ||
+           ((system_calibrations->major_firmware_version == FORCE_CAL_UNDER_FW_MAJOR_VERSION) &&
+            system_calibrations->minor_firmware_version < FORCE_CAL_UNDER_FW_MINOR_VERSION))
+  {
             system_calibrations->minor_firmware_version <
-                FORCE_CAL_UNDER_FW_MINOR_VERSION)) {
     LEDDRIVER_OUTPUTENABLE_ON;
-
 
     if (do_hardware_test()) {
       global_mode[CALIBRATE] = 1;
