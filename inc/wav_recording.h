@@ -28,10 +28,11 @@
 
 #pragma once
 
+#include "ff.h"
+#include <stm32f4xx.h>
+
 #define WAV_COMMENT "Recorded on a 4ms Stereo Triggered Sampler" // goes into wav info chunk and id3 tag
 #define WAV_SOFTWARE "4ms Stereo Triggered Sampler firmware v"	 //	goes into wav info chunk and id3 tag
-
-#include <stm32f4xx.h>
 
 enum RecStates {
 	REC_OFF,
