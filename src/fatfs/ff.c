@@ -1791,8 +1791,8 @@ void gen_numname (
 		c = (BYTE)((seq % 16) + '0');
 		if (c > '9') c += 7;
 		ns[i--] = c;
-		seq /= 16;
-	} while (seq);
+		seq /= 16; //shift 4, can be done a max of 8 times for 32-bit seq with no leading zero hex digits
+	} while (seq && i); // && i added by DG 2021-02-03. Fixes crash when seq > 0x0FFFFFFF causes next line to be ns[0xFFFFFFFF] = '~';
 	ns[i] = '~';
 
 	/* Append the number */
