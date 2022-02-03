@@ -30,23 +30,9 @@
 
 #include <stm32f4xx.h>
 
-enum TriggerJacks {
-	TrigJack_Play1,
-	TrigJack_Play2,
-	TrigJack_Rec,
-	TrigJack_Rev1,
-	TrigJack_Rev2,
-	NUM_TRIG_JACKS
-};
+enum TriggerJacks { TrigJack_Play1, TrigJack_Play2, TrigJack_Rec, TrigJack_Rev1, TrigJack_Rev2, NUM_TRIG_JACKS };
 
-enum TriggerStates {
-	TrigJack_UP,
-	TrigJack_DOWN
-};
-
-
+enum TriggerStates { TrigJack_UP, TrigJack_DOWN };
 
 #define Trigger_Jack_Debounce_IRQHandler TIM5_IRQHandler
 #define TrigJack_TIM TIM5
-
-

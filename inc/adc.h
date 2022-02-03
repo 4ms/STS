@@ -6,7 +6,6 @@
 
 #include <stm32f4xx.h>
 
-
 enum PotADCs {
 	PITCH1_POT,
 	PITCH2_POT,
@@ -30,7 +29,7 @@ enum CVADCs {
 	LENGTH2_CV,
 	SAMPLE1_CV,
 	SAMPLE2_CV,
-	
+
 	NUM_CV_ADCS
 };
 

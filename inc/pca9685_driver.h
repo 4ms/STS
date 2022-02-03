@@ -38,37 +38,32 @@
  */
 
 /* I2C peripheral configuration defines (control interface of the audio codec) */
-#define LEDDRIVER_I2C                      I2C1
-#define LEDDRIVER_I2C_CLK                  RCC_APB1Periph_I2C1
-#define LEDDRIVER_I2C_GPIO_CLOCK           RCC_AHB1Periph_GPIOB
-#define LEDDRIVER_I2C_GPIO_AF              GPIO_AF_I2C1
-#define LEDDRIVER_I2C_GPIO                 GPIOB
-#define LEDDRIVER_I2C_SCL_PIN              GPIO_Pin_8
-#define LEDDRIVER_I2C_SDA_PIN              GPIO_Pin_9
-#define LEDDRIVER_I2S_SCL_PINSRC           GPIO_PinSource8
-#define LEDDRIVER_I2S_SDA_PINSRC           GPIO_PinSource9
+#define LEDDRIVER_I2C I2C1
+#define LEDDRIVER_I2C_CLK RCC_APB1Periph_I2C1
+#define LEDDRIVER_I2C_GPIO_CLOCK RCC_AHB1Periph_GPIOB
+#define LEDDRIVER_I2C_GPIO_AF GPIO_AF_I2C1
+#define LEDDRIVER_I2C_GPIO GPIOB
+#define LEDDRIVER_I2C_SCL_PIN GPIO_Pin_8
+#define LEDDRIVER_I2C_SDA_PIN GPIO_Pin_9
+#define LEDDRIVER_I2S_SCL_PINSRC GPIO_PinSource8
+#define LEDDRIVER_I2S_SDA_PINSRC GPIO_PinSource9
 
 #define LEDDRIVER_OUTPUTENABLE_pin GPIO_Pin_7
 #define LEDDRIVER_OUTPUTENABLE_GPIO GPIOB
 #define LEDDRIVER_OUTPUTENABLE_OFF LEDDRIVER_OUTPUTENABLE_GPIO->BSRRL = LEDDRIVER_OUTPUTENABLE_pin
 #define LEDDRIVER_OUTPUTENABLE_ON LEDDRIVER_OUTPUTENABLE_GPIO->BSRRH = LEDDRIVER_OUTPUTENABLE_pin
 
-#define I2C1_SPEED                        400000
+#define I2C1_SPEED 400000
 
-#define PCA9685_MODE1 0x00 // location for Mode1 register address
-#define PCA9685_MODE2 0x01 // location for Mode2 reigster address
-#define PCA9685_LED0 0x06 // location for start of LED0 registers
+#define PCA9685_MODE1 0x00	// location for Mode1 register address
+#define PCA9685_MODE2 0x01	// location for Mode2 reigster address
+#define PCA9685_LED0 0x06	// location for start of LED0 registers
 #define PRE_SCALE_MODE 0xFE //location for setting prescale (clock speed)
 
 #define PCA9685_I2C_BASE_ADDRESS 0b10000000
 
-#define LEDDRIVER_FLAG_TIMEOUT             ((uint32_t)0x1000)
-#define LEDDRIVER_LONG_TIMEOUT             ((uint32_t)(300 * LEDDRIVER_FLAG_TIMEOUT))
-
-
-
-
-
+#define LEDDRIVER_FLAG_TIMEOUT ((uint32_t)0x1000)
+#define LEDDRIVER_LONG_TIMEOUT ((uint32_t)(300 * LEDDRIVER_FLAG_TIMEOUT))
 
 void LEDDriver_set_one_LED(uint8_t led_number, uint16_t brightness);
 void LEDDriver_setRGBLED_10bit(uint8_t led_number, uint32_t rgb);

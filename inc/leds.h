@@ -36,6 +36,3 @@ void flicker_endout(uint8_t chan, float play_time);
 
 void blink_all_lights(uint32_t delaytime);
 void chase_all_lights(uint32_t delaytime);
-
-
-

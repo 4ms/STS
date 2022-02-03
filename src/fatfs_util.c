@@ -27,24 +27,21 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "globals.h"
 #include "fatfs_util.h"
+#include "globals.h"
 
 extern FATFS FatFs;
 extern enum g_Errors g_error;
 
-
-FRESULT reload_sdcard(void)
-{
+FRESULT reload_sdcard(void) {
 	FRESULT res;
 
 	res = f_mount(&FatFs, "", 1);
-	if (res != FR_OK)
-	{
+	if (res != FR_OK) {
 		//can't mount
 		g_error |= SDCARD_CANT_MOUNT;
 		res = f_mount(&FatFs, "", 0);
-		return(FR_DISK_ERR);
+		return (FR_DISK_ERR);
 	}
 	return (FR_OK);
 }
@@ -55,8 +52,7 @@ FRESULT reload_sdcard(void)
 #define SZ_TBL 256
 CCMDATA DWORD chan_clmt[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK][SZ_TBL];
 
-FRESULT create_linkmap(FIL *fil, uint8_t chan, uint8_t samplenum)
-{
+FRESULT create_linkmap(FIL *fil, uint8_t chan, uint8_t samplenum) {
 	FRESULT res;
 
 	fil->cltbl = chan_clmt[chan][samplenum];

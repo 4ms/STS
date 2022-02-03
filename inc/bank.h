@@ -27,9 +27,9 @@
  */
 #pragma once
 
-#include <stm32f4xx.h>
 #include "ff.h"
 #include "sample_file.h"
+#include <stm32f4xx.h>
 
 void bump_down_banks(uint8_t bank);
 
@@ -53,14 +53,12 @@ uint8_t prev_enabled_bank(uint8_t bank);
 uint8_t prev_enabled_bank_0xFF(uint8_t bank);
 uint8_t prev_disabled_bank(uint8_t bank);
 
-void 	check_enabled_banks(void);
+void check_enabled_banks(void);
 uint8_t is_bank_enabled(uint8_t bank);
-void 	enable_bank(uint8_t bank);
-void 	disable_bank(uint8_t bank);
+void enable_bank(uint8_t bank);
+void disable_bank(uint8_t bank);
 
 uint8_t get_bank_color_digit(uint8_t bank);
 uint8_t get_bank_blink_digit(uint8_t bank);
 
 void init_banks(void);
-
-

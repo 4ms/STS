@@ -28,31 +28,30 @@
  * -----------------------------------------------------------------------------
  */
 
-
-#include "globals.h"
 #include "compressor.h"
+#include "globals.h"
 
 float MAX_SAMPLEVAL;
 float THRESHOLD_COMPILED;
 int32_t THRESHOLD_VALUE;
 
-void init_compressor(uint32_t max_sample_val, float threshold_percent)
-{
-	MAX_SAMPLEVAL=max_sample_val;
+void init_compressor(uint32_t max_sample_val, float threshold_percent) {
+	MAX_SAMPLEVAL = max_sample_val;
 
 	float m = (float)max_sample_val;
 	THRESHOLD_COMPILED = m * m * threshold_percent * (1.0 - threshold_percent);
 
-	THRESHOLD_VALUE = threshold_percent*max_sample_val;
+	THRESHOLD_VALUE = threshold_percent * max_sample_val;
 }
 
 extern inline int32_t compress(int32_t val);
 
-inline int32_t compress(int32_t val)
-{
+inline int32_t compress(int32_t val) {
 	float tv = THRESHOLD_COMPILED / ((float)val);
-	if (val > THRESHOLD_VALUE) return (MAX_SAMPLEVAL - tv);
-	else if (val < -THRESHOLD_VALUE) return (-MAX_SAMPLEVAL - tv);
-	else return val;
-
+	if (val > THRESHOLD_VALUE)
+		return (MAX_SAMPLEVAL - tv);
+	else if (val < -THRESHOLD_VALUE)
+		return (-MAX_SAMPLEVAL - tv);
+	else
+		return val;
 }

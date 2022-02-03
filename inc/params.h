@@ -37,67 +37,29 @@
 // f_ChannelParams are float values
 //
 
-enum i_ChannelParams{
-	BANK,
-	SAMPLE,
-	REV,
-	LOOPING,
-	NUM_I_PARAMS
-};
+enum i_ChannelParams { BANK, SAMPLE, REV, LOOPING, NUM_I_PARAMS };
 
-enum f_ChannelParams{
-	PITCH,
-	START,
-	LENGTH,
-	VOLUME,
-	NUM_F_PARAMS
-};
+enum f_ChannelParams { PITCH, START, LENGTH, VOLUME, NUM_F_PARAMS };
 
 //ChannelPots is just a shortcut to help us with params, and must match the order in adc.h
-enum ChannelPots{
-	PITCH_POT,
-	START_POT,
-	LENGTH_POT,
-	SAMPLE_POT
-};
-enum ChannelCVs{
-	PITCH_CV,
-	START_CV,
-	LENGTH_CV,
-	SAMPLE_CV
-};
+enum ChannelPots { PITCH_POT, START_POT, LENGTH_POT, SAMPLE_POT };
+enum ChannelCVs { PITCH_CV, START_CV, LENGTH_CV, SAMPLE_CV };
 
 //
 // Channel Settings are integer values related to states of operation
 //
 
-enum ChannelSettings{
-	GATETRIG_START,
-	GATETRIG_REV,
-	GATETRIG_ENDOUT,
-	NUM_CHAN_SETTINGS
-};
+enum ChannelSettings { GATETRIG_START, GATETRIG_REV, GATETRIG_ENDOUT, NUM_CHAN_SETTINGS };
 
+enum GateTrigTypes { GATE_MODE, TRIG_MODE };
 
-enum GateTrigTypes{
-	GATE_MODE,
-	TRIG_MODE
-};
-
-enum Stereo_Modes{
-	MONO,
-	STEREO_LEFT,
-	STEREO_RIGHT,
-	STEREO_AVERAGE
-};
-
+enum Stereo_Modes { MONO, STEREO_LEFT, STEREO_RIGHT, STEREO_AVERAGE };
 
 //
 //Global
 //Global Modes represent global states of functionality
 //
-enum GlobalModes
-{
+enum GlobalModes {
 	CALIBRATE, //calibration at the factory
 	SYSTEM_MODE,
 	MONITOR_RECORDING,
@@ -117,28 +79,15 @@ enum GlobalModes
 	STARTUPBANK_CH2,
 	TRIG_DELAY,
 	LED_COLOR_ADJUST, //led calibration
-	
-	VIDEO_DIM,	//dim button LEDs for shooting videos
+
+	VIDEO_DIM, //dim button LEDs for shooting videos
 
 	NUM_GLOBAL_MODES
 };
 
+enum AutoStopModes { AutoStop_OFF = 0, AutoStop_ALWAYS = 1, AutoStop_LOOPING = 2 };
 
-enum AutoStopModes
-{
-	AutoStop_OFF=0,
-	AutoStop_ALWAYS=1,
-	AutoStop_LOOPING=2
-};
-
-enum MonitorModes
-{
-	MONITOR_OFF		=	0b00,
-	MONITOR_BOTH	=	0b11,
-	MONITOR_LEFT	=	0b01,
-	MONITOR_RIGHT	=	0b10
-};
-
+enum MonitorModes { MONITOR_OFF = 0b00, MONITOR_BOTH = 0b11, MONITOR_LEFT = 0b01, MONITOR_RIGHT = 0b10 };
 
 // play_trig_delay / ONE_SECOND is the delay in sec from detecting a trigger to calling start_playing()
 // This is required to let Sample CV settle (due to the hardware LPF).
@@ -147,29 +96,18 @@ enum MonitorModes
 // This allows for a CV/gate sequencer to settle, and the internal LPF to settle, before using the new CV value
 // This reduces slew and "indecision" when a step is advanced on the sequencer
 
+enum RecordingSampleRates { REC_44K = 44100, REC_48K = 48000, REC_88K = 88200, REC_96K = 96000 };
 
-enum RecordingSampleRates
-{
-	REC_44K = 44100,
-	REC_48K = 48000,
-	REC_88K = 88200,
-	REC_96K = 96000
-};
-
-typedef struct GlobalParams
-{
-	uint32_t					play_trig_delay;
-	uint32_t					play_trig_latch_pitch_time;
-	enum RecordingSampleRates	record_sample_rate;
-	float						f_record_sample_rate; //pre-converted to float to speed up calculations
+typedef struct GlobalParams {
+	uint32_t play_trig_delay;
+	uint32_t play_trig_latch_pitch_time;
+	enum RecordingSampleRates record_sample_rate;
+	float f_record_sample_rate; //pre-converted to float to speed up calculations
 
 } GlobalParams;
 
-
-
-static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef)
-{
-	return (current_value * coef) + (new_value * (1.0f-coef));
+static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef) {
+	return (current_value * coef) + (new_value * (1.0f - coef));
 }
 float LowPassSmoothingFilter(float current_value, float new_value, float coef);
 
@@ -191,8 +129,5 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent);
 uint32_t calc_trig_delay(uint8_t trig_delay_setting);
 uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting);
 
-
 #define adc_param_update_IRQHandler TIM1_BRK_TIM9_IRQHandler
 void adc_param_update_IRQHandler(void);
-
-

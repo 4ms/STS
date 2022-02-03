@@ -26,22 +26,19 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "globals.h"
 #include "i2s.h"
-#include "dig_pins.h"
-#include "timekeeper.h"
-#include "codec.h"
 #include "audio_codec.h"
-
+#include "codec.h"
+#include "dig_pins.h"
+#include "globals.h"
+#include "timekeeper.h"
 
 DMA_InitTypeDef dma_tx, dma_rx;
 
 NVIC_InitTypeDef nvic_i2s2ext, NVIC_InitStructure;
 
-
 volatile int16_t tx_buffer[codec_BUFF_LEN];
 volatile int16_t rx_buffer[codec_BUFF_LEN];
-
 
 uint32_t tx_buffer_start, rx_buffer_start;
 
@@ -51,32 +48,24 @@ void set_codec_callback(void (*cb)(int16_t *, int16_t *)) {
 	audio_callback = cb;
 }
 
-
-void start_audio_stream(void)
-{
+void start_audio_stream(void) {
 	NVIC_EnableIRQ(AUDIO_I2S2_EXT_DMA_IRQ);
 }
-void stop_audio_stream(void)
-{
+void stop_audio_stream(void) {
 	NVIC_DisableIRQ(AUDIO_I2S2_EXT_DMA_IRQ);
 }
 
-void start_audio_clock_source(void)
-{
+void start_audio_clock_source(void) {
 	RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
 	RCC_PLLI2SCmd(ENABLE);
 }
-void stop_audio_clock_source(void){
+void stop_audio_clock_source(void) {
 
 	RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
 	RCC_PLLI2SCmd(DISABLE);
 }
 
-
-
-
-void init_audio_dma(void)
-{
+void init_audio_dma(void) {
 	uint32_t Size = codec_BUFF_LEN;
 
 	//Enable DMA clock
@@ -130,8 +119,7 @@ void init_audio_dma(void)
 	dma_rx.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
 	DMA_Init(AUDIO_I2S2_EXT_DMA_STREAM, &dma_rx);
 
-
-	// Configure interrupt for RX 
+	// Configure interrupt for RX
 	DMA_ITConfig(AUDIO_I2S2_EXT_DMA_STREAM, DMA_IT_TC | DMA_IT_HT | DMA_IT_FE | DMA_IT_TE | DMA_IT_DME, ENABLE);
 
 	nvic_i2s2ext.NVIC_IRQChannel = AUDIO_I2S2_EXT_DMA_IRQ;
@@ -157,14 +145,11 @@ void init_audio_dma(void)
 
 	I2S_Cmd(CODEC_I2S, ENABLE);
 	I2S_Cmd(CODEC_I2S_EXT, ENABLE);
-
 }
 
-
-void deinit_audio_dma(void)
-{
+void deinit_audio_dma(void) {
 	//don't disable DMA1 because other periphs are using it
-	//RCC_AHB1PeriphClockCmd(AUDIO_I2S2_DMA_CLOCK, DISABLE); 
+	//RCC_AHB1PeriphClockCmd(AUDIO_I2S2_DMA_CLOCK, DISABLE);
 
 	//Disable the interrupt for audio DMA
 	stop_audio_stream();
@@ -182,8 +167,7 @@ void deinit_audio_dma(void)
 
 	deinit_i2s();
 }
-void deinit_i2s(void)
-{
+void deinit_i2s(void) {
 	I2S_Cmd(CODEC_I2S, DISABLE);
 	I2S_Cmd(CODEC_I2S_EXT, DISABLE);
 
@@ -191,37 +175,33 @@ void deinit_i2s(void)
 	RCC_APB1PeriphClockCmd(CODEC_I2S_CLK, DISABLE);
 }
 
-
-
 //
 // I2S2 DMA interrupt for RX data
 //
-void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
-{
+void AUDIO_I2S2_EXT_DMA_IRQHandler(void) {
 	int16_t *src, *dst, sz;
-	uint32_t err=0;
+	uint32_t err = 0;
 
 	//DEBUG0_ON;
 
 	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_FE) != RESET)
-		err=AUDIO_I2S2_EXT_DMA_FLAG_FE;
+		err = AUDIO_I2S2_EXT_DMA_FLAG_FE;
 
 	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_TE) != RESET)
-		err=AUDIO_I2S2_EXT_DMA_FLAG_TE;
+		err = AUDIO_I2S2_EXT_DMA_FLAG_TE;
 
 	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_DME) != RESET)
-		err=AUDIO_I2S2_EXT_DMA_FLAG_DME;
+		err = AUDIO_I2S2_EXT_DMA_FLAG_DME;
 
 	//if (err)
 	//	DEBUG3_ON; //debug breakpoint
 
 	/* Transfer complete interrupt */
-	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_TC) != RESET)
-	{
+	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_TC) != RESET) {
 		/* Point to 2nd half of buffers */
-		sz = codec_BUFF_LEN/2;
-		src = (int16_t *)(rx_buffer_start) +sz;
-		dst = (int16_t *)(tx_buffer_start) +sz;
+		sz = codec_BUFF_LEN / 2;
+		src = (int16_t *)(rx_buffer_start) + sz;
+		dst = (int16_t *)(tx_buffer_start) + sz;
 
 		audio_callback(src, dst);
 
@@ -229,10 +209,9 @@ void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 	}
 
 	/* Half Transfer complete interrupt */
-	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_HT) != RESET)
-	{
+	if (DMA_GetFlagStatus(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_HT) != RESET) {
 		/* Point to 1st half of buffers */
-		sz = codec_BUFF_LEN/2;
+		sz = codec_BUFF_LEN / 2;
 		src = (int16_t *)(rx_buffer_start);
 		dst = (int16_t *)(tx_buffer_start);
 
@@ -241,33 +220,28 @@ void AUDIO_I2S2_EXT_DMA_IRQHandler(void)
 		DMA_ClearFlag(AUDIO_I2S2_EXT_DMA_STREAM, AUDIO_I2S2_EXT_DMA_FLAG_HT);
 	}
 	//DEBUG0_OFF;
-
 }
 
 //
 // I2S2 DMA interrupt for TX data
 //
-void DMA1_Stream4_IRQHandler(void)
-{
-	uint32_t err=0;
+void DMA1_Stream4_IRQHandler(void) {
+	uint32_t err = 0;
 
-	if (DMA_GetFlagStatus(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_FE) != RESET){
-		err=AUDIO_I2S2_DMA_FLAG_FE;
+	if (DMA_GetFlagStatus(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_FE) != RESET) {
+		err = AUDIO_I2S2_DMA_FLAG_FE;
 		DMA_ClearFlag(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_FE);
 	}
 
-	if (DMA_GetFlagStatus(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_TE) != RESET){
-		err=AUDIO_I2S2_DMA_FLAG_TE;
+	if (DMA_GetFlagStatus(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_TE) != RESET) {
+		err = AUDIO_I2S2_DMA_FLAG_TE;
 		DMA_ClearFlag(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_TE);
 	}
 
-	if (DMA_GetFlagStatus(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_DME) != RESET){
-		err=AUDIO_I2S2_DMA_FLAG_DME;
+	if (DMA_GetFlagStatus(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_DME) != RESET) {
+		err = AUDIO_I2S2_DMA_FLAG_DME;
 		DMA_ClearFlag(AUDIO_I2S2_DMA_STREAM, AUDIO_I2S2_DMA_FLAG_DME);
 	}
-//	if (err)
-//		DEBUG3_ON; //debug breakpoint
-
-
+	//	if (err)
+	//		DEBUG3_ON; //debug breakpoint
 }
-

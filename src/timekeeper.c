@@ -26,19 +26,19 @@
  * -----------------------------------------------------------------------------
  */
 
-#include "globals.h"
 #include "timekeeper.h"
-#include "params.h"
 #include "calibration.h"
-#include "leds.h"
 #include "dig_pins.h"
+#include "globals.h"
+#include "leds.h"
+#include "params.h"
 
 volatile uint32_t sys_tmr;
 
-uint32_t get_fattime(void){
+uint32_t get_fattime(void) {
 	uint32_t secs, mins, hours, days, month;
 
-	secs = sys_tmr/ONE_SECOND;
+	secs = sys_tmr / ONE_SECOND;
 	mins = 10;
 	hours = 21;
 	days = 22;
@@ -56,32 +56,26 @@ uint32_t get_fattime(void){
 	month += days / 28;
 	days = days % 28; //February
 
-	return	  ((uint32_t)(2016 - 1980) << 25)
-			| ((uint32_t)month << 21)
-			| ((uint32_t)days << 16)
-			| ((uint32_t)hours << 11)
-			| ((uint32_t)mins << 5)
-			| ((uint32_t)secs >> 1);
+	return ((uint32_t)(2016 - 1980) << 25) | ((uint32_t)month << 21) | ((uint32_t)days << 16) |
+		   ((uint32_t)hours << 11) | ((uint32_t)mins << 5) | ((uint32_t)secs >> 1);
 }
 
-void SysTick_Handler(void)
-{
+void SysTick_Handler(void) {
 	sys_tmr++;
 }
 
-void init_timekeeper(void){
+void init_timekeeper(void) {
 	//Set Priority Grouping mode to 2-bits for priority and 2-bits for sub-priority
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
 
 	//Start SysTick
 	SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK);
-	SysTick_Config(SystemCoreClock / ONE_SECOND); //updates about the same as a 44.1kHz sample rate, so one sys_tmr value is one 22.6us
+	SysTick_Config(SystemCoreClock /
+				   ONE_SECOND); //updates about the same as a 44.1kHz sample rate, so one sys_tmr value is one 22.6us
 }
 
-
-void init_adc_param_update_IRQ(void)
-{
-	TIM_TimeBaseInitTypeDef  tim;
+void init_adc_param_update_IRQ(void) {
+	TIM_TimeBaseInitTypeDef tim;
 
 	NVIC_InitTypeDef nvic;
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM9, ENABLE);
@@ -105,9 +99,7 @@ void init_adc_param_update_IRQ(void)
 	TIM_Cmd(TIM9, ENABLE);
 }
 
-
-void init_LED_PWM_IRQ(void)
-{
+void init_LED_PWM_IRQ(void) {
 	TIM_TimeBaseInitTypeDef tim;
 	NVIC_InitTypeDef nvic;
 
@@ -130,9 +122,8 @@ void init_LED_PWM_IRQ(void)
 	TIM_Cmd(TIM2, ENABLE);
 }
 
-void init_ButtonDebounce_IRQ(void)
-{
-	TIM_TimeBaseInitTypeDef  tim;
+void init_ButtonDebounce_IRQ(void) {
+	TIM_TimeBaseInitTypeDef tim;
 
 	NVIC_InitTypeDef nvic;
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
@@ -155,9 +146,8 @@ void init_ButtonDebounce_IRQ(void)
 	TIM_Cmd(TIM4, ENABLE);
 }
 
-void init_ButtonLED_IRQ(void)
-{
-	TIM_TimeBaseInitTypeDef  tim;
+void init_ButtonLED_IRQ(void) {
+	TIM_TimeBaseInitTypeDef tim;
 
 	NVIC_InitTypeDef nvic;
 
@@ -168,7 +158,6 @@ void init_ButtonLED_IRQ(void)
 	nvic.NVIC_IRQChannelSubPriority = 2;
 	nvic.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&nvic);
-
 
 	//Run every 2ms (500Hz)
 	//Prescale = 11 --> 168MHz / 12 = 14MHz
@@ -189,9 +178,8 @@ void init_ButtonLED_IRQ(void)
 	TIM_Cmd(TIM10, ENABLE);
 }
 
-void init_TrigJackDebounce_IRQ(void)
-{
-	TIM_TimeBaseInitTypeDef  tim;
+void init_TrigJackDebounce_IRQ(void) {
+	TIM_TimeBaseInitTypeDef tim;
 
 	NVIC_InitTypeDef nvic;
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
@@ -214,9 +202,8 @@ void init_TrigJackDebounce_IRQ(void)
 	TIM_Cmd(TIM5, ENABLE);
 }
 
-void init_SDIO_read_IRQ(void)
-{
-	TIM_TimeBaseInitTypeDef  tim;
+void init_SDIO_read_IRQ(void) {
+	TIM_TimeBaseInitTypeDef tim;
 
 	NVIC_InitTypeDef nvic;
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM7, ENABLE);
@@ -229,7 +216,7 @@ void init_SDIO_read_IRQ(void)
 
 	TIM_TimeBaseStructInit(&tim);
 	//30000 --> 1.4kHz
-	tim.TIM_Period = 30000; 
+	tim.TIM_Period = 30000;
 	tim.TIM_Prescaler = 2;
 	tim.TIM_ClockDivision = 0;
 	tim.TIM_CounterMode = TIM_CounterMode_Up;

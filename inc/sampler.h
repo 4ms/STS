@@ -26,14 +26,12 @@
  * -----------------------------------------------------------------------------
  */
 
-
 #pragma once
 
-#include <stm32f4xx.h>
-#include "sample_file.h"
-#include "ff.h"
 #include "circular_buffer.h"
-
+#include "ff.h"
+#include "sample_file.h"
+#include <stm32f4xx.h>
 
 /* Playback states */
 enum PlayStates {
@@ -50,13 +48,9 @@ enum PlayStates {
 
 };
 
-enum PlayLoadTriage{
-	NO_PRIORITY,
-	PRIORITIZE_PLAYING
-};
+enum PlayLoadTriage { NO_PRIORITY, PRIORITIZE_PLAYING };
 #define SDIO_read_IRQHandler TIM7_IRQHandler
 #define SDIO_read_TIM TIM7
-
 
 //44.1k/16b/stereo@ pitch=1.0: the time from the first block read to the first sample of audio outputted:
 //(This is addition to the delay from the Trigger jack to the first block being read, around 16ms)
@@ -74,7 +68,7 @@ enum PlayLoadTriage{
 
 //READ_BLOCK_SIZE must be a multiple of all possible sample file block sizes
 //1(8m), 2(16m), 3(24m), 4(32m), 6(24s), 8(32s) ---> 24 is the lowest value
-//It also should be a multiple of 512, since the SD Card is arranged by 512 byte sectors 
+//It also should be a multiple of 512, since the SD Card is arranged by 512 byte sectors
 //9216 = 512 * 18 = 24 * 384
 #define READ_BLOCK_SIZE 9216
 
@@ -99,12 +93,10 @@ void check_change_sample(void);
 
 void init_changed_bank(uint8_t chan);
 
-
 //uint8_t preload_sample(uint32_t samplenum, FIL* sample_file);
 
 uint32_t calc_start_point(float start_param, Sample *sample);
 uint32_t calc_stop_point(float length_param, float resample_param, Sample *sample, uint32_t startpos);
-
 
 void clear_is_buffered_to_file_end(uint8_t chan);
 //void check_trim_bounds(void);

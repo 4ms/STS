@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include <stm32f4xx.h>
 #include "ff.h"
+#include <stm32f4xx.h>
 
 FRESULT reload_sdcard(void);
 FRESULT create_linkmap(FIL *fil, uint8_t chan, uint8_t samplenum);

@@ -17,7 +17,7 @@
   *
   * <h2><center>&copy; COPYRIGHT 2011 STMicroelectronics</center></h2>
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #pragma once
@@ -42,8 +42,8 @@
 //#include "stm32f4xx_fsmc.h"
 #include <stm32f4xx_fmc.h>
 //#include "stm32f4xx_hash.h"
-#include <stm32f4xx_gpio.h>
 #include "stm32f4xx_i2c.h"
+#include <stm32f4xx_gpio.h>
 //#include "stm32f4xx_iwdg.h"
 //#include "stm32f4xx_pwr.h"
 #include "stm32f4xx_rcc.h"
@@ -66,13 +66,12 @@
 //#define I2S_EXTERNAL_CLOCK_VAL   12288000  /* Value of the external clock in Hz */
 //#define I2S_EXTERNAL_CLOCK_VAL   7000000  /* Value of the external clock in Hz */
 
-
 /* Uncomment the line below to expanse the "assert_param" macro in the 
    Standard Peripheral Library drivers code */
 /* #define USE_FULL_ASSERT    1 */
 
 /* Exported macro ------------------------------------------------------------*/
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 
 /**
   * @brief  The assert_param macro is used for function's parameters check.
@@ -82,11 +81,11 @@
   *   If expr is true, it returns no value.
   * @retval None
   */
-  #define assert_param(expr) ((expr) ? (void)0 : assert_failed((uint8_t *)__FILE__, __LINE__))
+#define assert_param(expr) ((expr) ? (void)0 : assert_failed((uint8_t *)__FILE__, __LINE__))
 /* Exported functions ------------------------------------------------------- */
-  void assert_failed(uint8_t* file, uint32_t line);
+void assert_failed(uint8_t *file, uint32_t line);
 #else
-  #define assert_param(expr) ((void)0)
+#define assert_param(expr) ((void)0)
 #endif
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/

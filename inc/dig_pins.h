@@ -32,10 +32,9 @@
 
 #include <stm32f4xx.h>
 
-#define ALL_GPIO_RCC 	(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | \
-						RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD | \
-						RCC_AHB1Periph_GPIOE | RCC_AHB1Periph_GPIOF | \
-						RCC_AHB1Periph_GPIOG)
+#define ALL_GPIO_RCC                                                                                                   \
+	(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD |                       \
+	 RCC_AHB1Periph_GPIOE | RCC_AHB1Periph_GPIOF | RCC_AHB1Periph_GPIOG)
 //INPUTS
 
 //Buttons
@@ -101,7 +100,6 @@
 #define REV2JACK_GPIO GPIOG
 #define REV2JACK (REV2JACK_GPIO->IDR & REV2JACK_pin)
 
-
 //Trigger Out jacks
 
 #define ENDOUT1_pin GPIO_Pin_3
@@ -135,7 +133,6 @@
 #define BUSYLED_ON BUSYLED_GPIO->BSRRL = BUSYLED_pin
 #define BUSYLED_OFF BUSYLED_GPIO->BSRRH = BUSYLED_pin
 
-
 //Same pin as WS clock of I2S2 (LRCLK), as defined in codec.h
 #define EXTI_CLOCK_GPIO EXTI_PortSourceGPIOB
 #define EXTI_CLOCK_pin EXTI_PinSource12
@@ -143,11 +140,9 @@
 #define EXTI_CLOCK_IRQ EXTI15_10_IRQn
 #define EXTI_Handler EXTI15_10_IRQHandler
 
-
 #define PCBVERSION_A_pin GPIO_Pin_13
 #define PCBVERSION_A_GPIO GPIOC
 #define PCBVERSION_A (PCBVERSION_A_GPIO->IDR & PCBVERSION_A_pin)
-
 
 #define DEBUG0 GPIO_Pin_5
 #define DEBUG0_GPIO GPIOD
@@ -157,7 +152,6 @@
 #define DEBUG2_GPIO GPIOA
 #define DEBUG3 GPIO_Pin_7
 #define DEBUG3_GPIO GPIOC
-
 
 //DEBUG pins
 #ifdef DEBUG_ENABLED
@@ -184,12 +178,8 @@
 
 #endif
 
-
 void init_dig_inouts(void);
 void test_dig_inouts(void);
 void test_noise(void);
 void deinit_dig_inouts(void);
 uint8_t get_PCB_version(void);
-
-
-

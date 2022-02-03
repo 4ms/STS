@@ -26,40 +26,35 @@
  * -----------------------------------------------------------------------------
  */
 
-#include <stm32f4xx.h>
-#include "dig_pins.h"
 #include "pca9685_driver.h"
+#include "dig_pins.h"
 #include "globals.h"
+#include <stm32f4xx.h>
 
-
-#define delay_cycles(x)						\
-do {							\
-  register unsigned int i;				\
-  for (i = 0; i < x; ++i)				\
-    __asm__ __volatile__ ("nop\n\t":::"memory");	\
-} while (0)
+#define delay_cycles(x)                                                                                                \
+	do {                                                                                                               \
+		register unsigned int i;                                                                                       \
+		for (i = 0; i < x; ++i)                                                                                        \
+			__asm__ __volatile__("nop\n\t" ::: "memory");                                                              \
+	} while (0)
 
 //These arrays map the rgbled_number (which is a unique number assigned to each RGB LED component)
 //to the driver chip's led number of the first element (red) of the RGB LED.
 //It's assumed blue is driverRGBBaseElement[x]+1, and green is driverRGBBaseElement[i]+2.
-const uint8_t driverRGBBaseAddress[8] =	{0, 0, 0, 1, 1, 1, 1, 1};
-const uint8_t driverRGBBaseElement[8] =	{0, 3, 6, 0, 3, 6, 9, 12};
+const uint8_t driverRGBBaseAddress[8] = {0, 0, 0, 1, 1, 1, 1, 1};
+const uint8_t driverRGBBaseElement[8] = {0, 3, 6, 0, 3, 6, 9, 12};
 
 //If we are using discrete LEDs or if one RGB LED spans two driver chips, then we need use these arrays instead:
-const uint8_t driverAddress[24] =	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1,  1,  1,  1 };
-const uint8_t driverElement[24] =	{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
+const uint8_t driverAddress[24] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+const uint8_t driverElement[24] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 
-
-__IO uint32_t  LEDDriverTimeout = LEDDRIVER_LONG_TIMEOUT;
-
+__IO uint32_t LEDDriverTimeout = LEDDRIVER_LONG_TIMEOUT;
 
 static inline uint32_t LEDDriver_startxfer(uint8_t driverAddr);
 static inline uint32_t LEDDriver_senddata(uint8_t data);
 static inline void LEDDriver_endxfer(void);
 
-
-void LEDDriver_GPIO_Init(void)
-{
+void LEDDriver_GPIO_Init(void) {
 	GPIO_InitTypeDef GPIO_InitStructure;
 
 	/* Enable I2S and I2C GPIO clocks */
@@ -70,7 +65,7 @@ void LEDDriver_GPIO_Init(void)
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-	GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(LEDDRIVER_I2C_GPIO, &GPIO_InitStructure);
 
 	/* Connect pins to I2C peripheral */
@@ -81,12 +76,11 @@ void LEDDriver_GPIO_Init(void)
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_InitStructure.GPIO_Pin = LEDDRIVER_OUTPUTENABLE_pin;	GPIO_Init(LEDDRIVER_OUTPUTENABLE_GPIO, &GPIO_InitStructure);
-
+	GPIO_InitStructure.GPIO_Pin = LEDDRIVER_OUTPUTENABLE_pin;
+	GPIO_Init(LEDDRIVER_OUTPUTENABLE_GPIO, &GPIO_InitStructure);
 }
 
-void LEDDriver_I2C_Init(void)
-{
+void LEDDriver_I2C_Init(void) {
 	I2C_InitTypeDef I2C_InitStructure;
 
 	/* Enable the LEDDRIVER_I2C peripheral clock */
@@ -106,14 +100,12 @@ void LEDDriver_I2C_Init(void)
 	I2C_Init(LEDDRIVER_I2C, &I2C_InitStructure);
 }
 
-
-uint32_t LEDDRIVER_TIMEOUT_UserCallback(void)
-{
+uint32_t LEDDRIVER_TIMEOUT_UserCallback(void) {
 	/* nothing */
 	return 1;
 }
 
-uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8_t RegisterValue){
+uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8_t RegisterValue) {
 	uint32_t result = 0;
 
 	driverAddr = PCA9685_I2C_BASE_ADDRESS | (driverAddr << 1);
@@ -121,9 +113,8 @@ uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8
 
 	/*!< While the bus is busy */
 	LEDDriverTimeout = LEDDRIVER_LONG_TIMEOUT;
-	while(I2C_GetFlagStatus(LEDDRIVER_I2C, I2C_FLAG_BUSY))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (I2C_GetFlagStatus(LEDDRIVER_I2C, I2C_FLAG_BUSY)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 
@@ -131,9 +122,8 @@ uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8
 	I2C_GenerateSTART(LEDDRIVER_I2C, ENABLE);
 
 	LEDDriverTimeout = LEDDRIVER_FLAG_TIMEOUT;
-	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_MODE_SELECT))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_MODE_SELECT)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 
@@ -141,9 +131,8 @@ uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8
 	I2C_Send7bitAddress(LEDDRIVER_I2C, driverAddr, I2C_Direction_Transmitter);
 
 	LEDDriverTimeout = LEDDRIVER_FLAG_TIMEOUT;
-	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 
@@ -152,9 +141,8 @@ uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8
 
 	/* Test on EV8 and clear it */
 	LEDDriverTimeout = LEDDRIVER_FLAG_TIMEOUT;
-	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_BYTE_TRANSMITTING))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_BYTE_TRANSMITTING)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 
@@ -163,9 +151,8 @@ uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8
 
 	/*!< Wait till all data have been physically transferred on the bus */
 	LEDDriverTimeout = LEDDRIVER_LONG_TIMEOUT;
-	while(!I2C_GetFlagStatus(LEDDRIVER_I2C, I2C_FLAG_BTF))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (!I2C_GetFlagStatus(LEDDRIVER_I2C, I2C_FLAG_BTF)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 
@@ -176,17 +163,15 @@ uint32_t LEDDriver_writeregister(uint8_t driverAddr, uint8_t RegisterAddr, uint8
 	return result;
 }
 
-
-inline uint32_t LEDDriver_startxfer(uint8_t driverAddr){
-	uint32_t result=0;
+inline uint32_t LEDDriver_startxfer(uint8_t driverAddr) {
+	uint32_t result = 0;
 
 	driverAddr = PCA9685_I2C_BASE_ADDRESS | (driverAddr << 1);
 
 	/*!< While the bus is busy */
 	LEDDriverTimeout = LEDDRIVER_LONG_TIMEOUT;
-	while(I2C_GetFlagStatus(LEDDRIVER_I2C, I2C_FLAG_BUSY))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (I2C_GetFlagStatus(LEDDRIVER_I2C, I2C_FLAG_BUSY)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 
@@ -194,9 +179,8 @@ inline uint32_t LEDDriver_startxfer(uint8_t driverAddr){
 	I2C_GenerateSTART(LEDDRIVER_I2C, ENABLE);
 
 	LEDDriverTimeout = LEDDRIVER_FLAG_TIMEOUT;
-	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_MODE_SELECT))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_MODE_SELECT)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 
@@ -204,38 +188,32 @@ inline uint32_t LEDDriver_startxfer(uint8_t driverAddr){
 	I2C_Send7bitAddress(LEDDRIVER_I2C, driverAddr, I2C_Direction_Transmitter);
 
 	LEDDriverTimeout = LEDDRIVER_FLAG_TIMEOUT;
-	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 
 	return result;
 }
 
-inline uint32_t LEDDriver_senddata(uint8_t data){
-	uint32_t result=0;
+inline uint32_t LEDDriver_senddata(uint8_t data) {
+	uint32_t result = 0;
 
 	/* Transmit the data for write operation */
 	I2C_SendData(LEDDRIVER_I2C, data);
 
 	LEDDriverTimeout = LEDDRIVER_FLAG_TIMEOUT;
-	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_BYTE_TRANSMITTING))
-	{
-		if((LEDDriverTimeout--) == 0)
+	while (!I2C_CheckEvent(LEDDRIVER_I2C, I2C_EVENT_MASTER_BYTE_TRANSMITTING)) {
+		if ((LEDDriverTimeout--) == 0)
 			return LEDDRIVER_TIMEOUT_UserCallback();
 	}
 	return result;
-
 }
 
-inline void LEDDriver_endxfer(void){
+inline void LEDDriver_endxfer(void) {
 	/* End the configuration sequence */
 	I2C_GenerateSTOP(LEDDRIVER_I2C, ENABLE);
-
 }
-
-
 
 /*
  * Sets one LED element's brightness.
@@ -249,34 +227,33 @@ void LEDDriver_set_one_LED(uint8_t led_number, uint16_t brightness) //sets one L
 	driverAddr = driverAddress[led_number];
 	led_number = driverElement[led_number];
 
-	LEDDriver_startxfer(driverAddr); //20us
-	LEDDriver_senddata(PCA9685_LED0 + (led_number*4)); //4 registers per LED element
-	LEDDriver_senddata(0); //on-time = 0
+	LEDDriver_startxfer(driverAddr);					 //20us
+	LEDDriver_senddata(PCA9685_LED0 + (led_number * 4)); //4 registers per LED element
+	LEDDriver_senddata(0);								 //on-time = 0
 	LEDDriver_senddata(0);
 	LEDDriver_senddata(brightness & 0xFF); //off-time = brightness
 	LEDDriver_senddata(brightness >> 8);
 	LEDDriver_endxfer();
-
 }
 
 /*
  * Sets one RGB LED with a 10+10+10 bit color value
  */
-void LEDDriver_setRGBLED_10bit(uint8_t rgbled_number, uint32_t rgb){
+void LEDDriver_setRGBLED_10bit(uint8_t rgbled_number, uint32_t rgb) {
 	uint8_t driverAddr;
 	uint8_t led_number;
 
-	uint16_t c_red= (rgb >> 20) & 0b1111111111;
-	uint16_t c_green= (rgb >> 10) & 0b1111111111;
-	uint16_t c_blue= rgb & 0b1111111111;
+	uint16_t c_red = (rgb >> 20) & 0b1111111111;
+	uint16_t c_green = (rgb >> 10) & 0b1111111111;
+	uint16_t c_blue = rgb & 0b1111111111;
 
 	driverAddr = driverRGBBaseAddress[rgbled_number];
 	led_number = driverRGBBaseElement[rgbled_number];
 
 	LEDDriver_startxfer(driverAddr);
 
-	LEDDriver_senddata(PCA9685_LED0 + (led_number*4)); //4 registers per LED element
-	LEDDriver_senddata(0); //on-time = 0
+	LEDDriver_senddata(PCA9685_LED0 + (led_number * 4)); //4 registers per LED element
+	LEDDriver_senddata(0);								 //on-time = 0
 	LEDDriver_senddata(0);
 	LEDDriver_senddata(c_red & 0xFF); //off-time = brightness
 	LEDDriver_senddata(c_red >> 8);
@@ -292,22 +269,19 @@ void LEDDriver_setRGBLED_10bit(uint8_t rgbled_number, uint32_t rgb){
 	LEDDriver_senddata(c_blue >> 8);
 
 	LEDDriver_endxfer();
-
 }
 
-void LEDDriver_setRGBLED(uint8_t rgbled_number, int16_t c_red, int16_t c_green, int16_t c_blue)
-{
+void LEDDriver_setRGBLED(uint8_t rgbled_number, int16_t c_red, int16_t c_green, int16_t c_blue) {
 	uint8_t driverAddr;
 	uint8_t led_number;
-
 
 	driverAddr = driverRGBBaseAddress[rgbled_number];
 	led_number = driverRGBBaseElement[rgbled_number];
 
 	LEDDriver_startxfer(driverAddr);
 
-	LEDDriver_senddata(PCA9685_LED0 + (led_number*4)); //4 registers per LED element
-	LEDDriver_senddata(0); //on-time = 0
+	LEDDriver_senddata(PCA9685_LED0 + (led_number * 4)); //4 registers per LED element
+	LEDDriver_senddata(0);								 //on-time = 0
 	LEDDriver_senddata(0);
 	LEDDriver_senddata(c_red & 0xFF); //off-time = brightness
 	LEDDriver_senddata(c_red >> 8);
@@ -323,12 +297,9 @@ void LEDDriver_setRGBLED(uint8_t rgbled_number, int16_t c_red, int16_t c_green, 
 	LEDDriver_senddata(c_blue >> 8);
 
 	LEDDriver_endxfer();
-
-
 }
 
-void LEDDriver_Reset(uint8_t driverAddr){
-
+void LEDDriver_Reset(uint8_t driverAddr) {
 
 	LEDDriver_writeregister(driverAddr, PCA9685_MODE1, 0b00000000); // clear sleep mode
 
@@ -340,15 +311,12 @@ void LEDDriver_Reset(uint8_t driverAddr){
 
 	delay_cycles(20);
 
-	LEDDriver_writeregister(driverAddr, PCA9685_MODE1, 0b00100000);	//auto increment
+	LEDDriver_writeregister(driverAddr, PCA9685_MODE1, 0b00100000); //auto increment
 
-	LEDDriver_writeregister(driverAddr, PCA9685_MODE2, 0b00010001);	// INVERT=1, OUTDRV=0, OUTNE=01
-
-
-
+	LEDDriver_writeregister(driverAddr, PCA9685_MODE2, 0b00010001); // INVERT=1, OUTDRV=0, OUTNE=01
 }
 
-void LEDDriver_Init(uint8_t numdrivers){
+void LEDDriver_Init(uint8_t numdrivers) {
 
 	uint8_t i;
 
@@ -358,13 +326,7 @@ void LEDDriver_Init(uint8_t numdrivers){
 
 	LEDDriver_I2C_Init();
 
-	for (i=0;i<numdrivers;i++){
+	for (i = 0; i < numdrivers; i++) {
 		LEDDriver_Reset(i);
 	}
-
 }
-
-
-
-
-

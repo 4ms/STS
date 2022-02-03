@@ -28,11 +28,10 @@
 
 #pragma once
 
-#include <stm32f4xx.h>
 #include "ff.h"
+#include <stm32f4xx.h>
 
-enum Settings
-{
+enum Settings {
 	NoSetting,
 	StereoMode,
 	RecordSampleBits,
@@ -50,10 +49,6 @@ enum Settings
 	NUM_SETTINGS_ENUM
 };
 
-
 void set_default_user_settings(void);
 FRESULT save_user_settings(void);
 FRESULT read_user_settings(void);
-
-
-
