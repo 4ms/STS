@@ -45,10 +45,6 @@
 #define FW_MAJOR_VERSION 1
 #define FW_MINOR_VERSION 5
 
-//Minimum firmware version that doesn't need a calibration on the very first boot
-#define FORCE_CAL_UNDER_FW_MAJOR_VERSION 0
-#define FORCE_CAL_UNDER_FW_MINOR_VERSION 2
-
 // Flags are used for sections of code with different interrupt priorities
 // to communicate that an event occured and/or to schedule an action to occur
 enum Flags {

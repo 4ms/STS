@@ -113,6 +113,8 @@ void deinit_all(void) {
 	deinit_dig_inouts();
 }
 
+static unsigned is_preproduction_firmware(unsigned v_major, unsigned v_minor);
+
 int main(void) {
 	uint32_t do_factory_reset = 0;
 	uint32_t timeout_boot;
@@ -208,9 +210,8 @@ int main(void) {
 		system_calibrations->led_brightness = 1;
 	}
 	// First boot: Run a hardware test, calibrate, and do a factory reset
-	else if (!valid_fw_version || (system_calibrations->major_firmware_version < FORCE_CAL_UNDER_FW_MAJOR_VERSION) ||
-			 ((system_calibrations->major_firmware_version == FORCE_CAL_UNDER_FW_MAJOR_VERSION) &&
-			  system_calibrations->minor_firmware_version < FORCE_CAL_UNDER_FW_MINOR_VERSION))
+	else if (!valid_fw_version || is_preproduction_firmware(system_calibrations->major_firmware_version,
+															system_calibrations->minor_firmware_version))
 	{
 		set_default_led_color_adjust();
 		LEDDRIVER_OUTPUTENABLE_ON;
@@ -361,6 +362,16 @@ int main(void) {
 	return (1);
 }
 
+static unsigned is_preproduction_firmware(unsigned v_major, unsigned v_minor) {
+	//Minimum firmware version that doesn't need a calibration on the very first boot
+	const unsigned FORCE_CAL_UNDER_FW_MAJOR_VERSION = 0;
+	const unsigned FORCE_CAL_UNDER_FW_MINOR_VERSION = 2;
+
+	if ((v_major < FORCE_CAL_UNDER_FW_MAJOR_VERSION) ||
+		((v_major == FORCE_CAL_UNDER_FW_MAJOR_VERSION) && v_minor < FORCE_CAL_UNDER_FW_MINOR_VERSION))
+		return 1;
+	return 0;
+}
 //#define USE_FULL_ASSERT
 
 #ifdef USE_FULL_ASSERT
