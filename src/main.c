@@ -219,7 +219,7 @@ int main(void) {
            ((system_calibrations->major_firmware_version == FORCE_CAL_UNDER_FW_MAJOR_VERSION) &&
             system_calibrations->minor_firmware_version < FORCE_CAL_UNDER_FW_MINOR_VERSION))
   {
-            system_calibrations->minor_firmware_version <
+	set_default_led_color_adjust(); 
     LEDDRIVER_OUTPUTENABLE_ON;
 
     if (do_hardware_test()) {
