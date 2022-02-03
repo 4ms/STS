@@ -228,7 +228,7 @@ void read_all_system_calibrations_from_FLASH(void)
 		if (invalid_fw_version || staging_system_calibrations->codec_dac_calibration_dcoffset[i] > 4000 || staging_system_calibrations->codec_dac_calibration_dcoffset[i] < -4000)
 			staging_system_calibrations->codec_dac_calibration_dcoffset[i] = 0;
 	
-		if (invalid_fw_version || staging_system_calibrations->tracking_comp[i] > 2.0 || staging_system_calibrations->tracking_comp[i] < 0.50 || (*(uint32_t *)(&staging_system_calibrations->tracking_comp[i])==0xFFFFFFFF))
+		if (invalid_fw_version || staging_system_calibrations->tracking_comp[i] > 2.0f || staging_system_calibrations->tracking_comp[i] < 0.5f || (*(uint32_t *)(&staging_system_calibrations->tracking_comp[i])==0xFFFFFFFF))
 			staging_system_calibrations->tracking_comp[i] = 1.0;
 	}
 
@@ -237,14 +237,14 @@ void read_all_system_calibrations_from_FLASH(void)
 
 	for (i=0;i<NUM_RGBBUTTONS;i++)
 	{
-		if (isnan(staging_system_calibrations->rgbled_adjustments[i][0]) || staging_system_calibrations->rgbled_adjustments[i][0] > 5.5 || staging_system_calibrations->rgbled_adjustments[i][0] < 0.1)
-			staging_system_calibrations->rgbled_adjustments[i][0] = 1.0;
+		if (isnan(staging_system_calibrations->rgbled_adjustments[i][0]) || staging_system_calibrations->rgbled_adjustments[i][0] > 5.5f || staging_system_calibrations->rgbled_adjustments[i][0] < 0.1f)
+			staging_system_calibrations->rgbled_adjustments[i][0] = 1.0f;
 
-		if (isnan(staging_system_calibrations->rgbled_adjustments[i][1]) || staging_system_calibrations->rgbled_adjustments[i][1] > 5.5 || staging_system_calibrations->rgbled_adjustments[i][1] < 0.1)
-			staging_system_calibrations->rgbled_adjustments[i][1] = 1.0;
+		if (isnan(staging_system_calibrations->rgbled_adjustments[i][1]) || staging_system_calibrations->rgbled_adjustments[i][1] > 5.5f || staging_system_calibrations->rgbled_adjustments[i][1] < 0.1f)
+			staging_system_calibrations->rgbled_adjustments[i][1] = 1.0f;
 
-		if (isnan(staging_system_calibrations->rgbled_adjustments[i][2]) || staging_system_calibrations->rgbled_adjustments[i][2] > 5.5 || staging_system_calibrations->rgbled_adjustments[i][2] < 0.1)
-			staging_system_calibrations->rgbled_adjustments[i][2] = 1.0;
+		if (isnan(staging_system_calibrations->rgbled_adjustments[i][2]) || staging_system_calibrations->rgbled_adjustments[i][2] > 5.5f || staging_system_calibrations->rgbled_adjustments[i][2] < 0.1f)
+			staging_system_calibrations->rgbled_adjustments[i][2] = 1.0f;
 	}
 }
 
