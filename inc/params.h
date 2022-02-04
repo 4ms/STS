@@ -103,7 +103,8 @@ typedef struct GlobalParams {
 	uint32_t play_trig_latch_pitch_time;
 	enum RecordingSampleRates record_sample_rate;
 	float f_record_sample_rate; //pre-converted to float to speed up calculations
-
+	float fade_up_rate;			// Non-percussion playback mode fade up time
+	float fade_down_rate;		// Non-percussion playback mode fade down time
 } GlobalParams;
 
 static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef) {

@@ -150,6 +150,9 @@ void init_params(void) {
 
 	global_params.play_trig_delay = calc_trig_delay(global_mode[TRIG_DELAY]);
 	global_params.play_trig_latch_pitch_time = calc_pitch_latch_time(global_mode[TRIG_DELAY]);
+
+	global_params.fade_down_rate = 1.f / (global_params.f_record_sample_rate * 0.025f); //25ms fade down
+	global_params.fade_up_rate = 1.f / (global_params.f_record_sample_rate * 0.05f);	//50ms fade up
 }
 
 //initializes modes that aren't read from flash ram or disk
@@ -902,7 +905,7 @@ void update_params(void) {
 				global_params.play_trig_delay = calc_trig_delay(t_trig_delay_val);
 				global_params.play_trig_latch_pitch_time = calc_pitch_latch_time(t_trig_delay_val);
 
-				flags[ChangedTrigDelay] = 1;
+				flags[ChangedTrigDelay] = 1; // tell LED driver to confirm the change with lights
 				global_mode[TRIG_DELAY] = t_trig_delay_val;
 
 				flags32[SaveUserSettingsLater] = 0x800000; //10-15s
