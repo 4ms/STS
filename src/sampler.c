@@ -519,9 +519,10 @@ void toggle_playing(uint8_t chan) {
 	//Stop it if we're playing a full sample
 	else if (play_state[chan] == PLAYING && f_param[chan][LENGTH] > 0.98f)
 	{
-		if (global_mode[LENGTH_FULL_START_STOP])
+		if (global_mode[LENGTH_FULL_START_STOP]) {
 			play_state[chan] = PLAY_FADEDOWN;
-		else
+			decay_amp_i[chan] = 1.f;
+		} else
 			play_state[chan] = RETRIG_FADEDOWN;
 
 		play_led_state[chan] = 0;
@@ -699,8 +700,10 @@ void check_change_sample(void) {
 					if (play_state[chan] != SILENT && play_state[chan] != PREBUFFERING) {
 						if (play_state[chan] == PLAYING_PERC)
 							play_state[chan] = PLAYING_PERC_FADEDOWN;
-						else
+						else {
 							play_state[chan] = PLAY_FADEDOWN;
+							decay_amp_i[chan] = 1.f;
+						}
 
 					} else
 						play_state[chan] = SILENT;
@@ -722,8 +725,10 @@ void check_change_sample(void) {
 					if (play_state[chan] != SILENT && play_state[chan] != PREBUFFERING) {
 						if (play_state[chan] == PLAYING_PERC)
 							play_state[chan] = PLAYING_PERC_FADEDOWN;
-						else
+						else {
 							play_state[chan] = PLAY_FADEDOWN;
+							decay_amp_i[chan] = 1.f;
+						}
 					}
 				} else {
 					if (i_param[chan][LOOPING]) {
@@ -733,8 +738,10 @@ void check_change_sample(void) {
 						else if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] == AutoStop_LOOPING) {
 							if (play_state[chan] == PLAYING_PERC)
 								play_state[chan] = PLAYING_PERC_FADEDOWN;
-							else
+							else {
 								play_state[chan] = PLAY_FADEDOWN;
+								decay_amp_i[chan] = 1.f;
+							}
 						}
 					}
 				}
@@ -1101,11 +1108,13 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 				if (flags[ChangePlaytoPerc1 + chan]) {
 					//If we just changed from PLAYING to PLAYING_PERC then, do a normal Fadedown or else we'll get annoying PAD_SILENCE
 					play_state[chan] = PLAY_FADEDOWN;
+					decay_amp_i[chan] = 1.f;
 					flags[ChangePlaytoPerc1 + chan] = 0;
 				} else if (play_state[chan] == PLAYING_PERC) {
 					play_state[chan] = PLAYING_PERC_FADEDOWN;
 				} else {
 					play_state[chan] = PLAY_FADEDOWN;
+					decay_amp_i[chan] = 1.f;
 				}
 			} else {
 				//Check if we are about to hit buffer underrun
@@ -1179,12 +1188,12 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 	if (i_param[chan][REV]) {
 		sample_file_startpos[chan] =
 			calc_stop_point(length, rs, &samples[banknum][samplenum], sample_file_endpos[chan]);
-			play_time = (sample_file_startpos[chan] - sample_file_endpos[chan]) /
-						(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
-		} else {
-			sample_file_endpos[chan] =
-				calc_stop_point(length, rs, &samples[banknum][samplenum], sample_file_startpos[chan]);
-			play_time = (sample_file_endpos[chan] - sample_file_startpos[chan]) /
+		play_time = (sample_file_startpos[chan] - sample_file_endpos[chan]) /
+					(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
+	} else {
+		sample_file_endpos[chan] =
+			calc_stop_point(length, rs, &samples[banknum][samplenum], sample_file_startpos[chan]);
+		play_time = (sample_file_endpos[chan] - sample_file_startpos[chan]) /
 					(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
 	}
 
@@ -1197,9 +1206,9 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 				outL[i] = (float)outL[i] * env * gain;
 				outR[i] = (float)outR[i] * env * gain;
 
-					outL[i] = _SSAT16(outL[i]);
-					outR[i] = _SSAT16(outR[i]);
-				}
+				outL[i] = _SSAT16(outL[i]);
+				outR[i] = _SSAT16(outR[i]);
+			}
 
 			flicker_endout(chan, play_time);
 
@@ -1242,15 +1251,15 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			break;
 
 		case (PLAYING):
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					outL[i] = (float)outL[i] * gain;
-					outR[i] = (float)outR[i] * gain;
+			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+				outL[i] = (float)outL[i] * gain;
+				outR[i] = (float)outR[i] * gain;
 
-					outL[i] = _SSAT16(outL[i]);
-					outR[i] = _SSAT16(outR[i]);
-				}
-				if (length <= 0.5f)
-					flags[ChangePlaytoPerc1 + chan] = 1;
+				outL[i] = _SSAT16(outL[i]);
+				outR[i] = _SSAT16(outR[i]);
+			}
+			if (length <= 0.5f)
+				flags[ChangePlaytoPerc1 + chan] = 1;
 
 			break;
 
@@ -1293,97 +1302,98 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 		case (PLAYING_PERC):
 			decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
 
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					if (i_param[chan][REV])
-						decay_amp_i[chan] += decay_inc[chan];
-					else
-						decay_amp_i[chan] -= decay_inc[chan];
-
-					if (decay_amp_i[chan] < 0.0f) {
-						decay_inc[chan] = 0.0;
-						decay_amp_i[chan] = 0.0f;
-					} else if (decay_amp_i[chan] > 1.0f) {
-						decay_inc[chan] = 0.0;
-						decay_amp_i[chan] = 1.0f;
-					}
-
-					if (global_mode[PERC_ENVELOPE])
-						env = decay_amp_i[chan];
-					else
-						env = 1.0;
-
-					outL[i] = ((float)outL[i]) * env * gain;
-					outR[i] = ((float)outR[i]) * env * gain;
-
-					outL[i] = _SSAT16(outL[i]);
-					outR[i] = _SSAT16(outR[i]);
-				}
-
-				//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
-				if (decay_amp_i[chan] >= 1.0f && i_param[chan][REV])
-					play_state[chan] = PLAY_FADEDOWN;
-				else
-					check_perc_ending(chan);
-				break;
-
-			case (PLAYING_PERC_FADEDOWN):
-				// Fade down to silence before going to PAD_SILENCE mode or ending the playback
-				// (this prevents a click if the sample data itself doesn't cleanly fade out)
-				decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
-
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					if (i_param[chan][REV])
-						decay_amp_i[chan] += decay_inc[chan];
-					else
-						decay_amp_i[chan] -= decay_inc[chan];
-
-					if (decay_amp_i[chan] < 0.0f) {
-						decay_inc[chan] = 0.0;
-						decay_amp_i[chan] = 0.0f;
-					} else if (decay_amp_i[chan] > 1.0f) {
-						decay_inc[chan] = 0.0;
-						decay_amp_i[chan] = 1.0f;
-					}
-
-					if (global_mode[FADEUPDOWN_ENVELOPE])
-						env = decay_amp_i[chan] * (float)(HT16_CHAN_BUFF_LEN - i) / (float)HT16_CHAN_BUFF_LEN;
-					else
-						env = 1.0;
-
-					outL[i] = ((float)outL[i]) * env * gain;
-					outR[i] = ((float)outR[i]) * env * gain;
-
-					outL[i] = _SSAT16(outL[i]);
-					outR[i] = _SSAT16(outR[i]);
-				}
-
-				// If the end point is the end of the sample data (which happens if the file is very short, or if we're at the end of it)
-				// Then pad it with silence so we keep a constant End Out period when looping
-				if (sample_file_endpos[chan] == s_sample->inst_end)
-					play_state[chan] = PAD_SILENCE;
-				else
-					decay_amp_i[chan] = 0.0f; //force a sample ending
-
-				check_perc_ending(chan);
-				break;
-
-			case (PAD_SILENCE):
-				decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
-				// Fill a short sample with silence in order to obtain the fixed loop time
-
+			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
 				if (i_param[chan][REV])
-					decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
+					decay_amp_i[chan] += decay_inc[chan];
 				else
-					decay_amp_i[chan] -= HT16_CHAN_BUFF_LEN * decay_inc[chan];
+					decay_amp_i[chan] -= decay_inc[chan];
 
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					outL[i] = 0;
-					outR[i] = 0;
+				if (decay_amp_i[chan] < 0.0f) {
+					decay_inc[chan] = 0.0;
+					decay_amp_i[chan] = 0.0f;
+				} else if (decay_amp_i[chan] > 1.0f) {
+					decay_inc[chan] = 0.0;
+					decay_amp_i[chan] = 1.0f;
 				}
-				check_perc_ending(chan);
-				break;
 
-			default: //PREBUFFERING or SILENT
+				if (global_mode[PERC_ENVELOPE])
+					env = decay_amp_i[chan];
+				else
+					env = 1.0;
+
+				outL[i] = ((float)outL[i]) * env * gain;
+				outR[i] = ((float)outR[i]) * env * gain;
+
+				outL[i] = _SSAT16(outL[i]);
+				outR[i] = _SSAT16(outR[i]);
+			}
+
+			//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
+			if (decay_amp_i[chan] >= 1.0f && i_param[chan][REV]) {
+				play_state[chan] = PLAY_FADEDOWN;
+				decay_amp_i[chan] = 1.f;
+			} else
+				check_perc_ending(chan);
+			break;
+
+		case (PLAYING_PERC_FADEDOWN):
+			// Fade down to silence before going to PAD_SILENCE mode or ending the playback
+			// (this prevents a click if the sample data itself doesn't cleanly fade out)
+			decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
+
+			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+				if (i_param[chan][REV])
+					decay_amp_i[chan] += decay_inc[chan];
+				else
+					decay_amp_i[chan] -= decay_inc[chan];
+
+				if (decay_amp_i[chan] < 0.0f) {
+					decay_inc[chan] = 0.0;
+					decay_amp_i[chan] = 0.0f;
+				} else if (decay_amp_i[chan] > 1.0f) {
+					decay_inc[chan] = 0.0;
+					decay_amp_i[chan] = 1.0f;
+				}
+
+				if (global_mode[FADEUPDOWN_ENVELOPE])
+					env = decay_amp_i[chan] * (float)(HT16_CHAN_BUFF_LEN - i) / (float)HT16_CHAN_BUFF_LEN;
+				else
+					env = 1.0;
+
+				outL[i] = ((float)outL[i]) * env * gain;
+				outR[i] = ((float)outR[i]) * env * gain;
+
+				outL[i] = _SSAT16(outL[i]);
+				outR[i] = _SSAT16(outR[i]);
+			}
+
+			// If the end point is the end of the sample data (which happens if the file is very short, or if we're at the end of it)
+			// Then pad it with silence so we keep a constant End Out period when looping
+			if (sample_file_endpos[chan] == s_sample->inst_end)
+				play_state[chan] = PAD_SILENCE;
+			else
+				decay_amp_i[chan] = 0.0f; //force a sample ending
+
+			check_perc_ending(chan);
+			break;
+
+		case (PAD_SILENCE):
+			decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
+			// Fill a short sample with silence in order to obtain the fixed loop time
+
+			if (i_param[chan][REV])
+				decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
+			else
+				decay_amp_i[chan] -= HT16_CHAN_BUFF_LEN * decay_inc[chan];
+
+			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+				outL[i] = 0;
+				outR[i] = 0;
+			}
+			check_perc_ending(chan);
+			break;
+
+		default: //PREBUFFERING or SILENT
 			break;
 
 	} //switch play_state
