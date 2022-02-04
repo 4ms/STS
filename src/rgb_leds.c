@@ -373,365 +373,330 @@ void update_ButtonLEDs(void) {
 			else
 				set_ButtonLED_byPalette(ButLEDnum, OFF);
 
-		} else
-
+		} else if (flags[RewriteIndexSucess] && (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED ||
+												 ButLEDnum == Play1ButtonLED || ButLEDnum == Play2ButtonLED))
+		{
 			// Successfully wrote index: flicker top row of buttons green
-			if (flags[RewriteIndexSucess] && (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED ||
-											  ButLEDnum == Play1ButtonLED || ButLEDnum == Play2ButtonLED))
-			{
-				set_ButtonLED_byPalette(ButLEDnum, GREEN);
-				flags[RewriteIndexSucess]--;
-			} else
+			set_ButtonLED_byPalette(ButLEDnum, GREEN);
+			flags[RewriteIndexSucess]--;
 
-				// Failed writing index: flicker all buttons red
-				if (flags[RewriteIndexFail]) {
-					set_ButtonLED_byPalette(ButLEDnum, RED);
-					flags[RewriteIndexFail]--;
-				} else
+		} else if (flags[RewriteIndexFail]) {
+			// Failed writing index: flicker all buttons red
+			set_ButtonLED_byPalette(ButLEDnum, RED);
+			flags[RewriteIndexFail]--;
 
-					if (flags[RevertAll])
-				{
-					set_ButtonLED_byPalette(ButLEDnum, GREEN);
-					flags[RevertAll]--;
-				} else
+		} else if (flags[RevertAll]) {
+			set_ButtonLED_byPalette(ButLEDnum, GREEN);
+			flags[RevertAll]--;
 
-					// Success re-loading bank 1: flash all ch1 buttons green
-					if (flags[RevertBank1] && (ButLEDnum == Bank1ButtonLED || ButLEDnum == Play1ButtonLED ||
-											   ButLEDnum == Reverse1ButtonLED || ButLEDnum == RecButtonLED))
-					{
-						set_ButtonLED_byPalette(ButLEDnum, GREEN);
-						flags[RevertBank1]--;
-					} else if (flags[RevertBank2] && (ButLEDnum == Bank2ButtonLED || ButLEDnum == Play2ButtonLED ||
-													  ButLEDnum == Reverse2ButtonLED || ButLEDnum == RecBankButtonLED))
-					{
-						set_ButtonLED_byPalette(ButLEDnum, GREEN);
-						flags[RevertBank1]--;
-					} else
+		} else if (flags[RevertBank1] && (ButLEDnum == Bank1ButtonLED || ButLEDnum == Play1ButtonLED ||
+										  ButLEDnum == Reverse1ButtonLED || ButLEDnum == RecButtonLED))
+		{
+			// Success re-loading bank 1: flash all ch1 buttons green
+			set_ButtonLED_byPalette(ButLEDnum, GREEN);
+			flags[RevertBank1]--;
 
-						if (flags[ChangedTrigDelay])
-					{
-						//initialize phase
-						if (flags[ChangedTrigDelay] == 1) {
-							// st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
-							st_phase = sys_tmr;
-							flags[ChangedTrigDelay]++;
-						}
+		} else if (flags[RevertBank2] && (ButLEDnum == Bank2ButtonLED || ButLEDnum == Play2ButtonLED ||
+										  ButLEDnum == Reverse2ButtonLED || ButLEDnum == RecBankButtonLED))
+		{
+			set_ButtonLED_byPalette(ButLEDnum, GREEN);
+			flags[RevertBank1]--;
 
-						// t = (sys_tmr + st_phase) & 0x7FF;
-						t = sys_tmr - st_phase;
+		} else if (flags[ChangedTrigDelay]) {
+			//initialize phase
+			if (flags[ChangedTrigDelay] == 1) {
+				// st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
+				st_phase = sys_tmr;
+				flags[ChangedTrigDelay]++;
+			}
 
-						if (flags[ChangedTrigDelay] == 2) {
-							set_ButtonLED_byPalette(RecButtonLED, WHITE);
-							set_ButtonLED_byPalette(RecBankButtonLED, OFF);
-							flags[ChangedTrigDelay]++;
-						} else if ((flags[ChangedTrigDelay] == 3) && (t > calc_trig_delay(global_mode[TRIG_DELAY]) * 4))
-						{
-							set_ButtonLED_byPalette(RecButtonLED, WHITE);
-							set_ButtonLED_byPalette(RecBankButtonLED, GREEN);
-							flags[ChangedTrigDelay]++;
-							st_phase = sys_tmr;
-						} else if ((flags[ChangedTrigDelay] == 4) && (t > calc_trig_delay(global_mode[TRIG_DELAY]) * 4))
-						{
-							set_ButtonLED_byPalette(RecButtonLED, OFF);
-							set_ButtonLED_byPalette(RecBankButtonLED, OFF);
-							flags[ChangedTrigDelay]++;
-							st_phase = sys_tmr;
-						} else if ((flags[ChangedTrigDelay] == 5) && (t > 10000)) {
-							flags[ChangedTrigDelay] = 0;
-						}
+			// t = (sys_tmr + st_phase) & 0x7FF;
+			t = sys_tmr - st_phase;
 
-					} else
+			if (flags[ChangedTrigDelay] == 2) {
+				set_ButtonLED_byPalette(RecButtonLED, WHITE);
+				set_ButtonLED_byPalette(RecBankButtonLED, OFF);
+				flags[ChangedTrigDelay]++;
+			} else if ((flags[ChangedTrigDelay] == 3) && (t > calc_trig_delay(global_mode[TRIG_DELAY]) * 4)) {
+				set_ButtonLED_byPalette(RecButtonLED, WHITE);
+				set_ButtonLED_byPalette(RecBankButtonLED, GREEN);
+				flags[ChangedTrigDelay]++;
+				st_phase = sys_tmr;
+			} else if ((flags[ChangedTrigDelay] == 4) && (t > calc_trig_delay(global_mode[TRIG_DELAY]) * 4)) {
+				set_ButtonLED_byPalette(RecButtonLED, OFF);
+				set_ButtonLED_byPalette(RecBankButtonLED, OFF);
+				flags[ChangedTrigDelay]++;
+				st_phase = sys_tmr;
+			} else if ((flags[ChangedTrigDelay] == 5) && (t > 10000)) {
+				flags[ChangedTrigDelay] = 0;
+			}
 
-						if (flags[SkipProcessButtons] == 2)
-					{
-						set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
-					} else
+		} else if (flags[SkipProcessButtons] == 2) {
+			set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
 
-						//
-						// Normal functions:
-						//
+			//
+			// Normal functions:
+			//
+		} else if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED) {
+			//BANK lights
 
-						//BANK lights
-						if (ButLEDnum == Bank1ButtonLED || ButLEDnum == Bank2ButtonLED || ButLEDnum == RecBankButtonLED)
-						{
-							if (ButLEDnum == Bank1ButtonLED)
-								chan = 0;
-							else if (ButLEDnum == Bank2ButtonLED)
-								chan = 1;
-							else if (ButLEDnum == RecBankButtonLED)
-								chan = 2;
+			if (ButLEDnum == Bank1ButtonLED)
+				chan = 0;
+			else if (ButLEDnum == Bank2ButtonLED)
+				chan = 1;
+			else if (ButLEDnum == RecBankButtonLED)
+				chan = 2;
 
 #ifdef DEBUG_SETBANK1RGB
-							if (chan == 0 && global_mode[EDIT_MODE])
-								set_ButtonLED_byRGB(ButLEDnum,
-													i_smoothed_potadc[0] / 4,
-													i_smoothed_potadc[1] / 4,
-													i_smoothed_potadc[2] / 4);
-							else
+			if (chan == 0 && global_mode[EDIT_MODE])
+				set_ButtonLED_byRGB(
+					ButLEDnum, i_smoothed_potadc[0] / 4, i_smoothed_potadc[1] / 4, i_smoothed_potadc[2] / 4);
+			else
 #endif
-								if (chan == 2 && global_mode[EDIT_MODE]) //REC Bank button LED off when in Edit Mode
-							{
-								set_ButtonLED_byPalette(ButLEDnum, OFF);
-							} else if (flags[PlayBankHover1Changed + chan]) {
-								flags[PlayBankHover1Changed + chan]--;
-								set_ButtonLED_byPalette(ButLEDnum, CYANER);
-							} else {
-								if (chan == 2) //REC button
-								{
-									//Display bank hover value
-									if (g_button_knob_combo[bkc_RecBank][bkc_RecSample].combo_state == COMBO_ACTIVE)
-										bank_to_display = g_button_knob_combo[bkc_RecBank][bkc_RecSample].hover_value;
-									else
-										bank_to_display = i_param[2][BANK];
-								} else //chan must be 0 or 1:
-									if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
-										bank_to_display =
-											g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
-									else if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state ==
-											 COMBO_ACTIVE)
-										bank_to_display =
-											g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].hover_value;
-									else
-										bank_to_display = i_param[chan][BANK];
+				if (chan == 2 && global_mode[EDIT_MODE]) //REC Bank button LED off when in Edit Mode
+			{
+				set_ButtonLED_byPalette(ButLEDnum, OFF);
+			} else if (flags[PlayBankHover1Changed + chan]) {
+				flags[PlayBankHover1Changed + chan]--;
+				set_ButtonLED_byPalette(ButLEDnum, CYANER);
+			} else {
+				if (chan == 2) //REC button
+				{
+					//Display bank hover value
+					if (g_button_knob_combo[bkc_RecBank][bkc_RecSample].combo_state == COMBO_ACTIVE)
+						bank_to_display = g_button_knob_combo[bkc_RecBank][bkc_RecSample].hover_value;
+					else
+						bank_to_display = i_param[2][BANK];
+				} else //chan must be 0 or 1:
+					if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].combo_state == COMBO_ACTIVE)
+						bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample1].hover_value;
+					else if (g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].combo_state == COMBO_ACTIVE)
+						bank_to_display = g_button_knob_combo[bkc_Bank1 + chan][bkc_Sample2].hover_value;
+					else
+						bank_to_display = i_param[chan][BANK];
 
-								display_bank_blink(ButLEDnum, bank_to_display, tm_16);
-							}
+				display_bank_blink(ButLEDnum, bank_to_display, tm_16);
+			}
+
+		} else if (ButLEDnum == Play1ButtonLED || ButLEDnum == Play2ButtonLED) {
+			// PLAY lights
+			chan = (ButLEDnum == Play1ButtonLED) ? 0 : 1;
+
+			if (chan && global_mode[EDIT_MODE]) {
+				set_ButtonLED_byPaletteFade(ButLEDnum, WHITE, MAGENTA, tri_14);
+
+			} else if (flags[PlaySample1Changed_valid + chan] > 1) {
+				set_ButtonLED_byPalette(ButLEDnum, WHITE);
+				flags[PlaySample1Changed_valid + chan]--;
+
+			} else if (flags[PlaySample1Changed_empty + chan] > 1) {
+				set_ButtonLED_byPalette(ButLEDnum, RED);
+				flags[PlaySample1Changed_empty + chan]--;
+
+			} else if (flags[StereoModeTurningOn]) {
+				//reset st_phase
+				if (flags[StereoModeTurningOn] == 1) {
+					st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
+					flags[StereoModeTurningOn]++;
+				}
+
+				//calc fade
+				t = (sys_tmr + st_phase) & 0x3FFF;
+				if (t > 0x2000)
+					t_tri = ((float)(t - 0x2000)) / 8192.0f;
+				else
+					t_tri = ((float)(0x2000 - t)) / 8192.0f;
+
+				set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, t_tri);
+
+				if ((t < 0x1000) && (flags[StereoModeTurningOn] & 1) == 1)
+					flags[StereoModeTurningOn]++;
+				if ((t > 0x2000) && (t < 0x3000) && (flags[StereoModeTurningOn] & 1) == 0)
+					flags[StereoModeTurningOn]++;
+
+				if (flags[StereoModeTurningOn] > 5)
+					flags[StereoModeTurningOn] = 0;
+
+			} else if (flags[StereoModeTurningOff]) {
+				//reset st_phase
+				if (flags[StereoModeTurningOff] == 1) {
+					st_phase = 0xFFFFFFFF - sys_tmr;
+					flags[StereoModeTurningOff]++;
+				}
+
+				t = (sys_tmr + st_phase) & 0x3FFF;
+
+				if (flags[StereoModeTurningOff] == 2) {
+					set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+					set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+				} else if (flags[StereoModeTurningOff] < 5) {
+					if ((t & 0x1FFF) < 0x1000)
+						set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
+					else
+						set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+
+					set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+				} else if (flags[StereoModeTurningOff] < 7) {
+					if ((t & 0x1FFF) < 0x1000)
+						set_ButtonLED_byPalette(Play2ButtonLED, GREEN);
+					else
+						set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+
+					set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+				}
+
+				if ((t < 0x1000) && (flags[StereoModeTurningOff] & 1) == 1)
+					flags[StereoModeTurningOff]++;
+				if ((t > 0x2000) && (t < 0x3000) && (flags[StereoModeTurningOff] & 1) == 0)
+					flags[StereoModeTurningOff]++;
+
+				if (flags[StereoModeTurningOff] > 7)
+					flags[StereoModeTurningOff] = 0;
+
+			} else {
+				if (play_state[chan] == SILENT || play_state[chan] == RETRIG_FADEDOWN ||
+					play_state[chan] == PLAY_FADEDOWN || play_led_flicker_ctr[chan])
+				//Not playing, or re-starting a sample
+				{
+					//Sample slot empty
+					if (flags[PlaySample1Changed_empty + chan]) {
+						if (i_param[chan][LOOPING])
+							set_ButtonLED_byPalette(ButLEDnum, MED_RED);
+						else
+							set_ButtonLED_byPalette(ButLEDnum, DIM_RED);
+					}
+					//Sample found
+					else
+					{
+						set_ButtonLED_byPalette(ButLEDnum, OFF);
+						// if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, OFF );
+						// else							set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE );
+					}
+				}
+				//Playing
+				else
+				{
+					if (global_mode[STEREO_MODE]) {
+						if (i_param[chan][LOOPING])
+							set_ButtonLED_byPalette(ButLEDnum, CYAN);
+						else
+							set_ButtonLED_byPalette(ButLEDnum, GREENER);
+					} else {
+						if (i_param[chan][LOOPING])
+							set_ButtonLED_byPalette(ButLEDnum, BLUE);
+						else
+							set_ButtonLED_byPalette(ButLEDnum, GREEN);
+					}
+				}
+			}
+
+		} else if (ButLEDnum == RecButtonLED) {
+			//Rec button Light
+			if (global_mode[EDIT_MODE]) {
+				set_ButtonLED_byPalette(RecButtonLED, OFF);
+			} else if (flags[RecSampleChanged_light]) {
+				set_ButtonLED_byPalette(RecButtonLED, WHITE);
+				flags[RecSampleChanged_light]--;
+			} else {
+				//Solid Red = recording + monitoring
+				//Solid Violet = recording, not monitoring
+				//Flashing Red = recording enabled, not recording, but monitoring
+				//Off = not enabled
+				if (!global_mode[ENABLE_RECORDING])
+					set_ButtonLED_byPalette(RecButtonLED, OFF);
+				else
+
+					if (rec_state == REC_OFF || rec_state == CLOSING_FILE)
+				{
+					if (global_mode[MONITOR_RECORDING])
+						set_ButtonLED_byPalette(RecButtonLED,
+												(tm_13 < 0x0800) ? RED : OFF); //Off/paused/closing = flash red
+					else
+						set_ButtonLED_byPalette(RecButtonLED,
+												(tm_13 < 0x0800) ? MAGENTA : OFF); //Off/paused/closing = flash red
+
+				} else //recording
+					if (global_mode[MONITOR_RECORDING])
+						set_ButtonLED_byPalette(RecButtonLED, RED); //rec + mon = solid red
+					else
+						set_ButtonLED_byPalette(RecButtonLED, MAGENTA); //rec + no-mon = solid violet
+			}
+
+			//Reverse Lights
+		} else if (ButLEDnum == Reverse1ButtonLED || ButLEDnum == Reverse2ButtonLED) {
+			chan = (ButLEDnum == Reverse1ButtonLED) ? 0 : 1;
+
+			if (global_mode[EDIT_MODE]) {
+				if (chan == 0) {
+					//When we press Edit+Rev1,
+					//Flicker the Rev1 light White for forward motion
+					//And Red for backward motion
+					//But-- if we're on a Red or White bank, then flicker it off
+					if (flags[AssignedNextSample]) {
+						set_ButtonLED_byPalette(ButLEDnum, ((cur_assign_bank % 10) == (WHITE - 1)) ? OFF : WHITE);
+						flags[AssignedNextSample]--;
+					} else if (flags[AssignedPrevBank]) {
+						set_ButtonLED_byPalette(ButLEDnum, ((cur_assign_bank % 10) == (RED - 1)) ? OFF : RED);
+						flags[AssignedPrevBank]--;
+					} else
+
+						// Reverse light during assignment: shows bank we're assigning from
+						//
+						if (global_mode[ASSIGN_MODE]) {
+							if (cur_assign_bank < MAX_NUM_BANKS)
+								// When we're looking for already assigned samples
+								// display the current bank we're scanning on the Rev1 light
+								display_bank_blink(ButLEDnum, cur_assign_bank, tm_16);
+							else
+								// When we're scanning unassigned samples:
+								// Flicker the bank base color rapidly if scanning unassigned samples in the folder
+								if (cur_assign_state == ASSIGN_IN_FOLDER)
+									set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10) + 1, tri_13);
+
+								// Flicker dim red/white if we're scanning unsassigned samples outside of the sample's folder
+								else if (cur_assign_state == ASSIGN_UNUSED_IN_FS ||
+										 cur_assign_state == ASSIGN_UNUSED_IN_ROOT)
+									set_ButtonLED_byPaletteFade(ButLEDnum, DIM_RED, DIM_WHITE, tri_13);
+						} else {
+							//Edit Mode, but not Assignment mode --> bank's base color
+							set_ButtonLED_byPaletteFade(ButLEDnum, OFF, (i_param[0][BANK] % 10) + 1, tri_14);
 						}
-
-						// PLAY lights
-						else if (ButLEDnum == Play1ButtonLED || ButLEDnum == Play2ButtonLED)
-						{
-							chan = (ButLEDnum == Play1ButtonLED) ? 0 : 1;
-
-							if (chan && global_mode[EDIT_MODE]) {
-								set_ButtonLED_byPaletteFade(ButLEDnum, WHITE, MAGENTA, tri_14);
-							} else if (flags[PlaySample1Changed_valid + chan] > 1) {
-								set_ButtonLED_byPalette(ButLEDnum, WHITE);
-								flags[PlaySample1Changed_valid + chan]--;
-							} else if (flags[PlaySample1Changed_empty + chan] > 1) {
-								set_ButtonLED_byPalette(ButLEDnum, RED);
-								flags[PlaySample1Changed_empty + chan]--;
-							}
-
-							else if (flags[StereoModeTurningOn])
-							{
-								//reset st_phase
-								if (flags[StereoModeTurningOn] == 1) {
-									st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
-									flags[StereoModeTurningOn]++;
-								}
-
-								//calc fade
-								t = (sys_tmr + st_phase) & 0x3FFF;
-								if (t > 0x2000)
-									t_tri = ((float)(t - 0x2000)) / 8192.0f;
-								else
-									t_tri = ((float)(0x2000 - t)) / 8192.0f;
-
-								set_ButtonLED_byPaletteFade(ButLEDnum, GREENER, OFF, t_tri);
-
-								if ((t < 0x1000) && (flags[StereoModeTurningOn] & 1) == 1)
-									flags[StereoModeTurningOn]++;
-								if ((t > 0x2000) && (t < 0x3000) && (flags[StereoModeTurningOn] & 1) == 0)
-									flags[StereoModeTurningOn]++;
-
-								if (flags[StereoModeTurningOn] > 5)
-									flags[StereoModeTurningOn] = 0;
-
-							} else if (flags[StereoModeTurningOff]) {
-								//reset st_phase
-								if (flags[StereoModeTurningOff] == 1) {
-									st_phase = 0xFFFFFFFF - sys_tmr;
-									flags[StereoModeTurningOff]++;
-								}
-
-								t = (sys_tmr + st_phase) & 0x3FFF;
-
-								if (flags[StereoModeTurningOff] == 2) {
-									set_ButtonLED_byPalette(Play1ButtonLED, OFF);
-									set_ButtonLED_byPalette(Play2ButtonLED, OFF);
-								} else if (flags[StereoModeTurningOff] < 5) {
-									if ((t & 0x1FFF) < 0x1000)
-										set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
-									else
-										set_ButtonLED_byPalette(Play1ButtonLED, OFF);
-
-									set_ButtonLED_byPalette(Play2ButtonLED, OFF);
-								} else if (flags[StereoModeTurningOff] < 7) {
-									if ((t & 0x1FFF) < 0x1000)
-										set_ButtonLED_byPalette(Play2ButtonLED, GREEN);
-									else
-										set_ButtonLED_byPalette(Play2ButtonLED, OFF);
-
-									set_ButtonLED_byPalette(Play1ButtonLED, OFF);
-								}
-
-								if ((t < 0x1000) && (flags[StereoModeTurningOff] & 1) == 1)
-									flags[StereoModeTurningOff]++;
-								if ((t > 0x2000) && (t < 0x3000) && (flags[StereoModeTurningOff] & 1) == 0)
-									flags[StereoModeTurningOff]++;
-
-								if (flags[StereoModeTurningOff] > 7)
-									flags[StereoModeTurningOff] = 0;
-
-							} else {
-								if (play_state[chan] == SILENT || play_state[chan] == RETRIG_FADEDOWN ||
-									play_state[chan] == PLAY_FADEDOWN || play_led_flicker_ctr[chan])
-								//Not playing, or re-starting a sample
-								{
-									//Sample slot empty
-									if (flags[PlaySample1Changed_empty + chan]) {
-										if (i_param[chan][LOOPING])
-											set_ButtonLED_byPalette(ButLEDnum, MED_RED);
-										else
-											set_ButtonLED_byPalette(ButLEDnum, DIM_RED);
-									}
-									//Sample found
-									else
-									{
-										set_ButtonLED_byPalette(ButLEDnum, OFF);
-										// if (i_param[chan][LOOPING]) 	set_ButtonLED_byPalette(ButLEDnum, OFF );
-										// else							set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE );
-									}
-								}
-								//Playing
-								else
-								{
-									if (global_mode[STEREO_MODE]) {
-										if (i_param[chan][LOOPING])
-											set_ButtonLED_byPalette(ButLEDnum, CYAN);
-										else
-											set_ButtonLED_byPalette(ButLEDnum, GREENER);
-									} else {
-										if (i_param[chan][LOOPING])
-											set_ButtonLED_byPalette(ButLEDnum, BLUE);
-										else
-											set_ButtonLED_byPalette(ButLEDnum, GREEN);
-									}
-								}
-							}
-
-						}
-
-						//Rec button Light
-						else if (ButLEDnum == RecButtonLED)
-						{
-							if (global_mode[EDIT_MODE]) {
-								set_ButtonLED_byPalette(RecButtonLED, OFF);
-							} else if (flags[RecSampleChanged_light]) {
-								set_ButtonLED_byPalette(RecButtonLED, WHITE);
-								flags[RecSampleChanged_light]--;
-							} else {
-								//Solid Red = recording + monitoring
-								//Solid Violet = recording, not monitoring
-								//Flashing Red = recording enabled, not recording, but monitoring
-								//Off = not enabled
-								if (!global_mode[ENABLE_RECORDING])
-									set_ButtonLED_byPalette(RecButtonLED, OFF);
-								else
-
-									if (rec_state == REC_OFF || rec_state == CLOSING_FILE)
-								{
-									if (global_mode[MONITOR_RECORDING])
-										set_ButtonLED_byPalette(
-											RecButtonLED,
-											(tm_13 < 0x0800) ? RED : OFF); //Off/paused/closing = flash red
-									else
-										set_ButtonLED_byPalette(
-											RecButtonLED,
-											(tm_13 < 0x0800) ? MAGENTA : OFF); //Off/paused/closing = flash red
-
-								} else //recording
-									if (global_mode[MONITOR_RECORDING])
-										set_ButtonLED_byPalette(RecButtonLED, RED); //rec + mon = solid red
-									else
-										set_ButtonLED_byPalette(RecButtonLED, MAGENTA); //rec + no-mon = solid violet
-							}
-
-						}
-
-						//Reverse Lights
-						else if (ButLEDnum == Reverse1ButtonLED || ButLEDnum == Reverse2ButtonLED)
-						{
-							chan = (ButLEDnum == Reverse1ButtonLED) ? 0 : 1;
-
-							if (global_mode[EDIT_MODE]) {
-								if (chan == 0) {
-									//When we press Edit+Rev1,
-									//Flicker the Rev1 light White for forward motion
-									//And Red for backward motion
-									//But-- if we're on a Red or White bank, then flicker it off
-									if (flags[AssignedNextSample]) {
-										set_ButtonLED_byPalette(ButLEDnum,
-																((cur_assign_bank % 10) == (WHITE - 1)) ? OFF : WHITE);
-										flags[AssignedNextSample]--;
-									} else if (flags[AssignedPrevBank]) {
-										set_ButtonLED_byPalette(ButLEDnum,
-																((cur_assign_bank % 10) == (RED - 1)) ? OFF : RED);
-										flags[AssignedPrevBank]--;
-									} else
-
-										// Reverse light during assignment: shows bank we're assigning from
-										//
-										if (global_mode[ASSIGN_MODE]) {
-											if (cur_assign_bank < MAX_NUM_BANKS)
-												// When we're looking for already assigned samples
-												// display the current bank we're scanning on the Rev1 light
-												display_bank_blink(ButLEDnum, cur_assign_bank, tm_16);
-											else
-												// When we're scanning unassigned samples:
-												// Flicker the bank base color rapidly if scanning unassigned samples in the folder
-												if (cur_assign_state == ASSIGN_IN_FOLDER)
-													set_ButtonLED_byPaletteFade(
-														ButLEDnum, OFF, (i_param[0][BANK] % 10) + 1, tri_13);
-
-												// Flicker dim red/white if we're scanning unsassigned samples outside of the sample's folder
-												else if (cur_assign_state == ASSIGN_UNUSED_IN_FS ||
-														 cur_assign_state == ASSIGN_UNUSED_IN_ROOT)
-													set_ButtonLED_byPaletteFade(ButLEDnum, DIM_RED, DIM_WHITE, tri_13);
-										} else {
-											//Edit Mode, but not Assignment mode --> bank's base color
-											set_ButtonLED_byPaletteFade(
-												ButLEDnum, OFF, (i_param[0][BANK] % 10) + 1, tri_14);
-										}
-								} else //Edit mode and chan==1
-								{
-									//Edit Mode: Rev2 flashes red/yellow if there's an undo available
-									if (flags[UndoSampleDiffers])
-										set_ButtonLED_byPaletteFade(ButLEDnum, YELLOW, RED, tri_14);
-									else
-										set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
-								}
-							} else //Not edit mode
-							{
-								if (flags[PercEnvModeChanged]) {
-									if (global_mode[PERC_ENVELOPE])
-										set_ButtonLED_byPaletteFade(
-											ButLEDnum, YELLOW, OFF, (float)flags[PercEnvModeChanged] / 100.0);
-									else {
-										if (flags[PercEnvModeChanged] > 70)
-											set_ButtonLED_byPalette(ButLEDnum, YELLOW);
-										else
-											set_ButtonLED_byPalette(ButLEDnum, OFF);
-									}
-									flags[PercEnvModeChanged]--;
-								} else if (flags[FadeEnvModeChanged]) {
-									if (global_mode[FADEUPDOWN_ENVELOPE])
-										set_ButtonLED_byPaletteFade(
-											ButLEDnum, RED, OFF, (float)flags[FadeEnvModeChanged] / 100.0);
-									else {
-										if (flags[FadeEnvModeChanged] > 70)
-											set_ButtonLED_byPalette(ButLEDnum, RED);
-										else
-											set_ButtonLED_byPalette(ButLEDnum, OFF);
-									}
-									flags[FadeEnvModeChanged]--;
-								} else if (i_param[chan][REV])
-									set_ButtonLED_byPalette(ButLEDnum, CYAN);
-								else
-									set_ButtonLED_byPalette(ButLEDnum, OFF);
-							}
-						}
+				} else {
+					//Edit mode and chan==1
+					//Edit Mode: Rev2 flashes red/yellow if there's an undo available
+					if (flags[UndoSampleDiffers])
+						set_ButtonLED_byPaletteFade(ButLEDnum, YELLOW, RED, tri_14);
+					else
+						set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
+				}
+			} else //Not edit mode
+			{
+				if (flags[PercEnvModeChanged]) {
+					if (global_mode[PERC_ENVELOPE])
+						set_ButtonLED_byPaletteFade(ButLEDnum, YELLOW, OFF, (float)flags[PercEnvModeChanged] / 100.f);
+					else {
+						if (flags[PercEnvModeChanged] > 70)
+							set_ButtonLED_byPalette(ButLEDnum, YELLOW);
+						else
+							set_ButtonLED_byPalette(ButLEDnum, OFF);
+					}
+					flags[PercEnvModeChanged]--;
+				} else if (flags[FadeEnvModeChanged]) {
+					if (global_mode[FADEUPDOWN_ENVELOPE])
+						set_ButtonLED_byPaletteFade(ButLEDnum, RED, OFF, (float)flags[FadeEnvModeChanged] / 100.f);
+					else {
+						if (flags[FadeEnvModeChanged] > 70)
+							set_ButtonLED_byPalette(ButLEDnum, RED);
+						else
+							set_ButtonLED_byPalette(ButLEDnum, OFF);
+					}
+					flags[FadeEnvModeChanged]--;
+				} else if (i_param[chan][REV])
+					set_ButtonLED_byPalette(ButLEDnum, CYAN);
+				else
+					set_ButtonLED_byPalette(ButLEDnum, OFF);
+			}
+		}
 	}
 }
 
