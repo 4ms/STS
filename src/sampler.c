@@ -58,6 +58,8 @@ static inline int32_t _SSAT16(int32_t x) {
 	return x;
 }
 
+static void check_perc_ending(uint8_t chan);
+
 //
 // DEBUG
 //
@@ -1286,16 +1288,11 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 				break;
 
 			case (PLAYING_PERC):
-			case (PLAYING_PERC_FADEDOWN):
-			case (PAD_SILENCE):
-
 				decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
 
-				if (play_state[chan] == PLAYING_PERC) {
-					// DEBUG2_ON;
-					for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-						if (i_param[chan][REV])
-							decay_amp_i[chan] += decay_inc[chan];
+				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+					if (i_param[chan][REV])
+						decay_amp_i[chan] += decay_inc[chan];
 						else
 							decay_amp_i[chan] -= decay_inc[chan];
 
@@ -1315,20 +1312,25 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 						outL[i] = ((float)outL[i]) * env * gain;
 						outR[i] = ((float)outR[i]) * env * gain;
 
-						outL[i] = _SSAT16(outL[i]);
-						outR[i] = _SSAT16(outR[i]);
-					}
-					// DEBUG2_OFF;
-				} else
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
+				}
 
-					// Fade down to silence before going to PAD_SILENCE mode or ending the playback
-					// (this prevents a click if the sample data itself doesn't cleanly fade out)
-					//
-					if (play_state[chan] == PLAYING_PERC_FADEDOWN) {
-						// DEBUG0_ON;
-						for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-							if (i_param[chan][REV])
-								decay_amp_i[chan] += decay_inc[chan];
+				//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
+				if (decay_amp_i[chan] >= 1.0f && i_param[chan][REV])
+					play_state[chan] = PLAY_FADEDOWN;
+				else
+					check_perc_ending(chan);
+				break;
+
+			case (PLAYING_PERC_FADEDOWN):
+				// Fade down to silence before going to PAD_SILENCE mode or ending the playback
+				// (this prevents a click if the sample data itself doesn't cleanly fade out)
+				decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
+
+				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+					if (i_param[chan][REV])
+						decay_amp_i[chan] += decay_inc[chan];
 							else
 								decay_amp_i[chan] -= decay_inc[chan];
 
@@ -1348,51 +1350,34 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 							outL[i] = ((float)outL[i]) * env * gain;
 							outR[i] = ((float)outR[i]) * env * gain;
 
-							outL[i] = _SSAT16(outL[i]);
-							outR[i] = _SSAT16(outR[i]);
-						}
-						// DEBUG0_OFF;
-						//If the sample is very short, then pad it with silence so we get a consistant end out period
-						// if ( (sample->inst_end - sample->inst_start) < (READ_BLOCK_SIZE*2) )
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
+				}
 
-						// If the end point is the end of the sample data (which happens if the file is very short, or if we're at the end of it)
-						// Then pad it with silence so we keep a constant End Out period when looping
+				// If the end point is the end of the sample data (which happens if the file is very short, or if we're at the end of it)
+				// Then pad it with silence so we keep a constant End Out period when looping
 						if (sample_file_endpos[chan] == s_sample->inst_end)
-							play_state[chan] = PAD_SILENCE;
-						else
-							decay_amp_i[chan] = 0.0f; //force a sample ending
-					} else
+					play_state[chan] = PAD_SILENCE;
+				else
+					decay_amp_i[chan] = 0.0f; //force a sample ending
 
-						// Fill a short sample with silence in order to obtain the fixed loop time
-						//
-						if (play_state[chan] == PAD_SILENCE) {
-							if (i_param[chan][REV])
-								decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
-							else
+				check_perc_ending(chan);
+				break;
+
+			case (PAD_SILENCE):
+				decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
+				// Fill a short sample with silence in order to obtain the fixed loop time
+
+				if (i_param[chan][REV])
+					decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
+				else
 								decay_amp_i[chan] -= HT16_CHAN_BUFF_LEN * decay_inc[chan];
 
-							for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-								outL[i] = 0;
-								outR[i] = 0;
-							}
-						}
-
-				//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
-				if (decay_amp_i[chan] >= 1.0f && i_param[chan][REV] && play_state[chan] == PLAYING_PERC)
-					play_state[chan] = PLAY_FADEDOWN;
-
-				//End the playback, go to silence, and trigger another play if looping
-				else if (decay_amp_i[chan] <= 0.0f || decay_amp_i[chan] >= 1.0f) {
-					decay_amp_i[chan] = 0.0f;
-
-					flicker_endout(chan, length * 3.0f);
-
-					//Restart loop
-					if (i_param[chan][LOOPING] && !flags[Play1TrigDelaying + chan])
-						flags[Play1Trig + chan] = 1;
-
-					play_state[chan] = SILENT;
+				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+					outL[i] = 0;
+					outR[i] = 0;
 				}
+				check_perc_ending(chan);
 				break;
 
 			default: //PREBUFFERING or SILENT
@@ -1411,6 +1396,21 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 	// 	play_load_triage = NO_PRIORITY;
 
 	// DEBUG3_OFF;
+}
+
+void check_perc_ending(uint8_t chan) {
+	//End the playback, go to silence, and trigger another play if looping
+	if (decay_amp_i[chan] <= 0.0f || decay_amp_i[chan] >= 1.0f) {
+		decay_amp_i[chan] = 0.0f;
+
+		flicker_endout(chan, f_param[chan][LENGTH] * 3.0f);
+
+		//Restart loop
+		if (i_param[chan][LOOPING] && !flags[Play1TrigDelaying + chan])
+			flags[Play1Trig + chan] = 1;
+
+		play_state[chan] = SILENT;
+	}
 }
 
 void SDIO_read_IRQHandler(void) {
