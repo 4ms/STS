@@ -1288,7 +1288,7 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 				decay_amp_i[chan] = 0.f; //set this so we detect "end of fade" in the next block
 			}
 
-			if (decay_amp_i[chan] == 0.f) {
+			if (decay_amp_i[chan] <= 0.f) {
 				flicker_endout(chan, play_time);
 
 				//Start playing again if we're looping, unless we faded down because of a play trigger
