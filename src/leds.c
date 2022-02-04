@@ -120,8 +120,8 @@ void LED_PWM_IRQHandler(void) {
 
 void flicker_endout(uint8_t chan, float play_time) {
 	play_led_state[chan] = 0;
-	end_out_ctr[chan] = (play_time > 0.300) ? 35 : ((play_time * 90) + 8);
-	play_led_flicker_ctr[chan] = (play_time > 0.300) ? 35 : ((play_time * 36) + 1);
+	end_out_ctr[chan] = (play_time > 0.300f) ? 35 : ((play_time * 90) + 8);
+	play_led_flicker_ctr[chan] = (play_time > 0.300f) ? 35 : ((play_time * 36) + 1);
 	if (chan)
 		ENDOUT2_ON;
 	else
