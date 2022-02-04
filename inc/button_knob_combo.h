@@ -65,6 +65,8 @@ enum ButtonKnobCombo_Knobs {
 	bkc_StartPos1,
 	bkc_StartPos2,
 
+	bkc_Length1,
+
 	NUM_BUTTON_KNOB_COMBO_KNOBS
 };
 

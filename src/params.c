@@ -477,6 +477,10 @@ float quantized_semitone_voct(uint32_t adcval) {
 	}
 }
 
+uint32_t diff32(uint32_t a, uint32_t b) {
+	return (a > b) ? (a - b) : (b - a);
+}
+
 void update_params(void) {
 	uint8_t chan;
 	uint8_t knob;
@@ -553,6 +557,29 @@ void update_params(void) {
 			set_sample_gain(&samples[banknum][samplenum], t_f);
 		}
 
+		{
+			//
+			// Edit + Length 1 knob = control fade up/down time
+			//
+			edit_bkc = &g_button_knob_combo[bkc_Edit][bkc_Length1];
+			uint32_t cur_pot_val = bracketed_potadc[LENGTH1_POT];
+
+			// Activate the combo when we detect the knob was turned a bit
+			if (diff32(cur_pot_val, edit_bkc->latched_value) > 16)
+				edit_bkc->combo_state = COMBO_ACTIVE;
+
+			// If the combo is active, see if the value has changed. Then update the params and flag for LED response
+			else {
+				float t_param_val = calc_fade_updown_rate(cur_pot_val);
+				if (t_param_val != global_params.play_trig_delay) {
+					global_params.fade_down_rate = t_param_val;
+					global_params.fade_up_rate = t_param_val;
+					flags[FadeUpDownTimeChanged] = 1;		   // tell LED driver to confirm the change with lights
+					flags32[SaveUserSettingsLater] = 0x800000; //10-15s
+				}
+			}
+		}
+
 	} //if  EDIT_MODE
 
 	else
@@ -582,11 +609,23 @@ void update_params(void) {
 		if (!(global_mode[EDIT_MODE] && chan == CHAN1)) //"skip this block if we're in edit mode and this is channel 1"
 		{
 			edit_bkc = &g_button_knob_combo[bkc_Edit][bkc_Length2];
-			t_f = f_param[chan][LENGTH];
+			ButtonKnobCombo *fade_bkc = &g_button_knob_combo[bkc_Edit][bkc_Length1];
 
-			//Use the latched pot value for channel 2 when in Edit Mode
+			//Use the latched pot value for channel 2 when in Edit + Length2 mode (Scrub End)
 			if (edit_bkc->combo_state != COMBO_INACTIVE && chan == CHAN2)
 				f_param[chan][LENGTH] = (edit_bkc->latched_value + bracketed_cvadc[LENGTH2_CV]) / 4096.0;
+
+			// Use the latched value for channel 1 when in Edit + Length1 mode (Fade Up/Down Rate)
+			else if (fade_bkc->combo_state != COMBO_INACTIVE && chan == CHAN1) {
+				f_param[chan][LENGTH] = (fade_bkc->latched_value + bracketed_cvadc[LENGTH1_CV]) / 4096.0;
+
+				// Disable combo mode if pot is moved to original location
+				if (fade_bkc->combo_state == COMBO_LATCHED &&
+					diff32(fade_bkc->latched_value, bracketed_potadc[LENGTH1_POT]) < 4)
+					fade_bkc->combo_state = COMBO_INACTIVE;
+			}
+
+			// Othwerwise use the actual pot value
 			else
 				f_param[chan][LENGTH] =
 					(bracketed_potadc[LENGTH1_POT + chan] + bracketed_cvadc[LENGTH1_CV + chan]) / 4096.0;
@@ -1124,6 +1163,13 @@ uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting) {
 			return 60;
 	}
 	return (0);
+}
+
+float calc_fade_updown_rate(uint16_t knob_pos) {
+	//map 0..4095 => 1/HT16_CHAN_BUFF_LEN .. 1/(0.05 * 44100.f) or whatever the sample rate is
+	float range = 0.05f * global_params.f_record_sample_rate - (float)HT16_CHAN_BUFF_LEN;
+	float offset = HT16_CHAN_BUFF_LEN;
+	return 1.0f / ((((float)knob_pos) / 4095.0f) * range + offset);
 }
 
 void adc_param_update_IRQHandler(void) {

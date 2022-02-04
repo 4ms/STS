@@ -549,6 +549,10 @@ void enter_edit_mode(void) {
 		g_button_knob_combo[bkc_Edit][bkc_RecSample].latched_value = bracketed_potadc[RECSAMPLE_POT];
 	}
 
+	if (g_button_knob_combo[bkc_Edit][bkc_Length1].combo_state == COMBO_INACTIVE) {
+		g_button_knob_combo[bkc_Edit][bkc_Length1].latched_value = bracketed_potadc[LENGTH1_POT];
+	}
+
 	global_mode[EDIT_MODE] = 1;
 	scrubbed_in_edit = 0;
 
@@ -574,6 +578,7 @@ void exit_edit_mode(void) {
 		g_button_knob_combo[bkc_Edit][bkc_Sample2].combo_state = COMBO_LATCHED;
 		g_button_knob_combo[bkc_Edit][bkc_Length2].combo_state = COMBO_LATCHED;
 		g_button_knob_combo[bkc_Edit][bkc_StartPos2].combo_state = COMBO_LATCHED;
+		g_button_knob_combo[bkc_Edit][bkc_Length1].combo_state = COMBO_LATCHED;
 
 		//RecSample pot is not latched, its value returns to the knob position immediately
 		g_button_knob_combo[bkc_Edit][bkc_RecSample].combo_state = COMBO_INACTIVE;
@@ -614,9 +619,9 @@ void copy_sample(uint8_t dst_bank, uint8_t dst_sample, uint8_t src_bank, uint8_t
 }
 
 void set_sample_gain(Sample *s_sample, float gain) {
-	if (gain >= 5.1)
+	if (gain >= 5.1f)
 		gain = 5.1f;
-	else if (gain <= 0.1)
+	else if (gain <= 0.1f)
 		gain = 0.1f;
 
 	s_sample->inst_gain = gain;

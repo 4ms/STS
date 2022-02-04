@@ -112,6 +112,7 @@ enum Flags {
 	ChangePlaytoPerc2,
 	PercEnvModeChanged,
 	FadeEnvModeChanged,
+	FadeUpDownTimeChanged,
 
 	NUM_FLAGS
 };
