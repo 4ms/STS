@@ -486,7 +486,6 @@ void update_params(void) {
 	uint8_t knob;
 	uint8_t old_val;
 	uint8_t new_val;
-	uint8_t t_trig_delay_val;
 	int32_t t_pitch_potadc;
 	float t_f;
 	uint16_t sample_pot;
@@ -920,14 +919,13 @@ void update_params(void) {
 		}
 	}
 
-	//
-	// Edit + RecSample knob = control trig delay
-	//
 	else if (global_mode[EDIT_MODE])
 	{
+		//
+		// Edit + RecSample knob = control trig delay
+		//
 		edit_bkc = &g_button_knob_combo[bkc_Edit][bkc_RecSample];
-
-		new_val = detent_num(bracketed_potadc[RECSAMPLE_POT]); //valid values are 1 to 10
+		new_val = detent_num(bracketed_potadc[RECSAMPLE_POT]); //converts ADC value to 0..9
 
 		// If the combo is not active, activate it when we detect the knob was turned to a new detent
 		if (edit_bkc->combo_state != COMBO_ACTIVE) {
@@ -939,13 +937,14 @@ void update_params(void) {
 		// If the combo is active, see if the value has changed. Then update the params and flag for LED response
 		else
 		{
-			t_trig_delay_val = new_val + 1; //convert detents 0..9 to 1..10
-			if (t_trig_delay_val != global_mode[TRIG_DELAY]) {
-				global_params.play_trig_delay = calc_trig_delay(t_trig_delay_val);
-				global_params.play_trig_latch_pitch_time = calc_pitch_latch_time(t_trig_delay_val);
+			uint8_t t_param_val;
+			t_param_val = new_val + 1; //convert detents 0..9 to 1..10
+			if (t_param_val != global_mode[TRIG_DELAY]) {
+				global_params.play_trig_delay = calc_trig_delay(t_param_val);
+				global_params.play_trig_latch_pitch_time = calc_pitch_latch_time(t_param_val);
 
 				flags[ChangedTrigDelay] = 1; // tell LED driver to confirm the change with lights
-				global_mode[TRIG_DELAY] = t_trig_delay_val;
+				global_mode[TRIG_DELAY] = t_param_val;
 
 				flags32[SaveUserSettingsLater] = 0x800000; //10-15s
 			}
