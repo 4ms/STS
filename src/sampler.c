@@ -1378,13 +1378,13 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			break;
 
 		case (PAD_SILENCE):
-			decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
-			// Fill a short sample with silence in order to obtain the fixed loop time
+			// decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
+			// // Fill a short sample with silence in order to obtain the fixed loop time
 
-			if (i_param[chan][REV])
-				decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
-			else
-				decay_amp_i[chan] -= HT16_CHAN_BUFF_LEN * decay_inc[chan];
+			// if (i_param[chan][REV])
+			// 	decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
+			// else
+			// 	decay_amp_i[chan] -= HT16_CHAN_BUFF_LEN * decay_inc[chan];
 
 			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
 				outL[i] = 0;
