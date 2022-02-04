@@ -59,6 +59,7 @@ static inline int32_t _SSAT16(int32_t x) {
 }
 
 static void check_perc_ending(uint8_t chan);
+static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan);
 
 //
 // DEBUG
@@ -1152,87 +1153,95 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 				resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 2, chan, outL);
 		}
 
-		//Calculate length and where to stop playing
-		length = f_param[chan][LENGTH];
-		gain = s_sample->inst_gain * f_param[chan][VOLUME];
+		apply_envelopes(outL, outR, chan);
+	}
+}
 
-		//Update the start/endpos based on the length parameter
-		//Update the play_time (used to calculate led flicker and END OUT pulse width
-		//ToDo: we should do this in update_params
-		//
-		if (i_param[chan][REV]) {
-			sample_file_startpos[chan] =
-				calc_stop_point(length, rs, &samples[banknum][samplenum], sample_file_endpos[chan]);
+void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
+	int i;
+	float env;
+
+	uint8_t samplenum = sample_num_now_playing[chan];
+	uint8_t banknum = sample_bank_now_playing[chan];
+	Sample *s_sample = &(samples[banknum][samplenum]);
+
+	float length = f_param[chan][LENGTH];
+	float gain = s_sample->inst_gain * f_param[chan][VOLUME];
+	float rs = (s_sample->sampleRate == global_params.record_sample_rate)
+				 ? f_param[chan][PITCH]
+				 : f_param[chan][PITCH] * ((float)s_sample->sampleRate / global_params.f_record_sample_rate);
+
+	//Update the start/endpos based on the length parameter
+	//Update the play_time (used to calculate led flicker and END OUT pulse width
+	//ToDo: we should do this in update_params
+
+	float play_time;
+	if (i_param[chan][REV]) {
+		sample_file_startpos[chan] =
+			calc_stop_point(length, rs, &samples[banknum][samplenum], sample_file_endpos[chan]);
 			play_time = (sample_file_startpos[chan] - sample_file_endpos[chan]) /
 						(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
 		} else {
 			sample_file_endpos[chan] =
 				calc_stop_point(length, rs, &samples[banknum][samplenum], sample_file_startpos[chan]);
 			play_time = (sample_file_endpos[chan] - sample_file_startpos[chan]) /
-						(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
-		}
+					(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
+	}
 
-		//TODO: apply_envelopes(outL, outR, chan)
-		switch (play_state[chan]) {
+	switch (play_state[chan]) {
+		case (RETRIG_FADEDOWN):
+			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+				env = global_mode[FADEUPDOWN_ENVELOPE] ? (float)(HT16_CHAN_BUFF_LEN - i) / (float)HT16_CHAN_BUFF_LEN
+													   : 1.f;
 
-			case (PLAY_FADEDOWN):
-			case (RETRIG_FADEDOWN):
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					if (global_mode[FADEUPDOWN_ENVELOPE])
-						env = (float)(HT16_CHAN_BUFF_LEN - i) / (float)HT16_CHAN_BUFF_LEN;
-					else
-						env = 1.0;
-
-					outL[i] = (float)outL[i] * env * gain;
-					outR[i] = (float)outR[i] * env * gain;
+				outL[i] = (float)outL[i] * env * gain;
+				outR[i] = (float)outR[i] * env * gain;
 
 					outL[i] = _SSAT16(outL[i]);
 					outR[i] = _SSAT16(outR[i]);
 				}
 
-				flicker_endout(chan, play_time);
+			flicker_endout(chan, play_time);
 
-				//Start playing again if we're looking, or re-triggered
-				//Unless we faded down because of a play trigger
-				if ((play_state[chan] == RETRIG_FADEDOWN || i_param[chan][LOOPING]) && !flags[Play1TrigDelaying + chan])
-					flags[Play1But + chan] = 1;
+			//Start playing again unless we faded down because of a play trigger
+			//TODO: Does this ever happen?
+			if (!flags[Play1TrigDelaying + chan])
+				flags[Play1But + chan] = 1;
 
-				play_state[chan] = SILENT;
-				break;
+			play_state[chan] = SILENT;
+			break;
 
-			case (PLAY_FADEUP):
-				decay_inc[chan] = global_mode[FADEUPDOWN_ENVELOPE] ? 1.0f / 44100.f : 0.f;
+		case (PLAY_FADEUP):
+			if (global_mode[FADEUPDOWN_ENVELOPE]) {
+				decay_inc[chan] = global_params.fade_up_rate;
 
 				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					if (decay_inc[chan] > 0.f) {
+					if (decay_amp_i[chan] > 1.0f)
+						decay_amp_i[chan] = 1.0f;
+					else
 						decay_amp_i[chan] += decay_inc[chan];
 
-						if (decay_amp_i[chan] < 0.0f) {
-							decay_inc[chan] = 0.0;
-							decay_amp_i[chan] = 0.0f;
-						} else if (decay_amp_i[chan] > 1.0f) {
-							decay_inc[chan] = 0.0;
-							decay_amp_i[chan] = 1.0f;
-						}
-
-						outL[i] = (float)outL[i] * decay_amp_i[chan] * gain;
-						outR[i] = (float)outR[i] * decay_amp_i[chan] * gain;
-					} else {
-						outL[i] = (float)outL[i] * gain;
-						outR[i] = (float)outR[i] * gain;
-					}
-
+					outL[i] = (float)outL[i] * decay_amp_i[chan] * gain;
+					outR[i] = (float)outR[i] * decay_amp_i[chan] * gain;
 					outL[i] = _SSAT16(outL[i]);
 					outR[i] = _SSAT16(outR[i]);
 				}
 
-				if (decay_inc[chan] == 0.f) {
+				if (decay_amp_i[chan] >= 1.f)
 					play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
+
+			} else {
+				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+					outL[i] = (float)outL[i] * gain;
+					outR[i] = (float)outR[i] * gain;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
 				}
+				play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
+			}
+			break;
 
-				break;
-
-			case (PLAYING):
+		case (PLAYING):
 				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
 					outL[i] = (float)outL[i] * gain;
 					outR[i] = (float)outR[i] * gain;
@@ -1243,10 +1252,46 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 				if (length <= 0.5f)
 					flags[ChangePlaytoPerc1 + chan] = 1;
 
-				break;
+			break;
 
-			case (PLAYING_PERC):
-				decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
+		case (PLAY_FADEDOWN):
+			if (global_mode[FADEUPDOWN_ENVELOPE]) {
+				decay_inc[chan] = global_params.fade_down_rate;
+
+				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+					if (decay_amp_i[chan] < 0.0f)
+						decay_amp_i[chan] = 0.0f;
+					else
+						decay_amp_i[chan] -= decay_inc[chan];
+
+					outL[i] = (float)outL[i] * decay_amp_i[chan] * gain;
+					outR[i] = (float)outR[i] * decay_amp_i[chan] * gain;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
+				}
+			} else {
+				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+					outL[i] = (float)outL[i] * gain;
+					outR[i] = (float)outR[i] * gain;
+					outL[i] = _SSAT16(outL[i]);
+					outR[i] = _SSAT16(outR[i]);
+				}
+				decay_amp_i[chan] = 0.f; //set this so we detect "end of fade" in the next block
+			}
+
+			if (decay_amp_i[chan] == 0.f) {
+				flicker_endout(chan, play_time);
+
+				//Start playing again if we're looping, unless we faded down because of a play trigger
+				if (i_param[chan][LOOPING] && !flags[Play1TrigDelaying + chan])
+					flags[Play1But + chan] = 1;
+
+				play_state[chan] = SILENT;
+			}
+			break;
+
+		case (PLAYING_PERC):
+			decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
 
 				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
 					if (i_param[chan][REV])
