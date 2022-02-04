@@ -477,12 +477,9 @@ void start_playing(uint8_t chan) {
 
 	flags[PlayBuff1_Discontinuity + chan] = 1;
 
-	if (i_param[chan][REV])
-		decay_amp_i[chan] = 0.0;
-	else
-		decay_amp_i[chan] = 1.0;
-
-	decay_inc[chan] = 0.0;
+	//decay_amp_i[chan] = i_param[chan][REV] ? 1.0f : 0.f;
+	decay_amp_i[chan] = 0.f;
+	decay_inc[chan] = 0.f;
 
 	play_led_state[chan] = 1;
 
@@ -1244,26 +1241,35 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 				break;
 
 			case (PLAY_FADEUP):
-				// DEBUG3_ON;
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					if (global_mode[FADEUPDOWN_ENVELOPE])
-						env = (float)i / (float)HT16_CHAN_BUFF_LEN;
-					else
-						env = 1.0;
+				decay_inc[chan] = global_mode[FADEUPDOWN_ENVELOPE] ? 1.0f / 44100.f : 0.f;
 
-					outL[i] = (float)outL[i] * env * gain;
-					outR[i] = (float)outR[i] * env * gain;
+				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+					if (decay_inc[chan] > 0.f) {
+						decay_amp_i[chan] += decay_inc[chan];
+
+						if (decay_amp_i[chan] < 0.0f) {
+							decay_inc[chan] = 0.0;
+							decay_amp_i[chan] = 0.0f;
+						} else if (decay_amp_i[chan] > 1.0f) {
+							decay_inc[chan] = 0.0;
+							decay_amp_i[chan] = 1.0f;
+						}
+
+						outL[i] = (float)outL[i] * decay_amp_i[chan] * gain;
+						outR[i] = (float)outR[i] * decay_amp_i[chan] * gain;
+					} else {
+						outL[i] = (float)outL[i] * gain;
+						outR[i] = (float)outR[i] * gain;
+					}
 
 					outL[i] = _SSAT16(outL[i]);
 					outR[i] = _SSAT16(outR[i]);
 				}
 
-				if (length > 0.5)
-					play_state[chan] = PLAYING;
-				else
-					play_state[chan] = PLAYING_PERC;
+				if (decay_inc[chan] == 0.f) {
+					play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
+				}
 
-				// DEBUG3_OFF;
 				break;
 
 			case (PLAYING):
