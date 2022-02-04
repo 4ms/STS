@@ -568,14 +568,12 @@ void update_params(void) {
 				edit_bkc->combo_state = COMBO_ACTIVE;
 
 			// If the combo is active, see if the value has changed. Then update the params and flag for LED response
-			else {
-				float t_param_val = calc_fade_updown_rate(cur_pot_val);
-				if (t_param_val != global_params.play_trig_delay) {
-					global_params.fade_down_rate = t_param_val;
-					global_params.fade_up_rate = t_param_val;
-					flags[FadeUpDownTimeChanged] = 1;		   // tell LED driver to confirm the change with lights
-					flags32[SaveUserSettingsLater] = 0x800000; //10-15s
-				}
+			float t_param_val = calc_fade_updown_rate(cur_pot_val);
+			if (t_param_val != global_params.fade_up_rate) {
+				global_params.fade_up_rate = t_param_val;
+				global_params.fade_down_rate = t_param_val;
+				flags[FadeUpDownTimeChanged] = 1;		   // tell LED driver to confirm the change with lights
+				flags32[SaveUserSettingsLater] = 0x800000; //10-15s
 			}
 		}
 
