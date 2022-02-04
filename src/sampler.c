@@ -476,7 +476,6 @@ void start_playing(uint8_t chan) {
 
 	flags[PlayBuff1_Discontinuity + chan] = 1;
 
-	//decay_amp_i[chan] = i_param[chan][REV] ? 1.0f : 0.f;
 	decay_amp_i[chan] = 0.f;
 	decay_inc[chan] = 0.f;
 
@@ -750,8 +749,6 @@ void read_storage_to_buffer(void) {
 	FRESULT res;
 	uint32_t br;
 	uint32_t rd;
-	//uint16_t i;
-	//int32_t a,b,c;
 
 	//convenience variables
 	uint8_t samplenum, banknum;
@@ -765,7 +762,6 @@ void read_storage_to_buffer(void) {
 	check_change_bank(0);
 	check_change_bank(1);
 
-	// DEBUG1_ON;
 	for (chan = 0; chan < NUM_PLAY_CHAN; chan++) {
 
 		if ((play_state[chan] != SILENT) && (play_state[chan] != PLAY_FADEDOWN) &&
@@ -800,7 +796,6 @@ void read_storage_to_buffer(void) {
 				g_error &= ~(FILE_READ_FAIL_1 << chan);
 			} else //If no file read error... [?? FixMe: does this logic make sense for clearing is_buffered_to_file_end ???]
 			{
-
 				if ((!i_param[chan][REV] && (sample_file_curpos[chan][samplenum] < s_sample->inst_end)) ||
 					(i_param[chan][REV] && (sample_file_curpos[chan][samplenum] > s_sample->inst_start)))
 					is_buffered_to_file_end[chan][samplenum] = 0;
@@ -830,12 +825,9 @@ void read_storage_to_buffer(void) {
 				((play_state[chan] == PREBUFFERING && (play_buff_bufferedamt[chan][samplenum] < pre_buff_size)) ||
 				 (play_state[chan] != PREBUFFERING && (play_buff_bufferedamt[chan][samplenum] < active_buff_size))))
 			{
-				// DEBUG2_ON;
-
-				if (sample_file_curpos[chan][samplenum] >
-					s_sample
-						->sampleSize) //we read too much data somehow //When does this happen? sample_file_curpos has not changed recently...
-				{
+				if (sample_file_curpos[chan][samplenum] > s_sample->sampleSize) {
+					//We read too much data somehow
+					//TODO: When does this happen? sample_file_curpos has not changed recently...
 					g_error |= FILE_WAVEFORMATERR;
 					play_state[chan] = SILENT;
 					start_playing(chan);
@@ -870,7 +862,6 @@ void read_storage_to_buffer(void) {
 							is_buffered_to_file_end[chan][samplenum] = 1;
 						}
 
-						//sample_file_curpos[chan][samplenum] += br;
 						sample_file_curpos[chan][samplenum] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
 
 						if (sample_file_curpos[chan][samplenum] >= s_sample->inst_end) {
@@ -945,29 +936,26 @@ void read_storage_to_buffer(void) {
 						//
 						// Write raw file data (tmp_buff_u32) into buffer (play_buff)
 						//
-						if (s_sample->sampleByteSize == 2) //16bit
+
+						// 16 bit
+						if (s_sample->sampleByteSize == 2)
 							err = memory_write_16as16(play_buff[chan][samplenum], tmp_buff_u32, rd >> 2, 0);
 
-						else if (s_sample->sampleByteSize == 3) //24bit
-							err = memory_write_24as16(play_buff[chan][samplenum],
-													  (uint8_t *)tmp_buff_u32,
-													  rd,
-													  0); //rd must be a multiple of 3
+						//24bit (rd must be a multiple of 3)
+						else if (s_sample->sampleByteSize == 3)
+							err = memory_write_24as16(play_buff[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, 0);
 
-						else if (s_sample->sampleByteSize == 1) //8bit
+						//8bit
+						else if (s_sample->sampleByteSize == 1)
 							err = memory_write_8as16(play_buff[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, 0);
 
-						else if (s_sample->sampleByteSize == 4 && s_sample->PCM == 3) //32-bit float
-							err = memory_write_32fas16(play_buff[chan][samplenum],
-													   (float *)tmp_buff_u32,
-													   rd >> 2,
-													   0); //rd must be a multiple of 4
+						//32-bit float (rd must be a multiple of 4)
+						else if (s_sample->sampleByteSize == 4 && s_sample->PCM == 3)
+							err = memory_write_32fas16(play_buff[chan][samplenum], (float *)tmp_buff_u32, rd >> 2, 0);
 
-						else if (s_sample->sampleByteSize == 4 && s_sample->PCM == 1) //32-bit int
-							err = memory_write_32ias16(play_buff[chan][samplenum],
-													   (uint8_t *)tmp_buff_u32,
-													   rd,
-													   0); //rd must be a multiple of 4
+						//32-bit int rd must be a multiple of 4
+						else if (s_sample->sampleByteSize == 4 && s_sample->PCM == 1)
+							err = memory_write_32ias16(play_buff[chan][samplenum], (uint8_t *)tmp_buff_u32, rd, 0);
 
 						//Update the cache addresses
 						if (i_param[chan][REV]) {
@@ -1002,7 +990,6 @@ void read_storage_to_buffer(void) {
 							g_error |= READ_BUFF1_OVERRUN << chan;
 					}
 				}
-				// DEBUG2_OFF;
 			}
 
 			//Check if we've prebuffered enough to start playing
@@ -1019,7 +1006,6 @@ void read_storage_to_buffer(void) {
 
 		} //play_state != SILENT, FADEDOWN
 	}	  //for (chan)
-	// DEBUG1_OFF;
 }
 
 // calc_resampled_cache_size
@@ -1111,12 +1097,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 			//See if we are about to surpass the calculated position in the file where we should end our sample
 			if (dist_to_end < resampled_cache_size * 2) {
-				//FIXME: simplify:
-				//if (flags[ChangePlaytoPerc1 + chan] || play_state[chan] != PLAYING_PERC) {
-				// play_state[chan] = PLAY_FADEDOWN;
-				// flags[ChangePlaytoPerc1 + chan] = 0;
-				// } else
-				// play_state[chan] = PLAYING_PERC_FADEDOWN;
 				if (flags[ChangePlaytoPerc1 + chan]) {
 					//If we just changed from PLAYING to PLAYING_PERC then, do a normal Fadedown or else we'll get annoying PAD_SILENCE
 					play_state[chan] = PLAY_FADEDOWN;
@@ -1132,10 +1112,11 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 				if (!is_buffered_to_file_end[chan][samplenum] &&
 					play_buff_bufferedamt[chan][samplenum] <= resampled_buffer_size) {
+					//buffer underrun: tried to read too much out. Try to recover!
 					g_error |= READ_BUFF1_UNDERRUN << chan;
 					check_errors();
 					play_state[chan] = PREBUFFERING;
-				} //buffer underrun: tried to read too much out. Try to recover!
+				}
 			}
 		}
 
@@ -1358,21 +1339,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 				break;
 
 			default: //PREBUFFERING or SILENT
-				break;
+			break;
 
-		} //switch play_state
-
-	} //if play_state
-
-	// //FixMe: samplenum is not necessarily set at this point in the function
-	// if (	(play_state[0]==PLAYING && (play_buff_bufferedamt[0][samplenum] < 15000)) ||
-	// 		(play_state[1]==PLAYING && (play_buff_bufferedamt[1][samplenum] < 15000)) )
-
-	// 	play_load_triage = PRIORITIZE_PLAYING;
-	// else
-	// 	play_load_triage = NO_PRIORITY;
-
-	// DEBUG3_OFF;
+	} //switch play_state
 }
 
 void check_perc_ending(uint8_t chan) {
