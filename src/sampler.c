@@ -1108,9 +1108,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 					play_state[chan] = PLAY_FADEDOWN;
 					decay_amp_i[chan] = 1.f;
 					flags[ChangePlaytoPerc1 + chan] = 0;
-				} else if (play_state[chan] == PLAYING_PERC) {
+				} else if (play_state[chan] == PLAYING_PERC && i_param[chan][REV]) {
 					play_state[chan] = PLAYING_PERC_FADEDOWN;
-				} else {
+				} else if (play_state[chan] != PLAYING_PERC) {
 					play_state[chan] = PLAY_FADEDOWN;
 					decay_amp_i[chan] = 1.f;
 				}
