@@ -65,8 +65,10 @@ void enter_system_mode(void) {
 void exit_system_mode(uint8_t do_save) {
 
 	if (do_save) {
+#ifdef ENABLE_VARIABLE_RECORD_SAMPLE_RATE
 		global_params.f_record_sample_rate = (float)(global_params.record_sample_rate);
 		codec_reboot_new_samplerate(global_params.record_sample_rate);
+#endif
 
 		save_flash_params(5);
 		flags[SaveUserSettings] = 1;
@@ -132,6 +134,7 @@ void update_system_mode(void) {
 
 		//Rec : Toggle 24-bit mode
 		if (check_button_pressed(RecBank)) {
+#ifdef ENABLE_VARIABLE_RECORD_SAMPLE_RATE
 			if (global_params.record_sample_rate == REC_44K)
 				global_params.record_sample_rate = REC_48K;
 			else if (global_params.record_sample_rate == REC_48K)
@@ -139,6 +142,7 @@ void update_system_mode(void) {
 			else if (global_params.record_sample_rate == REC_88K)
 				global_params.record_sample_rate = REC_96K;
 			else
+#endif
 				global_params.record_sample_rate = REC_44K;
 		}
 

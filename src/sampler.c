@@ -1102,15 +1102,20 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 			dist_to_end = calc_dist_to_end(chan, samplenum, banknum);
 
 			//See if we are about to surpass the calculated position in the file where we should end our sample
+			// - we're not in Perc mode --> FADEDOWN
+			// - we just changed to Perc from Play --> FADEDOWN (or else we'll get annoying PAD_SILENCE)
+			// - we're in reverse perc mode --> PERC_FADEDOWN
+			// - we're in Perc mode (but none of the above are true) --> do nothing, our PERC envelope will handle it
 			if (dist_to_end < resampled_cache_size * 2) {
-				if (flags[ChangePlaytoPerc1 + chan]) {
-					//If we just changed from PLAYING to PLAYING_PERC then, do a normal Fadedown or else we'll get annoying PAD_SILENCE
-					play_state[chan] = PLAY_FADEDOWN;
-					decay_amp_i[chan] = 1.f;
-					flags[ChangePlaytoPerc1 + chan] = 0;
-				} else if (play_state[chan] == PLAYING_PERC && i_param[chan][REV]) {
-					play_state[chan] = PLAYING_PERC_FADEDOWN;
-				} else if (play_state[chan] != PLAYING_PERC) {
+				if (play_state[chan] == PLAYING_PERC) {
+					if (flags[ChangePlaytoPerc1 + chan]) {
+						play_state[chan] = PLAY_FADEDOWN;
+						decay_amp_i[chan] = 1.f;
+						flags[ChangePlaytoPerc1 + chan] = 0;
+					} else if (i_param[chan][REV]) {
+						play_state[chan] = PLAYING_PERC_FADEDOWN;
+					}
+				} else {
 					play_state[chan] = PLAY_FADEDOWN;
 					decay_amp_i[chan] = 1.f;
 				}

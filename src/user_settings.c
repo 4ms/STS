@@ -92,7 +92,9 @@ FRESULT save_user_settings(void) {
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## [STEREO MODE] can be \"stereo\" or \"mono\" (default)\n");
 		f_printf(&settings_file, "## [RECORD SAMPLE BITS] can be 24 or 16 (default)\n");
+#ifdef ENABLE_VARIABLE_RECORD_SAMPLE_RATE
 		f_printf(&settings_file, "## [RECORD SAMPLE RATE] can be 96k, 88.2k, 48k, or 44.1k (default)\n");
+#endif
 		f_printf(&settings_file,
 				 "## [AUTO STOP ON SAMPLE CHANGE] can be \"No\", \"Looping Only\" or \"Yes\" (default)\n");
 		f_printf(&settings_file, "## [PLAY BUTTON STOPS WITH LENGTH AT FULL] can be \"No\" or \"Yes\" (default)\n");
@@ -129,6 +131,7 @@ FRESULT save_user_settings(void) {
 		else
 			f_printf(&settings_file, "16\n\n");
 
+#ifdef ENABLE_VARIABLE_RECORD_SAMPLE_RATE
 		// Write the record sample rate setting
 		f_printf(&settings_file, "[RECORD SAMPLE RATE]\n");
 
@@ -140,6 +143,7 @@ FRESULT save_user_settings(void) {
 			f_printf(&settings_file, "96k\n\n");
 		else
 			f_printf(&settings_file, "44.1k\n\n");
+#endif
 
 		// Write the Auto Stop on Sample Change mode setting
 		f_printf(&settings_file, "[AUTO STOP ON SAMPLE CHANGE]\n");
@@ -319,6 +323,7 @@ FRESULT read_user_settings(void) {
 				cur_setting_found = NoSetting; //back to looking for headers
 			}
 
+#ifdef ENABLE_VARIABLE_RECORD_SAMPLE_RATE
 			if (cur_setting_found == RecordSampleRate) {
 				if (str_startswith_nocase(read_buffer, "48"))
 					global_params.record_sample_rate = REC_48K;
@@ -331,6 +336,7 @@ FRESULT read_user_settings(void) {
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}
+#endif
 
 			if (cur_setting_found == AutoStopSampleChange) {
 				if (str_startswith_nocase(read_buffer, "Yes"))

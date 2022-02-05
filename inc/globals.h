@@ -29,6 +29,7 @@
 #pragma once
 
 // #define DEBUG_ENABLED
+#define ENABLE_VARIABLE_RECORD_SAMPLE_RATE
 
 // 128 bytes per DMA transfer
 // 64 bytes/half-transfer @ 16 bits/sample = 32 samples per half-transfer
