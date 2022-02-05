@@ -155,8 +155,10 @@ void init_params(void) {
 	global_params.play_trig_delay = calc_trig_delay(global_mode[TRIG_DELAY]);
 	global_params.play_trig_latch_pitch_time = calc_pitch_latch_time(global_mode[TRIG_DELAY]);
 
-	global_params.fade_down_rate = 1.f / (global_params.f_record_sample_rate * 0.025f); //25ms fade down
-	global_params.fade_up_rate = 1.f / (global_params.f_record_sample_rate * 0.05f);	//50ms fade up
+	if (global_params.fade_time_ms > 255)
+		global_params.fade_time_ms = 6;
+	global_params.fade_down_rate = calc_fade_updown_rate(global_params.fade_time_ms);
+	global_params.fade_up_rate = calc_fade_updown_rate(global_params.fade_time_ms);
 }
 
 //initializes modes that aren't read from flash ram or disk
@@ -572,10 +574,10 @@ void update_params(void) {
 				edit_bkc->combo_state = COMBO_ACTIVE;
 
 			// If the combo is active, see if the value has changed. Then update the params and flag for LED response
-			float t_param_val = calc_fade_updown_rate(cur_pot_val);
-			if (t_param_val != global_params.fade_up_rate) {
-				global_params.fade_up_rate = t_param_val;
-				global_params.fade_down_rate = t_param_val;
+			uint32_t t_param_val = cur_pot_val >> 4; //0..4095 => 0..255
+			if (t_param_val != global_params.fade_time_ms) {
+				global_params.fade_up_rate = calc_fade_updown_rate(t_param_val);
+				global_params.fade_down_rate = calc_fade_updown_rate(t_param_val);
 				flags[FadeUpDownTimeChanged] = 1;		   // tell LED driver to confirm the change with lights
 				flags32[SaveUserSettingsLater] = 0x800000; //10-15s
 			}
@@ -1166,11 +1168,11 @@ uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting) {
 	return (0);
 }
 
-float calc_fade_updown_rate(uint16_t knob_pos) {
-	//map 0..4095 => 1/HT16_CHAN_BUFF_LEN .. 1/(0.05 * 44100.f) or whatever the sample rate is
+float calc_fade_updown_rate(uint8_t time_ms) {
+	//map 0..255 => 1/HT16_CHAN_BUFF_LEN .. 1/(0.05 * 44100.f)
 	float range = 0.05f * global_params.f_record_sample_rate - (float)HT16_CHAN_BUFF_LEN;
 	float offset = HT16_CHAN_BUFF_LEN;
-	return 1.0f / ((((float)knob_pos) / 4095.0f) * range + offset);
+	return 1.0f / ((((float)time_ms) / 255.0f) * range + offset);
 }
 
 void adc_param_update_IRQHandler(void) {

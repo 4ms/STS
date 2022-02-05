@@ -111,6 +111,9 @@ FRESULT save_user_settings(void) {
 		f_printf(&settings_file,
 				 "## [TRIG DELAY] can be a number between 1 and 10 which translates to a delay between 0.5ms and 20ms, "
 				 "respectively (default is 5)\n");
+		f_printf(&settings_file,
+				 "## [FADE TIME] can be a number between 0 and 250 which sets the fade in/out time in milliseconds. "
+				 "(0 is actually 0.36ms, and 250 is 250ms. Default is 6)\n");
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## Deleting this file will restore default settings\n");
 		f_printf(&settings_file, "##\n\n");
@@ -207,6 +210,10 @@ FRESULT save_user_settings(void) {
 		f_printf(&settings_file, "[TRIG DELAY]\n");
 		f_printf(&settings_file, "%d\n\n", global_mode[TRIG_DELAY]);
 
+		// Write the Trig Delay setting
+		f_printf(&settings_file, "[FADE TIME]\n");
+		f_printf(&settings_file, "%d\n\n", global_params.fade_time_ms);
+
 		res = f_close(&settings_file);
 	}
 
@@ -285,19 +292,24 @@ FRESULT read_user_settings(void) {
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[CROSSFADE SAMPLE END POINTS")) {
-					cur_setting_found = FadeEnvelope; //Fade up/dpwn envelope
+					cur_setting_found = FadeEnvelope; //Fade up/down envelope
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[STARTUP BANK CHANNEL 1")) {
-					cur_setting_found = StartUpBank_ch1; //Fade up/dpwn envelope
+					cur_setting_found = StartUpBank_ch1;
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[STARTUP BANK CHANNEL 2")) {
-					cur_setting_found = StartUpBank_ch2; //Fade up/dpwn envelope
+					cur_setting_found = StartUpBank_ch2;
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[TRIG DELAY")) {
 					cur_setting_found = TrigDelay; //Trigger delay for play trig
+					continue;
+				}
+
+				if (str_startswith_nocase(read_buffer, "[FADE TIME")) {
+					cur_setting_found = FadeUpDownTime; //Fade up/down envelope time
 					continue;
 				}
 			}
@@ -404,10 +416,19 @@ FRESULT read_user_settings(void) {
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}
+
 			if (cur_setting_found == TrigDelay) {
 				global_mode[TRIG_DELAY] = str_xt_int(read_buffer);
 				if (global_mode[TRIG_DELAY] < 1 || global_mode[TRIG_DELAY] > 20)
 					global_mode[TRIG_DELAY] = 8;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found == FadeUpDownTime) {
+				global_params.fade_time_ms = str_xt_int(read_buffer);
+				if (global_params.fade_time_ms < 0 || global_params.fade_time_ms > 255)
+					global_params.fade_time_ms = 6;
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}

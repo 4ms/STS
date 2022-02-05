@@ -68,6 +68,10 @@ void exit_system_mode(uint8_t do_save) {
 #ifdef ENABLE_VARIABLE_RECORD_SAMPLE_RATE
 		global_params.f_record_sample_rate = (float)(global_params.record_sample_rate);
 		codec_reboot_new_samplerate(global_params.record_sample_rate);
+
+		//Re-calculate fade rate because it depends on sample rate
+		global_params.fade_down_rate = calc_fade_updown_rate(global_params.fade_time_ms);
+		global_params.fade_up_rate = calc_fade_updown_rate(global_params.fade_time_ms);
 #endif
 
 		save_flash_params(5);

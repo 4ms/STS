@@ -103,8 +103,9 @@ typedef struct GlobalParams {
 	uint32_t play_trig_latch_pitch_time;
 	enum RecordingSampleRates record_sample_rate;
 	float f_record_sample_rate; //pre-converted to float to speed up calculations
-	float fade_up_rate;			// Non-percussion playback mode fade up time
-	float fade_down_rate;		// Non-percussion playback mode fade down time
+	float fade_up_rate;			// Non-percussion playback mode fade up increment
+	float fade_down_rate;		// Non-percussion playback mode fade down increment
+	uint32_t fade_time_ms;		// Raw value in ms, independant of codec sample rate
 } GlobalParams;
 
 static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef) {
@@ -129,7 +130,7 @@ uint8_t detent_num_antihys(uint16_t adc_val, uint8_t cur_detent);
 
 uint32_t calc_trig_delay(uint8_t trig_delay_setting);
 uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting);
-float calc_fade_updown_rate(uint16_t knob_pos);
+float calc_fade_updown_rate(uint8_t time_ms);
 
 #define adc_param_update_IRQHandler TIM1_BRK_TIM9_IRQHandler
 void adc_param_update_IRQHandler(void);
