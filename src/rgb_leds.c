@@ -405,12 +405,9 @@ void update_ButtonLEDs(void) {
 		} else if (flags[ChangedTrigDelay]) {
 			//initialize phase
 			if (flags[ChangedTrigDelay] == 1) {
-				// st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
 				st_phase = sys_tmr;
 				flags[ChangedTrigDelay]++;
 			}
-
-			// t = (sys_tmr + st_phase) & 0x7FF;
 			t = sys_tmr - st_phase;
 
 			if (flags[ChangedTrigDelay] == 2) {
@@ -429,6 +426,37 @@ void update_ButtonLEDs(void) {
 				st_phase = sys_tmr;
 			} else if ((flags[ChangedTrigDelay] == 5) && (t > 10000)) {
 				flags[ChangedTrigDelay] = 0;
+			}
+
+		} else if (flags[FadeUpDownTimeChanged]) {
+			//initialize phase
+			if (flags[FadeUpDownTimeChanged] == 1) {
+				st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
+				// st_phase = sys_tmr;
+				flags[FadeUpDownTimeChanged]++;
+			}
+			t = sys_tmr - st_phase;
+
+			if (flags[FadeUpDownTimeChanged] == 2) {
+				set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+				set_ButtonLED_byPalette(Play2ButtonLED, WHITE);
+				flags[FadeUpDownTimeChanged]++;
+			} else if (flags[FadeUpDownTimeChanged] == 2) {
+				//TODO: set rate based on global_params.fade
+				float rate = 8192.f;
+				set_ButtonLED_byPaletteFade(Play1ButtonLED, OFF, WHITE, t / rate);
+				if (t >= rate)
+					flags[FadeUpDownTimeChanged]++;
+			} else if (flags[FadeUpDownTimeChanged] == 3) {
+				//TODO: set rate based on global_params.fade
+				float rate = 8192.f;
+				set_ButtonLED_byPaletteFade(Play2ButtonLED, WHITE, OFF, t / rate);
+				if (t >= rate)
+					flags[FadeUpDownTimeChanged]++;
+			} else if (flags[FadeUpDownTimeChanged] == 4) {
+				set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+				set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+				flags[FadeUpDownTimeChanged] = 0;
 			}
 
 		} else if (flags[SkipProcessButtons] == 2) {
