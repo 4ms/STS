@@ -420,6 +420,7 @@ void start_playing(uint8_t chan) {
 															  cache_map_pt[chan][samplenum],
 															  play_buff[chan][samplenum]);
 
+		decay_amp_i[chan] = 0.f;
 		if (f_param[chan][LENGTH] <= 0.5f && i_param[chan][REV])
 			play_state[chan] = PLAYING_PERC;
 		else
@@ -1004,12 +1005,11 @@ void read_storage_to_buffer(void) {
 			if ((is_buffered_to_file_end[chan][samplenum] || play_buff_bufferedamt[chan][samplenum] >= pre_buff_size) &&
 				play_state[chan] == PREBUFFERING)
 			{
+				decay_amp_i[chan] = 0.f;
 				if (f_param[chan][LENGTH] <= 0.5f && i_param[chan][REV])
 					play_state[chan] = PLAYING_PERC;
-				else {
-					decay_amp_i[chan] = 0.f;
+				else
 					play_state[chan] = PLAY_FADEUP;
-				}
 			}
 
 		} //play_state != SILENT, FADEDOWN
@@ -1069,8 +1069,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 	float length;
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
-
-	// DEBUG3_ON;
 
 	// Fill buffer with silence
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT) {
@@ -1166,6 +1164,38 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 	}
 }
 
+// Linear fade of stereo data in outL and outR
+// Gain is a fixed gain to apply to all samples
+// Set rate to < 0 to fade down, > 0 to fade up
+// Returns amplitude applied to the last sample
+// Note: this increments amplitude before applying to the first sample
+float fade(int32_t *outL, int32_t *outR, float gain, float starting_amp, float rate) {
+	float amp = starting_amp;
+	uint32_t completed = 0;
+
+	for (int i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+		amp += rate;
+		if (amp >= 1.0f)
+			amp = 1.0f;
+		if (amp <= 0.f)
+			amp = 0.f;
+		outL[i] = (float)outL[i] * amp * gain;
+		outR[i] = (float)outR[i] * amp * gain;
+		outL[i] = _SSAT16(outL[i]);
+		outR[i] = _SSAT16(outR[i]);
+	}
+	return amp;
+}
+
+void apply_gain(int32_t *outL, int32_t *outR, float gain) {
+	for (int i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
+		outL[i] = (float)outL[i] * gain;
+		outR[i] = (float)outR[i] * gain;
+		outL[i] = _SSAT16(outL[i]);
+		outR[i] = _SSAT16(outR[i]);
+	}
+}
+
 void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 	int i;
 	float env;
@@ -1197,19 +1227,11 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 					(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
 	}
 
+	float fast_perc_fade_rate = 1.f / (0.003f * global_params.f_record_sample_rate);
 	switch (play_state[chan]) {
+
 		case (RETRIG_FADEDOWN):
-			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-				env = global_mode[FADEUPDOWN_ENVELOPE] ? (float)(HT16_CHAN_BUFF_LEN - i) / (float)HT16_CHAN_BUFF_LEN
-													   : 1.f;
-
-				outL[i] = (float)outL[i] * env * gain;
-				outR[i] = (float)outR[i] * env * gain;
-
-				outL[i] = _SSAT16(outL[i]);
-				outR[i] = _SSAT16(outR[i]);
-			}
-
+			fade(outL, outR, gain, 1.f, -1.f / (float)HT16_CHAN_BUFF_LEN);
 			flicker_endout(chan, play_time);
 
 			//Start playing again unless we faded down because of a play trigger
@@ -1221,43 +1243,46 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			break;
 
 		case (PLAY_FADEUP):
-			if (global_mode[FADEUPDOWN_ENVELOPE]) {
-				decay_inc[chan] = global_params.fade_up_rate;
+			if (length > 0.5f) {
+				if (global_mode[FADEUPDOWN_ENVELOPE]) {
+					decay_inc[chan] = global_params.fade_up_rate;
+					decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
+					if (decay_amp_i[chan] >= 1.f)
+						play_state[chan] = PLAYING;
 
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					if (decay_amp_i[chan] > 1.0f)
-						decay_amp_i[chan] = 1.0f;
-					else
-						decay_amp_i[chan] += decay_inc[chan];
-
-					outL[i] = (float)outL[i] * decay_amp_i[chan] * gain;
-					outR[i] = (float)outR[i] * decay_amp_i[chan] * gain;
-					outL[i] = _SSAT16(outL[i]);
-					outR[i] = _SSAT16(outR[i]);
+				} else {
+					apply_gain(outL, outR, gain);
+					play_state[chan] = PLAYING;
 				}
-
-				if (decay_amp_i[chan] >= 1.f)
-					play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
 
 			} else {
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					outL[i] = (float)outL[i] * gain;
-					outR[i] = (float)outR[i] * gain;
-					outL[i] = _SSAT16(outL[i]);
-					outR[i] = _SSAT16(outR[i]);
+				if (global_mode[PERC_ENVELOPE]) {
+					decay_inc[chan] = fast_perc_fade_rate;
+					decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
+					if (decay_amp_i[chan] >= 1.f)
+						play_state[chan] = PLAYING_PERC;
+
+				} else {
+					apply_gain(outL, outR, gain);
+					play_state[chan] = PLAYING_PERC;
 				}
-				play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
 			}
+
+			// if ((length > 0.5f && global_mode[FADEUPDOWN_ENVELOPE]) || (length <= 0.5f && global_mode[PERC_ENVELOPE])) {
+
+			// 	decay_inc[chan] = (length > 0.5f) ? global_params.fade_up_rate : fast_perc_fade_rate;
+			// 	decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
+			// 	if (decay_amp_i[chan] >= 1.f)
+			// 		play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
+
+			// } else {
+			// 	apply_gain(outL, outR, gain);
+			// 	play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
+			// }
 			break;
 
 		case (PLAYING):
-			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-				outL[i] = (float)outL[i] * gain;
-				outR[i] = (float)outR[i] * gain;
-
-				outL[i] = _SSAT16(outL[i]);
-				outR[i] = _SSAT16(outR[i]);
-			}
+			apply_gain(outL, outR, gain);
 			if (length <= 0.5f)
 				flags[ChangePlaytoPerc1 + chan] = 1;
 
@@ -1266,25 +1291,9 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 		case (PLAY_FADEDOWN):
 			if (global_mode[FADEUPDOWN_ENVELOPE]) {
 				decay_inc[chan] = global_params.fade_down_rate;
-
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					if (decay_amp_i[chan] < 0.0f)
-						decay_amp_i[chan] = 0.0f;
-					else
-						decay_amp_i[chan] -= decay_inc[chan];
-
-					outL[i] = (float)outL[i] * decay_amp_i[chan] * gain;
-					outR[i] = (float)outR[i] * decay_amp_i[chan] * gain;
-					outL[i] = _SSAT16(outL[i]);
-					outR[i] = _SSAT16(outR[i]);
-				}
+				decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], -1.f * decay_inc[chan]);
 			} else {
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-					outL[i] = (float)outL[i] * gain;
-					outR[i] = (float)outR[i] * gain;
-					outL[i] = _SSAT16(outL[i]);
-					outR[i] = _SSAT16(outR[i]);
-				}
+				apply_gain(outL, outR, gain);
 				decay_amp_i[chan] = 0.f; //set this so we detect "end of fade" in the next block
 			}
 
@@ -1300,37 +1309,17 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			break;
 
 		case (PLAYING_PERC):
-			decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
-
-			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-				if (i_param[chan][REV])
-					decay_amp_i[chan] += decay_inc[chan];
-				else
-					decay_amp_i[chan] -= decay_inc[chan];
-
-				if (decay_amp_i[chan] < 0.0f) {
-					decay_inc[chan] = 0.0;
-					decay_amp_i[chan] = 0.0f;
-				} else if (decay_amp_i[chan] > 1.0f) {
-					decay_inc[chan] = 0.0;
-					decay_amp_i[chan] = 1.0f;
-				}
-
-				if (global_mode[PERC_ENVELOPE])
-					env = decay_amp_i[chan];
-				else
-					env = 1.0;
-
-				outL[i] = ((float)outL[i]) * env * gain;
-				outR[i] = ((float)outR[i]) * env * gain;
-
-				outL[i] = _SSAT16(outL[i]);
-				outR[i] = _SSAT16(outR[i]);
+			if (global_mode[PERC_ENVELOPE]) {
+				decay_inc[chan] = (i_param[chan][REV] ? 1.f : -1.f) / (length * PERC_ENV_FACTOR);
+				decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
+			} else {
+				apply_gain(outL, outR, gain);
+				decay_amp_i[chan] = 1.f;
 			}
 
 			//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
-			if (decay_amp_i[chan] >= 1.0f && i_param[chan][REV]) {
-				play_state[chan] = PLAY_FADEDOWN;
+			if ((decay_amp_i[chan] >= 1.0f) && (i_param[chan][REV])) {
+				play_state[chan] = PLAYING_PERC_FADEDOWN;
 				decay_amp_i[chan] = 1.f;
 			} else
 				check_perc_ending(chan);
@@ -1339,53 +1328,22 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 		case (PLAYING_PERC_FADEDOWN):
 			// Fade down to silence before going to PAD_SILENCE mode or ending the playback
 			// (this prevents a click if the sample data itself doesn't cleanly fade out)
-			decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
-
-			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
-				if (i_param[chan][REV])
-					decay_amp_i[chan] += decay_inc[chan];
-				else
-					decay_amp_i[chan] -= decay_inc[chan];
-
-				if (decay_amp_i[chan] < 0.0f) {
-					decay_inc[chan] = 0.0;
-					decay_amp_i[chan] = 0.0f;
-				} else if (decay_amp_i[chan] > 1.0f) {
-					decay_inc[chan] = 0.0;
-					decay_amp_i[chan] = 1.0f;
-				}
-
-				if (global_mode[FADEUPDOWN_ENVELOPE])
-					env = decay_amp_i[chan] * (float)(HT16_CHAN_BUFF_LEN - i) / (float)HT16_CHAN_BUFF_LEN;
-				else
-					env = 1.0;
-
-				outL[i] = ((float)outL[i]) * env * gain;
-				outR[i] = ((float)outR[i]) * env * gain;
-
-				outL[i] = _SSAT16(outL[i]);
-				outR[i] = _SSAT16(outR[i]);
+			if (global_mode[PERC_ENVELOPE]) {
+				decay_inc[chan] = -1.f * fast_perc_fade_rate;
+				decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
+			} else {
+				apply_gain(outL, outR, gain);
 			}
 
 			// If the end point is the end of the sample data (which happens if the file is very short, or if we're at the end of it)
 			// Then pad it with silence so we keep a constant End Out period when looping
-			if (sample_file_endpos[chan] == s_sample->inst_end)
+			if (decay_amp_i[chan] <= 0.f && sample_file_endpos[chan] == s_sample->inst_end)
 				play_state[chan] = PAD_SILENCE;
 			else
-				decay_amp_i[chan] = 0.0f; //force a sample ending
-
-			check_perc_ending(chan);
+				check_perc_ending(chan);
 			break;
 
 		case (PAD_SILENCE):
-			// decay_inc[chan] = 1.0f / ((length)*PERC_ENV_FACTOR);
-			// // Fill a short sample with silence in order to obtain the fixed loop time
-
-			// if (i_param[chan][REV])
-			// 	decay_amp_i[chan] += HT16_CHAN_BUFF_LEN * decay_inc[chan];
-			// else
-			// 	decay_amp_i[chan] -= HT16_CHAN_BUFF_LEN * decay_inc[chan];
-
 			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
 				outL[i] = 0;
 				outR[i] = 0;
