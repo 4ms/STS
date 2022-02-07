@@ -68,6 +68,8 @@ void set_default_user_settings(void) {
 	global_mode[STARTUPBANK_CH2] = 0;
 
 	global_mode[TRIG_DELAY] = 8;
+
+	global_params.fade_time_ms = 24;
 }
 
 FRESULT save_user_settings(void) {
@@ -112,8 +114,8 @@ FRESULT save_user_settings(void) {
 				 "## [TRIG DELAY] can be a number between 1 and 10 which translates to a delay between 0.5ms and 20ms, "
 				 "respectively (default is 5)\n");
 		f_printf(&settings_file,
-				 "## [FADE TIME] can be a number between 0 and 250 which sets the fade in/out time in milliseconds. "
-				 "(0 is actually 0.36ms, and 250 is 250ms. Default is 6)\n");
+				 "## [FADE TIME] can be a number between 0 and 255 which sets the fade in/out time in milliseconds. "
+				 "(0 is actually 0.36ms, and 255 is 255ms. Default is 24)\n");
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## Deleting this file will restore default settings\n");
 		f_printf(&settings_file, "##\n\n");
@@ -428,7 +430,7 @@ FRESULT read_user_settings(void) {
 			if (cur_setting_found == FadeUpDownTime) {
 				global_params.fade_time_ms = str_xt_int(read_buffer);
 				if (global_params.fade_time_ms < 0 || global_params.fade_time_ms > 255)
-					global_params.fade_time_ms = 6;
+					global_params.fade_time_ms = 24;
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}
