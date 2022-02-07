@@ -573,9 +573,10 @@ void update_params(void) {
 			if (diff32(cur_pot_val, edit_bkc->latched_value) > 16)
 				edit_bkc->combo_state = COMBO_ACTIVE;
 
-			// If the combo is active, see if the value has changed. Then update the params and flag for LED response
 			uint32_t t_param_val = cur_pot_val >> 4; //0..4095 => 0..255
-			if (t_param_val != global_params.fade_time_ms) {
+			// Update if the value has changed AND the animation has finished. This slows down the update rate
+			if (t_param_val != global_params.fade_time_ms && (flags[FadeUpDownTimeChanged] == 0)) {
+				global_params.fade_time_ms = t_param_val;
 				global_params.fade_up_rate = calc_fade_updown_rate(t_param_val);
 				global_params.fade_down_rate = calc_fade_updown_rate(t_param_val);
 				flags[FadeUpDownTimeChanged] = 1;		   // tell LED driver to confirm the change with lights

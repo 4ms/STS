@@ -428,37 +428,6 @@ void update_ButtonLEDs(void) {
 				flags[ChangedTrigDelay] = 0;
 			}
 
-		} else if (flags[FadeUpDownTimeChanged]) {
-			//initialize phase
-			if (flags[FadeUpDownTimeChanged] == 1) {
-				st_phase = 0xFFFFFFFF - sys_tmr + 1; //t will start at 0
-				// st_phase = sys_tmr;
-				flags[FadeUpDownTimeChanged]++;
-			}
-			t = sys_tmr - st_phase;
-
-			if (flags[FadeUpDownTimeChanged] == 2) {
-				set_ButtonLED_byPalette(Play1ButtonLED, OFF);
-				set_ButtonLED_byPalette(Play2ButtonLED, WHITE);
-				flags[FadeUpDownTimeChanged]++;
-			} else if (flags[FadeUpDownTimeChanged] == 2) {
-				//TODO: set rate based on global_params.fade
-				float rate = 8192.f;
-				set_ButtonLED_byPaletteFade(Play1ButtonLED, OFF, WHITE, t / rate);
-				if (t >= rate)
-					flags[FadeUpDownTimeChanged]++;
-			} else if (flags[FadeUpDownTimeChanged] == 3) {
-				//TODO: set rate based on global_params.fade
-				float rate = 8192.f;
-				set_ButtonLED_byPaletteFade(Play2ButtonLED, WHITE, OFF, t / rate);
-				if (t >= rate)
-					flags[FadeUpDownTimeChanged]++;
-			} else if (flags[FadeUpDownTimeChanged] == 4) {
-				set_ButtonLED_byPalette(Play1ButtonLED, OFF);
-				set_ButtonLED_byPalette(Play2ButtonLED, OFF);
-				flags[FadeUpDownTimeChanged] = 0;
-			}
-
 		} else if (flags[SkipProcessButtons] == 2) {
 			set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
 
@@ -510,7 +479,34 @@ void update_ButtonLEDs(void) {
 			// PLAY lights
 			chan = (ButLEDnum == Play1ButtonLED) ? 0 : 1;
 
-			if (chan && global_mode[EDIT_MODE]) {
+			if (flags[FadeUpDownTimeChanged]) {
+				if (flags[FadeUpDownTimeChanged] == 1) {
+					//initialize phase
+					st_phase = sys_tmr;
+					flags[FadeUpDownTimeChanged]++;
+				}
+				t = sys_tmr - st_phase;
+
+				if (flags[FadeUpDownTimeChanged] == 2) {
+					set_ButtonLED_byPalette(Play1ButtonLED, WHITE);
+					set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+					flags[FadeUpDownTimeChanged]++;
+				} else if (flags[FadeUpDownTimeChanged] == 3) {
+					if (t >= 400) {
+						set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+						set_ButtonLED_byPalette(Play2ButtonLED, WHITE);
+						flags[FadeUpDownTimeChanged]++;
+					}
+				} else if (flags[FadeUpDownTimeChanged] == 4) {
+					if (t >= 800) {
+						flags[FadeUpDownTimeChanged]++;
+						set_ButtonLED_byPalette(Play1ButtonLED, OFF);
+						set_ButtonLED_byPalette(Play2ButtonLED, OFF);
+						flags[FadeUpDownTimeChanged] = 0;
+					}
+				}
+
+			} else if (chan && global_mode[EDIT_MODE]) {
 				set_ButtonLED_byPaletteFade(ButLEDnum, WHITE, MAGENTA, tri_14);
 
 			} else if (flags[PlaySample1Changed_valid + chan] > 1) {
