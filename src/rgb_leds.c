@@ -43,7 +43,7 @@
 
 //#define DEBUG_SETBANK1RGB
 
-enum Buttons_LEDs Button_LED_map[NUM_RGBBUTTONS];
+enum Buttons Button_LED_map[NUM_RGBBUTTONS]; //Maps a enum Buttons_LEDs element to a enum Buttons element
 
 const uint32_t LED_PALETTE[NUM_LED_PALETTE][3] = {
 	{0, 0, 0}, //OFF

@@ -44,7 +44,7 @@ extern SystemCalibrations *system_calibrations;
 extern enum ButtonStates button_state[NUM_BUTTONS];
 extern uint16_t i_smoothed_potadc[NUM_POT_ADCS];
 
-extern enum Buttons_LEDs Button_LED_map[NUM_RGBBUTTONS];
+extern enum Buttons Button_LED_map[NUM_RGBBUTTONS]; //Maps a enum Buttons_LEDs element to a enum Buttons element
 
 static const uint8_t NO_LED_SELECTED = 0xFF;
 
@@ -132,10 +132,10 @@ float fdiff(float a, float b) {
 float adjust_amount(uint16_t potval) {
 	//(4095-2070)/5 = 405
 	if (potval > 2070)
-		return (1.0 + ((float)(potval - 2070) / 405.5));
+		return (1.f + ((float)(potval - 2070) / 405.5f));
 	if (potval >= 2030)
-		return 1.0;
-	return (1.0 / (1.0 + (float)(2030 - potval) / 406.0));
+		return 1.f;
+	return (1.f / (1.f + (float)(2030 - potval) / 406.f));
 }
 
 void process_led_color_adjust_mode(void) {
