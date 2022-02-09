@@ -712,6 +712,9 @@ void write_buffer_to_storage(void) {
 				sample_bank_now_recording = 0xFF;
 				flags[ForceFileReload1] = 1;
 				flags[ForceFileReload2] = 1;
+				// Force re-calculating if Play button should be dim red:
+				flags[PlaySample1Changed] = 1;
+				flags[PlaySample2Changed] = 1;
 
 				if (rec_state == CLOSING_FILE)
 					rec_state = REC_OFF;
