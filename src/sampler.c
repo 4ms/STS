@@ -1070,12 +1070,13 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 					} else if (i_param[chan][REV]) {
 						play_state[chan] = PLAYING_PERC_FADEDOWN;
 					}
-				} else {
-					play_state[chan] = PLAY_FADEDOWN;
-					env_level[chan] = 1.f;
-				}
 			} else {
-				//Check if we are about to hit buffer underrun
+				play_state[chan] = PLAY_FADEDOWN;
+				env_level[chan] = 1.f;
+				flags[ChangePlaytoPerc1 + chan] = 0;
+			}
+		} else {
+			//Check if we are about to hit buffer underrun
 				play_buff_bufferedamt[chan][samplenum] = CB_distance(play_buff[chan][samplenum], i_param[chan][REV]);
 
 				if (!is_buffered_to_file_end[chan][samplenum] &&
