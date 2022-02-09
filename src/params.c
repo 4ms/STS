@@ -969,8 +969,13 @@ void update_params(void) {
 			i_param[REC][SAMPLE] = new_val;
 			flags[RecSampleChanged] = 1;
 
-			if (global_mode[MONITOR_RECORDING] != MONITOR_OFF) {
-				flags[RecSampleChanged_light] = 10;
+			if (samples[i_param[REC][BANK]][new_val].filename[0] == 0) //not a valid sample
+			{
+				flags[RecSampleChanged_empty] = 6;
+				flags[RecSampleChanged_valid] = 0;
+			} else {
+				flags[RecSampleChanged_empty] = 0;
+				flags[RecSampleChanged_valid] = 6;
 			}
 		}
 	}

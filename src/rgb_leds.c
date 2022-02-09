@@ -617,10 +617,16 @@ void update_ButtonLEDs(void) {
 		} else if (ButLEDnum == RecButtonLED) {
 			//Rec button Light
 			if (global_mode[EDIT_MODE]) {
-				set_ButtonLED_byPalette(RecButtonLED, OFF);
-			} else if (flags[RecSampleChanged_light]) {
-				set_ButtonLED_byPalette(RecButtonLED, WHITE);
-				flags[RecSampleChanged_light]--;
+				set_ButtonLED_byPalette(ButLEDnum, OFF);
+
+			} else if (flags[RecSampleChanged_valid] > 1) {
+				set_ButtonLED_byPalette(ButLEDnum, DIM_WHITE);
+				flags[RecSampleChanged_valid]--;
+
+			} else if (flags[RecSampleChanged_empty] > 1) {
+				set_ButtonLED_byPalette(ButLEDnum, DIM_RED);
+				flags[RecSampleChanged_empty]--;
+
 			} else {
 				//Solid Red = recording + monitoring
 				//Solid Violet = recording, not monitoring

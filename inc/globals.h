@@ -69,7 +69,7 @@ enum Flags {
 	PlaySample2Changed_valid,
 	PlaySample1Changed_empty,
 	PlaySample2Changed_empty,
-	RecSampleChanged_light, //20
+	RecSampleChanged_light, //20 //NOT USED
 	ForceFileReload1,
 	ForceFileReload2,
 	AssignModeRefused,
@@ -114,7 +114,8 @@ enum Flags {
 	PercEnvModeChanged,
 	FadeEnvModeChanged,
 	FadeUpDownTimeChanged,
-
+	RecSampleChanged_valid, //65
+	RecSampleChanged_empty,
 	NUM_FLAGS
 };
 
