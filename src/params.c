@@ -160,7 +160,8 @@ void init_params(void) {
 	global_params.fade_down_rate = calc_fade_updown_rate(global_params.fade_time_ms);
 	global_params.fade_up_rate = calc_fade_updown_rate(global_params.fade_time_ms);
 
-	global_params.auto_inc_slot_num_after_rec_trig = 1;
+	if (global_params.auto_inc_slot_num_after_rec_trig > 1)
+		global_params.auto_inc_slot_num_after_rec_trig = 0;
 }
 
 //initializes modes that aren't read from flash ram or disk

@@ -46,6 +46,7 @@ enum Settings {
 	StartUpBank_ch2,
 	TrigDelay,
 	FadeUpDownTime,
+	AutoIncRecSlot,
 
 	NUM_SETTINGS_ENUM
 };

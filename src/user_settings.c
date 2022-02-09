@@ -70,6 +70,8 @@ void set_default_user_settings(void) {
 	global_mode[TRIG_DELAY] = 8;
 
 	global_params.fade_time_ms = 24;
+
+	global_params.auto_inc_slot_num_after_rec_trig = 0;
 }
 
 FRESULT save_user_settings(void) {
@@ -116,6 +118,7 @@ FRESULT save_user_settings(void) {
 		f_printf(&settings_file,
 				 "## [FADE TIME] can be a number between 0 and 255 which sets the fade in/out time in milliseconds. "
 				 "(0 is actually 0.36ms, and 255 is 255ms. Default is 24)\n");
+		f_printf(&settings_file, "## [AUTO INCREMENT REC SLOT ON TRIG] can be \"Yes\" or \"No\" (default)\n");
 		f_printf(&settings_file, "##\n");
 		f_printf(&settings_file, "## Deleting this file will restore default settings\n");
 		f_printf(&settings_file, "##\n\n");
@@ -216,6 +219,10 @@ FRESULT save_user_settings(void) {
 		f_printf(&settings_file, "[FADE TIME]\n");
 		f_printf(&settings_file, "%d\n\n", global_params.fade_time_ms);
 
+		// Write Auto Inc Rec Slot setting
+		f_printf(&settings_file, "[AUTO INCREMENT REC SLOT ON TRIG]\n");
+		f_printf(&settings_file, "%s\n\n", global_params.auto_inc_slot_num_after_rec_trig ? "Yes" : "No");
+
 		res = f_close(&settings_file);
 	}
 
@@ -278,23 +285,23 @@ FRESULT read_user_settings(void) {
 				}
 
 				if (str_startswith_nocase(read_buffer, "[PLAY BUTTON STOPS WITH LENGTH AT FULL]")) {
-					cur_setting_found = PlayStopsLengthFull; //Auto Stop Mode section detected
+					cur_setting_found = PlayStopsLengthFull;
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 1")) {
-					cur_setting_found = QuantizeChannel1; //Channel 1 Quantize
+					cur_setting_found = QuantizeChannel1;
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[QUANTIZE CHANNEL 2")) {
-					cur_setting_found = QuantizeChannel2; //Channel 2 Quantize
+					cur_setting_found = QuantizeChannel2;
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[SHORT SAMPLE PERCUSSIVE ENVELOPE")) {
-					cur_setting_found = PercEnvelope; //Percussive envelope
+					cur_setting_found = PercEnvelope;
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[CROSSFADE SAMPLE END POINTS")) {
-					cur_setting_found = FadeEnvelope; //Fade up/down envelope
+					cur_setting_found = FadeEnvelope;
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[STARTUP BANK CHANNEL 1")) {
@@ -306,12 +313,17 @@ FRESULT read_user_settings(void) {
 					continue;
 				}
 				if (str_startswith_nocase(read_buffer, "[TRIG DELAY")) {
-					cur_setting_found = TrigDelay; //Trigger delay for play trig
+					cur_setting_found = TrigDelay;
 					continue;
 				}
 
 				if (str_startswith_nocase(read_buffer, "[FADE TIME")) {
-					cur_setting_found = FadeUpDownTime; //Fade up/down envelope time
+					cur_setting_found = FadeUpDownTime;
+					continue;
+				}
+
+				if (str_startswith_nocase(read_buffer, "[AUTO INCREMENT REC SLOT ON TRIG")) {
+					cur_setting_found = AutoIncRecSlot;
 					continue;
 				}
 			}
@@ -431,6 +443,12 @@ FRESULT read_user_settings(void) {
 				global_params.fade_time_ms = str_xt_int(read_buffer);
 				if (global_params.fade_time_ms < 0 || global_params.fade_time_ms > 255)
 					global_params.fade_time_ms = 24;
+
+				cur_setting_found = NoSetting; //back to looking for headers
+			}
+
+			if (cur_setting_found == AutoIncRecSlot) {
+				global_params.auto_inc_slot_num_after_rec_trig = (str_startswith_nocase(read_buffer, "Yes")) ? 1 : 0;
 
 				cur_setting_found = NoSetting; //back to looking for headers
 			}
