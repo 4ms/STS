@@ -1025,51 +1025,53 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
 
-	// Fill buffer with silence
+	// Fill buffer with silence and return if we're not playing
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT) {
 		for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
 			outL[i] = 0;
 			outR[i] = 0;
 		}
-	} else {
-		samplenum = sample_num_now_playing[chan];
-		banknum = sample_bank_now_playing[chan];
-		s_sample = &(samples[banknum][samplenum]);
+		return;
+	}
 
-		//Calculate our actual resampling rate, based on the sample rate of the file being played
+	samplenum = sample_num_now_playing[chan];
+	banknum = sample_bank_now_playing[chan];
+	s_sample = &(samples[banknum][samplenum]);
 
-		if (s_sample->sampleRate == global_params.record_sample_rate)
-			rs = f_param[chan][PITCH];
-		else
-			rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / global_params.f_record_sample_rate);
+	//Calculate our actual resampling rate, based on the sample rate of the file being played
 
-		// FixMe: Consider moving this to a new function that's called after play_audio_buffer()
-		// See if we've played enough samples and should start fading down to stop playback
-		//
-		if (play_state[chan] == PLAYING || play_state[chan] == PLAY_FADEUP || play_state[chan] == PLAYING_PERC) {
-			// Amount play_buff[]->out changes with each audio block sent to the codec
-			resampled_buffer_size = calc_resampled_buffer_size(chan, samplenum, banknum, rs);
+	if (s_sample->sampleRate == global_params.record_sample_rate)
+		rs = f_param[chan][PITCH];
+	else
+		rs = f_param[chan][PITCH] * ((float)s_sample->sampleRate / global_params.f_record_sample_rate);
 
-			// Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
-			resampled_cache_size = calc_resampled_cache_size(samplenum, banknum, resampled_buffer_size);
+	// FixMe: Consider moving this to a new function that's called after play_audio_buffer()
+	// See if we've played enough samples and should start fading down to stop playback
+	//
+	if (play_state[chan] == PLAYING || play_state[chan] == PLAY_FADEUP || play_state[chan] == PLAYING_PERC) {
+		// Amount play_buff[]->out changes with each audio block sent to the codec
+		resampled_buffer_size = calc_resampled_buffer_size(chan, samplenum, banknum, rs);
 
-			// Amount in the sample file we have remaining before we hit sample_file_endpos
-			dist_to_end = calc_dist_to_end(chan, samplenum, banknum);
+		// Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
+		resampled_cache_size = calc_resampled_cache_size(samplenum, banknum, resampled_buffer_size);
 
-			//See if we are about to surpass the calculated position in the file where we should end our sample
-			// - we're not in Perc mode --> FADEDOWN
-			// - we just changed to Perc from Play --> FADEDOWN (or else we'll get annoying PAD_SILENCE)
-			// - we're in reverse perc mode --> PERC_FADEDOWN
-			// - we're in Perc mode (but none of the above are true) --> do nothing, our PERC envelope will handle it
-			if (dist_to_end < resampled_cache_size * 2) {
-				if (play_state[chan] == PLAYING_PERC) {
-					if (flags[ChangePlaytoPerc1 + chan]) {
-						play_state[chan] = PLAY_FADEDOWN;
-						env_level[chan] = 1.f;
-						flags[ChangePlaytoPerc1 + chan] = 0;
-					} else if (i_param[chan][REV]) {
-						play_state[chan] = PLAYING_PERC_FADEDOWN;
-					}
+		// Amount in the sample file we have remaining before we hit sample_file_endpos
+		dist_to_end = calc_dist_to_end(chan, samplenum, banknum);
+
+		//See if we are about to surpass the calculated position in the file where we should end our sample
+		// - we're not in Perc mode --> FADEDOWN
+		// - we just changed to Perc from Play --> FADEDOWN (or else we'll get annoying PAD_SILENCE)
+		// - we're in reverse perc mode --> PERC_FADEDOWN
+		// - we're in Perc mode (but none of the above are true) --> do nothing, our PERC envelope will handle it
+		if (dist_to_end < resampled_cache_size * 2) {
+			if (play_state[chan] == PLAYING_PERC) {
+				if (flags[ChangePlaytoPerc1 + chan]) {
+					play_state[chan] = PLAY_FADEDOWN;
+					env_level[chan] = 1.f;
+					flags[ChangePlaytoPerc1 + chan] = 0;
+				} else if (i_param[chan][REV]) {
+					play_state[chan] = PLAYING_PERC_FADEDOWN;
+				}
 			} else {
 				play_state[chan] = PLAY_FADEDOWN;
 				env_level[chan] = 1.f;
@@ -1077,52 +1079,51 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 			}
 		} else {
 			//Check if we are about to hit buffer underrun
-				play_buff_bufferedamt[chan][samplenum] = CB_distance(play_buff[chan][samplenum], i_param[chan][REV]);
+			play_buff_bufferedamt[chan][samplenum] = CB_distance(play_buff[chan][samplenum], i_param[chan][REV]);
 
-				if (!is_buffered_to_file_end[chan][samplenum] &&
-					play_buff_bufferedamt[chan][samplenum] <= resampled_buffer_size) {
-					//buffer underrun: tried to read too much out. Try to recover!
-					g_error |= READ_BUFF1_UNDERRUN << chan;
-					check_errors();
-					play_state[chan] = PREBUFFERING;
-				}
+			if (!is_buffered_to_file_end[chan][samplenum] &&
+				play_buff_bufferedamt[chan][samplenum] <= resampled_buffer_size) {
+				//buffer underrun: tried to read too much out. Try to recover!
+				g_error |= READ_BUFF1_UNDERRUN << chan;
+				check_errors();
+				play_state[chan] = PREBUFFERING;
 			}
 		}
-
-		//
-		//Resample data read from the play_buff and store into out[]
-		//
-
-		if (global_mode[STEREO_MODE]) {
-			if ((rs * s_sample->numChannels) > MAX_RS)
-				rs = MAX_RS / (float)s_sample->numChannels;
-
-			if (s_sample->numChannels == 2) {
-				t_u32 = play_buff[chan][samplenum]->out;
-				t_flag = flags[PlayBuff1_Discontinuity + chan];
-				resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outL);
-
-				play_buff[chan][samplenum]->out = t_u32;
-				flags[PlayBuff1_Discontinuity + chan] = t_flag;
-				resample_read16_right(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outR);
-			} else {
-				//MONO: read left channel and copy to right
-				resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 2, chan, outL);
-				for (i = 0; i < HT16_CHAN_BUFF_LEN; i++)
-					outR[i] = outL[i];
-			}
-		} else { //not STEREO_MODE:
-			if (rs > (MAX_RS))
-				rs = (MAX_RS);
-
-			if (s_sample->numChannels == 2)
-				resample_read16_avg(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outL);
-			else
-				resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 2, chan, outL);
-		}
-
-		apply_envelopes(outL, outR, chan);
 	}
+
+	//
+	//Resample data read from the play_buff and store into out[]
+	//
+
+	if (global_mode[STEREO_MODE]) {
+		if ((rs * s_sample->numChannels) > MAX_RS)
+			rs = MAX_RS / (float)s_sample->numChannels;
+
+		if (s_sample->numChannels == 2) {
+			t_u32 = play_buff[chan][samplenum]->out;
+			t_flag = flags[PlayBuff1_Discontinuity + chan];
+			resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outL);
+
+			play_buff[chan][samplenum]->out = t_u32;
+			flags[PlayBuff1_Discontinuity + chan] = t_flag;
+			resample_read16_right(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outR);
+		} else {
+			//MONO: read left channel and copy to right
+			resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 2, chan, outL);
+			for (i = 0; i < HT16_CHAN_BUFF_LEN; i++)
+				outR[i] = outL[i];
+		}
+	} else { //not STEREO_MODE:
+		if (rs > (MAX_RS))
+			rs = (MAX_RS);
+
+		if (s_sample->numChannels == 2)
+			resample_read16_avg(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outL);
+		else
+			resample_read16_left(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 2, chan, outL);
+	}
+
+	apply_envelopes(outL, outR, chan);
 }
 
 // Linear fade of stereo data in outL and outR
@@ -1177,35 +1178,16 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 	float play_time;
 	if (i_param[chan][REV]) {
-		sample_file_startpos[chan] =
-			calc_stop_point(length, rs, &samples[banknum][samplenum], sample_file_endpos[chan]);
+		sample_file_startpos[chan] = calc_stop_point(length, rs, s_sample, sample_file_endpos[chan]);
 		play_time = (sample_file_startpos[chan] - sample_file_endpos[chan]) /
 					(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
 	} else {
-		sample_file_endpos[chan] =
-			calc_stop_point(length, rs, &samples[banknum][samplenum], sample_file_startpos[chan]);
+		sample_file_endpos[chan] = calc_stop_point(length, rs, s_sample, sample_file_startpos[chan]);
 		play_time = (sample_file_endpos[chan] - sample_file_startpos[chan]) /
 					(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
 	}
 
 	float fast_perc_fade_rate = 1.f / (0.003f * global_params.f_record_sample_rate);
-
-	if (play_state[chan] & 0b0001)
-		DEBUG0_ON;
-	else
-		DEBUG0_OFF;
-	if (play_state[chan] & 0b0010)
-		DEBUG1_ON;
-	else
-		DEBUG1_OFF;
-	if (play_state[chan] & 0b0100)
-		DEBUG2_ON;
-	else
-		DEBUG2_OFF;
-	if (play_state[chan] & 0b1000)
-		DEBUG3_ON;
-	else
-		DEBUG3_OFF;
 
 	switch (play_state[chan]) {
 
@@ -1264,7 +1246,6 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			apply_gain(outL, outR, gain);
 			if (length <= 0.5f)
 				flags[ChangePlaytoPerc1 + chan] = 1;
-
 			break;
 
 		case (PLAY_FADEDOWN):
