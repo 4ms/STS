@@ -38,15 +38,24 @@ enum PlayStates {
 	SILENT,
 	PREBUFFERING,
 	PLAY_FADEUP,
+	PERC_FADEUP,
 	PLAYING,
 	PLAYING_PERC,
 	PLAY_FADEDOWN,
 	RETRIG_FADEDOWN,
-	PLAYING_PERC_FADEDOWN,
+	REV_PERC_FADEDOWN,
 	PAD_SILENCE,
 	HOLD
-
 };
+
+// Note: normal state changes go like this:
+// All start with SILENT -> PREBUFFERING if needed
+// Playing with Length > 50%:
+// 		PLAY_FADEUP -> PLAYING -> PLAY_FADEDOWN
+// Playing with Length < 50% (not reversed):
+//		PERC_FADEUP -> PLAYING_PERC
+// Playing with Length < 50% (reversed):
+//		PLAYING_PERC (fades up) -> PLAYING_PERC_FADEDOWN
 
 enum PlayLoadTriage { NO_PRIORITY, PRIORITIZE_PLAYING };
 #define SDIO_read_IRQHandler TIM7_IRQHandler

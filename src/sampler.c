@@ -204,7 +204,7 @@ void toggle_reverse(uint8_t chan) {
 	enum PlayStates tplay_state;
 
 	if (play_state[chan] == PLAYING || play_state[chan] == PLAYING_PERC || play_state[chan] == PREBUFFERING ||
-		play_state[chan] == PLAY_FADEUP)
+		play_state[chan] == PLAY_FADEUP || play_state[chan] == PERC_FADEUP)
 	{
 		samplenum = sample_num_now_playing[chan];
 		banknum = sample_bank_now_playing[chan];
@@ -219,7 +219,8 @@ void toggle_reverse(uint8_t chan) {
 	//If we are PREBUFFERING or PLAY_FADEUP, then that means we just started playing.
 	//It could be the case a common trigger fired into PLAY and REV, but the PLAY trig was detected first
 	//So we actually want to make it play from the end of the sample rather than reverse direction from the current spot
-	if (tplay_state == PREBUFFERING || tplay_state == PLAY_FADEUP || tplay_state == PLAYING) {
+	if (tplay_state == PREBUFFERING || tplay_state == PLAY_FADEUP || tplay_state == PLAYING ||
+		tplay_state == PERC_FADEUP) {
 		// If we just started playing, and then we get a reverse flag a short time afterwards,
 		// then we should not just reverse direction, but instead play from the opposite end (sample_file_endpos).
 		// The reason for this can be shown in the following patch:
@@ -240,12 +241,13 @@ void toggle_reverse(uint8_t chan) {
 			// Then we can just play from that point
 			if ((sample_file_endpos[chan] >= cache_low[chan][samplenum]) &&
 				(sample_file_endpos[chan] <= cache_high[chan][samplenum]))
+			{
 				play_buff[chan][samplenum]->out = map_cache_to_buffer(sample_file_endpos[chan],
 																	  samples[banknum][samplenum].sampleByteSize,
 																	  cache_low[chan][samplenum],
 																	  cache_map_pt[chan][samplenum],
 																	  play_buff[chan][samplenum]);
-			else {
+			} else {
 				//Otherwise we have to make a new cache, so run start_playing()
 				//And return from this function
 				if (i_param[chan][REV])
@@ -415,8 +417,8 @@ void start_playing(uint8_t chan) {
 															  play_buff[chan][samplenum]);
 
 		env_level[chan] = 0.f;
-		if (f_param[chan][LENGTH] <= 0.5f && i_param[chan][REV])
-			play_state[chan] = PLAYING_PERC;
+		if (f_param[chan][LENGTH] <= 0.5f)
+			play_state[chan] = i_param[chan][REV] ? PLAYING_PERC : PERC_FADEUP;
 		else
 			play_state[chan] = PLAY_FADEUP;
 
@@ -506,7 +508,7 @@ void toggle_playing(uint8_t chan) {
 
 	//Start playing
 	if (play_state[chan] == SILENT || play_state[chan] == PLAY_FADEDOWN || play_state[chan] == RETRIG_FADEDOWN ||
-		play_state[chan] == PREBUFFERING || play_state[chan] == PLAY_FADEUP)
+		play_state[chan] == PREBUFFERING || play_state[chan] == PLAY_FADEUP || play_state[chan] == PERC_FADEUP)
 	{
 		start_playing(chan);
 	}
@@ -525,7 +527,7 @@ void toggle_playing(uint8_t chan) {
 
 	//Re-start if we have a short length
 	else if (play_state[chan] == PLAYING_PERC || play_state[chan] == PLAYING || play_state[chan] == PAD_SILENCE ||
-			 play_state[chan] == PLAYING_PERC_FADEDOWN)
+			 play_state[chan] == REV_PERC_FADEDOWN)
 	{
 		play_state[chan] = RETRIG_FADEDOWN;
 		play_led_state[chan] = 0;
@@ -694,7 +696,7 @@ static void check_change_sample(void) {
 				{
 					if (play_state[chan] != SILENT && play_state[chan] != PREBUFFERING) {
 						if (play_state[chan] == PLAYING_PERC)
-							play_state[chan] = PLAYING_PERC_FADEDOWN;
+							play_state[chan] = REV_PERC_FADEDOWN;
 						else {
 							play_state[chan] = PLAY_FADEDOWN;
 							env_level[chan] = 1.f;
@@ -719,7 +721,7 @@ static void check_change_sample(void) {
 
 					if (play_state[chan] != SILENT && play_state[chan] != PREBUFFERING) {
 						if (play_state[chan] == PLAYING_PERC)
-							play_state[chan] = PLAYING_PERC_FADEDOWN;
+							play_state[chan] = REV_PERC_FADEDOWN;
 						else {
 							play_state[chan] = PLAY_FADEDOWN;
 							env_level[chan] = 1.f;
@@ -732,7 +734,7 @@ static void check_change_sample(void) {
 
 						else if (global_mode[AUTO_STOP_ON_SAMPLE_CHANGE] == AutoStop_LOOPING) {
 							if (play_state[chan] == PLAYING_PERC)
-								play_state[chan] = PLAYING_PERC_FADEDOWN;
+								play_state[chan] = REV_PERC_FADEDOWN;
 							else {
 								play_state[chan] = PLAY_FADEDOWN;
 								env_level[chan] = 1.f;
@@ -995,8 +997,8 @@ void read_storage_to_buffer(void) {
 				play_state[chan] == PREBUFFERING)
 			{
 				env_level[chan] = 0.f;
-				if (f_param[chan][LENGTH] <= 0.5f && i_param[chan][REV])
-					play_state[chan] = PLAYING_PERC;
+				if (f_param[chan][LENGTH] <= 0.5f)
+					play_state[chan] = i_param[chan][REV] ? PLAYING_PERC : PERC_FADEUP;
 				else
 					play_state[chan] = PLAY_FADEUP;
 			}
@@ -1048,7 +1050,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 	// FixMe: Consider moving this to a new function that's called after play_audio_buffer()
 	// See if we've played enough samples and should start fading down to stop playback
 	//
-	if (play_state[chan] == PLAYING || play_state[chan] == PLAY_FADEUP || play_state[chan] == PLAYING_PERC) {
+	if (play_state[chan] == PLAYING || play_state[chan] == PLAY_FADEUP || play_state[chan] == PLAYING_PERC ||
+		play_state[chan] == PERC_FADEUP)
+	{
 		// Amount play_buff[]->out changes with each audio block sent to the codec
 		resampled_buffer_size = calc_resampled_buffer_size(chan, samplenum, banknum, rs);
 
@@ -1065,16 +1069,12 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		// - we're in Perc mode (but none of the above are true) --> do nothing, our PERC envelope will handle it
 		if (dist_to_end < resampled_cache_size * 2) {
 			if (play_state[chan] == PLAYING_PERC) {
-				if (flags[ChangePlaytoPerc1 + chan]) {
-					play_state[chan] = PLAY_FADEDOWN;
-					env_level[chan] = 1.f;
-					flags[ChangePlaytoPerc1 + chan] = 0;
-				} else if (i_param[chan][REV]) {
-					play_state[chan] = PLAYING_PERC_FADEDOWN;
+				if (i_param[chan][REV]) {
+					play_state[chan] = REV_PERC_FADEDOWN;
 				}
-			} else {
+			} else { //PLAYING or PLAY_FADEUP or PERC_FADEUP
 				play_state[chan] = PLAY_FADEDOWN;
-				env_level[chan] = 1.f;
+				//env_level[chan] = 1.f; //Don't set this to 1 because if we're in a FADEUP, we want to fade down from where the amplitude is currently
 				flags[ChangePlaytoPerc1 + chan] = 0;
 			}
 		} else {
@@ -1204,42 +1204,29 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			break;
 
 		case (PLAY_FADEUP):
-			if (length > 0.5f) {
-				if (global_mode[FADEUPDOWN_ENVELOPE]) {
-					env_rate[chan] = global_params.fade_up_rate;
-					env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
-					if (env_level[chan] >= 1.f)
-						play_state[chan] = PLAYING;
-
-				} else {
-					apply_gain(outL, outR, gain);
+			if (global_mode[FADEUPDOWN_ENVELOPE]) {
+				env_rate[chan] = global_params.fade_up_rate;
+				env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
+				if (env_level[chan] >= 1.f)
 					play_state[chan] = PLAYING;
-				}
 
 			} else {
-				if (global_mode[PERC_ENVELOPE]) {
-					env_rate[chan] = fast_perc_fade_rate;
-					env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
-					if (env_level[chan] >= 1.f)
-						play_state[chan] = PLAYING_PERC;
-
-				} else {
-					apply_gain(outL, outR, gain);
-					play_state[chan] = PLAYING_PERC;
-				}
+				apply_gain(outL, outR, gain);
+				play_state[chan] = PLAYING;
 			}
+			break;
 
-			// if ((length > 0.5f && global_mode[FADEUPDOWN_ENVELOPE]) || (length <= 0.5f && global_mode[PERC_ENVELOPE])) {
+		case (PERC_FADEUP):
+			if (global_mode[PERC_ENVELOPE]) {
+				env_rate[chan] = fast_perc_fade_rate;
+				env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
+				if (env_level[chan] >= 1.f)
+					play_state[chan] = PLAYING_PERC;
 
-			// 	decay_inc[chan] = (length > 0.5f) ? global_params.fade_up_rate : fast_perc_fade_rate;
-			// 	decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
-			// 	if (decay_amp_i[chan] >= 1.f)
-			// 		play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
-
-			// } else {
-			// 	apply_gain(outL, outR, gain);
-			// 	play_state[chan] = (length > 0.5f) ? PLAYING : PLAYING_PERC;
-			// }
+			} else {
+				apply_gain(outL, outR, gain);
+				play_state[chan] = PLAYING_PERC;
+			}
 			break;
 
 		case (PLAYING):
@@ -1279,13 +1266,13 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 			//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
 			if ((env_level[chan] >= 1.0f) && (i_param[chan][REV])) {
-				play_state[chan] = PLAYING_PERC_FADEDOWN;
+				play_state[chan] = REV_PERC_FADEDOWN;
 				env_level[chan] = 1.f;
 			} else
 				check_perc_ending(chan);
 			break;
 
-		case (PLAYING_PERC_FADEDOWN):
+		case (REV_PERC_FADEDOWN):
 			// Fade down to silence before going to PAD_SILENCE mode or ending the playback
 			// (this prevents a click if the sample data itself doesn't cleanly fade out)
 			if (global_mode[PERC_ENVELOPE]) {
