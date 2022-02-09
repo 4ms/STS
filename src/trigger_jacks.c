@@ -101,6 +101,7 @@ void Trigger_Jack_Debounce_IRQHandler(void) {
 
 					case TrigJack_Rec:
 						flags[RecTrig] = 1;
+						flags[RecStartedWithTrigger] = 1;
 						break;
 					case TrigJack_Rev1:
 						flags[Rev1Trig] = 1;

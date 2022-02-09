@@ -106,6 +106,8 @@ typedef struct GlobalParams {
 	float fade_up_rate;			// Non-percussion playback mode fade up increment
 	float fade_down_rate;		// Non-percussion playback mode fade down increment
 	uint32_t fade_time_ms;		// Raw value in ms, independant of codec sample rate
+
+	uint32_t auto_inc_slot_num_after_rec_trig;
 } GlobalParams;
 
 static inline float LowPassSmoothingFilter(float current_value, float new_value, float coef) {

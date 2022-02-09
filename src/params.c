@@ -159,6 +159,8 @@ void init_params(void) {
 		global_params.fade_time_ms = 6;
 	global_params.fade_down_rate = calc_fade_updown_rate(global_params.fade_time_ms);
 	global_params.fade_up_rate = calc_fade_updown_rate(global_params.fade_time_ms);
+
+	global_params.auto_inc_slot_num_after_rec_trig = 1;
 }
 
 //initializes modes that aren't read from flash ram or disk
@@ -962,12 +964,10 @@ void update_params(void) {
 	//is simplier than the case of play Bank1/2 + Sample1/2
 	else
 	{
-		old_val = i_param[REC][SAMPLE];
+		//Flash light if we move to a new detent
 		new_val = detent_num(bracketed_potadc[RECSAMPLE_POT]);
-
-		if (old_val != new_val) {
+		if (new_val != i_param[REC][SAMPLE]) {
 			i_param[REC][SAMPLE] = new_val;
-			flags[RecSampleChanged] = 1;
 
 			if (samples[i_param[REC][BANK]][new_val].filename[0] == 0) //not a valid sample
 			{
@@ -977,6 +977,8 @@ void update_params(void) {
 				flags[RecSampleChanged_empty] = 0;
 				flags[RecSampleChanged_valid] = 6;
 			}
+
+			flags[RecSampleChanged] = 1;
 		}
 	}
 }

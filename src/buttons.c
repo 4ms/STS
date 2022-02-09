@@ -330,8 +330,10 @@ void Button_Debounce_IRQHandler(void) {
 								break;
 
 							case Rec:
-								if (button_state[Rec] < SHORT_PRESSED)
+								if (button_state[Rec] < SHORT_PRESSED) {
 									flags[RecTrig] = 1;
+									flags[RecStartedWithTrigger] = 0;
+								}
 								break;
 
 							case RecBank:

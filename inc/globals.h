@@ -116,6 +116,7 @@ enum Flags {
 	FadeUpDownTimeChanged,
 	RecSampleChanged_valid, //65
 	RecSampleChanged_empty,
+	RecStartedWithTrigger,
 	NUM_FLAGS
 };
 

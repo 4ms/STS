@@ -94,6 +94,7 @@ int16_t rec_buff16[WRITE_BLOCK_SIZE >> 1];
 enum RecStates rec_state;
 uint32_t samplebytes_recorded;
 uint8_t sample_num_now_recording;
+uint8_t sample_num_to_record_in;
 uint8_t sample_bank_now_recording;
 uint8_t sample_bytesize_now_recording;
 char sample_fname_now_recording[_MAX_LFN];
@@ -111,6 +112,8 @@ void init_rec_buff(void) {
 	rec_buff->max = REC_BUFF_START + REC_BUFF_SIZE;
 	rec_buff->size = REC_BUFF_SIZE;
 	rec_buff->wrapping = 0;
+
+	sample_num_to_record_in = i_param[REC][SAMPLE];
 }
 
 void stop_recording(void) {
@@ -485,14 +488,14 @@ void write_buffer_to_storage(void) {
 	uint32_t sz;
 
 	if (flags[RecSampleChanged]) {
-		//Currently, nothing happens if you change record sample slot
+		sample_num_to_record_in = i_param[REC_CHAN][SAMPLE];
 		flags[RecSampleChanged] = 0;
 	}
 
-	if (flags[RecBankChanged]) {
-		//Currently, nothing happens if you change record bank
-		flags[RecBankChanged] = 0;
-	}
+	//if (flags[RecBankChanged]) {
+	//	//Currently, nothing happens if you change record bank
+	//	flags[RecBankChanged] = 0;
+	//}
 
 	// Handle write buffers (transfer SDRAM to SD card)
 	switch (rec_state) {
@@ -501,7 +504,7 @@ void write_buffer_to_storage(void) {
 				rec_state = CLOSING_FILE;
 			}
 
-			sample_num_now_recording = i_param[REC_CHAN][SAMPLE];
+			sample_num_now_recording = sample_num_to_record_in; //i_param[REC_CHAN][SAMPLE];
 			sample_bank_now_recording = i_param[REC_CHAN][BANK];
 
 			if (global_mode[REC_24BITS])
@@ -715,6 +718,14 @@ void write_buffer_to_storage(void) {
 				// Force re-calculating if Play button should be dim red:
 				flags[PlaySample1Changed] = 1;
 				flags[PlaySample2Changed] = 1;
+
+				if (global_params.auto_inc_slot_num_after_rec_trig && flags[RecStartedWithTrigger]) {
+					flags[RecStartedWithTrigger] = 0;
+					if (sample_num_to_record_in < 9)
+						sample_num_to_record_in++;
+					else
+						sample_num_to_record_in = 0;
+				}
 
 				if (rec_state == CLOSING_FILE)
 					rec_state = REC_OFF;
