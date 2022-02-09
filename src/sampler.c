@@ -52,15 +52,6 @@
 #include "wav_recording.h"
 #include "wavefmt.h"
 
-static inline int32_t _SSAT16(int32_t x);
-static inline int32_t _SSAT16(int32_t x) {
-	asm("ssat %[dst], #16, %[src]" : [dst] "=r"(x) : [src] "r"(x));
-	return x;
-}
-
-static void check_perc_ending(uint8_t chan);
-static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan);
-
 //
 // DEBUG
 //
@@ -115,38 +106,35 @@ uint8_t sample_bank_now_playing[NUM_PLAY_CHAN]; //bank_now_playing
 //The cache tells us what section of the file has been cached into the play_buff
 //cache_low and cache_high and cache_size are all in file's native units (varies by the file's bit rate and stereo/mono)
 //cache_map_pt is in units of play_buff, and tells us what address cache_low maps to
-//
-uint32_t
-	cache_low[NUM_PLAY_CHAN]
-			 [NUM_SAMPLES_PER_BANK]; //file position address that corresponds to lowest position in file that's cached
-uint32_t
-	cache_high[NUM_PLAY_CHAN]
-			  [NUM_SAMPLES_PER_BANK]; //file position address that corresponds to highest position in file that's cached
-uint32_t cache_size
-	[NUM_PLAY_CHAN]
-	[NUM_SAMPLES_PER_BANK]; //size in bytes of the cache (should always equal play_buff[]->size / 2 * sampleByteSize
-uint32_t cache_map_pt[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //address in play_buff[] that corresponds to cache_low
-uint8_t is_buffered_to_file_end
-	[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK]; //1 = file is totally cached (from inst_start to inst_end), otherwise 0
+
+//file position address that corresponds to lowest position in file that's cached
+uint32_t cache_low[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+//file position address that corresponds to highest position in file that's cached
+uint32_t cache_high[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+//size in bytes of the cache (should always equal play_buff[]->size / 2 * sampleByteSize
+uint32_t cache_size[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+//address in play_buff[] that corresponds to cache_low
+uint32_t cache_map_pt[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
+//1 = file is totally cached (from inst_start to inst_end), otherwise 0
+uint8_t is_buffered_to_file_end[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 uint32_t play_buff_bufferedamt[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 uint8_t cached_rev_state[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 
 //ToDo: make this a struct
 uint32_t sample_file_startpos[NUM_PLAY_CHAN]; //file position where we began playback.
-uint32_t sample_file_endpos
-	[NUM_PLAY_CHAN]; //file position where we will end playback. endpos > startpos when REV==0, endpos < startpos when REV==1
+//file position where we will end playback. endpos > startpos when REV==0, endpos < startpos when REV==1
+uint32_t sample_file_endpos[NUM_PLAY_CHAN];
 
-uint32_t sample_file_curpos
-	[NUM_PLAY_CHAN]
-	[NUM_SAMPLES_PER_BANK]; //current file position being read. Must match the actual open file's position. This is always inc/decrementing from startpos towards endpos
+//current file position being read. Must match the actual open file's position. This is always inc/decrementing from startpos towards endpos
+uint32_t sample_file_curpos[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 
 enum PlayLoadTriage play_load_triage;
 
 //
 //PLAYING_PERC envelopes:
 //
-float decay_amp_i[NUM_PLAY_CHAN];
-float decay_inc[NUM_PLAY_CHAN] = {0, 0};
+static float env_level[NUM_PLAY_CHAN];
+static float env_rate[NUM_PLAY_CHAN] = {0, 0};
 
 //
 // Filesystem
@@ -158,16 +146,22 @@ FIL fil[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
 //
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
-// inline FRESULT SET_FILE_POS(uint8_t c, uint8_t b, uint8_t s)
-// {
-// 	FRESULT r = f_lseek(&fil[c][s], samples[b][s].startOfData + sample_file_curpos[c][s]);
-// 	if(fil[c][s].fptr != (samples[b][s].startOfData + sample_file_curpos[c][s]) ) g_error|=LSEEK_FPTR_MISMATCH;
-// 	return r;
-// }
-#define SET_FILE_POS(c, b, s)                                                                                          \
-	f_lseek(&fil[c][s], samples[b][s].startOfData + sample_file_curpos[c][s]);                                         \
-	if (fil[c][s].fptr != (samples[b][s].startOfData + sample_file_curpos[c][s]))                                      \
-		g_error |= LSEEK_FPTR_MISMATCH;
+// Private functions
+static void check_change_sample(void);
+static void check_change_bank(uint8_t chan);
+static uint32_t calc_start_point(float start_param, Sample *sample);
+static uint32_t calc_stop_point(float length_param, float resample_param, Sample *sample, uint32_t startpos);
+static void init_changed_bank(uint8_t chan);
+static void reverse_file_positions(uint8_t chan, uint8_t samplenum, uint8_t banknum, uint8_t new_dir);
+static void check_perc_ending(uint8_t chan);
+static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan);
+static uint32_t calc_resampled_cache_size(uint8_t samplenum, uint8_t banknum, uint32_t resampled_buffer_size);
+static uint32_t calc_resampled_buffer_size(uint8_t chan, uint8_t samplenum, uint8_t banknum, float resample_rate);
+static inline int32_t calc_dist_to_end(uint8_t chan, uint8_t samplenum, uint8_t banknum);
+static void apply_gain(int32_t *outL, int32_t *outR, float gain);
+static float fade(int32_t *outL, int32_t *outR, float gain, float starting_amp, float rate);
+static inline FRESULT SET_FILE_POS(uint8_t c, uint8_t b, uint8_t s);
+static inline int32_t _SSAT16(int32_t x);
 
 void audio_buffer_init(void) {
 	uint8_t i, chan;
@@ -277,7 +271,7 @@ void toggle_reverse(uint8_t chan) {
 	play_state[chan] = tplay_state;
 }
 
-void reverse_file_positions(uint8_t chan, uint8_t samplenum, uint8_t banknum, uint8_t new_dir) {
+static void reverse_file_positions(uint8_t chan, uint8_t samplenum, uint8_t banknum, uint8_t new_dir) {
 	uint32_t swap;
 	FRESULT res;
 
@@ -315,7 +309,7 @@ void reverse_file_positions(uint8_t chan, uint8_t samplenum, uint8_t banknum, ui
 	}
 }
 
-void init_changed_bank(uint8_t chan) {
+static void init_changed_bank(uint8_t chan) {
 	uint8_t samplenum;
 	FRESULT res;
 
@@ -420,7 +414,7 @@ void start_playing(uint8_t chan) {
 															  cache_map_pt[chan][samplenum],
 															  play_buff[chan][samplenum]);
 
-		decay_amp_i[chan] = 0.f;
+		env_level[chan] = 0.f;
 		if (f_param[chan][LENGTH] <= 0.5f && i_param[chan][REV])
 			play_state[chan] = PLAYING_PERC;
 		else
@@ -478,8 +472,8 @@ void start_playing(uint8_t chan) {
 
 	flags[PlayBuff1_Discontinuity + chan] = 1;
 
-	decay_amp_i[chan] = 0.f;
-	decay_inc[chan] = 0.f;
+	env_level[chan] = 0.f;
+	env_rate[chan] = 0.f;
 
 	play_led_state[chan] = 1;
 
@@ -522,7 +516,7 @@ void toggle_playing(uint8_t chan) {
 	{
 		if (global_mode[LENGTH_FULL_START_STOP]) {
 			play_state[chan] = PLAY_FADEDOWN;
-			decay_amp_i[chan] = 1.f;
+			env_level[chan] = 1.f;
 		} else
 			play_state[chan] = RETRIG_FADEDOWN;
 
@@ -538,7 +532,7 @@ void toggle_playing(uint8_t chan) {
 	}
 }
 
-uint32_t calc_start_point(float start_param, Sample *sample) {
+static uint32_t calc_start_point(float start_param, Sample *sample) {
 	uint32_t zeropt;
 	uint32_t inst_size;
 
@@ -560,7 +554,7 @@ uint32_t calc_start_point(float start_param, Sample *sample) {
 
 //Returns an offset from the startpos, based on the length param (knob and CV) and resampling rate
 //
-uint32_t calc_stop_point(float length_param, float resample_param, Sample *sample, uint32_t startpos) {
+static uint32_t calc_stop_point(float length_param, float resample_param, Sample *sample, uint32_t startpos) {
 	uint32_t fwd_stop_point;
 	uint32_t num_samples_to_play;
 	uint32_t max_play_length;
@@ -649,7 +643,7 @@ uint32_t calc_stop_point(float length_param, float resample_param, Sample *sampl
 // because that's distracting to see when pressing the bank button.
 // Also sets the sample changed flag.
 //
-void check_change_bank(uint8_t chan) {
+static void check_change_bank(uint8_t chan) {
 	if (flags[PlayBank1Changed + chan]) {
 		flags[PlayBank1Changed + chan] = 0;
 
@@ -671,7 +665,7 @@ void check_change_bank(uint8_t chan) {
 	}
 }
 
-void check_change_sample(void) {
+static void check_change_sample(void) {
 	uint8_t chan;
 
 	for (chan = 0; chan < NUM_PLAY_CHAN; chan++) {
@@ -703,7 +697,7 @@ void check_change_sample(void) {
 							play_state[chan] = PLAYING_PERC_FADEDOWN;
 						else {
 							play_state[chan] = PLAY_FADEDOWN;
-							decay_amp_i[chan] = 1.f;
+							env_level[chan] = 1.f;
 						}
 
 					} else
@@ -728,7 +722,7 @@ void check_change_sample(void) {
 							play_state[chan] = PLAYING_PERC_FADEDOWN;
 						else {
 							play_state[chan] = PLAY_FADEDOWN;
-							decay_amp_i[chan] = 1.f;
+							env_level[chan] = 1.f;
 						}
 					}
 				} else {
@@ -741,7 +735,7 @@ void check_change_sample(void) {
 								play_state[chan] = PLAYING_PERC_FADEDOWN;
 							else {
 								play_state[chan] = PLAY_FADEDOWN;
-								decay_amp_i[chan] = 1.f;
+								env_level[chan] = 1.f;
 							}
 						}
 					}
@@ -840,10 +834,8 @@ void read_storage_to_buffer(void) {
 					g_error |= FILE_WAVEFORMATERR;
 					play_state[chan] = SILENT;
 					start_playing(chan);
-				}
 
-				else if (sample_file_curpos[chan][samplenum] > s_sample->inst_end)
-				{
+				} else if (sample_file_curpos[chan][samplenum] > s_sample->inst_end) {
 					is_buffered_to_file_end[chan][samplenum] = 1;
 				}
 
@@ -877,13 +869,10 @@ void read_storage_to_buffer(void) {
 							is_buffered_to_file_end[chan][samplenum] = 1;
 						}
 
-					}
-
-					//
-					// Reverse reading:
-					//
-					else
-					{
+					} else {
+						//
+						// Reverse reading:
+						//
 						if (sample_file_curpos[chan][samplenum] > s_sample->inst_start)
 							rd = sample_file_curpos[chan][samplenum] - s_sample->inst_start;
 						else
@@ -901,8 +890,8 @@ void read_storage_to_buffer(void) {
 
 							sample_file_curpos[chan][samplenum] = f_tell(&fil[chan][samplenum]) - s_sample->startOfData;
 
-						} else //rd < READ_BLOCK_SIZE: read the first block (which is the last to be read, since we're reversing)
-						{
+						} else {
+							//rd < READ_BLOCK_SIZE: read the first block (which is the last to be read, since we're reversing)
 							//to-do:
 							//align rd to 24
 
@@ -1005,7 +994,7 @@ void read_storage_to_buffer(void) {
 			if ((is_buffered_to_file_end[chan][samplenum] || play_buff_bufferedamt[chan][samplenum] >= pre_buff_size) &&
 				play_state[chan] == PREBUFFERING)
 			{
-				decay_amp_i[chan] = 0.f;
+				env_level[chan] = 0.f;
 				if (f_param[chan][LENGTH] <= 0.5f && i_param[chan][REV])
 					play_state[chan] = PLAYING_PERC;
 				else
@@ -1014,40 +1003,6 @@ void read_storage_to_buffer(void) {
 
 		} //play_state != SILENT, FADEDOWN
 	}	  //for (chan)
-}
-
-// calc_resampled_cache_size
-// Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
-//
-uint32_t calc_resampled_cache_size(uint8_t samplenum, uint8_t banknum, uint32_t resampled_buffer_size);
-inline uint32_t calc_resampled_cache_size(uint8_t samplenum, uint8_t banknum, uint32_t resampled_buffer_size) {
-	return ((resampled_buffer_size * samples[banknum][samplenum].sampleByteSize) / 2);
-}
-
-// calc_resampled_buffer_size
-// Amount play_buff[]->out changes with each audio block sent to the codec
-//
-uint32_t calc_resampled_buffer_size(uint8_t chan, uint8_t samplenum, uint8_t banknum, float resample_rate);
-inline uint32_t calc_resampled_buffer_size(uint8_t chan, uint8_t samplenum, uint8_t banknum, float resample_rate) {
-	return ((uint32_t)((HT16_CHAN_BUFF_LEN * samples[banknum][samplenum].numChannels * 2) * resample_rate));
-}
-
-int32_t calc_dist_to_end(uint8_t chan, uint8_t samplenum, uint8_t banknum);
-inline int32_t calc_dist_to_end(uint8_t chan, uint8_t samplenum, uint8_t banknum) {
-	uint32_t sample_file_playpos;
-
-	//Find out where the audio output data is relative to the start of the cache
-	sample_file_playpos = map_buffer_to_cache(play_buff[chan][samplenum]->out,
-											  samples[banknum][samplenum].sampleByteSize,
-											  cache_low[chan][samplenum],
-											  cache_map_pt[chan][samplenum],
-											  play_buff[chan][samplenum]);
-
-	//Calculate the distance left to the end that we should be playing
-	if (!i_param[chan][REV])
-		return (sample_file_endpos[chan] - sample_file_playpos);
-	else
-		return (sample_file_playpos - sample_file_endpos[chan]);
 }
 
 void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
@@ -1110,14 +1065,14 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 				if (play_state[chan] == PLAYING_PERC) {
 					if (flags[ChangePlaytoPerc1 + chan]) {
 						play_state[chan] = PLAY_FADEDOWN;
-						decay_amp_i[chan] = 1.f;
+						env_level[chan] = 1.f;
 						flags[ChangePlaytoPerc1 + chan] = 0;
 					} else if (i_param[chan][REV]) {
 						play_state[chan] = PLAYING_PERC_FADEDOWN;
 					}
 				} else {
 					play_state[chan] = PLAY_FADEDOWN;
-					decay_amp_i[chan] = 1.f;
+					env_level[chan] = 1.f;
 				}
 			} else {
 				//Check if we are about to hit buffer underrun
@@ -1174,7 +1129,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 // Set rate to < 0 to fade down, > 0 to fade up
 // Returns amplitude applied to the last sample
 // Note: this increments amplitude before applying to the first sample
-float fade(int32_t *outL, int32_t *outR, float gain, float starting_amp, float rate) {
+static float fade(int32_t *outL, int32_t *outR, float gain, float starting_amp, float rate) {
 	float amp = starting_amp;
 	uint32_t completed = 0;
 
@@ -1192,7 +1147,7 @@ float fade(int32_t *outL, int32_t *outR, float gain, float starting_amp, float r
 	return amp;
 }
 
-void apply_gain(int32_t *outL, int32_t *outR, float gain) {
+static void apply_gain(int32_t *outL, int32_t *outR, float gain) {
 	for (int i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
 		outL[i] = (float)outL[i] * gain;
 		outR[i] = (float)outR[i] * gain;
@@ -1201,7 +1156,7 @@ void apply_gain(int32_t *outL, int32_t *outR, float gain) {
 	}
 }
 
-void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
+static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 	int i;
 	float env;
 
@@ -1233,6 +1188,24 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 	}
 
 	float fast_perc_fade_rate = 1.f / (0.003f * global_params.f_record_sample_rate);
+
+	if (play_state[chan] & 0b0001)
+		DEBUG0_ON;
+	else
+		DEBUG0_OFF;
+	if (play_state[chan] & 0b0010)
+		DEBUG1_ON;
+	else
+		DEBUG1_OFF;
+	if (play_state[chan] & 0b0100)
+		DEBUG2_ON;
+	else
+		DEBUG2_OFF;
+	if (play_state[chan] & 0b1000)
+		DEBUG3_ON;
+	else
+		DEBUG3_OFF;
+
 	switch (play_state[chan]) {
 
 		case (RETRIG_FADEDOWN):
@@ -1250,9 +1223,9 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 		case (PLAY_FADEUP):
 			if (length > 0.5f) {
 				if (global_mode[FADEUPDOWN_ENVELOPE]) {
-					decay_inc[chan] = global_params.fade_up_rate;
-					decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
-					if (decay_amp_i[chan] >= 1.f)
+					env_rate[chan] = global_params.fade_up_rate;
+					env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
+					if (env_level[chan] >= 1.f)
 						play_state[chan] = PLAYING;
 
 				} else {
@@ -1262,9 +1235,9 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 			} else {
 				if (global_mode[PERC_ENVELOPE]) {
-					decay_inc[chan] = fast_perc_fade_rate;
-					decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
-					if (decay_amp_i[chan] >= 1.f)
+					env_rate[chan] = fast_perc_fade_rate;
+					env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
+					if (env_level[chan] >= 1.f)
 						play_state[chan] = PLAYING_PERC;
 
 				} else {
@@ -1295,14 +1268,14 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 		case (PLAY_FADEDOWN):
 			if (global_mode[FADEUPDOWN_ENVELOPE]) {
-				decay_inc[chan] = global_params.fade_down_rate;
-				decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], -1.f * decay_inc[chan]);
+				env_rate[chan] = global_params.fade_down_rate;
+				env_level[chan] = fade(outL, outR, gain, env_level[chan], -1.f * env_rate[chan]);
 			} else {
 				apply_gain(outL, outR, gain);
-				decay_amp_i[chan] = 0.f; //set this so we detect "end of fade" in the next block
+				env_level[chan] = 0.f; //set this so we detect "end of fade" in the next block
 			}
 
-			if (decay_amp_i[chan] <= 0.f) {
+			if (env_level[chan] <= 0.f) {
 				flicker_endout(chan, play_time);
 
 				//Start playing again if we're looping, unless we faded down because of a play trigger
@@ -1315,17 +1288,17 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 		case (PLAYING_PERC):
 			if (global_mode[PERC_ENVELOPE]) {
-				decay_inc[chan] = (i_param[chan][REV] ? 1.f : -1.f) / (length * PERC_ENV_FACTOR);
-				decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
+				env_rate[chan] = (i_param[chan][REV] ? 1.f : -1.f) / (length * PERC_ENV_FACTOR);
+				env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
 			} else {
 				apply_gain(outL, outR, gain);
-				decay_amp_i[chan] = 1.f;
+				env_level[chan] = 1.f;
 			}
 
 			//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
-			if ((decay_amp_i[chan] >= 1.0f) && (i_param[chan][REV])) {
+			if ((env_level[chan] >= 1.0f) && (i_param[chan][REV])) {
 				play_state[chan] = PLAYING_PERC_FADEDOWN;
-				decay_amp_i[chan] = 1.f;
+				env_level[chan] = 1.f;
 			} else
 				check_perc_ending(chan);
 			break;
@@ -1334,15 +1307,15 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			// Fade down to silence before going to PAD_SILENCE mode or ending the playback
 			// (this prevents a click if the sample data itself doesn't cleanly fade out)
 			if (global_mode[PERC_ENVELOPE]) {
-				decay_inc[chan] = -1.f * fast_perc_fade_rate;
-				decay_amp_i[chan] = fade(outL, outR, gain, decay_amp_i[chan], decay_inc[chan]);
+				env_rate[chan] = -1.f * fast_perc_fade_rate;
+				env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
 			} else {
 				apply_gain(outL, outR, gain);
 			}
 
 			// If the end point is the end of the sample data (which happens if the file is very short, or if we're at the end of it)
 			// Then pad it with silence so we keep a constant End Out period when looping
-			if (decay_amp_i[chan] <= 0.f && sample_file_endpos[chan] == s_sample->inst_end)
+			if (env_level[chan] <= 0.f && sample_file_endpos[chan] == s_sample->inst_end)
 				play_state[chan] = PAD_SILENCE;
 			else
 				check_perc_ending(chan);
@@ -1362,10 +1335,41 @@ void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 	} //switch play_state
 }
 
-void check_perc_ending(uint8_t chan) {
+// calc_resampled_cache_size
+// Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
+//
+static inline uint32_t calc_resampled_cache_size(uint8_t samplenum, uint8_t banknum, uint32_t resampled_buffer_size) {
+	return ((resampled_buffer_size * samples[banknum][samplenum].sampleByteSize) / 2);
+}
+
+// calc_resampled_buffer_size
+// Amount play_buff[]->out changes with each audio block sent to the codec
+static inline uint32_t
+calc_resampled_buffer_size(uint8_t chan, uint8_t samplenum, uint8_t banknum, float resample_rate) {
+	return ((uint32_t)((HT16_CHAN_BUFF_LEN * samples[banknum][samplenum].numChannels * 2) * resample_rate));
+}
+
+static inline int32_t calc_dist_to_end(uint8_t chan, uint8_t samplenum, uint8_t banknum) {
+	uint32_t sample_file_playpos;
+
+	//Find out where the audio output data is relative to the start of the cache
+	sample_file_playpos = map_buffer_to_cache(play_buff[chan][samplenum]->out,
+											  samples[banknum][samplenum].sampleByteSize,
+											  cache_low[chan][samplenum],
+											  cache_map_pt[chan][samplenum],
+											  play_buff[chan][samplenum]);
+
+	//Calculate the distance left to the end that we should be playing
+	if (!i_param[chan][REV])
+		return (sample_file_endpos[chan] - sample_file_playpos);
+	else
+		return (sample_file_playpos - sample_file_endpos[chan]);
+}
+
+static void check_perc_ending(uint8_t chan) {
 	//End the playback, go to silence, and trigger another play if looping
-	if (decay_amp_i[chan] <= 0.0f || decay_amp_i[chan] >= 1.0f) {
-		decay_amp_i[chan] = 0.0f;
+	if (env_level[chan] <= 0.0f || env_level[chan] >= 1.0f) {
+		env_level[chan] = 0.0f;
 
 		flicker_endout(chan, f_param[chan][LENGTH] * 3.0f);
 
@@ -1389,3 +1393,19 @@ void SDIO_read_IRQHandler(void) {
 		TIM_ClearITPendingBit(SDIO_read_TIM, TIM_IT_Update);
 	}
 }
+
+inline FRESULT SET_FILE_POS(uint8_t c, uint8_t b, uint8_t s) {
+	FRESULT r = f_lseek(&fil[c][s], samples[b][s].startOfData + sample_file_curpos[c][s]);
+	if (fil[c][s].fptr != (samples[b][s].startOfData + sample_file_curpos[c][s]))
+		g_error |= LSEEK_FPTR_MISMATCH;
+	return r;
+}
+static inline int32_t _SSAT16(int32_t x) {
+	asm("ssat %[dst], #16, %[src]" : [dst] "=r"(x) : [src] "r"(x));
+	return x;
+}
+
+// #define SET_FILE_POS(c, b, s)                                                                                          \
+// 	f_lseek(&fil[c][s], samples[b][s].startOfData + sample_file_curpos[c][s]);                                         \
+// 	if (fil[c][s].fptr != (samples[b][s].startOfData + sample_file_curpos[c][s]))                                      \
+// 		g_error |= LSEEK_FPTR_MISMATCH;

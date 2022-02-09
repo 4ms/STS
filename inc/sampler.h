@@ -79,26 +79,7 @@ enum PlayLoadTriage { NO_PRIORITY, PRIORITIZE_PLAYING };
 void audio_buffer_init(void);
 void read_storage_to_buffer(void);
 void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan);
-
-void set_buff_window(uint8_t chan, uint8_t samplenum);
-
 void toggle_playing(uint8_t chan);
 void start_playing(uint8_t chan);
-
 void toggle_reverse(uint8_t chan);
-void reverse_file_positions(uint8_t chan, uint8_t samplenum, uint8_t banknum, uint8_t new_dir);
-
-void check_change_bank(uint8_t chan);
-void check_change_sample(void);
-
-void init_changed_bank(uint8_t chan);
-
-//uint8_t preload_sample(uint32_t samplenum, FIL* sample_file);
-
-uint32_t calc_start_point(float start_param, Sample *sample);
-uint32_t calc_stop_point(float length_param, float resample_param, Sample *sample, uint32_t startpos);
-
-void clear_is_buffered_to_file_end(uint8_t chan);
-//void check_trim_bounds(void);
-
 void SDIO_read_IRQHandler(void);
