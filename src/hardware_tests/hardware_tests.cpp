@@ -32,19 +32,18 @@ extern "C" {
 #include "audio_sdram.h"
 #include "flash.h"
 #include "globals.h"
+#include "led_color_adjust.h"
 }
 #include "hardware_test_adc.h"
 #include "hardware_test_audio.h"
 #include "hardware_test_gates.h"
-#include "hardware_test_switches_buttons.h"
-#include "hardware_test_util.h"
 #include "hardware_test_leds.h"
 #include "hardware_test_sdcard.h"
+#include "hardware_test_switches_buttons.h"
+#include "hardware_test_util.h"
 #include "hardware_tests.h"
 
-
-uint16_t _abs(int16_t val)
-{
+uint16_t _abs(int16_t val) {
 	return (val < 0) ? -val : val;
 }
 
@@ -53,11 +52,12 @@ static void test_RAM(void);
 static void test_input_jacks(void);
 static void animate_success(void);
 
-uint8_t do_hardware_test(void)
-{
+uint8_t do_hardware_test(void) {
 	pause_until_button_released();
 
 	test_single_leds();
+
+	set_default_led_color_adjust();
 	test_rgb_leds();
 	test_codec_init();
 	test_audio_out();
@@ -87,14 +87,11 @@ uint8_t do_hardware_test(void)
 	return 1;
 }
 
-void animate_success(void)
-{
+void animate_success(void) {
 	chase_all_buttonLEDs(20);
 }
 
-
-void test_RAM(void)
-{
+void test_RAM(void) {
 	set_led(0, true);
 
 	SDRAM_Init();
@@ -115,4 +112,3 @@ void test_RAM(void)
 
 	flash_mainbut_until_pressed();
 }
-

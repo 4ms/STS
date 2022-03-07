@@ -1,14 +1,14 @@
-#include "GateInChecker.h"
-#include "CodecCallbacks.h"
 #include "hardware_test_gates.h"
+#include "CodecCallbacks.h"
+#include "GateInChecker.h"
 #include "hardware_test_util.h"
 extern "C" {
-#include "globals.h"
 #include "dig_pins.h"
-#include "leds.h"
+#include "globals.h"
 #include "i2s.h"
-#include "rgb_leds.h"
+#include "leds.h"
 #include "res/LED_palette.h"
+#include "rgb_leds.h"
 }
 
 const uint8_t kNumGateIns = 5;
@@ -21,8 +21,7 @@ class STSGateInChecker : public IGateInChecker {
 
 public:
 	STSGateInChecker()
-		: IGateInChecker(kNumGateIns)
-	{
+		: IGateInChecker(kNumGateIns) {
 		STSCodecCB::leftStream = &manual_codec_cb;
 		STSCodecCB::rightStream = &manual_codec_cb;
 
@@ -31,7 +30,6 @@ public:
 
 		cont_button_state = 0;
 	}
-
 
 private:
 	static inline ManualValue manual_codec_cb;
@@ -45,30 +43,30 @@ protected:
 	}
 
 	virtual bool read_gate(uint8_t gate_num) {
-		if (gate_num==0)
-			return (PLAY1JACK!=0);
-		else if (gate_num==1)
-			return (REV1JACK!=0);
-		else if (gate_num==2)
-			return (RECTRIGJACK!=0);
-		else if (gate_num==3)
-			return (REV2JACK!=0);
-		else if (gate_num==4)
-			return (PLAY2JACK!=0);
+		if (gate_num == 0)
+			return (PLAY1JACK != 0);
+		else if (gate_num == 1)
+			return (REV1JACK != 0);
+		else if (gate_num == 2)
+			return (RECTRIGJACK != 0);
+		else if (gate_num == 3)
+			return (REV2JACK != 0);
+		else if (gate_num == 4)
+			return (PLAY2JACK != 0);
 		else
 			return false;
 	}
 
 	virtual void set_indicator(uint8_t indicator_num, bool newstate) {
-		if (indicator_num==0)
+		if (indicator_num == 0)
 			set_led(0, newstate);
-		else if (indicator_num==1)
+		else if (indicator_num == 1)
 			set_ButtonLED_byPalette(Reverse1ButtonLED, newstate ? WHITE : OFF);
-		else if (indicator_num==2)
+		else if (indicator_num == 2)
 			set_ButtonLED_byPalette(RecButtonLED, newstate ? WHITE : OFF);
-		else if (indicator_num==3)
+		else if (indicator_num == 3)
 			set_ButtonLED_byPalette(Reverse2ButtonLED, newstate ? WHITE : OFF);
-		else if (indicator_num==4)
+		else if (indicator_num == 4)
 			set_led(3, newstate);
 
 		display_all_ButtonLEDs();
@@ -84,14 +82,12 @@ protected:
 		if (hardwaretest_continue_button()) {
 			cont_button_state = 1;
 			return false;
-		}
-		else {
+		} else {
 			if (cont_button_state == 1) {
 				set_ButtonLED_byPalette(Play1ButtonLED, OFF);
 				display_all_ButtonLEDs();
 				return true;
-			}
-			else {
+			} else {
 				set_ButtonLED_byPalette(Play1ButtonLED, ((blink_ctr++ & 0xFFFF) < 0x8000) ? YELLOW : OFF);
 				display_all_ButtonLEDs();
 
@@ -159,5 +155,3 @@ void test_gate_ins() {
 	all_leds_off();
 	delay_ms(150);
 }
-
-

@@ -1,13 +1,13 @@
+#include "hardware_test_adc.h"
 #include "AdcRangeChecker.h"
 #include "CodecCallbacks.h"
-#include "hardware_test_adc.h"
 #include "hardware_test_util.h"
 extern "C" {
-#include "dig_pins.h"
-#include "leds.h"
-#include "globals.h"
 #include "adc.h"
+#include "dig_pins.h"
+#include "globals.h"
 #include "i2s.h"
+#include "leds.h"
 }
 static void show_multiple_nonzeros_error();
 extern uint16_t potadc_buffer[NUM_POT_ADCS];
@@ -28,7 +28,7 @@ void send_LFOs_to_audio_outs() {
 	set_codec_callback(STSCodecCB::testWavesOut);
 }
 
-const uint8_t adc_map[NUM_POT_ADCS+NUM_CV_ADCS] = {
+const uint8_t adc_map[NUM_POT_ADCS + NUM_CV_ADCS] = {
 	PITCH1_POT,
 	SAMPLE1_POT,
 	SAMPLE2_POT,
@@ -72,13 +72,13 @@ bool check_max_one_cv_is_nonzero(uint16_t width) {
 		num_nonzero++;
 	if (cvadc_buffer[SAMPLE2_CV] > width)
 		num_nonzero++;
-	if (cvadc_buffer[PITCH1_CV] < (2048-width/2))
+	if (cvadc_buffer[PITCH1_CV] < (2048 - width / 2))
 		num_nonzero++;
-	if (cvadc_buffer[PITCH2_CV] < (2048-width/2))
+	if (cvadc_buffer[PITCH2_CV] < (2048 - width / 2))
 		num_nonzero++;
-	if (cvadc_buffer[PITCH1_CV] > (2048+width/2))
+	if (cvadc_buffer[PITCH1_CV] > (2048 + width / 2))
 		num_nonzero++;
-	if (cvadc_buffer[PITCH2_CV] > (2048+width/2))
+	if (cvadc_buffer[PITCH2_CV] > (2048 + width / 2))
 		num_nonzero++;
 
 	return (num_nonzero <= 1);
@@ -91,10 +91,10 @@ void test_pots_and_CV() {
 		.center_val = 2048,
 		.center_width = 200,
 		.center_check_counts = 50000,
-		.min_val = 35, //about 28mV
+		.min_val = 35,	 //about 28mV
 		.max_val = 4080, //about 3288mV
 	};
-	AdcRangeChecker checker {bounds};
+	AdcRangeChecker checker{bounds};
 
 	set_led(2, false);
 
@@ -104,7 +104,7 @@ void test_pots_and_CV() {
 
 	setup_adc();
 
-	for (uint32_t adc_i=0; adc_i<NUM_POT_ADCS+NUM_CV_ADCS; adc_i++) {
+	for (uint32_t adc_i = 0; adc_i < NUM_POT_ADCS + NUM_CV_ADCS; adc_i++) {
 		pause_until_button_released();
 		delay_ms(100);
 
@@ -119,11 +119,13 @@ void test_pots_and_CV() {
 		checker.reset();
 
 		while (!done) {
-			uint16_t adcval = (adc_i<NUM_POT_ADCS) ? potadc_buffer[cur_adc]: cvadc_buffer[cur_adc]; //virtual get_val()
+			uint16_t adcval =
+				(adc_i < NUM_POT_ADCS) ? potadc_buffer[cur_adc] : cvadc_buffer[cur_adc]; //TODO: virtual get_val()
 			checker.set_adcval(adcval);
 
-			if (adc_i>=NUM_POT_ADCS) {
-				zeroes_ok = check_max_one_cv_is_nonzero(300); //use bounds.width
+			//Check for multiple non-zero readings (CV jacks only)
+			if (adc_i >= NUM_POT_ADCS) {
+				zeroes_ok = check_max_one_cv_is_nonzero(300); //TODO: use bounds.width
 				if (!zeroes_ok) {
 					show_multiple_nonzeros_error();
 					checker.reset();
@@ -135,20 +137,16 @@ void test_pots_and_CV() {
 			}
 
 			auto status = checker.check();
-			//virtual display_status(chan, ADCCheckStatus)
-			if (status==ADCCHECK_AT_MIN){
+			//TODO: virtual display_status(chan, ADCCheckStatus)
+			if (status == ADCCHECK_AT_MIN) {
 				set_led(0, false);
-			}
-			else if (status==ADCCHECK_AT_MAX){
+			} else if (status == ADCCHECK_AT_MAX) {
 				set_led(3, false);
-			}
-			else if (status==ADCCHECK_AT_CENTER){
+			} else if (status == ADCCHECK_AT_CENTER) {
 				set_led(1, false);
-			}
-			else if (status==ADCCHECK_ELSEWHERE){
+			} else if (status == ADCCHECK_ELSEWHERE) {
 				set_led(1, true);
-			}
-			else if (status==ADCCHECK_FULLY_COVERED){
+			} else if (status == ADCCHECK_FULLY_COVERED) {
 				done = true;
 			}
 
@@ -156,7 +154,7 @@ void test_pots_and_CV() {
 				done = true;
 		}
 
-		//virtual handle_channel_done()
+		//TODO: virtual handle_channel_done()
 		set_led(2, true);
 		delay_ms(50);
 		set_led(2, false);
@@ -172,4 +170,3 @@ static void show_multiple_nonzeros_error() {
 	flash_mainbut_until_pressed();
 	delay_ms(150);
 }
-
