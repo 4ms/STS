@@ -130,6 +130,7 @@ void test_pots_and_CV() {
 					set_led(0, true);
 					set_led(1, true);
 					set_led(3, true);
+					done = true;
 				}
 			}
 
