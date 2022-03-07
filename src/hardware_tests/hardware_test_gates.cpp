@@ -148,7 +148,10 @@ void test_gate_ins() {
 	checker.set_num_toggles(50);
 	checker.reset();
 
-	while (checker.check()) {;}
+	while (checker.check()) {
+		if (read_button_state(3)) //Play2 button = abort
+			break;
+	}
 
 	set_ButtonLED_byPalette(Play1ButtonLED, OFF);
 	display_all_ButtonLEDs();
