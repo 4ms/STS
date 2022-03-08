@@ -146,6 +146,8 @@ void init_params(void) {
 	}
 
 #ifdef ENABLE_VARIABLE_RECORD_SAMPLE_RATE
+	if (global_params.record_sample_rate < REC_44K || global_params.record_sample_rate > REC_96K)
+		global_params.record_sample_rate = REC_44K;
 	global_params.f_record_sample_rate = (float)(global_params.record_sample_rate);
 #else
 	global_params.record_sample_rate = REC_44K;
