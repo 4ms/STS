@@ -1217,15 +1217,16 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			break;
 
 		case (PERC_FADEUP):
+			env_rate[chan] = fast_perc_fade_rate;
 			if (global_mode[PERC_ENVELOPE]) {
-				env_rate[chan] = fast_perc_fade_rate;
 				env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
-				if (env_level[chan] >= 1.f)
-					play_state[chan] = PLAYING_PERC;
-
 			} else {
 				apply_gain(outL, outR, gain);
+				env_level[chan] += env_rate[chan] * HT16_CHAN_BUFF_LEN;
+			}
+			if (env_level[chan] >= 1.f) {
 				play_state[chan] = PLAYING_PERC;
+				env_level[chan] = 1.f;
 			}
 			break;
 
@@ -1256,12 +1257,14 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 			break;
 
 		case (PLAYING_PERC):
+			env_rate[chan] = (i_param[chan][REV] ? 1.f : -1.f) / (length * PERC_ENV_FACTOR);
 			if (global_mode[PERC_ENVELOPE]) {
-				env_rate[chan] = (i_param[chan][REV] ? 1.f : -1.f) / (length * PERC_ENV_FACTOR);
 				env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
 			} else {
+				// Calculate the envelope in order to keep the timing the same vs. PERC_ENVELOPE enabled,
+				// but just don't apply the envelope
 				apply_gain(outL, outR, gain);
-				env_level[chan] = 1.f;
+				env_level[chan] += env_rate[chan] * HT16_CHAN_BUFF_LEN;
 			}
 
 			//After fading up to full amplitude in a reverse percussive playback, fade back down to silence:
@@ -1275,11 +1278,12 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 		case (REV_PERC_FADEDOWN):
 			// Fade down to silence before going to PAD_SILENCE mode or ending the playback
 			// (this prevents a click if the sample data itself doesn't cleanly fade out)
+			env_rate[chan] = -1.f * fast_perc_fade_rate;
 			if (global_mode[PERC_ENVELOPE]) {
-				env_rate[chan] = -1.f * fast_perc_fade_rate;
 				env_level[chan] = fade(outL, outR, gain, env_level[chan], env_rate[chan]);
 			} else {
 				apply_gain(outL, outR, gain);
+				env_level[chan] += env_rate[chan] * HT16_CHAN_BUFF_LEN;
 			}
 
 			// If the end point is the end of the sample data (which happens if the file is very short, or if we're at the end of it)
