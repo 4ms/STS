@@ -1069,9 +1069,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		// - we're in Perc mode (but none of the above are true) --> do nothing, our PERC envelope will handle it
 		if (dist_to_end < resampled_cache_size * 2) {
 			if (play_state[chan] == PLAYING_PERC) {
-				if (i_param[chan][REV]) {
-					play_state[chan] = REV_PERC_FADEDOWN;
-				}
+				// if (i_param[chan][REV]) {
+				play_state[chan] = REV_PERC_FADEDOWN;
+				// }
 			} else { //PLAYING or PLAY_FADEUP or PERC_FADEUP
 				play_state[chan] = PLAY_FADEDOWN;
 				//env_level[chan] = 1.f; //Don't set this to 1 because if we're in a FADEUP, we want to fade down from where the amplitude is currently
