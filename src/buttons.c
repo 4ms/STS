@@ -528,7 +528,7 @@ void Button_Debounce_IRQHandler(void) {
 			//
 			if (!global_mode[SYSTEM_MODE]) {
 				// All sysmode buttons down for MED PRESS, and all others are up, and we're not recording, means we should enter System Mode
-				if (all_buttons_atleast(MED_PRESSED, SYSMODE_BUTTONS_MASK)) {
+				if (all_buttons_atleast(SHORT_PRESSED, SYSMODE_BUTTONS_MASK)) {
 					if (rec_state == REC_OFF) {
 						enter_system_mode();
 						flags[SkipProcessButtons] = 1;
@@ -659,6 +659,19 @@ void Button_Debounce_IRQHandler(void) {
 						button_state[Bank2] = UP;
 						button_state[RecBank] = UP;
 					}
+				}
+
+				// Edit + Rec + RecBank: Reload (new) SD card
+				if (all_buttons_except(UP, (1 << RecBank) | (1 << Rec) | (1 << Bank1) | (1 << Bank2)) &&
+					all_buttons_atleast(MED_PRESSED, (1 << RecBank) | (1 << Rec) | (1 << Bank1) | (1 << Bank2)))
+				{
+					flags[LoadIndex] = 1;
+					flags[RevertAll] = 255;
+
+					flags[SkipProcessButtons] = 2;
+					flags[UndoSampleExists] = 0;
+					play_state[0] = SILENT;
+					play_state[1] = SILENT;
 				}
 			}
 		}

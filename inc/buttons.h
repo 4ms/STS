@@ -77,7 +77,18 @@
 //Play1 + Bank1 at boot
 #define TEST_LED_BUTTONS (PLAY1BUT && !PLAY2BUT && BANK1BUT && !BANK2BUT && !RECBUT && !BANKRECBUT && !EDIT_BUTTON)
 
-enum Buttons { Play1, Play2, Bank1, Bank2, Rec, RecBank, Rev1, Rev2, Edit, NUM_BUTTONS };
+enum Buttons {
+	Play1,
+	Play2,
+	Bank1,
+	Bank2,
+	Rec,
+	RecBank,
+	Rev1,
+	Rev2,
+	Edit,
+	NUM_BUTTONS,
+};
 
 enum ButtonStates {
 	UNKNOWN,

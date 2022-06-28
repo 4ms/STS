@@ -339,6 +339,14 @@ int main(void) {
 			flags[RewriteIndex] = 0;
 		}
 
+		if (flags[LoadIndex]) {
+			load_all_banks(0);
+			// load_sampleindex_file(USE_INDEX_FILE, ALL_BANKS);
+			flags[LoadIndex] = 0;
+			flags[ForceFileReload1] = 1;
+			flags[ForceFileReload2] = 1;
+		}
+
 		if (flags[LoadBackupIndex]) {
 			load_sampleindex_file(USE_BACKUP_FILE, flags[LoadBackupIndex] - 1);
 			flags[LoadBackupIndex] = 0;
