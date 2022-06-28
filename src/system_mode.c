@@ -221,7 +221,7 @@ void update_system_mode(void) {
 	if (BOOTLOADER_BUTTONS) {
 		bootloader_buttons_down += elapsed_time;
 
-		if (bootloader_buttons_down > 120000) {
+		if (bootloader_buttons_down > 60000) {
 			flags[ShutdownAndBootload] = 1;
 
 			set_ButtonLED_byPalette(Play1ButtonLED, GREEN);
@@ -241,7 +241,7 @@ void update_system_mode(void) {
 
 	if (ENTER_LED_ADJUST_BUTTONS) {
 		enter_led_adjust_buttons_down += elapsed_time;
-		if (enter_led_adjust_buttons_down > 120000) {
+		if (enter_led_adjust_buttons_down > 60000) {
 			global_mode[SYSTEM_MODE] = 0;
 			init_led_color_adjust();
 		}
