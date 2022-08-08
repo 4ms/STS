@@ -1,5 +1,4 @@
 # Stereo Triggered Sampler - Firmwares
-
 ### How do I know what version I have?
 Using a computer:
 
@@ -11,7 +10,8 @@ Without a computer:
 
   2) Press and hold the Edit button. Look at the colors of Reverse buttons:
 
-*  Left Reverse = __White__, Right Reverse = __Yellow__ ==> 1.4 (latest version)
+*  Left Reverse = __White__, Right Reverse = __Green ==> 1.5 (latest version)
+*  Left Reverse = __White__, Right Reverse = __Yellow__ ==> 1.4 
 *  Left Reverse = __White__, Right Reverse = __Orange__ ==> 1.3
 *  Left Reverse = __White__, Right Reverse = __Red__ ==> 1.2 
 *  Left Reverse = __Orange__, Right Reverse = __Orange__ ==> 1.0 or 1.1 (see note below)
@@ -26,11 +26,53 @@ Without a computer:
 ###Change log:
 
 ----
+### v1.5.1b ###
+
+*__Released:__* June 28, 2022
+
+*__Download:__* [Firmware v1.5.1b](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.5.1b.wav)
+
+*__New Features:__*
+
+  * __Force Reload SD Card__: Hold down four buttons: Bank 1, Bank 2, Rec Bank and Rec, for about 2 seconds. Release the buttons when the startup sequence of lights displays.
+
+*__Bug Fix:__*
+
+   * __Unrelated sample file played in certain circumstances__: When Start Pos was high, within 0.5s of the end of the file, and Length was just under 50% (Percussive mode) but high enough such that a percussive burst longer than 0.5s was to be played, then the STS would overrun the sample data and play unrelated data (usually a previously played sample). Bug appeared in v1.5, fixed in v1.5.1b.
+  
+  
+----
+### v1.5 ###
+
+*__Released:__* June 6, 2022
+
+*__Download:__* [Firmware v1.5](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.5.wav)
+
+*__New Features:__*
+
+  * __Looping Fade Time__: The STS can make a longer crossfade between the end and start of a loop (adjustable from 0.36ms to 250ms). This results in a smoother, click-free loop.
+
+  * __LED Color Adjustment__: You can now adjust the red, green, and blue amounts of each button, letting you match the colors between buttons. All new units ship pre-calibrated.
+
+  * __Maximum Recording Rate__: You can now record up to 96kHz.
+
+  * __Auto Increment Sample Slot on Record__: You can enable a mode that moves to the next sample slot each time you finish a recording that was started with the Rec Trigger jack.
+
+  * __REC button flashes when you change sample slots__: The REC button flashes red or white when you turn the REC Sample knob to indicate if the slot is full or empty.
+
+*__Bug Fix:__*
+
+  * __PLAY button stayed dim red after a recording into an active slot__: Fixed. The PLAY button now indicates the selected sample slot is full immediately after recording into a previously empty slot.
+
+  * __STS hangs on boot in some circumstances__: Fixed. An issue where the STS could hang on boot while searching for missing sample files is now fixed.
+
+
+----
 ### v1.4g ###
 
 *__Released:__* August 4, 2020
 
-*__Download:__* [Firmware v1.4g](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.4g.wav)
+*__Download:__* [Firmware v1.4g](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.4g.zip)
 
 *__Bug Fix:__*
 
