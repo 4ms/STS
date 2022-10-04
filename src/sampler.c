@@ -1206,15 +1206,20 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 	switch (play_state[chan]) {
 
 		case (RETRIG_FADEDOWN):
-			fade(outL, outR, gain, 1.f, -1.f / (float)HT16_CHAN_BUFF_LEN);
+			// DEBUG0_ON;
+			env_rate[chan] = (global_mode[FADEUPDOWN_ENVELOPE] ? 0.25f : 1.0f) / (float)HT16_CHAN_BUFF_LEN;
+			env_level[chan] = fade(outL, outR, gain, env_level[chan], -1.f * env_rate[chan]);
 			flicker_endout(chan, play_time);
 
+			if (env_level[chan] <= 0.f) {
+				env_level[chan] = 0.f;
 			//Start playing again unless we faded down because of a play trigger
 			//TODO: Does this ever happen?
 			if (!flags[Play1TrigDelaying + chan])
 				flags[Play1But + chan] = 1;
 
 			play_state[chan] = SILENT;
+			}
 			break;
 
 		case (PLAY_FADEUP):
