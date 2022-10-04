@@ -1201,13 +1201,19 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 					(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
 	}
 
-	float fast_perc_fade_rate = 1.f / (0.003f * global_params.f_record_sample_rate);
+	const float fast_perc_fade_rate = 1.f / (0.003f * global_params.f_record_sample_rate);
+
+	// 2ms fade down
+	float fast_retrig_fade_rate = 1.f / (0.002 * global_params.f_record_sample_rate);
+	// If fade_down_rate is super-fast (a larger number) then make retrig fade fast, too
+	if (fast_retrig_fade_rate < global_params.fade_down_rate)
+		fast_retrig_fade_rate = global_params.fade_down_rate;
 
 	switch (play_state[chan]) {
 
 		case (RETRIG_FADEDOWN):
 			// DEBUG0_ON;
-			env_rate[chan] = (global_mode[FADEUPDOWN_ENVELOPE] ? 0.25f : 1.0f) / (float)HT16_CHAN_BUFF_LEN;
+			env_rate[chan] = global_mode[FADEUPDOWN_ENVELOPE] ? fast_retrig_fade_rate : (1.0f / (float)HT16_CHAN_BUFF_LEN);
 			env_level[chan] = fade(outL, outR, gain, env_level[chan], -1.f * env_rate[chan]);
 			flicker_endout(chan, play_time);
 
