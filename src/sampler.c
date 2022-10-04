@@ -220,7 +220,8 @@ void toggle_reverse(uint8_t chan) {
 	//It could be the case a common trigger fired into PLAY and REV, but the PLAY trig was detected first
 	//So we actually want to make it play from the end of the sample rather than reverse direction from the current spot
 	if (tplay_state == PREBUFFERING || tplay_state == PLAY_FADEUP || tplay_state == PLAYING ||
-		tplay_state == PERC_FADEUP) {
+		tplay_state == PERC_FADEUP)
+	{
 		// If we just started playing, and then we get a reverse flag a short time afterwards,
 		// then we should not just reverse direction, but instead play from the opposite end (sample_file_endpos).
 		// The reason for this can be shown in the following patch:
@@ -787,7 +788,8 @@ void read_storage_to_buffer(void) {
 	for (chan = 0; chan < NUM_PLAY_CHAN; chan++) {
 
 		if ((play_state[chan] != SILENT) && (play_state[chan] != PLAY_FADEDOWN) &&
-			(play_state[chan] != RETRIG_FADEDOWN)) {
+			(play_state[chan] != RETRIG_FADEDOWN))
+		{
 			samplenum = sample_num_now_playing[chan];
 			banknum = sample_bank_now_playing[chan];
 			s_sample = &(samples[banknum][samplenum]);
@@ -997,7 +999,8 @@ void read_storage_to_buffer(void) {
 							cache_high[chan][samplenum] = sample_file_curpos[chan][samplenum];
 
 							if ((cache_high[chan][samplenum] - cache_low[chan][samplenum]) >
-								cache_size[chan][samplenum]) {
+								cache_size[chan][samplenum])
+							{
 								cache_map_pt[chan][samplenum] = play_buff[chan][samplenum]->in;
 								cache_low[chan][samplenum] = cache_high[chan][samplenum] - cache_size[chan][samplenum];
 							}
@@ -1099,7 +1102,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 			play_buff_bufferedamt[chan][samplenum] = CB_distance(play_buff[chan][samplenum], i_param[chan][REV]);
 
 			if (!is_buffered_to_file_end[chan][samplenum] &&
-				play_buff_bufferedamt[chan][samplenum] <= resampled_buffer_size) {
+				play_buff_bufferedamt[chan][samplenum] <= resampled_buffer_size)
+			{
 				//buffer underrun: tried to read too much out. Try to recover!
 				g_error |= READ_BUFF1_UNDERRUN << chan;
 				check_errors();
@@ -1222,12 +1226,12 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 			if (env_level[chan] <= 0.f) {
 				env_level[chan] = 0.f;
-			//Start playing again unless we faded down because of a play trigger
-			//TODO: Does this ever happen?
-			if (!flags[Play1TrigDelaying + chan])
-				flags[Play1But + chan] = 1;
+				//Start playing again unless we faded down because of a play trigger
+				//TODO: Does this ever happen?
+				if (!flags[Play1TrigDelaying + chan])
+					flags[Play1But + chan] = 1;
 
-			play_state[chan] = SILENT;
+				play_state[chan] = SILENT;
 			}
 			break;
 
