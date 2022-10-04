@@ -534,6 +534,20 @@ void toggle_playing(uint8_t chan) {
 	}
 }
 
+void start_restart_playing(uint8_t chan) {
+	//Start playing immediately if we have envelopes disabled, or we're not playing
+	if (!global_mode[FADEUPDOWN_ENVELOPE] || play_state[chan] == SILENT || play_state[chan] == PREBUFFERING) {
+		start_playing(chan);
+	}
+
+	//Re-start if we're playing (and have envelopes enabled)
+	else
+	{
+		play_state[chan] = RETRIG_FADEDOWN;
+		play_led_state[chan] = 0;
+	}
+}
+
 static uint32_t calc_start_point(float start_param, Sample *sample) {
 	uint32_t zeropt;
 	uint32_t inst_size;

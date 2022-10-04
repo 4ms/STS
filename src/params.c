@@ -1022,7 +1022,7 @@ void process_mode_flags(void) {
 		}
 	}
 	if (flags[Play1Trig]) {
-		start_playing(0);
+		start_restart_playing(0);
 		flags[Play1Trig] = 0;
 	}
 
@@ -1041,7 +1041,7 @@ void process_mode_flags(void) {
 	}
 	if (flags[Play2Trig]) {
 		// DEBUG3_OFF;
-		start_playing(1);
+		start_restart_playing(1);
 		flags[Play2Trig] = 0;
 		flags[LatchVoltOctCV2] = 0;
 	}
@@ -1180,7 +1180,7 @@ uint32_t calc_pitch_latch_time(uint8_t trig_delay_setting) {
 }
 
 float calc_fade_updown_rate(uint8_t time_ms) {
-	//map 0..255 => 1/HT16_CHAN_BUFF_LEN .. 1/(0.05 * 44100.f)
+	//map 0..255 => 1/HT16_CHAN_BUFF_LEN .. 1/(0.05 * 44100.f) = one buffer to 50ms
 	float range = 0.05f * global_params.f_record_sample_rate - (float)HT16_CHAN_BUFF_LEN;
 	float offset = HT16_CHAN_BUFF_LEN;
 	return 1.0f / ((((float)time_ms) / 255.0f) * range + offset);

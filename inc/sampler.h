@@ -90,5 +90,6 @@ void read_storage_to_buffer(void);
 void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan);
 void toggle_playing(uint8_t chan);
 void start_playing(uint8_t chan);
+void start_restart_playing(uint8_t chan);
 void toggle_reverse(uint8_t chan);
 void SDIO_read_IRQHandler(void);
