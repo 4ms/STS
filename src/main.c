@@ -240,12 +240,6 @@ int main(void) {
 	Init_Pot_ADC();
 	Init_CV_ADC();
 
-	//Initialize Codec
-	codec_init_gpio();
-	codec_init_i2s(global_params.record_sample_rate);
-	init_audio_dma();
-	codec_setup_registers(0, global_params.record_sample_rate);
-
 	// Initialize parameters/modes
 	init_adc_param_update_IRQ();
 
@@ -253,6 +247,12 @@ int main(void) {
 	read_user_settings();
 	init_params();
 	init_modes();
+
+	//Initialize Codec
+	codec_init_gpio();
+	codec_init_i2s(global_params.record_sample_rate);
+	init_audio_dma();
+	codec_setup_registers(0, global_params.record_sample_rate);
 
 	// If we detect a different version, update the firmware version in FLASH
 	if (system_calibrations->major_firmware_version != FW_MAJOR_VERSION ||
