@@ -45,7 +45,7 @@ enum PlayStates {
 	RETRIG_FADEDOWN,
 	REV_PERC_FADEDOWN,
 	PAD_SILENCE,
-	HOLD
+	// HOLD
 };
 
 // Note: normal state changes go like this:
