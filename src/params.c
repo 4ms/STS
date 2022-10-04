@@ -1024,6 +1024,7 @@ void process_mode_flags(void) {
 	if (flags[Play1Trig]) {
 		start_restart_playing(0);
 		flags[Play1Trig] = 0;
+		flags[LatchVoltOctCV1] = 0;
 	}
 
 	if (flags[Play2TrigDelaying]) {
