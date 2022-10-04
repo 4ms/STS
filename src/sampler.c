@@ -535,8 +535,11 @@ void toggle_playing(uint8_t chan) {
 }
 
 void start_restart_playing(uint8_t chan) {
-	//Start playing immediately if we have envelopes disabled, or we're not playing
-	if (!global_mode[FADEUPDOWN_ENVELOPE] || play_state[chan] == SILENT || play_state[chan] == PREBUFFERING) {
+	//Start playing immediately if we have envelopes disabled for the mode that's playing, or we're not playing
+	if ((!global_mode[FADEUPDOWN_ENVELOPE] && (play_state[chan] == PLAYING || play_state[chan] == PLAY_FADEDOWN)) ||
+		(!global_mode[PERC_ENVELOPE] && play_state[chan] == PLAYING_PERC) || play_state[chan] == SILENT ||
+		play_state[chan] == PREBUFFERING)
+	{
 		start_playing(chan);
 	}
 
