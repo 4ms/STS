@@ -1027,6 +1027,10 @@ void read_storage_to_buffer(void) {
 	}	  //for (chan)
 }
 
+float calc_fast_perc_fade_rate() {
+	return 1.f / (0.003f * global_params.f_record_sample_rate);
+}
+
 void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 	uint16_t i;
 	float env;
@@ -1082,21 +1086,32 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		// Amount in the sample file we have remaining before we hit sample_file_endpos
 		dist_to_end = calc_dist_to_end(chan, samplenum, banknum);
 
-		//See if we are about to surpass the calculated position in the file where we should end our sample
-		// - we're not in Perc mode --> FADEDOWN
-		// - we just changed to Perc from Play --> FADEDOWN (or else we'll get annoying PAD_SILENCE)
-		// - we're in reverse perc mode --> PERC_FADEDOWN
-		// - we're in Perc mode (but none of the above are true) --> do nothing, our PERC envelope will handle it
-		if (dist_to_end < resampled_cache_size * 2) {
-			if (play_state[chan] == PLAYING_PERC) {
-				// if (i_param[chan][REV]) {
-				play_state[chan] = REV_PERC_FADEDOWN;
-				// }
-			} else { //PLAYING or PLAY_FADEUP or PERC_FADEUP
-				play_state[chan] = PLAY_FADEDOWN;
-				//env_level[chan] = 1.f; //Don't set this to 1 because if we're in a FADEUP, we want to fade down from where the amplitude is currently
-				flags[ChangePlaytoPerc1 + chan] = 0;
+		// See if we are about to surpass the calculated position in the file where we should end our sample
+		// We must start fading down at a point that depends on how long it takes to fade down
+		uint32_t fadedown_blocks = 2;
+		uint32_t fadedown_state = SILENT;
+
+		if (play_state[chan] == PLAYING_PERC) {
+			if (global_mode[PERC_ENVELOPE]) {
+				fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * calc_fast_perc_fade_rate())) + 1;
+				fadedown_state = REV_PERC_FADEDOWN;
 			}
+		} else {
+			if (global_mode[FADEUPDOWN_ENVELOPE]) {
+				if (i_param[chan][REV]) {
+					fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * calc_fast_perc_fade_rate())) + 1;
+					fadedown_state = REV_PERC_FADEDOWN;
+				} else {
+					fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * global_params.fade_down_rate)) + 1;
+					fadedown_state = PLAY_FADEDOWN;
+				}
+			}
+		}
+
+		if (dist_to_end < resampled_cache_size * fadedown_blocks) {
+			play_state[chan] = fadedown_state;
+			if (play_state[chan] != PLAYING_PERC)
+				flags[ChangePlaytoPerc1 + chan] = 0;
 		} else {
 			//Check if we are about to hit buffer underrun
 			play_buff_bufferedamt[chan][samplenum] = CB_distance(play_buff[chan][samplenum], i_param[chan][REV]);
@@ -1135,8 +1150,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 				outR[i] = outL[i];
 		}
 	} else { //not STEREO_MODE:
-		if (rs > (MAX_RS))
-			rs = (MAX_RS);
+		if (rs > MAX_RS)
+			rs = MAX_RS;
 
 		if (s_sample->numChannels == 2)
 			resample_read16_avg(rs, play_buff[chan][samplenum], HT16_CHAN_BUFF_LEN, 4, chan, outL);
@@ -1209,7 +1224,7 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 	}
 
 	// 3ms fade down
-	const float fast_perc_fade_rate = 1.f / (0.003f * global_params.f_record_sample_rate);
+	const float fast_perc_fade_rate = calc_fast_perc_fade_rate();
 
 	// 3ms fade down or global fade_down_rate, whichever is faster
 	const float fast_retrig_fade_rate =
