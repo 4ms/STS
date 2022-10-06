@@ -74,7 +74,9 @@ CFLAGS += -DARM_MATH_CM4 -D'__FPU_PRESENT=1' -DUSE_STDPERIPH_DRIVER
 CFLAGS += -I. $(INCLUDES)
 CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion -fcommon
 CFLAGS += -ffreestanding
-CFLAGS += --specs=nosys.specs
+CFLAGS += -fdata-sections -ffunction-sections
+# CFLAGS += -nostdlib
+# CFLAGS += --specs=nosys.specs
 CFLAGS += -DHSE_VALUE=16000000
 
 CXXFLAGS = -std=c++17
@@ -83,7 +85,7 @@ CXXFLAGS += -Wno-register
 AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4
 
 LDSCRIPT = $(DEVICE)/$(LOADFILE)
-LFLAGS  = $(CFLAGS) -Wl,-Map,main.map -T $(LDSCRIPT)
+LFLAGS  = $(CFLAGS) -Wl,--gc-sections -Wl,-Map,$(BUILDDIR)/main.map -T $(LDSCRIPT)
 
 # Uncomment to compile unoptimized:
 
