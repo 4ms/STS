@@ -1,36 +1,33 @@
-#include "LEDTester.h"
 #include "hardware_test_leds.h"
 #include "hardware_test_util.h"
+#include "libhwtests/LEDTester.hh"
 extern "C" {
-#include "res/LED_palette.h"
 #include "dig_pins.h"
-#include "pca9685_driver.h"
-#include "leds.h"
-#include "rgb_leds.h"
 #include "globals.h"
+#include "leds.h"
+#include "pca9685_driver.h"
+#include "res/LED_palette.h"
+#include "rgb_leds.h"
 }
 
 class STSLEDTester : public ILEDTester {
-	virtual void set_led(int led_id, bool turn_on) override
-	{
+	virtual void set_led(int led_id, bool turn_on) override {
 		::set_led(led_id, turn_on);
 	}
 
-	virtual void pause_between_steps() override
-	{
+	virtual void pause_between_steps() override {
 		pause_until_button();
 	}
 
 public:
 	STSLEDTester(uint8_t num_leds)
-		: ILEDTester(num_leds)
-	{}
+		: ILEDTester(num_leds) {
+	}
 };
 
 // The continue button is pressed to illuminate each LED, one at a time
 // At the end, all leds turn on
-void test_single_leds(void)
-{
+void test_single_leds(void) {
 
 	const uint8_t numLEDs = 4;
 	STSLEDTester check{numLEDs};
@@ -45,27 +42,24 @@ void test_single_leds(void)
 //RGB
 
 class STSRGBLEDTester : public ILEDTester {
-	virtual void set_led(int led_id, bool turn_on) override
-	{
+	virtual void set_led(int led_id, bool turn_on) override {
 		int led_base = led_id / 3;
 		int color = led_id - (led_base * 3);
 		set_ButtonLED_byPalette(led_base, turn_on == false ? OFF : color == 0 ? RED : color == 1 ? GREEN : BLUE);
 		display_all_ButtonLEDs();
 	}
 
-	virtual void pause_between_steps() override
-	{
+	virtual void pause_between_steps() override {
 		pause_until_button();
 	}
 
 public:
 	STSRGBLEDTester(uint8_t num_leds)
-		: ILEDTester(num_leds)
-	{}
+		: ILEDTester(num_leds) {
+	}
 };
 
-void test_rgb_leds(void)
-{
+void test_rgb_leds(void) {
 	set_led(0, false);
 	set_led(1, true);
 	set_led(2, true);
@@ -78,7 +72,7 @@ void test_rgb_leds(void)
 	set_led(2, false);
 	set_led(3, false);
 
-	int colorseq[] = {WHITE, RED, BLUE, GREEN, CYAN, MAGENTA, YELLOW };
+	int colorseq[] = {WHITE, RED, BLUE, GREEN, CYAN, MAGENTA, YELLOW};
 	for (auto c : colorseq) {
 		for (int i = 0; i < NUM_RGBBUTTONS; i++)
 			set_ButtonLED_byPalette(i, c);
@@ -105,4 +99,3 @@ void test_rgb_leds(void)
 
 	all_leds_off();
 }
-

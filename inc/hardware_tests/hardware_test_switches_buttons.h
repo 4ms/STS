@@ -1,5 +1,5 @@
 #pragma once
-#include "ButtonChecker.h"
+#include "libhwtests/ButtonChecker.hh"
 extern "C" {
 #include "dig_pins.h"
 #include "globals.h"
@@ -14,17 +14,16 @@ const uint8_t kNumSTSButtons = 9;
 class STSButtonChecker : public IButtonChecker {
 public:
 	STSButtonChecker()
-		: IButtonChecker(kNumSTSButtons)
-	{
+		: IButtonChecker(kNumSTSButtons) {
 		LEDDriver_Init(2);
 		LEDDRIVER_OUTPUTENABLE_ON;
 		init_buttonLEDs();
 	}
 
-	~STSButtonChecker() {}
+	~STSButtonChecker() {
+	}
 
-	virtual bool _read_button(uint8_t button_num)
-	{
+	virtual bool _read_button(uint8_t button_num) {
 		if (button_num == 0)
 			return PLAY1BUT ? true : false;
 		if (button_num == 1)
@@ -47,8 +46,7 @@ public:
 			return false;
 	}
 
-	virtual void _set_error_indicator(uint8_t channel, ErrorType err)
-	{
+	virtual void _set_error_indicator(uint8_t channel, ErrorType err) {
 		PLAYLED1_OFF;
 		PLAYLED2_OFF;
 		if (err == ErrorType::NoisyPress)
@@ -70,8 +68,7 @@ public:
 		PLAYLED2_OFF;
 	}
 
-	virtual void _set_indicator(uint8_t indicate_num, bool turn_on)
-	{
+	virtual void _set_indicator(uint8_t indicate_num, bool turn_on) {
 		if (turn_on) {
 			if (indicate_num == 0)
 				set_ButtonLED_byPalette(Play1ButtonLED, WHITE);
@@ -118,8 +115,8 @@ public:
 		display_all_ButtonLEDs();
 	}
 
-	virtual void _check_max_one_pin_changed() {}
+	virtual void _check_max_one_pin_changed() {
+	}
 };
 
 void test_buttons(void);
-

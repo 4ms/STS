@@ -75,7 +75,8 @@ CFLAGS += -I. $(INCLUDES)
 CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion -fcommon
 CFLAGS += -ffreestanding
 CFLAGS += -fdata-sections -ffunction-sections
-# CFLAGS += -nostdlib
+CFLAGS += -fno-exceptions  -fno-unwind-tables
+CFLAGS += -nostdlib
 # CFLAGS += --specs=nosys.specs
 CFLAGS += -DHSE_VALUE=16000000
 

@@ -115,7 +115,7 @@ void deinit_all(void) {
 
 static unsigned is_preproduction_firmware(unsigned v_major, unsigned v_minor);
 
-int main(void) {
+void main(void) {
 	uint32_t do_factory_reset = 0;
 	uint32_t timeout_boot;
 	uint32_t valid_fw_version;
@@ -366,8 +366,6 @@ int main(void) {
 			if (!(--do_factory_reset))
 				factory_reset();
 	}
-
-	return (1);
 }
 
 static unsigned is_preproduction_firmware(unsigned v_major, unsigned v_minor) {
