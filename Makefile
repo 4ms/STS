@@ -18,6 +18,7 @@ SOURCES += $(wildcard $(PERIPH)/src/*.c)
 SOURCES += $(DEVICE)/src/$(STARTUP)
 SOURCES += $(DEVICE)/src/$(SYSTEM)
 SOURCES += $(wildcard src/*.c)
+SOURCES += src/libcpp_stubs.cc
 SOURCES += $(wildcard libhwtests/src/*.c)
 SOURCES += $(wildcard libhwtests/src/*.cc)
 SOURCES += $(wildcard libhwtests/src/*.cpp)
@@ -76,12 +77,13 @@ CFLAGS += -fno-exceptions -fsingle-precision-constant -Wdouble-promotion -fcommo
 CFLAGS += -ffreestanding
 CFLAGS += -fdata-sections -ffunction-sections
 CFLAGS += -fno-exceptions  -fno-unwind-tables
-CFLAGS += -nostdlib
-# CFLAGS += --specs=nosys.specs
+# CFLAGS += -nostdlib
 CFLAGS += -DHSE_VALUE=16000000
 
 CXXFLAGS = -std=c++17
 CXXFLAGS += -Wno-register
+CXXFLAGS += -fno-rtti
+CXXFLAGS += -fno-threadsafe-statics
 
 AFLAGS  = -mlittle-endian -mthumb -mcpu=cortex-m4
 
