@@ -1,5 +1,5 @@
-# Stereo Triggered Sampler - Firmwares
-### How do I know what version I have?
+# Stereo Triggered Sampler - Firmwares #
+### How do I know what version I have? ###
 Using a computer:
 
   * Put your microSD card into your computer. Open up the `__Sample List__.html` file. At the top it will say "Firmware version XXX".
@@ -10,7 +10,7 @@ Without a computer:
 
   2) Press and hold the Edit button. Look at the colors of Reverse buttons:
 
-*  Left Reverse = __White__, Right Reverse = __Green ==> 1.5 (latest version)
+*  Left Reverse = __White__, Right Reverse = __Green__ ==> 1.5.x (latest version)
 *  Left Reverse = __White__, Right Reverse = __Yellow__ ==> 1.4 
 *  Left Reverse = __White__, Right Reverse = __Orange__ ==> 1.3
 *  Left Reverse = __White__, Right Reverse = __Red__ ==> 1.2 
@@ -23,9 +23,28 @@ Without a computer:
 
 
 
-###Change log:
+### Change log: ###
 
 ----
+### v1.5.2 ###
+
+*__Released:__* October 8, 2022
+
+*__Download:__* [Firmware v1.5.2](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.5.2.wav)
+
+*__Improvements:__*
+
+  * __Smaller firmware update files__: The size of the firmware file has been reduced, making the firmware update .wav file smaller by about 57% (from 5:55 to 3:22).
+
+*__Bug Fixes:__*
+
+   * __Long Fade In/Out Envelope times caused clicking in audio under certain circumstances__: When the Fade In/Out Envelope Time was set longer than the Trigger Delay Time, firing a play trigger into a channel that's already playing audio would cause the audio to re-start before the fade out had completed, causing a pop or click in the audio. Another circumstance was if the Fade In/Out Envelope Time or Percussive Envelope Time was set longer than time between Start Pos and the actual start of sample data, playing a sample in reverse would result in extra silence or glitchy audio. Bug appeared in v1.5, fixed in v1.5.2.
+
+   * __Recording Sample Rate not presevered across reboots__: The Recording Sample Rate can be set in System Mode up to 96kHz. However, the next time the STS started up, the rate would be set back to 44.1kHz, yet the System Mode lights would indicate it was still in 96kHz. One symptom was that samples would play back at the wrong pitch. Bug fixed in v1.5.2.
+
+
+----
+
 ### v1.5.1b ###
 
 *__Released:__* June 28, 2022
@@ -40,13 +59,14 @@ Without a computer:
 
    * __Unrelated sample file played in certain circumstances__: When Start Pos was high, within 0.5s of the end of the file, and Length was just under 50% (Percussive mode) but high enough such that a percussive burst longer than 0.5s was to be played, then the STS would overrun the sample data and play unrelated data (usually a previously played sample). Bug appeared in v1.5, fixed in v1.5.1b.
   
+  (Note: v1.5.1a was not released)
   
 ----
 ### v1.5 ###
 
 *__Released:__* June 6, 2022
 
-*__Download:__* [Firmware v1.5](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.5.wav)
+*__Download:__* [Firmware v1.5](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.5.zip)
 
 *__New Features:__*
 
