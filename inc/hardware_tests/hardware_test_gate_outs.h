@@ -1,5 +1,4 @@
 #pragma once
-#include "GateOutput.h"
+#include "libhwtests/GateOutput.hh"
 
 void test_gate_outs();
-

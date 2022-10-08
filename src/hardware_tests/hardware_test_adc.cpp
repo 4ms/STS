@@ -1,7 +1,7 @@
 #include "hardware_test_adc.h"
-#include "AdcRangeChecker.h"
-#include "CodecCallbacks.h"
 #include "hardware_test_util.h"
+#include "libhwtests/AdcRangeChecker.hh"
+#include "libhwtests/CodecCallbacks.hh"
 extern "C" {
 #include "adc.h"
 #include "dig_pins.h"
@@ -138,15 +138,15 @@ void test_pots_and_CV() {
 
 			auto status = checker.check();
 			//TODO: virtual display_status(chan, ADCCheckStatus)
-			if (status == ADCCHECK_AT_MIN) {
+			if (status == AdcCheckState::AtMin) {
 				set_led(0, false);
-			} else if (status == ADCCHECK_AT_MAX) {
+			} else if (status == AdcCheckState::AtMax) {
 				set_led(3, false);
-			} else if (status == ADCCHECK_AT_CENTER) {
+			} else if (status == AdcCheckState::AtCenter) {
 				set_led(1, false);
-			} else if (status == ADCCHECK_ELSEWHERE) {
+			} else if (status == AdcCheckState::Elsewhere) {
 				set_led(1, true);
-			} else if (status == ADCCHECK_FULLY_COVERED) {
+			} else if (status == AdcCheckState::FullyCovered) {
 				done = true;
 			}
 

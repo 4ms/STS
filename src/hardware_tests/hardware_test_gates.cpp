@@ -1,7 +1,7 @@
 #include "hardware_test_gates.h"
-#include "CodecCallbacks.h"
-#include "GateInChecker.h"
 #include "hardware_test_util.h"
+#include "libhwtests/CodecCallbacks.hh"
+#include "libhwtests/GateInChecker.hh"
 extern "C" {
 #include "dig_pins.h"
 #include "globals.h"

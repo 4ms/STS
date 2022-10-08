@@ -1,12 +1,12 @@
 #include "hardware_test_audio.h"
 #include "hardware_test_util.h"
-#include "CodecCallbacks.h"
+#include "libhwtests/CodecCallbacks.hh"
 extern "C" {
-#include "dig_pins.h"
-#include "leds.h"
-#include "globals.h"
 #include "codec.h"
+#include "dig_pins.h"
+#include "globals.h"
 #include "i2s.h"
+#include "leds.h"
 }
 
 static void setup_outs_as_LFOs(void);
@@ -29,7 +29,6 @@ static void setup_outs_as_LFOs(void);
 //	codecb_buserr = I2C_GetFlagStatus(CODECB_I2C, I2C_FLAG_BERR);
 //}
 
-
 void test_codec_init(void) {
 	all_leds_off();
 	pause_until_button_released();
@@ -50,7 +49,7 @@ void test_codec_init(void) {
 	BUSYLED_ON;
 	err = codec_setup_registers(0, SAMPLERATE);
 	if (err) {
-		const uint32_t bailout_time=50; //5 seconds
+		const uint32_t bailout_time = 50; //5 seconds
 		uint32_t ctr = bailout_time;
 		while (ctr) {
 			PLAYLED2_ON;
@@ -59,7 +58,7 @@ void test_codec_init(void) {
 			delay_ms(50);
 			if (hardwaretest_continue_button())
 				ctr--;
-			else 
+			else
 				ctr = bailout_time;
 		}
 	}
@@ -79,7 +78,7 @@ void test_audio_out(void) {
 	PLAYLED1_ON;
 	PLAYLED2_ON;
 
-	float max = ((1<<15)-1);
+	float max = ((1 << 15) - 1);
 	float min = -max - 1.0f;
 
 	testWaves[0].init(100, 0.2, max, min, 0, SAMPLERATE);
@@ -109,7 +108,7 @@ void test_audio_in(void) {
 	SIGNALLED_ON;
 	BUSYLED_ON;
 
-	float max = ((1<<15)-1) / 2.0f;
+	float max = ((1 << 15) - 1) / 2.0f;
 	float min = -max - 1.0f;
 
 	testWaves[0].init(200, 0.2, max, min, 0, SAMPLERATE);
@@ -123,4 +122,3 @@ void test_audio_in(void) {
 	SIGNALLED_OFF;
 	BUSYLED_OFF;
 }
-
