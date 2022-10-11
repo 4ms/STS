@@ -1090,12 +1090,15 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		// We must start fading down at a point that depends on how long it takes to fade down
 		uint32_t fadedown_blocks = 2;
 		uint32_t fadedown_state = SILENT;
+		uint32_t fadedown_state = REV_PERC_FADEDOWN;
 
 		if (play_state[chan] == PLAYING_PERC) {
 			if (global_mode[PERC_ENVELOPE]) {
 				fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * calc_fast_perc_fade_rate())) + 1;
-				fadedown_state = REV_PERC_FADEDOWN;
+			} else {
+				fadedown_blocks = 1;
 			}
+				fadedown_state = REV_PERC_FADEDOWN;
 		} else {
 			if (global_mode[FADEUPDOWN_ENVELOPE]) {
 				if (i_param[chan][REV]) {
