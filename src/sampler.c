@@ -926,12 +926,9 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 	//Resampling:
 	float rs;
-	uint32_t resampled_buffer_size;
-	int32_t resampled_cache_size;
 
 	float gain;
 	float play_time;
-	int32_t dist_to_end;
 
 	//convenience variables
 	float length;
@@ -965,18 +962,18 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		play_state[chan] == PERC_FADEUP)
 	{
 		// Amount play_buff[]->out changes with each audio block sent to the codec
-		resampled_buffer_size = calc_resampled_buffer_size(samplenum, banknum, rs);
+		volatile uint32_t resampled_buffer_size = calc_resampled_buffer_size(chan, samplenum, banknum, rs);
 
 		// Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
-		resampled_cache_size = calc_resampled_cache_size(samplenum, banknum, resampled_buffer_size);
+		volatile int32_t resampled_cache_size = calc_resampled_cache_size(samplenum, banknum, resampled_buffer_size);
 
 		// Amount in the sample file we have remaining before we hit sample_file_endpos
-		dist_to_end = calc_dist_to_end(chan, samplenum, banknum);
+		volatile int32_t dist_to_end = calc_dist_to_end(chan, samplenum, banknum);
 
 		// See if we are about to surpass the calculated position in the file where we should end our sample
 		// We must start fading down at a point that depends on how long it takes to fade down
 		uint32_t fadedown_blocks = 2;
-		// uint32_t fadedown_state = SILENT;
+		// uint32_t fadedown_state = f_param[chan][LENGTH] < 0.5f ? REV_PERC_FADEDOWN : PLAY_FADEDOWN;
 		uint32_t fadedown_state = REV_PERC_FADEDOWN;
 
 		if (play_state[chan] == PLAYING_PERC) {
@@ -998,7 +995,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 			}
 		}
 
-		if (dist_to_end < resampled_cache_size * fadedown_blocks) {
+		if (dist_to_end < (resampled_cache_size * fadedown_blocks)) {
 			play_state[chan] = fadedown_state;
 			if (play_state[chan] != PLAYING_PERC)
 				flags[ChangePlaytoPerc1 + chan] = 0;
