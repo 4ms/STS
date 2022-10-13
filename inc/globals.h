@@ -39,6 +39,7 @@
 #define codec_BUFF_LEN 128
 #define HT16_BUFF_LEN (codec_BUFF_LEN >> 2)		/*32*/
 #define HT16_CHAN_BUFF_LEN (HT16_BUFF_LEN >> 1) /*16*/
+#define FramesPerBlock 16.0f
 
 #define ONE_SECOND 44100
 
@@ -183,5 +184,3 @@ enum g_Errors {
 #define CCMDATA __attribute__((section(".ccmdata")))
 
 void check_errors(void);
-
-//#define delay_sys(x) do{register uint32_t donetime=x+systime;__asm__ __volatile__ ("nop\n\t":::"memory");}while(sys_time!=donetime;)
