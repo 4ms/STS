@@ -15,11 +15,12 @@ static inline uint32_t calc_resampled_cache_size(uint8_t samplenum, uint8_t bank
 
 // calc_resampled_buffer_size()
 // Amount play_buff[]->out changes with each audio block sent to the codec
-static inline uint32_t
-calc_resampled_buffer_size(uint8_t chan, uint8_t samplenum, uint8_t banknum, float resample_rate) {
+static inline uint32_t calc_resampled_buffer_size(uint8_t samplenum, uint8_t banknum, float resample_rate) {
 	return ((uint32_t)((HT16_CHAN_BUFF_LEN * samples[banknum][samplenum].numChannels * 2) * resample_rate));
 }
 
+// calc_dist_to_end()
+// How many samples left to go before we hit the stopping point
 static inline int32_t calc_dist_to_end(uint8_t chan, uint8_t samplenum, uint8_t banknum) {
 	extern uint32_t sample_file_endpos[NUM_PLAY_CHAN];
 	extern CircularBuffer *play_buff[NUM_PLAY_CHAN][NUM_SAMPLES_PER_BANK];
@@ -160,4 +161,5 @@ static inline float calc_fast_perc_fade_rate() {
 static inline uint32_t calc_fadedown_blocks() {
 	extern GlobalParams global_params;
 	return ((0.003f * global_params.f_record_sample_rate) / FramesPerBlock) + 1;
+	//44100Hz --> 3ms is 8.2 blocks, so return 9 blocks
 }

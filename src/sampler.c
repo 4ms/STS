@@ -965,7 +965,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		play_state[chan] == PERC_FADEUP)
 	{
 		// Amount play_buff[]->out changes with each audio block sent to the codec
-		resampled_buffer_size = calc_resampled_buffer_size(chan, samplenum, banknum, rs);
+		resampled_buffer_size = calc_resampled_buffer_size(samplenum, banknum, rs);
 
 		// Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
 		resampled_cache_size = calc_resampled_cache_size(samplenum, banknum, resampled_buffer_size);
