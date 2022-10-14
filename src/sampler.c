@@ -1106,12 +1106,11 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 					(s_sample->blockAlign * s_sample->sampleRate * f_param[chan][PITCH]);
 	}
 
-	// 3ms fade down
 	const float fast_perc_fade_rate = calc_fast_perc_fade_rate(length);
 
-	// 3ms fade down or global fade_down_rate, whichever is faster
+	// retrig fadedown rate is the faster of perc fade and global non-perc fadedown rate (larger rate == faster fade)
 	const float fast_retrig_fade_rate =
-		(fast_retrig_fade_rate < global_params.fade_down_rate) ? global_params.fade_down_rate : fast_perc_fade_rate;
+		(fast_perc_fade_rate < global_params.fade_down_rate) ? global_params.fade_down_rate : fast_perc_fade_rate;
 
 	switch (play_state[chan]) {
 
