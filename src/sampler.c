@@ -290,9 +290,6 @@ static void reverse_file_positions(uint8_t chan, uint8_t samplenum, uint8_t bank
 															 play_buff[chan][samplenum]);
 	}
 
-	// if (play_buff[chan][samplenum]->out < play_buff[chan][samplenum]->in)	play_buff[chan][samplenum]->wrapping = i_param[chan][REV]? 1 : 0;
-	// else																	play_buff[chan][samplenum]->wrapping = i_param[chan][REV]? 0 : 1;
-
 	//Swap the endpos with the startpos
 	//This way, curpos is always moving towards endpos and away from startpos
 	swap = sample_file_endpos[chan];
@@ -930,11 +927,6 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 	float gain;
 	float play_time;
 
-	//convenience variables
-	float length = f_param[chan][LENGTH];
-	uint8_t samplenum, banknum;
-	Sample *s_sample;
-
 	// Fill buffer with silence and return if we're not playing
 	if (play_state[chan] == PREBUFFERING || play_state[chan] == SILENT) {
 		for (i = 0; i < HT16_CHAN_BUFF_LEN; i++) {
@@ -944,9 +936,10 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		return;
 	}
 
-	samplenum = sample_num_now_playing[chan];
-	banknum = sample_bank_now_playing[chan];
-	s_sample = &(samples[banknum][samplenum]);
+	float length = f_param[chan][LENGTH];
+	uint8_t samplenum = sample_num_now_playing[chan];
+	uint8_t banknum = sample_bank_now_playing[chan];
+	Sample *s_sample = &(samples[banknum][samplenum]);
 
 	//Calculate our actual resampling rate, based on the sample rate of the file being played
 
@@ -973,23 +966,8 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		// See if we are about to surpass the calculated position in the file where we should end our sample
 		// We must start fading down at a point that depends on how long it takes to fade down
 
-		//TODO: these calcuated lengths must match the actual ones
-		// uint32_t fadedown_blocks = 2;
 		uint32_t fadedown_blocks = calc_perc_fadedown_blocks(length) + 1;
 		uint32_t fadedown_state = REV_PERC_FADEDOWN;
-
-		// if (play_state[chan] == PLAYING_PERC || play_state[chan] == PERC_FADEUP) {
-		// 	fadedown_blocks = calc_fast_perc_fade_rate(length) + 1;
-		// } else {
-		// 	if (global_mode[FADEUPDOWN_ENVELOPE]) {
-		// 		if (i_param[chan][REV]) {
-		// 			fadedown_blocks = calc_fast_perc_fade_rate(length) + 1;
-		// 		} else {
-		// 			fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * global_params.fade_down_rate)) + 1;
-		// 			fadedown_state = PLAY_FADEDOWN;
-		// 		}
-		// 	}
-		// }
 
 		if (dist_to_end < (resampled_cache_size * fadedown_blocks)) {
 			play_state[chan] = fadedown_state;
@@ -1276,8 +1254,3 @@ static inline int32_t _SSAT16(int32_t x) {
 	asm("ssat %[dst], #16, %[src]" : [dst] "=r"(x) : [src] "r"(x));
 	return x;
 }
-
-// #define SET_FILE_POS(c, b, s)                                                                                          \
-// 	f_lseek(&fil[c][s], samples[b][s].startOfData + sample_file_curpos[c][s]);                                         \
-// 	if (fil[c][s].fptr != (samples[b][s].startOfData + sample_file_curpos[c][s]))                                      \
-// 		g_error |= LSEEK_FPTR_MISMATCH;

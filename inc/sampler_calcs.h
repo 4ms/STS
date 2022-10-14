@@ -26,6 +26,7 @@ static inline uint32_t calc_perc_fadedown_blocks(float length) {
 	return ((time - 0.010f) / 0.100f) * (max_fadedown - 1) + 1;
 
 	//TODO: compare performance of this vs. doing the interpolate and then limiting
+	//TODO: compare performance of this vs. pre-calculating PERC_ENV_FACTOR/sr and max_fadedown whenever sr changes
 	//44100Hz --> 3ms is 8.2 blocks, so return 9 blocks
 }
 
@@ -163,10 +164,10 @@ static uint32_t calc_stop_point(float length_param, float resample_param, Sample
 	// length_param <= 50%: fixed envelope
 	else
 	{
-		//number of samples to play is length*PERC_ENV_FACTOR plus the fadedown env
-		//rounded up to multiples of HT16_CHAN_BUFF_LEN
-		//times the block align
-		//times the playback resample rate (1.0=44.1kHz), rounded up the the next integer
+		//number of sample frames to play is length*PERC_ENV_FACTOR plus the fadedown env
+		//rounded up to multiples of FramesPerBlock
+		//times the playback resample rate (ratio of wavfile SR : playback SR)
+		//times the block align gives us how much the buffer address will increment
 		t_f = (length_param * PERC_ENV_FACTOR) + calc_perc_fadedown_blocks(length_param);
 
 		//round up to nearest audio block size
