@@ -200,11 +200,11 @@ void init_LowPassCoefs(void) {
 	CV_BRACKET[PITCH1_CV] = 5;
 	CV_BRACKET[PITCH2_CV] = 5;
 
-	CV_BRACKET[START1_CV] = 20;
-	CV_BRACKET[START2_CV] = 20;
+	CV_BRACKET[START1_CV] = 5;
+	CV_BRACKET[START2_CV] = 5;
 
-	CV_BRACKET[LENGTH1_CV] = 20;
-	CV_BRACKET[LENGTH2_CV] = 20;
+	CV_BRACKET[LENGTH1_CV] = 10;
+	CV_BRACKET[LENGTH2_CV] = 10;
 
 	CV_BRACKET[SAMPLE1_CV] = 20;
 	CV_BRACKET[SAMPLE2_CV] = 20;
@@ -230,11 +230,11 @@ void init_LowPassCoefs(void) {
 	POT_BRACKET[PITCH1_POT] = 12;
 	POT_BRACKET[PITCH2_POT] = 12;
 
-	POT_BRACKET[START1_POT] = 20;
-	POT_BRACKET[START2_POT] = 20;
+	POT_BRACKET[START1_POT] = 5;
+	POT_BRACKET[START2_POT] = 5;
 
-	POT_BRACKET[LENGTH1_POT] = 20;
-	POT_BRACKET[LENGTH2_POT] = 20;
+	POT_BRACKET[LENGTH1_POT] = 10;
+	POT_BRACKET[LENGTH2_POT] = 10;
 
 	POT_BRACKET[SAMPLE1_POT] = 60;
 	POT_BRACKET[SAMPLE2_POT] = 60;
@@ -336,7 +336,11 @@ void process_cv_adc(void) { //takes about 7us to run, at -O3
 
 		//Apply bracketing
 		t = i_smoothed_cvadc[i] - bracketed_cvadc[i];
-		if (t > CV_BRACKET[i]) {
+
+		if (i_smoothed_cvadc[i] == 0)
+			bracketed_cvadc[i] = 0;
+
+		else if (t > CV_BRACKET[i]) {
 			cv_delta[i] = t;
 			bracketed_cvadc[i] = i_smoothed_cvadc[i] - (CV_BRACKET[i]);
 		}
@@ -668,7 +672,7 @@ void update_params(void) {
 
 			if (f_param[chan][START] > 0.99f)
 				f_param[chan][START] = 1.0;
-			if (f_param[chan][START] <= 0.0003f)
+			if (f_param[chan][START] <= 0.005f) //20/4095.f
 				f_param[chan][START] = 0.0;
 		}
 
