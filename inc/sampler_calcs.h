@@ -65,9 +65,9 @@ static inline int32_t calc_dist_to_end(uint8_t chan, uint8_t samplenum, uint8_t 
 
 	//Calculate the distance left to the end that we should be playing
 	if (!i_param[chan][REV])
-		return (sample_file_endpos[chan] - sample_file_playpos);
+		return (sample_file_endpos[chan] > sample_file_playpos) ? (sample_file_endpos[chan] - sample_file_playpos) : 0;
 	else
-		return (sample_file_playpos - sample_file_endpos[chan]);
+		return (sample_file_playpos > sample_file_endpos[chan]) ? (sample_file_playpos - sample_file_endpos[chan]) : 0;
 }
 
 // calc_start_point()
