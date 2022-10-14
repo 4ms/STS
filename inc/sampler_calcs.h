@@ -64,6 +64,7 @@ static inline int32_t calc_dist_to_end(uint8_t chan, uint8_t samplenum, uint8_t 
 											  play_buff[chan][samplenum]);
 
 	//Calculate the distance left to the end that we should be playing
+	//TODO: check if playpos is in bounds of startpos as well
 	if (!i_param[chan][REV])
 		return (sample_file_endpos[chan] > sample_file_playpos) ? (sample_file_endpos[chan] - sample_file_playpos) : 0;
 	else
