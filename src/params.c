@@ -575,12 +575,15 @@ void update_params(void) {
 			uint32_t cur_pot_val = bracketed_potadc[LENGTH1_POT];
 
 			// Activate the combo when we detect the knob was turned a bit
-			if (diff32(cur_pot_val, edit_bkc->latched_value) > 16)
+			if (diff32(cur_pot_val, edit_bkc->latched_value) > 16) {
 				edit_bkc->combo_state = COMBO_ACTIVE;
+			}
 
 			uint32_t t_param_val = cur_pot_val >> 4; //0..4095 => 0..255
 			// Update if the value has changed AND the animation has finished. This slows down the update rate
-			if (t_param_val != global_params.fade_time_ms && (flags[FadeUpDownTimeChanged] == 0)) {
+			if (edit_bkc->combo_state == COMBO_ACTIVE && t_param_val != global_params.fade_time_ms &&
+				(flags[FadeUpDownTimeChanged] == 0))
+			{
 				global_params.fade_time_ms = t_param_val;
 				global_params.fade_up_rate = calc_fade_updown_rate(t_param_val);
 				global_params.fade_down_rate = calc_fade_updown_rate(t_param_val);
