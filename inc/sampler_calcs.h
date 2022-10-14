@@ -7,6 +7,32 @@
 
 extern Sample samples[MAX_NUM_BANKS][NUM_SAMPLES_PER_BANK];
 
+// Returns number of blocks that we should take to do a fast fade in perc mode
+// Fast fades are PERC_FADEUP and REV_PERC_FADEDOWN
+// and when we need to fade-down quickle because we're about to hit the end
+static inline uint32_t calc_perc_fadedown_blocks(float length) {
+	extern GlobalParams global_params;
+
+	const float time = length * PERC_ENV_FACTOR / global_params.f_record_sample_rate;
+
+	if (time <= 0.010f) //faster than 100Hz, 10ms --> 1 block (0.3ms at 44k)
+		return 1;
+
+	const uint32_t max_fadedown = (0.003f * global_params.f_record_sample_rate) / FramesPerBlock;
+
+	if (time >= 0.100f) //slower than 10Hz, 100ms --> 3ms fade
+		return max_fadedown;
+
+	return ((time - 0.010f) / 0.100f) * (max_fadedown - 1) + 1;
+
+	//TODO: compare performance of this vs. doing the interpolate and then limiting
+	//44100Hz --> 3ms is 8.2 blocks, so return 9 blocks
+}
+
+static inline float calc_fast_perc_fade_rate(float length) {
+	return 1.f / (calc_perc_fadedown_blocks(length) * FramesPerBlock);
+}
+
 // calc_resampled_cache_size()
 // Amount an imaginary pointer in the sample file would move with each audio block sent to the codec
 static inline uint32_t calc_resampled_cache_size(uint8_t samplenum, uint8_t banknum, uint32_t resampled_buffer_size) {
@@ -63,6 +89,14 @@ static uint32_t calc_start_point(float start_param, Sample *sample) {
 						   sample->blockAlign)); //just play the last 32 blocks (~64k samples)
 	else
 		return (align_addr((zeropt + ((uint32_t)(start_param * (float)inst_size))), sample->blockAlign));
+}
+
+uint32_t ceil(float num) {
+	uint32_t inum = (uint32_t)num;
+	if (num == (float)inum) {
+		return inum;
+	}
+	return inum + 1;
 }
 
 // calc_stop_point()
@@ -128,19 +162,17 @@ static uint32_t calc_stop_point(float length_param, float resample_param, Sample
 	// length_param <= 50%: fixed envelope
 	else
 	{
-		//number of samples to play is length*PERC_ENV_FACTOR, rounded up to multiples of HT16_CHAN_BUFF_LEN
+		//number of samples to play is length*PERC_ENV_FACTOR plus the fadedown env
+		//rounded up to multiples of HT16_CHAN_BUFF_LEN
 		//times the block align
 		//times the playback resample rate (1.0=44.1kHz), rounded up the the next integer
+		t_f = (length_param * PERC_ENV_FACTOR) + calc_perc_fadedown_blocks(length_param);
 
-		t_f = ((length_param)*PERC_ENV_FACTOR) / ((float)HT16_CHAN_BUFF_LEN);
-		t_int = (uint32_t)t_f;
+		//round up to nearest audio block size
+		t_f = ceil(t_f / FramesPerBlock) * FramesPerBlock;
 
-		//TODO: the +1 is for rounding, the extra +2 is probably for the v1.4 fade-up and fade-down
-		// So add in the extra time due to perc fade
-		t_int = (t_int + 3) * HT16_CHAN_BUFF_LEN; //+1 does ceiling(t_f)
-		t_f = (float)t_int;
 		t_f *= resample_param;
-		t_int = (((uint32_t)t_f)) * sample->blockAlign;
+		t_int = ((uint32_t)t_f) * sample->blockAlign;
 		num_samples_to_play = t_int;
 	}
 
@@ -150,16 +182,4 @@ static uint32_t calc_stop_point(float length_param, float resample_param, Sample
 		fwd_stop_point = sample->inst_end;
 
 	return (align_addr(fwd_stop_point, sample->blockAlign));
-}
-
-static inline float calc_fast_perc_fade_rate() {
-	extern GlobalParams global_params;
-	//3ms
-	return 1.f / (0.003f * global_params.f_record_sample_rate);
-}
-
-static inline uint32_t calc_fadedown_blocks() {
-	extern GlobalParams global_params;
-	return ((0.003f * global_params.f_record_sample_rate) / FramesPerBlock) + 1;
-	//44100Hz --> 3ms is 8.2 blocks, so return 9 blocks
 }

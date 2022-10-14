@@ -931,7 +931,7 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 	float play_time;
 
 	//convenience variables
-	float length;
+	float length = f_param[chan][LENGTH];
 	uint8_t samplenum, banknum;
 	Sample *s_sample;
 
@@ -976,18 +976,12 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 		// uint32_t fadedown_state = f_param[chan][LENGTH] < 0.5f ? REV_PERC_FADEDOWN : PLAY_FADEDOWN;
 		uint32_t fadedown_state = REV_PERC_FADEDOWN;
 
-		if (play_state[chan] == PLAYING_PERC) {
-			if (global_mode[PERC_ENVELOPE]) {
-				fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * calc_fast_perc_fade_rate())) + 1;
-			} else {
-				fadedown_blocks = 1;
-			}
-			fadedown_state = REV_PERC_FADEDOWN;
+		if (play_state[chan] == PLAYING_PERC || play_state[chan] == PERC_FADEUP) {
+			fadedown_blocks = calc_fast_perc_fade_rate(length) + 1;
 		} else {
 			if (global_mode[FADEUPDOWN_ENVELOPE]) {
 				if (i_param[chan][REV]) {
-					fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * calc_fast_perc_fade_rate())) + 1;
-					fadedown_state = REV_PERC_FADEDOWN;
+					fadedown_blocks = calc_fast_perc_fade_rate(length) + 1;
 				} else {
 					fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * global_params.fade_down_rate)) + 1;
 					fadedown_state = PLAY_FADEDOWN;
@@ -1111,7 +1105,7 @@ static void apply_envelopes(int32_t *outL, int32_t *outR, uint8_t chan) {
 	}
 
 	// 3ms fade down
-	const float fast_perc_fade_rate = calc_fast_perc_fade_rate();
+	const float fast_perc_fade_rate = calc_fast_perc_fade_rate(length);
 
 	// 3ms fade down or global fade_down_rate, whichever is faster
 	const float fast_retrig_fade_rate =
