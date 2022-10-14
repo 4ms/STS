@@ -972,22 +972,24 @@ void play_audio_from_buffer(int32_t *outL, int32_t *outR, uint8_t chan) {
 
 		// See if we are about to surpass the calculated position in the file where we should end our sample
 		// We must start fading down at a point that depends on how long it takes to fade down
-		uint32_t fadedown_blocks = 2;
-		// uint32_t fadedown_state = f_param[chan][LENGTH] < 0.5f ? REV_PERC_FADEDOWN : PLAY_FADEDOWN;
+
+		//TODO: these calcuated lengths must match the actual ones
+		// uint32_t fadedown_blocks = 2;
+		uint32_t fadedown_blocks = calc_perc_fadedown_blocks(length) + 1;
 		uint32_t fadedown_state = REV_PERC_FADEDOWN;
 
-		if (play_state[chan] == PLAYING_PERC || play_state[chan] == PERC_FADEUP) {
-			fadedown_blocks = calc_fast_perc_fade_rate(length) + 1;
-		} else {
-			if (global_mode[FADEUPDOWN_ENVELOPE]) {
-				if (i_param[chan][REV]) {
-					fadedown_blocks = calc_fast_perc_fade_rate(length) + 1;
-				} else {
-					fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * global_params.fade_down_rate)) + 1;
-					fadedown_state = PLAY_FADEDOWN;
-				}
-			}
-		}
+		// if (play_state[chan] == PLAYING_PERC || play_state[chan] == PERC_FADEUP) {
+		// 	fadedown_blocks = calc_fast_perc_fade_rate(length) + 1;
+		// } else {
+		// 	if (global_mode[FADEUPDOWN_ENVELOPE]) {
+		// 		if (i_param[chan][REV]) {
+		// 			fadedown_blocks = calc_fast_perc_fade_rate(length) + 1;
+		// 		} else {
+		// 			fadedown_blocks = (uint32_t)(1.f / ((float)HT16_CHAN_BUFF_LEN * global_params.fade_down_rate)) + 1;
+		// 			fadedown_state = PLAY_FADEDOWN;
+		// 		}
+		// 	}
+		// }
 
 		if (dist_to_end < (resampled_cache_size * fadedown_blocks)) {
 			play_state[chan] = fadedown_state;
