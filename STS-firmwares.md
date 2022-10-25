@@ -26,11 +26,27 @@ Without a computer:
 ### Change log: ###
 
 ----
+### v1.5.2b ###
+
+*__Released:__* October 14, 2022
+
+*__Download:__* [Firmware v1.5.2b](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.5.2b.wav)
+
+*__Improvements:__*
+
+*__Bug Fixes:__*
+
+   * __Start Pos would not go back to 0__: With longer sample files, adjusting Start Pos up and then back to 0 would sometimes set the start position such that the first few milliseconds of audio were truncated. Fixed.
+
+   * __Clicking when re-triggering a sample with long Fade settings__: With longer Fade Up/Down Envelope times, re-triggering an already playing sample would prioritize low latency over the fade-down envelope, causing a click. In v1.5.2b the fade-down envelope is accelerated, adding a little bit of latency when re-triggering but removing the click. Setting the Fade Up/Down envelope time to fast removes the latency and clicking.
+
+   * __Looping broken for very short samples when Perc Env is off__: When Percussive Envelope was turned off, setting the sample length to be very short could make it not loop. Bug introduced in 1.5.2. Fixed.
+  
+   
+----
 ### v1.5.2 ###
 
 *__Released:__* October 8, 2022
-
-*__Download:__* [Firmware v1.5.2](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.5.2.wav)
 
 *__Improvements:__*
 
@@ -48,8 +64,6 @@ Without a computer:
 ### v1.5.1b ###
 
 *__Released:__* June 28, 2022
-
-*__Download:__* [Firmware v1.5.1b](https://4mscompany.com/media/STS/firmware/STS-firmware-v1.5.1b.wav)
 
 *__New Features:__*
 
